@@ -1,6 +1,6 @@
 use iced::{widget::{button, column, scrollable, text}, Element, Length, Sandbox, Theme};
 use iced_aw::{Grid, GridRow, modal};
-use crate::{components::{home_button, project_preview, CreateNewProjectModal}, project::Project};
+use crate::{components::{home_button, project_preview, CreateNewProjectModal, create_new_project_button, CreateNewTaskModal}, project::Project};
 use crate::task::{Task, TaskState};
 
 #[derive(Debug, Clone)]
@@ -10,6 +10,7 @@ pub enum ProjectTrackerPage {
 	},
 	ProjectPage {
 		project_name: String,
+		create_new_task_modal: CreateNewTaskModal,
 	},
 }
 
@@ -27,6 +28,13 @@ pub enum UiMessage {
 	CloseCreateNewProjectModal,
 	ChangeCreateNewProjectName(String),
 	CreateProject(String),
+	CreateTask {
+		project_name: String,
+		task: Task,
+	},
+	OpenCreateNewTaskModal,
+	CloseCreateNewTaskModal,
+	ChangeCreateNewTaskName(String),
 }
 
 
@@ -93,6 +101,33 @@ impl Sandbox for ProjectTrackerApp {
 					create_new_project_modal.close();
 				}
 			},
+			UiMessage::CreateTask { project_name, task } => {
+				for project in self.projects.iter_mut() {
+					if project.name == *project_name {
+						project.tasks.push(task);
+						break;
+					}
+				}
+
+				if let ProjectTrackerPage::ProjectPage { create_new_task_modal, .. } = &mut self.page {
+					create_new_task_modal.close();
+				}
+			},
+			UiMessage::OpenCreateNewTaskModal => {
+				if let ProjectTrackerPage::ProjectPage { create_new_task_modal, .. } = &mut self.page {
+					create_new_task_modal.open();
+				}
+			},
+			UiMessage::CloseCreateNewTaskModal => {
+				if let ProjectTrackerPage::ProjectPage { create_new_task_modal, .. } = &mut self.page {
+					create_new_task_modal.close();
+				}
+			},
+			UiMessage::ChangeCreateNewTaskName(new_task_name) => {
+				if let ProjectTrackerPage::ProjectPage { create_new_task_modal, .. } = &mut self.page {
+					create_new_task_modal.task_name = new_task_name;
+				}
+			}
 		}
 	}
 
@@ -119,7 +154,7 @@ impl Sandbox for ProjectTrackerApp {
 				)
 				.width(Length::Fill);
 
-				let create_new_project_button = button("Create New").on_press(UiMessage::OpenCreateNewProjectModal);
+				let create_new_project_button = create_new_project_button();
 
 				let background = column![
 					create_new_project_button,
@@ -131,7 +166,7 @@ impl Sandbox for ProjectTrackerApp {
 					.on_esc(UiMessage::CloseCreateNewProjectModal)
 					.into()
 			},
-			ProjectTrackerPage::ProjectPage { project_name } => {
+			ProjectTrackerPage::ProjectPage { project_name, create_new_task_modal } => {
 				let mut current_project = None;
 				for project in self.projects.iter() {
 					if project.name == *project_name {
@@ -140,7 +175,7 @@ impl Sandbox for ProjectTrackerApp {
 					}
 				}
 				let project_element = if let Some(project) = current_project {
-					project.view()
+					project.view(create_new_task_modal)
 				}
 				else {
 					text("Invalid Project").into()

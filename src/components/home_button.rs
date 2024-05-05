@@ -1,7 +1,7 @@
 use iced::{theme, widget::{button, svg, Button}, Border, Vector, Color, Shadow, Theme};
 use crate::project_tracker::{UiMessage, ProjectTrackerPage};
 
-use super::create_new_project_modal::CreateNewProjectModal;
+use super::create_new_project::CreateNewProjectModal;
 
 pub fn home_button() -> Button<'static, UiMessage>{
 	let home_svg = svg::Handle::from_path(format!("{}/assets/home.svg", env!("CARGO_MANIFEST_DIR")));
@@ -12,8 +12,8 @@ pub fn home_button() -> Button<'static, UiMessage>{
 			.height(24)
 			.style(theme::Svg::Custom(Box::new(HomeSvgStyle)))
 	)
-    .on_press(UiMessage::SwitchPage(ProjectTrackerPage::StartPage{ create_new_project_modal: CreateNewProjectModal::new() }))
-    .style(theme::Button::Secondary)
+	.on_press(UiMessage::SwitchPage(ProjectTrackerPage::StartPage{ create_new_project_modal: CreateNewProjectModal::new() }))
+	.style(theme::Button::Secondary)
 }
 
 struct HomeSvgStyle;

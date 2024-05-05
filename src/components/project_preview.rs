@@ -2,6 +2,8 @@ use crate::components::completion_bar;
 use iced::{theme, widget::{button, column, container, text}, Border, Color, Element, Shadow, Theme, Vector};
 use crate::{project::Project, project_tracker::{ProjectTrackerPage, UiMessage}};
 
+use super::CreateNewTaskModal;
+
 pub fn project_preview(project: &Project) -> Element<UiMessage> {
 	button(
 		container(
@@ -17,7 +19,7 @@ pub fn project_preview(project: &Project) -> Element<UiMessage> {
 		)
 		.padding(20)
 	)
-	.on_press(UiMessage::SwitchPage(ProjectTrackerPage::ProjectPage{ project_name: project.name.clone() }))
+	.on_press(UiMessage::SwitchPage(ProjectTrackerPage::ProjectPage{ project_name: project.name.clone(), create_new_task_modal: CreateNewTaskModal::new() }))
 	.style(theme::Button::Custom(Box::new(ProjectPreviewButtonStyle)))
 	.into()
 }

@@ -10,5 +10,8 @@ pub use home_button::home_button;
 mod task_list;
 pub use task_list::task_list;
 
-mod create_new_project_modal;
-pub use create_new_project_modal::CreateNewProjectModal;
+mod create_new_project;
+pub use create_new_project::{CreateNewProjectModal, create_new_project_button};
+
+mod create_new_task;
+pub use create_new_task::{CreateNewTaskModal, create_new_task_button};

@@ -15,6 +15,7 @@ impl TaskState {
 	}
 }
 
+#[derive(Debug, Clone)]
 pub struct Task {
 	pub name: String,
 	pub state: TaskState,
@@ -33,6 +34,6 @@ impl Task {
 	}
 
 	pub fn view(&self) -> Element<UiMessage> {
-		text(&self.name).into()
+		text(format!("({:?}) {}", self.state, self.name)).into()
 	}
 }
