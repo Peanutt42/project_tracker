@@ -1,5 +1,6 @@
 use iced::{theme, widget::{button, svg, Button}, Border, Vector, Color, Shadow, Theme};
-use crate::project_tracker::{UiMessage, ProjectTrackerPage};
+use crate::project_tracker::UiMessage;
+use crate::page::Page;
 
 use super::create_new_project::CreateNewProjectModal;
 
@@ -12,7 +13,7 @@ pub fn home_button() -> Button<'static, UiMessage>{
 			.height(24)
 			.style(theme::Svg::Custom(Box::new(HomeSvgStyle)))
 	)
-	.on_press(UiMessage::SwitchPage(ProjectTrackerPage::StartPage{ create_new_project_modal: CreateNewProjectModal::new() }))
+	.on_press(UiMessage::SwitchPage(Page::StartPage{ create_new_project_modal: CreateNewProjectModal::new() }))
 	.style(theme::Button::Secondary)
 }
 

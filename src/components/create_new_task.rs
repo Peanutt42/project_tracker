@@ -23,15 +23,23 @@ impl CreateNewTaskModal {
 				text("Create new task"),
 				TextInput::new("task name", &self.task_name)
 					.on_input(UiMessage::ChangeCreateNewTaskName)
+					.on_submit(UiMessage::CreateTask {
+						project_name: project_name.clone(),
+						task: Task::new(self.task_name.clone(), TaskState::Todo)
+					})
 			)
 			.foot(
 				row![
 					button(text("Create"))
-						.on_press(UiMessage::CreateTask { project_name, task: Task::new(self.task_name.clone(), TaskState::Todo) }),
+						.on_press(UiMessage::CreateTask {
+							project_name: project_name.clone(),
+							task: Task::new(self.task_name.clone(), TaskState::Todo)
+						}),
 					button(text("Cancel"))
 						.on_press(UiMessage::CloseCreateNewTaskModal)
 				]
-			))
+			)
+			.max_width(400.0))
 		}
 		else {
 			None

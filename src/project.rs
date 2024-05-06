@@ -1,9 +1,11 @@
 use iced::{Element, widget::{column, text}};
 use iced_aw::modal;
+use serde::{Serialize, Deserialize};
 use crate::{components::{create_new_task_button, CreateNewTaskModal}, project_tracker::UiMessage};
 use crate::components::{task_list, completion_bar};
 use crate::task::Task;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
 	pub name: String,
 	pub tasks: Vec<Task>,

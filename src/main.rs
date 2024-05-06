@@ -4,6 +4,7 @@ mod project;
 mod task;
 mod project_tracker;
 use project_tracker::ProjectTrackerApp;
+mod page;
 mod window_icon;
 mod components;
 

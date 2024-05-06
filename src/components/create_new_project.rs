@@ -21,7 +21,8 @@ impl CreateNewProjectModal {
 			Some(Card::new(
 				Text::new("Create Project"),
 				TextInput::new("Project name", &self.project_name)
-					.on_input(|new_project_name| UiMessage::ChangeCreateNewProjectName(new_project_name))
+					.on_input(UiMessage::ChangeCreateNewProjectName)
+					.on_submit(UiMessage::CreateProject(self.project_name.clone()))
 			)
 			.foot(
 				row![
@@ -40,8 +41,7 @@ impl CreateNewProjectModal {
 					.on_press(UiMessage::CloseCreateNewProjectModal),
 				]
 			)
-			.max_width(400.0)
-			)
+			.max_width(400.0))
 		}
 		else {
 			None

@@ -1,7 +1,8 @@
 use iced::{widget::text, Element};
+use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq, Eq)]
 pub enum TaskState {
 	#[default]
 	Todo,
@@ -15,7 +16,7 @@ impl TaskState {
 	}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
 	pub name: String,
 	pub state: TaskState,
