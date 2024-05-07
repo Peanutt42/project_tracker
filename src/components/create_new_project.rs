@@ -1,6 +1,13 @@
-use iced::{alignment::Horizontal, widget::{button, row, svg, Button, Text, TextInput}, Background, Border, Color, Command, Length, Shadow, Theme, Vector};
+use iced::{alignment::Horizontal, widget::{button, row, text, svg, Button, Text, TextInput}, Background, Border, Color, Length, Shadow, Theme, Vector};
 use iced_aw::Card;
 use crate::project_tracker::UiMessage;
+
+#[derive(Debug, Clone)]
+pub enum CreateNewProjectModalMessage {
+	Open,
+	Close,
+	ChangeProjectName(String),
+}
 
 #[derive(Clone, Debug)]
 pub struct CreateNewProjectModal {
@@ -16,29 +23,43 @@ impl CreateNewProjectModal {
 		}
 	}
 
+	pub fn update(&mut self, message: CreateNewProjectModalMessage) {
+		match message {
+			CreateNewProjectModalMessage::Open => {
+				self.opened = true;
+				self.project_name.clear();
+			},
+			CreateNewProjectModalMessage::Close => {
+				self.opened = false;
+				self.project_name.clear();
+			},
+			CreateNewProjectModalMessage::ChangeProjectName(new_name) => self.project_name = new_name,
+		}
+	}
+
 	pub fn view(&self) -> Option<Card<UiMessage>> {
 		if self.opened {
 			Some(Card::new(
 				Text::new("Create Project"),
 				TextInput::new("Project name", &self.project_name)
-        			.on_input(UiMessage::ChangeCreateNewProjectName)
+        			.on_input(|new_name| UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::ChangeProjectName(new_name)))
 					.on_submit(UiMessage::CreateProject(self.project_name.clone()))
 			)
 			.foot(
 				row![
-					Button::new(
-						Text::new("Create")
+					button(
+						text("Create")
 							.horizontal_alignment(Horizontal::Center)
 					)
 					.width(Length::Fill)
 					.on_press(UiMessage::CreateProject(self.project_name.clone())),
 
-					Button::new(
-						Text::new("Cancel")
+					button(
+						text("Cancel")
 							.horizontal_alignment(Horizontal::Center)
 					)
 					.width(Length::Fill)
-					.on_press(UiMessage::CloseCreateNewProjectModal),
+					.on_press(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close)),
 				]
 			)
 			.max_width(400.0))
@@ -46,17 +67,6 @@ impl CreateNewProjectModal {
 		else {
 			None
 		}
-	}
-
-	pub fn open(&mut self) -> Command<UiMessage> {
-		self.opened = true;
-		self.project_name.clear();
-		Command::none()
-	}
-
-	pub fn close(&mut self) {
-		self.opened = false;
-		self.project_name.clear();
 	}
 }
 
@@ -69,7 +79,7 @@ pub fn create_new_project_button() -> Button<'static, UiMessage> {
 			.width(32)
 			.height(32)
 	)
-	.on_press(UiMessage::OpenCreateNewProjectModal)
+	.on_press(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Open))
 	.style(iced::theme::Button::Custom(Box::new(CreateNewProjectButtonStyle)))
 }
 

@@ -1,7 +1,14 @@
-use iced::{theme, widget::{button, row, svg, text, Button, TextInput}, Background, Border, Color, Shadow, Theme, Vector};
+use iced::{theme, widget::{button, row, svg, text, Button, TextInput}, Background, Length, alignment::Horizontal, Border, Color, Shadow, Theme, Vector};
 use iced_aw::Card;
 
 use crate::{project_tracker::UiMessage, task::{Task, TaskState}};
+
+#[derive(Debug, Clone)]
+pub enum CreateNewTaskModalMessage {
+	Open,
+	Close,
+	ChangeTaskName(String),
+}
 
 #[derive(Debug, Clone)]
 pub struct CreateNewTaskModal {
@@ -17,12 +24,26 @@ impl CreateNewTaskModal {
 		}
 	}
 
+	pub fn update(&mut self, message: CreateNewTaskModalMessage) {
+		match message {
+			CreateNewTaskModalMessage::Open => {
+				self.opened = true;
+				self.task_name.clear();
+			},
+			CreateNewTaskModalMessage::Close => {
+				self.opened = false;
+				self.task_name.clear();
+			},
+			CreateNewTaskModalMessage::ChangeTaskName(new_name) => self.task_name = new_name,
+		}
+	}
+
 	pub fn view(&self, project_name: String) -> Option<Card<UiMessage>> {
 		if self.opened {
 			Some(Card::new(
 				text("Create new task"),
 				TextInput::new("task name", &self.task_name)
-					.on_input(UiMessage::ChangeCreateNewTaskName)
+					.on_input(|new_name| UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::ChangeTaskName(new_name)))
 					.on_submit(UiMessage::CreateTask {
 						project_name: project_name.clone(),
 						task: Task::new(self.task_name.clone(), TaskState::Todo)
@@ -30,13 +51,21 @@ impl CreateNewTaskModal {
 			)
 			.foot(
 				row![
-					button(text("Create"))
+					button(
+						text("Create")
+							.horizontal_alignment(Horizontal::Center)
+					)
+						.width(Length::Fill)
 						.on_press(UiMessage::CreateTask {
 							project_name: project_name.clone(),
 							task: Task::new(self.task_name.clone(), TaskState::Todo)
 						}),
-					button(text("Cancel"))
-						.on_press(UiMessage::CloseCreateNewTaskModal)
+					button(
+						text("Cancel")
+							.horizontal_alignment(Horizontal::Center)
+					)
+						.width(Length::Fill)
+						.on_press(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Close))
 				]
 			)
 			.max_width(400.0))
@@ -44,16 +73,6 @@ impl CreateNewTaskModal {
 		else {
 			None
 		}
-	}
-
-	pub fn open(&mut self) {
-		self.opened = true;
-		self.task_name.clear();
-	}
-
-	pub fn close(&mut self) {
-		self.opened = false;
-		self.task_name.clear();
 	}
 }
 
@@ -65,7 +84,7 @@ pub fn create_new_task_button() -> Button<'static, UiMessage> {
 			.width(32)
 			.height(32)
 	)
-	.on_press(UiMessage::OpenCreateNewTaskModal)
+	.on_press(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Open))
 	.style(theme::Button::Custom(Box::new(CreateNewTaskButtonStyle)))
 }
 

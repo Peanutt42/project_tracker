@@ -46,6 +46,19 @@
     {
       "name": "test saving",
       "tasks": []
+    },
+    {
+      "name": "test test test",
+      "tasks": [
+        {
+          "name": "test 2 2 1 123",
+          "state": "Todo"
+        }
+      ]
+    },
+    {
+      "name": "another one",
+      "tasks": []
     }
   ],
   "dark_mode": true

@@ -5,6 +5,7 @@ mod task;
 mod project_tracker;
 use project_tracker::ProjectTrackerApp;
 mod page;
+mod saved_state;
 mod window_icon;
 mod components;
 

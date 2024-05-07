@@ -1,7 +1,7 @@
 use iced::{widget::{button, column, scrollable, text, container}, alignment::{Horizontal, Vertical}, Element, Length};
 use iced_aw::{Grid, GridRow, modal};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
-use crate::components::{home_button, project_preview, CreateNewProjectModal, create_new_project_button, CreateNewTaskModal};
+use crate::components::{home_button, project_preview, CreateNewProjectModal, create_new_project_button, CreateNewTaskModal, CreateNewProjectModalMessage, CreateNewTaskModalMessage};
 
 
 
@@ -17,6 +17,18 @@ pub enum Page {
 }
 
 impl Page {
+	pub fn update_create_new_project_modal_message(&mut self, message: CreateNewProjectModalMessage) {
+		if let Page::StartPage { create_new_project_modal } = self {
+			create_new_project_modal.update(message);
+		}
+	}
+
+	pub fn update_create_new_task_modal_message(&mut self, message: CreateNewTaskModalMessage) {
+		if let Page::ProjectPage { create_new_task_modal, .. } = self {
+			create_new_task_modal.update(message);
+		}
+	}
+
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		match self {
 			Page::StartPage { create_new_project_modal } => {
@@ -61,8 +73,8 @@ impl Page {
 				];
 
 				modal(background, create_new_project_modal.view())
-					.backdrop(UiMessage::CloseCreateNewProjectModal)
-					.on_esc(UiMessage::CloseCreateNewProjectModal)
+					.backdrop(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close))
+					.on_esc(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close))
 					.into()
 			},
 			Page::ProjectPage { project_name, create_new_task_modal } => {
