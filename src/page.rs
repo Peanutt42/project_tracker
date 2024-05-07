@@ -1,5 +1,5 @@
 use iced::{widget::{button, column, scrollable, text, container}, alignment::{Horizontal, Vertical}, Element, Length};
-use iced_aw::{Grid, GridRow, modal};
+use iced_aw::{modal, Grid, GridRow};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 use crate::components::{home_button, project_preview, CreateNewProjectModal, create_new_project_button, CreateNewTaskModal, CreateNewProjectModalMessage, CreateNewTaskModalMessage};
 
@@ -30,6 +30,14 @@ impl Page {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
+		let dark_mode = if let Some(saved_state) = &app.saved_state {
+			saved_state.dark_mode
+		}
+		else {
+			true
+		};
+
+
 		match self {
 			Page::StartPage { create_new_project_modal } => {
 				let project_grid: Element<UiMessage> = if let Some(saved_state) = &app.saved_state {
@@ -72,7 +80,7 @@ impl Page {
 					project_grid,
 				];
 
-				modal(background, create_new_project_modal.view())
+				modal(background, create_new_project_modal.view(dark_mode))
 					.backdrop(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close))
 					.on_esc(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close))
 					.into()
@@ -87,7 +95,7 @@ impl Page {
 						}
 					}
 					let project_element = if let Some(project) = current_project {
-						project.view(create_new_task_modal)
+						project.view(create_new_task_modal, dark_mode)
 					}
 					else {
 						text("Invalid Project").into()

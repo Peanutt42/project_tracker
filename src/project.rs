@@ -1,8 +1,7 @@
 use iced::{Element, widget::{column, text}};
 use iced_aw::modal;
 use serde::{Serialize, Deserialize};
-use crate::{components::{create_new_task_button, CreateNewTaskModal}, project_tracker::UiMessage};
-use crate::components::{task_list, completion_bar};
+use crate::{components::{create_new_task_button, task_list, completion_bar, CreateNewTaskModal, CreateNewTaskModalMessage}, project_tracker::UiMessage};
 use crate::task::Task;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,7 +38,7 @@ impl Project {
 		Self::calculate_completion_percentage(self.get_tasks_done(), self.tasks.len())
 	}
 
-	pub fn view<'a>(&'a self, create_new_task_modal: &'a CreateNewTaskModal) -> Element<UiMessage> {
+	pub fn view<'a>(&'a self, create_new_task_modal: &'a CreateNewTaskModal, dark_mode: bool) -> Element<UiMessage> {
 		let tasks_done = self.get_tasks_done();
 		let tasks_len = self.tasks.len();
 		let completion_percentage = Self::calculate_completion_percentage(tasks_done, tasks_len);
@@ -52,7 +51,9 @@ impl Project {
 			task_list(&self.tasks)
 		];
 
-		modal(project_view, create_new_task_modal.view(self.name.clone()))
+		modal(project_view, create_new_task_modal.view(self.name.clone(), dark_mode))
+			.backdrop(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Close))
+			.on_esc(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Close))
 			.into()
 	}
 }

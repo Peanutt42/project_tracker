@@ -1,6 +1,7 @@
-use iced::{alignment::Horizontal, widget::{button, row, text, svg, Button, Text, TextInput}, Background, Border, Color, Length, Shadow, Theme, Vector};
-use iced_aw::Card;
+use iced::{theme, alignment::Horizontal, widget::{button, row, text, svg, Button, Text, TextInput}, Length};
+use iced_aw::{Card, CardStyles};
 use crate::project_tracker::UiMessage;
+use crate::components::{GreenRoundButtonStyle, GreenButtonStyle};
 
 #[derive(Debug, Clone)]
 pub enum CreateNewProjectModalMessage {
@@ -37,8 +38,15 @@ impl CreateNewProjectModal {
 		}
 	}
 
-	pub fn view(&self) -> Option<Card<UiMessage>> {
+	pub fn view(&self, dark_mode: bool) -> Option<Card<UiMessage>> {
 		if self.opened {
+			let card_style = if dark_mode {
+				CardStyles::Dark
+			}
+			else {
+				CardStyles::Light
+			};
+
 			Some(Card::new(
 				Text::new("Create Project"),
 				TextInput::new("Project name", &self.project_name)
@@ -52,6 +60,7 @@ impl CreateNewProjectModal {
 							.horizontal_alignment(Horizontal::Center)
 					)
 					.width(Length::Fill)
+					.style(theme::Button::Custom(Box::new(GreenButtonStyle)))
 					.on_press(UiMessage::CreateProject(self.project_name.clone())),
 
 					button(
@@ -59,9 +68,11 @@ impl CreateNewProjectModal {
 							.horizontal_alignment(Horizontal::Center)
 					)
 					.width(Length::Fill)
+					.style(theme::Button::Secondary)
 					.on_press(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close)),
 				]
 			)
+			.style(card_style)
 			.max_width(400.0))
 		}
 		else {
@@ -80,57 +91,5 @@ pub fn create_new_project_button() -> Button<'static, UiMessage> {
 			.height(32)
 	)
 	.on_press(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Open))
-	.style(iced::theme::Button::Custom(Box::new(CreateNewProjectButtonStyle)))
+	.style(iced::theme::Button::Custom(Box::new(GreenRoundButtonStyle)))
 }
-
-struct CreateNewProjectButtonStyle;
-
-impl button::StyleSheet for CreateNewProjectButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, _style: &Self::Style) -> button::Appearance {
-		button::Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 0.75, 0.0))),
-			border: Border::with_radius(32.0),
-			shadow: Shadow {
-				color: Color::BLACK,
-				offset: Vector::default(),
-				blur_radius: 20.0,
-			},
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, _style: &Self::Style) -> button::Appearance {
-		button::Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 1.0, 0.0))),
-			border: Border::with_radius(32.0),
-			shadow: Shadow {
-				color: Color::BLACK,
-				offset: Vector::default(),
-				blur_radius: 30.0,
-			},
-			..Default::default()
-		}
-	}
-
-	fn pressed(&self, _style: &Self::Style) -> button::Appearance {
-		button::Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 0.5, 0.0))),
-			border: Border::with_radius(32.0),
-			shadow: Shadow {
-				color: Color::BLACK,
-				offset: Vector::default(),
-				blur_radius: 40.0,
-			},
-			..Default::default()
-		}
-	}
-}
-/*
-struct RoundCreateNewProjectButtonStyle;
-
-impl button::StyleSheet for RoundCreateNewProjectButtonStyle {
-
-}
-*/
