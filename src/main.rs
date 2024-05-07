@@ -1,4 +1,4 @@
-use iced::{Settings, Sandbox, window};
+use iced::{Settings, Application, window};
 
 mod project;
 mod task;

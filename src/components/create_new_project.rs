@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, widget::{button, row, svg, Button, Text, TextInput}, Background, Border, Color, Length, Shadow, Theme, Vector};
+use iced::{alignment::Horizontal, widget::{button, row, svg, Button, Text, TextInput}, Background, Border, Color, Command, Length, Shadow, Theme, Vector};
 use iced_aw::Card;
 use crate::project_tracker::UiMessage;
 
@@ -21,7 +21,7 @@ impl CreateNewProjectModal {
 			Some(Card::new(
 				Text::new("Create Project"),
 				TextInput::new("Project name", &self.project_name)
-					.on_input(UiMessage::ChangeCreateNewProjectName)
+        			.on_input(UiMessage::ChangeCreateNewProjectName)
 					.on_submit(UiMessage::CreateProject(self.project_name.clone()))
 			)
 			.foot(
@@ -48,9 +48,10 @@ impl CreateNewProjectModal {
 		}
 	}
 
-	pub fn open(&mut self) {
+	pub fn open(&mut self) -> Command<UiMessage> {
 		self.opened = true;
 		self.project_name.clear();
+		Command::none()
 	}
 
 	pub fn close(&mut self) {

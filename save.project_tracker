@@ -1,101 +1,52 @@
-[
-  {
-    "name": "Project Tracker 0",
-    "tasks": [
-      {
-        "name": "Project Page",
-        "state": "Todo"
-      }
-    ]
-  },
-  {
-    "name": "Client Server 0",
-    "tasks": [
-      {
-        "name": "Packet Loss and Latency Simulator",
-        "state": "Done"
-      }
-    ]
-  },
-  {
-    "name": "SphynxEngine 0",
-    "tasks": []
-  },
-  {
-    "name": "SIA Project 0",
-    "tasks": [
-      {
-        "name": "PID-Konstanten optimieren",
-        "state": "InProgress"
-      },
-      {
-        "name": "Finale Strecke bauen",
-        "state": "Todo"
-      },
-      {
-        "name": "Ausweichspur",
-        "state": "Done"
-      }
-    ]
-  },
-  {
-    "name": "Project Tracker 1",
-    "tasks": [
-      {
-        "name": "Project Page",
-        "state": "Todo"
-      }
-    ]
-  },
-  {
-    "name": "Client Server 1",
-    "tasks": [
-      {
-        "name": "Packet Loss and Latency Simulator",
-        "state": "Done"
-      }
-    ]
-  },
-  {
-    "name": "SphynxEngine 1",
-    "tasks": []
-  },
-  {
-    "name": "SIA Project 1",
-    "tasks": [
-      {
-        "name": "PID-Konstanten optimieren",
-        "state": "InProgress"
-      },
-      {
-        "name": "Finale Strecke bauen",
-        "state": "Todo"
-      },
-      {
-        "name": "Ausweichspur",
-        "state": "Done"
-      }
-    ]
-  },
-  {
-    "name": "test",
-    "tasks": [
-      {
-        "name": "this is a test",
-        "state": "Todo"
-      },
-      {
-        "name": "this is a test",
-        "state": "Todo"
-      },
-      {
-        "name": "test 2",
-        "state": "Todo"
-      }
-    ]
-  },
-  {
-    "name": "test 2",
-    "tasks": []
-  }
-]
+{
+  "projects": [
+    {
+      "name": "test",
+      "tasks": [
+        {
+          "name": "task1",
+          "state": "Done"
+        },
+        {
+          "name": "task2",
+          "state": "Todo"
+        },
+        {
+          "name": "test",
+          "state": "Done"
+        },
+        {
+          "name": "task3",
+          "state": "Todo"
+        }
+      ]
+    },
+    {
+      "name": "test2",
+      "tasks": [
+        {
+          "name": "test2",
+          "state": "Todo"
+        }
+      ]
+    },
+    {
+      "name": "test3",
+      "tasks": [
+        {
+          "name": "test3",
+          "state": "Done"
+        }
+      ]
+    },
+    {
+      "name": "this project should save ",
+      "tasks": []
+    },
+    {
+      "name": "test saving",
+      "tasks": []
+    }
+  ],
+  "dark_mode": true
+}

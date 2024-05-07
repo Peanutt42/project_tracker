@@ -26,30 +26,28 @@ impl Project {
 			.count()
 	}
 
-	pub fn get_tasks_left(&self) -> usize {
-		self.tasks
-			.iter()
-			.filter(|t| !t.is_done())
-			.count()
-	}
-
-	pub fn get_completion_percentage(&self) -> f32 {
-		if self.tasks.is_empty() {
+	fn calculate_completion_percentage(tasks_done: usize, task_count: usize) -> f32 {
+		if task_count == 0 {
 			0.0
 		}
 		else {
-			self.get_tasks_done() as f32 / self.tasks.len() as f32
+			tasks_done as f32 / task_count as f32
 		}
 	}
 
+	pub fn get_completion_percentage(&self) -> f32 {
+		Self::calculate_completion_percentage(self.get_tasks_done(), self.tasks.len())
+	}
+
 	pub fn view<'a>(&'a self, create_new_task_modal: &'a CreateNewTaskModal) -> Element<UiMessage> {
-		let tasks_left = self.get_tasks_left();
+		let tasks_done = self.get_tasks_done();
 		let tasks_len = self.tasks.len();
+		let completion_percentage = Self::calculate_completion_percentage(tasks_done, tasks_len);
 
 		let project_view = column![
 			text(&self.name).size(21),
-			completion_bar(self.get_completion_percentage()),
-			text(format!("{tasks_left}/{tasks_len} finished ({}%)", (self.get_completion_percentage() * 100.0).round())),
+			completion_bar(completion_percentage),
+			text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round())),
 			create_new_task_button(),
 			task_list(&self.tasks)
 		];

@@ -1,20 +1,36 @@
-use std::io::{Read, Write};
-
-use iced::{Element, Sandbox, Theme};
+use iced::{Application, Command, Subscription, Element, Theme, keyboard};
+use serde::{Serialize, Deserialize};
 use crate::{components::CreateNewProjectModal, project::Project};
 use crate::task::Task;
 use crate::page::Page;
 
-pub struct ProjectTrackerApp {
-	pub page: Page,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SavedState {
 	pub projects: Vec<Project>,
 	pub dark_mode: bool,
+}
+
+impl Default for SavedState {
+	fn default() -> Self {
+		Self {
+			projects: Vec::new(),
+			dark_mode: true,
+		}
+	}
+}
+
+pub struct ProjectTrackerApp {
+	pub page: Page,
+	pub saved_state: Option<SavedState>,
 }
 
 #[derive(Debug, Clone)]
 pub enum UiMessage {
 	SwitchPage(Page),
 	ToggleTheme,
+	Loaded(SavedState),
+	Save,
+	Saved,
 	OpenCreateNewProjectModal,
 	CloseCreateNewProjectModal,
 	ChangeCreateNewProjectName(String),
@@ -26,37 +42,23 @@ pub enum UiMessage {
 	OpenCreateNewTaskModal,
 	CloseCreateNewTaskModal,
 	ChangeCreateNewTaskName(String),
-	Save,
 }
 
 
-impl Sandbox for ProjectTrackerApp {
+impl Application for ProjectTrackerApp {
+	type Flags = ();
+	type Theme = Theme;
+	type Executor = iced::executor::Default;
 	type Message = UiMessage;
 
-	fn new() -> Self {
-		let projects = match std::fs::File::open("save.project_tracker") {
-			Ok(mut file) => {
-				let mut file_content = String::new();
-				if file.read_to_string(&mut file_content).is_ok() {
-					serde_json::from_str(&file_content).unwrap_or_default()
-				}
-				else {
-					Vec::new()
-				}
-			},
-			Err(e) => {
-				eprintln!("Failed to load previous projects: {e}");
-				Vec::new()
-			}
-		};
-
-		Self {
+	fn new(_flags: ()) -> (Self, Command<UiMessage>) {
+		(Self {
 			page: Page::StartPage{
 				create_new_project_modal: CreateNewProjectModal::new(),
 			},
-			projects,
-			dark_mode: true,
-		}
+			saved_state: None,
+		},
+		Command::perform(SavedState::load(), UiMessage::Loaded))
 	}
 
 	fn title(&self) -> String {
@@ -64,81 +66,135 @@ impl Sandbox for ProjectTrackerApp {
 	}
 
 	fn theme(&self) -> Theme {
-		if self.dark_mode {
-			Theme::Dark
+		if let Some(saved_state) = &self.saved_state {
+			if saved_state.dark_mode {
+				Theme::Dark
+			}
+			else {
+				Theme::Light
+			}
 		}
 		else {
-			Theme::Light
+			Theme::Dark
 		}
 	}
 
-	fn update(&mut self, message: UiMessage) {
+	fn subscription(&self) -> Subscription<Self::Message> {
+		keyboard::on_key_press(|key, modifiers| match key.as_ref() {
+			keyboard::Key::Character("s") if modifiers.command() => {
+				Some(UiMessage::Save)
+			},
+			_ => None,
+		})
+	}
+
+	fn update(&mut self, message: UiMessage) -> Command<UiMessage> {
 		match message {
-			UiMessage::SwitchPage(new_page) => self.page = new_page,
-			UiMessage::ToggleTheme => self.dark_mode = !self.dark_mode,
+			UiMessage::SwitchPage(new_page) => { self.page = new_page; Command::none() },
+			UiMessage::ToggleTheme => {
+				if let Some(saved_state) = &mut self.saved_state {
+					saved_state.dark_mode = !saved_state.dark_mode;
+				}
+				Command::none()
+			},
+			UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 			UiMessage::Save => {
-				match std::fs::File::create("save.project_tracker") {
-					Ok(mut file) => {
-						if let Err(e) = file.write_all(serde_json::to_string_pretty(&self.projects).unwrap().as_bytes()) {
-							eprintln!("Failed to write to save file: {e}");
-						}
-					},
-					Err(e) => eprintln!("Failed to save: {e}"),
+				if let Some(saved_state) = &self.saved_state {
+					Command::perform(saved_state.clone().save(), |_| UiMessage::Saved)
+				}
+				else {
+					Command::none()
 				}
 			},
+			UiMessage::Saved => Command::none(),
 			UiMessage::OpenCreateNewProjectModal => {
 				if let Page::StartPage { create_new_project_modal } = &mut self.page {
-					create_new_project_modal.open();
+					create_new_project_modal.open()
+				}
+				else {
+					Command::none()
 				}
 			},
 			UiMessage::CloseCreateNewProjectModal => {
 				if let Page::StartPage { create_new_project_modal } = &mut self.page {
 					create_new_project_modal.close();
 				}
+				Command::none()
 			},
 			UiMessage::ChangeCreateNewProjectName(new_project_name) => {
 				if let Page::StartPage { create_new_project_modal } = &mut self.page {
 					create_new_project_modal.project_name = new_project_name;
 				}
+				Command::none()
 			},
 			UiMessage::CreateProject(project_name) => {
-				self.projects.push(Project::new(project_name, Vec::new()));
-				self.update(UiMessage::CloseCreateNewProjectModal);
+				if let Some(saved_state) = &mut self.saved_state {
+					saved_state.projects.push(Project::new(project_name, Vec::new()));
+				}
+				Command::batch([
+					self.update(UiMessage::Save),
+					self.update(UiMessage::CloseCreateNewProjectModal),
+				])
 			},
 			UiMessage::CreateTask { project_name, task } => {
-				for project in self.projects.iter_mut() {
-					if project.name == *project_name {
-						project.tasks.push(task);
-						break;
+				if let Some(saved_state) = &mut self.saved_state {
+					for project in saved_state.projects.iter_mut() {
+						if project.name == *project_name {
+							project.tasks.push(task);
+							break;
+						}
 					}
 				}
-				self.update(UiMessage::CloseCreateNewTaskModal);
+				Command::batch([
+					self.update(UiMessage::Save),
+					self.update(UiMessage::CloseCreateNewTaskModal)
+				])
 			},
 			UiMessage::OpenCreateNewTaskModal => {
 				if let Page::ProjectPage { create_new_task_modal, .. } = &mut self.page {
 					create_new_task_modal.open();
 				}
+				Command::none()
 			},
 			UiMessage::CloseCreateNewTaskModal => {
 				if let Page::ProjectPage { create_new_task_modal, .. } = &mut self.page {
 					create_new_task_modal.close();
 				}
+				Command::none()
 			},
 			UiMessage::ChangeCreateNewTaskName(new_task_name) => {
 				if let Page::ProjectPage { create_new_task_modal, .. } = &mut self.page {
 					create_new_task_modal.task_name = new_task_name;
 				}
+				Command::none()
 			},
 		}
 	}
 
 	fn view(&self) -> Element<UiMessage> {
-		self.page.view(&self.projects)
+		self.page.view(&self)
 	}
 }
 
-impl Drop for ProjectTrackerApp {
-	fn drop(&mut self) {
-		self.update(UiMessage::Save);
+impl SavedState {
+	async fn load() -> SavedState {
+		match tokio::fs::read_to_string("save.project_tracker").await {
+			Ok(file_content) => {
+				serde_json::from_str(&file_content).unwrap_or_default()
+			},
+			Err(e) => {
+				eprintln!("Failed to load previous projects: {e}");
+				SavedState {
+					projects: Vec::new(),
+					dark_mode: true,
+				}
+			}
+		}
+	}
+
+	async fn save(self) {
+		if let Err(e) = tokio::fs::write("save.project_tracker", serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
+			eprintln!("Failed to save: {e}");
+		}
 	}
 }
