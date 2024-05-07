@@ -46,9 +46,7 @@ impl Page {
 						.map(|project_chunk| {
 						let project_row_views: Vec<Element<UiMessage>> = project_chunk
 							.iter()
-							.map(|project| {
-								project_preview(project).into()
-							})
+							.map(|project| project_preview(project))
 							.collect();
 						GridRow::with_elements(project_row_views)
 					}).collect();
@@ -56,7 +54,7 @@ impl Page {
 					scrollable(
 						Grid::with_rows(project_rows)
 							.width(Length::Fill)
-							.spacing(10.0)
+							.spacing(15.0)
 							.padding(10)
 					)
 					.width(Length::Fill).into()

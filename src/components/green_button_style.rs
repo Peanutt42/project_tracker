@@ -7,7 +7,7 @@ impl button::StyleSheet for GreenButtonStyle {
 
 	fn active(&self, _style: &Self::Style) -> button::Appearance {
 		button::Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 0.75, 0.0))),
+			background: Some(Background::Color(Color::from_rgb(0.0, 0.9, 0.0))),
 			..Default::default()
 		}
 	}
@@ -21,7 +21,7 @@ impl button::StyleSheet for GreenButtonStyle {
 
 	fn pressed(&self, _style: &Self::Style) -> button::Appearance {
 		button::Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 0.5, 0.0))),
+			background: Some(Background::Color(Color::from_rgb(0.0, 0.8, 0.0))),
 			..Default::default()
 		}
 	}

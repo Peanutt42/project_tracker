@@ -129,6 +129,6 @@ impl Application for ProjectTrackerApp {
 	}
 
 	fn view(&self) -> Element<UiMessage> {
-		self.page.view(&self)
+		self.page.view(self)
 	}
 }

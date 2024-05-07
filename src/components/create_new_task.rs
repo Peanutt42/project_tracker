@@ -1,4 +1,4 @@
-use iced::{theme, widget::{button, row, svg, text, Button, TextInput}, Length, alignment::Horizontal};
+use iced::{theme, widget::{button, row, svg, text, Button, TextInput}, Length, alignment::{Horizontal, Vertical}};
 use iced_aw::{CardStyles, Card};
 
 use crate::{project_tracker::UiMessage, task::{Task, TaskState}};
@@ -49,7 +49,8 @@ impl CreateNewTaskModal {
 			};
 
 			Some(Card::new(
-				text("Create new task"),
+				text("Create new task")
+					.vertical_alignment(Vertical::Center),
 				TextInput::new("task name", &self.task_name)
 					.on_input(|new_name| UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::ChangeTaskName(new_name)))
 					.on_submit(UiMessage::CreateTask {
@@ -62,6 +63,7 @@ impl CreateNewTaskModal {
 					button(
 						text("Create")
 							.horizontal_alignment(Horizontal::Center)
+							.vertical_alignment(Vertical::Center)
 					)
 						.width(Length::Fill)
 						.style(theme::Button::Custom(Box::new(GreenButtonStyle)))
@@ -69,9 +71,11 @@ impl CreateNewTaskModal {
 							project_name: project_name.clone(),
 							task: Task::new(self.task_name.clone(), TaskState::Todo)
 						}),
+
 					button(
 						text("Cancel")
 							.horizontal_alignment(Horizontal::Center)
+							.vertical_alignment(Vertical::Center)
 					)
 						.width(Length::Fill)
 						.style(theme::Button::Secondary)

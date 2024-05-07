@@ -1,4 +1,4 @@
-use iced::{theme, alignment::Horizontal, widget::{button, row, text, svg, Button, Text, TextInput}, Length};
+use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, row, svg, text, Button, Text, TextInput}, Length};
 use iced_aw::{Card, CardStyles};
 use crate::project_tracker::UiMessage;
 use crate::components::{GreenRoundButtonStyle, GreenButtonStyle};
@@ -48,9 +48,10 @@ impl CreateNewProjectModal {
 			};
 
 			Some(Card::new(
-				Text::new("Create Project"),
+				Text::new("Create Project")
+					.vertical_alignment(Vertical::Center),
 				TextInput::new("Project name", &self.project_name)
-        			.on_input(|new_name| UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::ChangeProjectName(new_name)))
+					.on_input(|new_name| UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::ChangeProjectName(new_name)))
 					.on_submit(UiMessage::CreateProject(self.project_name.clone()))
 			)
 			.foot(
@@ -58,6 +59,7 @@ impl CreateNewProjectModal {
 					button(
 						text("Create")
 							.horizontal_alignment(Horizontal::Center)
+							.vertical_alignment(Vertical::Center)
 					)
 					.width(Length::Fill)
 					.style(theme::Button::Custom(Box::new(GreenButtonStyle)))
@@ -66,6 +68,7 @@ impl CreateNewProjectModal {
 					button(
 						text("Cancel")
 							.horizontal_alignment(Horizontal::Center)
+							.vertical_alignment(Vertical::Center)
 					)
 					.width(Length::Fill)
 					.style(theme::Button::Secondary)
