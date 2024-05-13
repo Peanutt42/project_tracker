@@ -11,6 +11,12 @@ pub enum CreateNewTaskModalMessage {
 	ChangeTaskName(String),
 }
 
+impl From<CreateNewTaskModalMessage> for UiMessage {
+	fn from(value: CreateNewTaskModalMessage) -> UiMessage {
+		UiMessage::CreateNewTaskModalMessage(value)
+	}
+}
+
 #[derive(Debug, Clone)]
 pub struct CreateNewTaskModal {
 	opened: bool,
@@ -52,7 +58,7 @@ impl CreateNewTaskModal {
 				text("Create new task")
 					.vertical_alignment(Vertical::Center),
 				TextInput::new("task name", &self.task_name)
-					.on_input(|new_name| UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::ChangeTaskName(new_name)))
+					.on_input(|new_name| CreateNewTaskModalMessage::ChangeTaskName(new_name).into())
 					.on_submit(UiMessage::CreateTask {
 						project_name: project_name.clone(),
 						task: Task::new(self.task_name.clone(), TaskState::Todo)
@@ -79,7 +85,7 @@ impl CreateNewTaskModal {
 					)
 						.width(Length::Fill)
 						.style(theme::Button::Secondary)
-						.on_press(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Close))
+						.on_press(CreateNewTaskModalMessage::Close.into())
 				]
 			)
 			.style(card_style)
@@ -92,13 +98,13 @@ impl CreateNewTaskModal {
 }
 
 pub fn create_new_task_button() -> Button<'static, UiMessage> {
-	let add_task_svg = svg::Handle::from_path(format!("{}/assets/add_task.svg", env!("CARGO_MANIFEST_DIR")));
+	let add_task_svg = svg::Handle::from_memory(include_bytes!("../../assets/add_task.svg"));
 
 	button(
 		svg(add_task_svg)
 			.width(32)
 			.height(32)
 	)
-	.on_press(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Open))
+	.on_press(CreateNewTaskModalMessage::Open.into())
 	.style(theme::Button::Custom(Box::new(GreenRoundButtonStyle)))
 }

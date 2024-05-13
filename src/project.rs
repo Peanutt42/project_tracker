@@ -49,11 +49,12 @@ impl Project {
 			text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round())),
 			create_new_task_button(),
 			task_list(&self.tasks)
-		];
+		]
+		.spacing(10);
 
 		modal(project_view, create_new_task_modal.view(self.name.clone(), dark_mode))
-			.backdrop(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Close))
-			.on_esc(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Close))
+			.backdrop(CreateNewTaskModalMessage::Close.into())
+			.on_esc(CreateNewTaskModalMessage::Close.into())
 			.into()
 	}
 }

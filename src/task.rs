@@ -1,4 +1,5 @@
-use iced::{widget::text, Element};
+use iced::{widget::{text, row}, Element, Alignment};
+use iced_aw::{badge, BadgeStyles};
 use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
 
@@ -13,6 +14,20 @@ pub enum TaskState {
 impl TaskState {
 	pub fn is_done(&self) -> bool {
 		*self == TaskState::Done
+	}
+
+	pub fn view(&self) -> Element<UiMessage> {
+		match self {
+			TaskState::Todo => badge(text("Todo"))
+				.style(BadgeStyles::Default)
+				.into(),
+			TaskState::InProgress => badge(text("In Progress"))
+				.style(BadgeStyles::Warning)
+				.into(),
+			TaskState::Done => badge(text("Done"))
+				.style(BadgeStyles::Success)
+				.into(),
+		}
 	}
 }
 
@@ -35,6 +50,12 @@ impl Task {
 	}
 
 	pub fn view(&self) -> Element<UiMessage> {
-		text(format!("({:?}) {}", self.state, self.name)).into()
+		row![
+			self.state.view(),
+			text(&self.name)
+		]
+		.spacing(10)
+		.align_items(Alignment::Center)
+		.into()
 	}
 }

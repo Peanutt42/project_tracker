@@ -1,6 +1,6 @@
-use iced::{widget::{button, column, scrollable, text, container}, alignment::{Horizontal, Vertical}, Element, Length};
-use iced_aw::{modal, Grid, GridRow};
-use crate::project_tracker::{ProjectTrackerApp, UiMessage};
+use iced::{widget::{column, scrollable, text, container}, Element, Length};
+use iced_aw::{modal, Grid, GridRow, Spinner};
+use crate::{project_tracker::{ProjectTrackerApp, UiMessage}, theme_mode::ThemeMode};
 use crate::components::{home_button, project_preview, CreateNewProjectModal, create_new_project_button, CreateNewTaskModal, CreateNewProjectModalMessage, CreateNewTaskModalMessage};
 
 
@@ -31,7 +31,11 @@ impl Page {
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		let dark_mode = if let Some(saved_state) = &app.saved_state {
-			saved_state.dark_mode
+			match &saved_state.theme_mode {
+				ThemeMode::Dark => true,
+				ThemeMode::Light => false,
+				ThemeMode::System => app.is_system_theme_dark
+			}
 		}
 		else {
 			true
@@ -57,19 +61,19 @@ impl Page {
 							.spacing(15.0)
 							.padding(10)
 					)
-					.width(Length::Fill).into()
+					.width(Length::Fill)
+					.into()
 				}
 				else {
 					container(
-						text("loading...")
-							.horizontal_alignment(Horizontal::Center)
-							.vertical_alignment(Vertical::Center)
-							.size(50)
+						Spinner::new()
+							.width(Length::Fixed(75.0))
+							.height(Length::Fixed(75.0)).circle_radius(3.0)
 					)
-					.center_x()
-					.center_y()
 					.width(Length::Fill)
 					.height(Length::Fill)
+					.center_x()
+					.center_y()
 					.into()
 				};
 
@@ -79,8 +83,8 @@ impl Page {
 				];
 
 				modal(background, create_new_project_modal.view(dark_mode))
-					.backdrop(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close))
-					.on_esc(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close))
+					.backdrop(CreateNewProjectModalMessage::Close.into())
+					.on_esc(CreateNewProjectModalMessage::Close.into())
 					.into()
 			},
 			Page::ProjectPage { project_name, create_new_task_modal } => {
@@ -101,8 +105,9 @@ impl Page {
 					column![
 						home_button(),
 						project_element,
-						button("theme").on_press(UiMessage::ToggleTheme)
-					].into()
+					]
+					.spacing(10)
+					.into()
 				}
 				else {
 					column![].into()

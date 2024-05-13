@@ -10,6 +10,12 @@ pub enum CreateNewProjectModalMessage {
 	ChangeProjectName(String),
 }
 
+impl From<CreateNewProjectModalMessage> for UiMessage {
+	fn from(value: CreateNewProjectModalMessage) -> UiMessage {
+		UiMessage::CreateNewProjectModalMessage(value)
+	}
+}
+
 #[derive(Clone, Debug)]
 pub struct CreateNewProjectModal {
 	opened: bool,
@@ -51,7 +57,7 @@ impl CreateNewProjectModal {
 				Text::new("Create Project")
 					.vertical_alignment(Vertical::Center),
 				TextInput::new("Project name", &self.project_name)
-					.on_input(|new_name| UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::ChangeProjectName(new_name)))
+					.on_input(|new_name| CreateNewProjectModalMessage::ChangeProjectName(new_name).into())
 					.on_submit(UiMessage::CreateProject(self.project_name.clone()))
 			)
 			.foot(
@@ -72,7 +78,7 @@ impl CreateNewProjectModal {
 					)
 					.width(Length::Fill)
 					.style(theme::Button::Secondary)
-					.on_press(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close)),
+					.on_press(CreateNewProjectModalMessage::Close.into()),
 				]
 			)
 			.style(card_style)
@@ -86,13 +92,13 @@ impl CreateNewProjectModal {
 
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
-	let add_project_svg = svg::Handle::from_path(format!("{}/assets/add_project.svg", env!("CARGO_MANIFEST_DIR")));
+	let add_project_svg = svg::Handle::from_memory(include_bytes!("../../assets/add_project.svg"));
 
 	button(
 		svg(add_project_svg)
 			.width(32)
 			.height(32)
 	)
-	.on_press(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Open))
+	.on_press(CreateNewProjectModalMessage::Open.into())
 	.style(iced::theme::Button::Custom(Box::new(GreenRoundButtonStyle)))
 }

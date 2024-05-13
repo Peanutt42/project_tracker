@@ -1,18 +1,23 @@
-use iced::{Application, Command, Subscription, Element, Theme, keyboard};
-use crate::{components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModalMessage}, project::Project};
-use crate::task::Task;
-use crate::page::Page;
-use crate::saved_state::SavedState;
+use iced::{keyboard, Application, Command, Element, Subscription, Theme};
+use crate::{
+	components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModalMessage},
+	project::Project,
+	task::Task,
+	page::Page,
+	saved_state::SavedState,
+	theme_mode::{ThemeMode, is_system_theme_dark, get_theme, system_theme_subscription},
+};
 
 pub struct ProjectTrackerApp {
 	pub page: Page,
 	pub saved_state: Option<SavedState>,
+	pub is_system_theme_dark: bool,
 }
 
 #[derive(Debug, Clone)]
 pub enum UiMessage {
+	SystemTheme { is_dark: bool },
 	SwitchPage(Page),
-	ToggleTheme,
 	Loaded(SavedState),
 	Save,
 	Saved,
@@ -38,6 +43,7 @@ impl Application for ProjectTrackerApp {
 				create_new_project_modal: CreateNewProjectModal::new(),
 			},
 			saved_state: None,
+			is_system_theme_dark: is_system_theme_dark(),
 		},
 		Command::perform(SavedState::load(), UiMessage::Loaded))
 	}
@@ -48,32 +54,34 @@ impl Application for ProjectTrackerApp {
 
 	fn theme(&self) -> Theme {
 		if let Some(saved_state) = &self.saved_state {
-			if saved_state.dark_mode {
-				Theme::Dark
-			}
-			else {
-				Theme::Light
+			match saved_state.theme_mode {
+				ThemeMode::System => get_theme(self.is_system_theme_dark),
+				ThemeMode::Dark => get_theme(true),
+				ThemeMode::Light => get_theme(false),
 			}
 		}
 		else {
-			Theme::Dark
+			get_theme(self.is_system_theme_dark)
 		}
 	}
 
 	fn subscription(&self) -> Subscription<Self::Message> {
-		keyboard::on_key_press(|key, modifiers| match key.as_ref() {
-			keyboard::Key::Character("s") if modifiers.command() => {
-				Some(UiMessage::Save)
-			},
-			_ => None,
-		})
+		Subscription::batch([
+			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
+				keyboard::Key::Character("s") if modifiers.command() => {
+					Some(UiMessage::Save)
+				},
+				_ => None,
+			}),
+			system_theme_subscription(),
+		])
 	}
 
 	fn update(&mut self, message: UiMessage) -> Command<UiMessage> {
 		if let Some(saved_state) = &mut self.saved_state {
 			match message {
+				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
 				UiMessage::SwitchPage(new_page) => { self.page = new_page; Command::none() },
-				UiMessage::ToggleTheme => { saved_state.dark_mode = !saved_state.dark_mode; Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::Save => Command::perform(saved_state.clone().save(), |_| UiMessage::Saved),
 				UiMessage::Saved => Command::none(),
@@ -82,7 +90,7 @@ impl Application for ProjectTrackerApp {
 
 					Command::batch([
 						self.update(UiMessage::Save),
-						self.update(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close)),
+						self.update(CreateNewProjectModalMessage::Close.into()),
 					])
 				},
 				UiMessage::CreateTask { project_name, task } => {
@@ -94,7 +102,7 @@ impl Application for ProjectTrackerApp {
 					}
 					Command::batch([
 						self.update(UiMessage::Save),
-						self.update(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Close))
+						self.update(CreateNewTaskModalMessage::Close.into())
 					])
 				},
 				UiMessage::CreateNewProjectModalMessage(message) => {
@@ -109,13 +117,13 @@ impl Application for ProjectTrackerApp {
 		}
 		else {
 			match message {
+				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
 				UiMessage::SwitchPage(new_page) => { self.page = new_page; Command::none() },
-				UiMessage::ToggleTheme => Command::none(),
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::Save => Command::none(),
 				UiMessage::Saved => Command::none(),
-				UiMessage::CreateProject(_) => self.update(UiMessage::CreateNewProjectModalMessage(CreateNewProjectModalMessage::Close)),
-				UiMessage::CreateTask { .. } => self.update(UiMessage::CreateNewTaskModalMessage(CreateNewTaskModalMessage::Close)),
+				UiMessage::CreateProject(_) => self.update(CreateNewProjectModalMessage::Close.into()),
+				UiMessage::CreateTask { .. } => self.update(CreateNewTaskModalMessage::Close.into()),
 				UiMessage::CreateNewProjectModalMessage(message) => {
 					self.page.update_create_new_project_modal_message(message);
 					Command::none()

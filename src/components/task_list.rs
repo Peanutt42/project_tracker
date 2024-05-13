@@ -9,6 +9,7 @@ pub fn task_list(tasks: &[Task]) -> Element<UiMessage>{
 				.iter()
 				.map(|task| task.view())
 		)
+		.spacing(10)
 	)
 	.into()
 }

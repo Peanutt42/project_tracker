@@ -1,4 +1,4 @@
-use iced::{Settings, Application, window};
+use iced::{Settings, Application, window::{self, icon}};
 
 mod project;
 mod task;
@@ -6,15 +6,16 @@ mod project_tracker;
 use project_tracker::ProjectTrackerApp;
 mod page;
 mod saved_state;
-mod window_icon;
+mod theme_mode;
 mod components;
 
 fn main() -> Result<(), iced::Error> {
-	let icon = include_icon!("../assets/icon-handdrawn.png");
-
 	ProjectTrackerApp::run(Settings {
 		window: window::Settings {
-			icon,
+			icon: icon::from_file_data(
+				include_bytes!("../assets/icon-handdrawn.png"),
+				Some(image::ImageFormat::Png)
+			).ok(),
 			..Default::default()
 		},
 		..Default::default()
