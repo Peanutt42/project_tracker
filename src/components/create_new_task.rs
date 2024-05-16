@@ -1,8 +1,8 @@
-use iced::{theme, widget::{button, row, svg, text, Button, TextInput}, Length, alignment::{Horizontal, Vertical}};
+use iced::{theme, widget::{button, row, text, TextInput}, Length, alignment::{Horizontal, Vertical}};
 use iced_aw::{CardStyles, Card};
 
 use crate::{project_tracker::UiMessage, task::{Task, TaskState}};
-use crate::components::{GreenRoundButtonStyle, GreenButtonStyle};
+use crate::styles::{GreenButtonStyle, SecondaryButtonStyle};
 
 #[derive(Debug, Clone)]
 pub enum CreateNewTaskModalMessage {
@@ -84,7 +84,7 @@ impl CreateNewTaskModal {
 							.vertical_alignment(Vertical::Center)
 					)
 						.width(Length::Fill)
-						.style(theme::Button::Secondary)
+						.style(theme::Button::Custom(Box::new(SecondaryButtonStyle)))
 						.on_press(CreateNewTaskModalMessage::Close.into())
 				]
 			)
@@ -97,14 +97,8 @@ impl CreateNewTaskModal {
 	}
 }
 
-pub fn create_new_task_button() -> Button<'static, UiMessage> {
-	let add_task_svg = svg::Handle::from_memory(include_bytes!("../../assets/add_task.svg"));
-
-	button(
-		svg(add_task_svg)
-			.width(32)
-			.height(32)
-	)
-	.on_press(CreateNewTaskModalMessage::Open.into())
-	.style(theme::Button::Custom(Box::new(GreenRoundButtonStyle)))
+impl Default for CreateNewTaskModal {
+	fn default() -> Self {
+		Self::new()
+	}
 }

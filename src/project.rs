@@ -1,7 +1,7 @@
 use iced::{Element, widget::{column, text}};
 use iced_aw::modal;
 use serde::{Serialize, Deserialize};
-use crate::{components::{create_new_task_button, task_list, completion_bar, CreateNewTaskModal, CreateNewTaskModalMessage}, project_tracker::UiMessage};
+use crate::{components::{task_list, completion_bar, CreateNewTaskModal, CreateNewTaskModalMessage}, project_tracker::UiMessage};
 use crate::task::Task;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,10 +44,9 @@ impl Project {
 		let completion_percentage = Self::calculate_completion_percentage(tasks_done, tasks_len);
 
 		let project_view = column![
-			text(&self.name).size(21),
+			text(&self.name).size(35),
 			completion_bar(completion_percentage),
 			text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round())),
-			create_new_task_button(),
 			task_list(&self.tasks)
 		]
 		.spacing(10);

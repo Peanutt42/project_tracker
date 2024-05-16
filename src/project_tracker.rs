@@ -1,15 +1,15 @@
 use iced::{keyboard, Application, Command, Element, Subscription, Theme};
 use crate::{
-	components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModalMessage},
+	components::{CreateNewProjectModalMessage, CreateNewTaskModalMessage},
 	project::Project,
 	task::Task,
-	page::Page,
+	pages::{Page, StartPage, ProjectPage},
 	saved_state::SavedState,
 	theme_mode::{ThemeMode, is_system_theme_dark, get_theme, system_theme_subscription},
 };
 
 pub struct ProjectTrackerApp {
-	pub page: Page,
+	pub page: Box<dyn Page>,
 	pub saved_state: Option<SavedState>,
 	pub is_system_theme_dark: bool,
 }
@@ -17,7 +17,8 @@ pub struct ProjectTrackerApp {
 #[derive(Debug, Clone)]
 pub enum UiMessage {
 	SystemTheme { is_dark: bool },
-	SwitchPage(Page),
+	GotoStartPage,
+	GotoProjectPage(String),
 	Loaded(SavedState),
 	Save,
 	Saved,
@@ -30,6 +31,20 @@ pub enum UiMessage {
 	CreateNewTaskModalMessage(CreateNewTaskModalMessage),
 }
 
+impl ProjectTrackerApp {
+	pub fn is_dark_mode(&self) -> bool {
+		if let Some(saved_state) = &self.saved_state {
+			match &saved_state.theme_mode {
+				ThemeMode::Dark => true,
+				ThemeMode::Light => false,
+				ThemeMode::System => self.is_system_theme_dark
+			}
+		}
+		else {
+			true
+		}
+	}
+}
 
 impl Application for ProjectTrackerApp {
 	type Flags = ();
@@ -39,9 +54,7 @@ impl Application for ProjectTrackerApp {
 
 	fn new(_flags: ()) -> (Self, Command<UiMessage>) {
 		(Self {
-			page: Page::StartPage{
-				create_new_project_modal: CreateNewProjectModal::new(),
-			},
+			page: Box::new(StartPage::new()),
 			saved_state: None,
 			is_system_theme_dark: is_system_theme_dark(),
 		},
@@ -81,7 +94,8 @@ impl Application for ProjectTrackerApp {
 		if let Some(saved_state) = &mut self.saved_state {
 			match message {
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
-				UiMessage::SwitchPage(new_page) => { self.page = new_page; Command::none() },
+				UiMessage::GotoStartPage => { self.page = Box::new(StartPage::new()); Command::none() },
+				UiMessage::GotoProjectPage(project_name) => { self.page = Box::new(ProjectPage::new(project_name)); Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::Save => Command::perform(saved_state.clone().save(), |_| UiMessage::Saved),
 				UiMessage::Saved => Command::none(),
@@ -106,11 +120,11 @@ impl Application for ProjectTrackerApp {
 					])
 				},
 				UiMessage::CreateNewProjectModalMessage(message) => {
-					self.page.update_create_new_project_modal_message(message);
+					self.page.update_create_new_project_modal(message);
 					Command::none()
 				},
 				UiMessage::CreateNewTaskModalMessage(message) => {
-					self.page.update_create_new_task_modal_message(message);
+					self.page.update_create_new_task_modal(message);
 					Command::none()
 				},
 			}
@@ -118,18 +132,19 @@ impl Application for ProjectTrackerApp {
 		else {
 			match message {
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
-				UiMessage::SwitchPage(new_page) => { self.page = new_page; Command::none() },
+				UiMessage::GotoStartPage => { self.page = Box::new(StartPage::new()); Command::none() },
+				UiMessage::GotoProjectPage(project_name) => { self.page = Box::new(ProjectPage::new(project_name)); Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::Save => Command::none(),
 				UiMessage::Saved => Command::none(),
 				UiMessage::CreateProject(_) => self.update(CreateNewProjectModalMessage::Close.into()),
 				UiMessage::CreateTask { .. } => self.update(CreateNewTaskModalMessage::Close.into()),
 				UiMessage::CreateNewProjectModalMessage(message) => {
-					self.page.update_create_new_project_modal_message(message);
+					self.page.update_create_new_project_modal(message);
 					Command::none()
 				},
 				UiMessage::CreateNewTaskModalMessage(message) => {
-					self.page.update_create_new_task_modal_message(message);
+					self.page.update_create_new_task_modal(message);
 					Command::none()
 				},
 			}

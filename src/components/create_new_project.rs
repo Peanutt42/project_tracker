@@ -1,7 +1,7 @@
-use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, row, svg, text, Button, Text, TextInput}, Length};
+use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, row, text, Text, TextInput}, Length};
 use iced_aw::{Card, CardStyles};
 use crate::project_tracker::UiMessage;
-use crate::components::{GreenRoundButtonStyle, GreenButtonStyle};
+use crate::styles::{GreenButtonStyle, SecondaryButtonStyle};
 
 #[derive(Debug, Clone)]
 pub enum CreateNewProjectModalMessage {
@@ -77,7 +77,7 @@ impl CreateNewProjectModal {
 							.vertical_alignment(Vertical::Center)
 					)
 					.width(Length::Fill)
-					.style(theme::Button::Secondary)
+					.style(theme::Button::Custom(Box::new(SecondaryButtonStyle)))
 					.on_press(CreateNewProjectModalMessage::Close.into()),
 				]
 			)
@@ -90,15 +90,8 @@ impl CreateNewProjectModal {
 	}
 }
 
-
-pub fn create_new_project_button() -> Button<'static, UiMessage> {
-	let add_project_svg = svg::Handle::from_memory(include_bytes!("../../assets/add_project.svg"));
-
-	button(
-		svg(add_project_svg)
-			.width(32)
-			.height(32)
-	)
-	.on_press(CreateNewProjectModalMessage::Open.into())
-	.style(iced::theme::Button::Custom(Box::new(GreenRoundButtonStyle)))
+impl Default for CreateNewProjectModal {
+	fn default() -> Self {
+		Self::new()
+	}
 }

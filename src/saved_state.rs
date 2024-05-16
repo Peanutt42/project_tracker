@@ -12,13 +12,10 @@ impl SavedState {
 	pub async fn load() -> SavedState {
 		match tokio::fs::read_to_string("save.project_tracker").await {
 			Ok(file_content) => {
-				match serde_json::from_str(&file_content) {
-					Ok(saved_state) => saved_state,
-					Err(_) => {
-						println!("Failed to load previous projects");
-						SavedState::default()
-					}
-				}
+				serde_json::from_str(&file_content).unwrap_or_else(|_| {
+					println!("Failed to load previous projects");
+					SavedState::default()
+				})
 			},
 			Err(_) => {
 				println!("Could not find previous projects");

@@ -4,10 +4,11 @@ mod project;
 mod task;
 mod project_tracker;
 use project_tracker::ProjectTrackerApp;
-mod page;
 mod saved_state;
 mod theme_mode;
 mod components;
+mod pages;
+mod styles;
 
 fn main() -> Result<(), iced::Error> {
 	ProjectTrackerApp::run(Settings {
@@ -18,6 +19,7 @@ fn main() -> Result<(), iced::Error> {
 			).ok(),
 			..Default::default()
 		},
+		antialiasing: true,
 		..Default::default()
 	})
 }
