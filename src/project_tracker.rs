@@ -1,7 +1,7 @@
 use iced::{keyboard, widget::{container, text}, Application, Command, Element, Length, Subscription, Theme};
-use iced_aw::{Split, modal};
+use iced_aw::{Split, SplitStyles, modal};
 use crate::{
-	components::{CreateNewProjectModal, CreateNewTaskModal, CreateNewProjectModalMessage, CreateNewTaskModalMessage}, pages::{ProjectListPage, ProjectPage}, project::{Project, Task}, saved_state::SavedState, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModal, CreateNewTaskModalMessage}, pages::{ProjectListPage, ProjectPage}, project::{Project, Task}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
@@ -175,6 +175,7 @@ impl Application for ProjectTrackerApp {
 			iced_aw::split::Axis::Vertical,
 			UiMessage::SidebarMoved
 		)
+		.style(SplitStyles::custom(SplitStyle))
 		.into();
 
 		let is_dark_mode = self.is_dark_mode();
