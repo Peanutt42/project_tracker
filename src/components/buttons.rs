@@ -1,8 +1,8 @@
-use iced::{theme, widget::{button, svg, Button}};
+use iced::{theme, Length, alignment::{Horizontal, Vertical}, widget::{button, svg, text, Button}};
 use crate::{
 	project_tracker::UiMessage,
 	components::{CreateNewProjectModalMessage, CreateNewTaskModalMessage},
-	styles::GreenCircleButtonStyle,
+	styles::{GreenCircleButtonStyle, ProjectPreviewButtonStyle},
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -27,4 +27,17 @@ pub fn create_new_task_button() -> Button<'static, UiMessage> {
 	)
 	.on_press(CreateNewTaskModalMessage::Open.into())
 	.style(theme::Button::custom(GreenCircleButtonStyle))
+}
+
+pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
+	button(
+		text("Todo Overview")
+			.size(25)
+			.width(Length::Fill)
+			.horizontal_alignment(Horizontal::Center)
+			.vertical_alignment(Vertical::Center)
+	)
+	.width(Length::Fill)
+	.on_press(UiMessage::OpenOverview)
+	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
 }

@@ -1,12 +1,13 @@
-use iced::{keyboard, widget::{container, text}, Application, Command, Element, Length, Subscription, Theme};
+use iced::{keyboard, Application, Command, Element, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, modal};
 use crate::{
-	components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModal, CreateNewTaskModalMessage}, pages::{ProjectListPage, ProjectPage}, project::{Project, Task}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModal, CreateNewTaskModalMessage}, pages::{SidebarPage, ProjectPage, OverviewPage}, project::{Project, Task}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
-	pub project_list_page: ProjectListPage,
-	pub project_page: Option<ProjectPage>,
+	pub sidebar_page: SidebarPage,
+	pub content_page: ContentPage,
+	pub selected_page_name: String,
 	pub sidebar_position: Option<u16>,
 	create_new_project_modal: CreateNewProjectModal,
 	create_new_task_modal: CreateNewTaskModal,
@@ -21,6 +22,7 @@ pub enum UiMessage {
 	Save,
 	Saved,
 	SidebarMoved(u16),
+	OpenOverview,
 	SelectProject(String),
 	CreateProject(String),
 	CreateTask {
@@ -54,8 +56,9 @@ impl Application for ProjectTrackerApp {
 
 	fn new(_flags: ()) -> (Self, Command<UiMessage>) {
 		(Self {
-			project_list_page: ProjectListPage::new(),
-			project_page: None,
+			sidebar_page: SidebarPage::new(),
+			content_page: ContentPage::OverviewPage(OverviewPage::new()),
+			selected_page_name: String::new(),
 			sidebar_position: Some(250),
 			create_new_project_modal: CreateNewProjectModal::new(),
 			create_new_task_modal: CreateNewTaskModal::new(),
@@ -102,7 +105,16 @@ impl Application for ProjectTrackerApp {
 				UiMessage::Save => Command::perform(saved_state.clone().save(), |_| UiMessage::Saved),
 				UiMessage::Saved => Command::none(),
 				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
-				UiMessage::SelectProject(project_name) => { self.project_page = Some(ProjectPage::new(project_name)); Command::none() },
+				UiMessage::OpenOverview => {
+					self.content_page = ContentPage::OverviewPage(OverviewPage::new());
+					self.selected_page_name = String::new();
+					Command::none()
+				},
+				UiMessage::SelectProject(project_name) => {
+					self.selected_page_name = project_name.clone();
+					self.content_page = ContentPage::ProjectPage(ProjectPage::new(project_name));
+					Command::none()
+				},
 				UiMessage::CreateProject(project_name) => {
 					saved_state.projects.push(Project::new(project_name, Vec::new()));
 
@@ -140,7 +152,16 @@ impl Application for ProjectTrackerApp {
 				UiMessage::Save => Command::none(),
 				UiMessage::Saved => Command::none(),
 				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
-				UiMessage::SelectProject(project_name) => { self.project_page = Some(ProjectPage::new(project_name)); Command::none() },
+				UiMessage::OpenOverview => {
+					self.content_page = ContentPage::OverviewPage(OverviewPage::new());
+					self.selected_page_name = String::new();
+					Command::none()
+				},
+				UiMessage::SelectProject(project_name) => {
+					self.selected_page_name = project_name.clone();
+					self.content_page = ContentPage::ProjectPage(ProjectPage::new(project_name));
+					Command::none()
+				},
 				UiMessage::CreateProject(_) => self.update(CreateNewProjectModalMessage::Close.into()),
 				UiMessage::CreateTask { .. } => self.update(CreateNewTaskModalMessage::Close.into()),
 				UiMessage::CreateNewProjectModalMessage(message) => {
@@ -156,21 +177,9 @@ impl Application for ProjectTrackerApp {
 	}
 
 	fn view(&self) -> Element<UiMessage> {
-		let project_page = if let Some(project_page) = &self.project_page {
-			project_page.view(self)
-		}
-		else {
-			container(text("select project"))
-				.width(Length::Fill)
-				.height(Length::Fill)
-				.center_x()
-				.center_y()
-				.into()
-		};
-
 		let underlay: Element<UiMessage> = Split::new(
-			self.project_list_page.view(self),
-			project_page,
+			self.sidebar_page.view(self),
+			self.content_page.view(self),
 			self.sidebar_position,
 			iced_aw::split::Axis::Vertical,
 			UiMessage::SidebarMoved
@@ -180,12 +189,31 @@ impl Application for ProjectTrackerApp {
 
 		let is_dark_mode = self.is_dark_mode();
 
-		let selected_project_name = if let Some(project_page) = &self.project_page { project_page.project_name.clone() } else { String::new() };
-		let modal_view = self.create_new_project_modal.view(is_dark_mode).or(self.create_new_task_modal.view(selected_project_name, is_dark_mode));
+		let modal_view = self.create_new_project_modal.view(is_dark_mode).or(self.create_new_task_modal.view(self.selected_page_name.clone(), is_dark_mode));
 		let close_modal_message: UiMessage = if self.create_new_project_modal.is_opened() { CreateNewProjectModalMessage::Close.into() } else { CreateNewTaskModalMessage::Close.into() };
 		modal(underlay, modal_view)
 				.backdrop(close_modal_message.clone())
 				.on_esc(close_modal_message)
 				.into()
+	}
+}
+
+pub enum ContentPage {
+	ProjectPage(ProjectPage),
+	OverviewPage(OverviewPage),
+}
+
+impl ContentPage {
+	pub fn is_overview_page(&self) -> bool {
+		matches!(self, ContentPage::OverviewPage(_))
+	}
+}
+
+impl ContentPage {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
+		match self {
+			ContentPage::ProjectPage(project_page) => project_page.view(app),
+			ContentPage::OverviewPage(todo_overview_page) => todo_overview_page.view(app),
+		}
 	}
 }
