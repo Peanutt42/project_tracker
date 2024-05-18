@@ -18,13 +18,13 @@ impl TaskState {
 
 	pub fn view(&self) -> Element<UiMessage> {
 		match self {
-			TaskState::Todo => badge(text("Todo"))
+			TaskState::Todo => badge(text("Todo").size(15))
 				.style(BadgeStyles::Default)
 				.into(),
-			TaskState::InProgress => badge(text("In Progress"))
+			TaskState::InProgress => badge(text("In Progress").size(15))
 				.style(BadgeStyles::Warning)
 				.into(),
-			TaskState::Done => badge(text("Done"))
+			TaskState::Done => badge(text("Done").size(15))
 				.style(BadgeStyles::Success)
 				.into(),
 		}
