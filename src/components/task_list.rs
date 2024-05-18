@@ -1,6 +1,6 @@
 use iced::{Element, widget::{column, scrollable}};
 use crate::project_tracker::UiMessage;
-use crate::task::Task;
+use crate::project::Task;
 
 pub fn task_list(tasks: &[Task]) -> Element<UiMessage>{
 	scrollable(

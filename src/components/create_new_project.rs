@@ -30,6 +30,10 @@ impl CreateNewProjectModal {
 		}
 	}
 
+	pub fn is_opened(&self) -> bool {
+		self.opened
+	}
+
 	pub fn update(&mut self, message: CreateNewProjectModalMessage) {
 		match message {
 			CreateNewProjectModalMessage::Open => {
@@ -68,7 +72,7 @@ impl CreateNewProjectModal {
 							.vertical_alignment(Vertical::Center)
 					)
 					.width(Length::Fill)
-					.style(theme::Button::Custom(Box::new(GreenButtonStyle)))
+					.style(theme::Button::custom(GreenButtonStyle))
 					.on_press(UiMessage::CreateProject(self.project_name.clone())),
 
 					button(
@@ -77,7 +81,7 @@ impl CreateNewProjectModal {
 							.vertical_alignment(Vertical::Center)
 					)
 					.width(Length::Fill)
-					.style(theme::Button::Custom(Box::new(SecondaryButtonStyle)))
+					.style(theme::Button::custom(SecondaryButtonStyle))
 					.on_press(CreateNewProjectModalMessage::Close.into()),
 				]
 			)

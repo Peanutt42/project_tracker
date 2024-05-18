@@ -1,7 +1,7 @@
 use iced::{theme, widget::{button, row, text, TextInput}, Length, alignment::{Horizontal, Vertical}};
 use iced_aw::{CardStyles, Card};
 
-use crate::{project_tracker::UiMessage, task::{Task, TaskState}};
+use crate::{project_tracker::UiMessage, project::{Task, TaskState}};
 use crate::styles::{GreenButtonStyle, SecondaryButtonStyle};
 
 #[derive(Debug, Clone)]
@@ -19,7 +19,7 @@ impl From<CreateNewTaskModalMessage> for UiMessage {
 
 #[derive(Debug, Clone)]
 pub struct CreateNewTaskModal {
-	opened: bool,
+	pub opened: bool,
 	pub task_name: String,
 }
 
@@ -72,7 +72,7 @@ impl CreateNewTaskModal {
 							.vertical_alignment(Vertical::Center)
 					)
 						.width(Length::Fill)
-						.style(theme::Button::Custom(Box::new(GreenButtonStyle)))
+						.style(theme::Button::custom(GreenButtonStyle))
 						.on_press(UiMessage::CreateTask {
 							project_name: project_name.clone(),
 							task: Task::new(self.task_name.clone(), TaskState::Todo)
@@ -84,7 +84,7 @@ impl CreateNewTaskModal {
 							.vertical_alignment(Vertical::Center)
 					)
 						.width(Length::Fill)
-						.style(theme::Button::Custom(Box::new(SecondaryButtonStyle)))
+						.style(theme::Button::custom(SecondaryButtonStyle))
 						.on_press(CreateNewTaskModalMessage::Close.into())
 				]
 			)

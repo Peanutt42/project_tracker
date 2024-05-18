@@ -1,15 +1,15 @@
-use iced::{keyboard, Application, Command, Element, Subscription, Theme};
+use iced::{keyboard, widget::{container, text}, Application, Command, Element, Length, Subscription, Theme};
+use iced_aw::{Split, modal};
 use crate::{
-	components::{CreateNewProjectModalMessage, CreateNewTaskModalMessage},
-	project::Project,
-	task::Task,
-	pages::{Page, StartPage, ProjectPage},
-	saved_state::SavedState,
-	theme_mode::{ThemeMode, is_system_theme_dark, get_theme, system_theme_subscription},
+	components::{CreateNewProjectModal, CreateNewTaskModal, CreateNewProjectModalMessage, CreateNewTaskModalMessage}, pages::{ProjectListPage, ProjectPage}, project::{Project, Task}, saved_state::SavedState, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
-	pub page: Box<dyn Page>,
+	pub project_list_page: ProjectListPage,
+	pub project_page: Option<ProjectPage>,
+	pub sidebar_position: Option<u16>,
+	create_new_project_modal: CreateNewProjectModal,
+	create_new_task_modal: CreateNewTaskModal,
 	pub saved_state: Option<SavedState>,
 	pub is_system_theme_dark: bool,
 }
@@ -17,11 +17,11 @@ pub struct ProjectTrackerApp {
 #[derive(Debug, Clone)]
 pub enum UiMessage {
 	SystemTheme { is_dark: bool },
-	GotoStartPage,
-	GotoProjectPage(String),
 	Loaded(SavedState),
 	Save,
 	Saved,
+	SidebarMoved(u16),
+	SelectProject(String),
 	CreateProject(String),
 	CreateTask {
 		project_name: String,
@@ -54,7 +54,11 @@ impl Application for ProjectTrackerApp {
 
 	fn new(_flags: ()) -> (Self, Command<UiMessage>) {
 		(Self {
-			page: Box::new(StartPage::new()),
+			project_list_page: ProjectListPage::new(),
+			project_page: None,
+			sidebar_position: Some(250),
+			create_new_project_modal: CreateNewProjectModal::new(),
+			create_new_task_modal: CreateNewTaskModal::new(),
 			saved_state: None,
 			is_system_theme_dark: is_system_theme_dark(),
 		},
@@ -94,11 +98,11 @@ impl Application for ProjectTrackerApp {
 		if let Some(saved_state) = &mut self.saved_state {
 			match message {
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
-				UiMessage::GotoStartPage => { self.page = Box::new(StartPage::new()); Command::none() },
-				UiMessage::GotoProjectPage(project_name) => { self.page = Box::new(ProjectPage::new(project_name)); Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::Save => Command::perform(saved_state.clone().save(), |_| UiMessage::Saved),
 				UiMessage::Saved => Command::none(),
+				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
+				UiMessage::SelectProject(project_name) => { self.project_page = Some(ProjectPage::new(project_name)); Command::none() },
 				UiMessage::CreateProject(project_name) => {
 					saved_state.projects.push(Project::new(project_name, Vec::new()));
 
@@ -120,11 +124,11 @@ impl Application for ProjectTrackerApp {
 					])
 				},
 				UiMessage::CreateNewProjectModalMessage(message) => {
-					self.page.update_create_new_project_modal(message);
+					self.create_new_project_modal.update(message);
 					Command::none()
 				},
 				UiMessage::CreateNewTaskModalMessage(message) => {
-					self.page.update_create_new_task_modal(message);
+					self.create_new_task_modal.update(message);
 					Command::none()
 				},
 			}
@@ -132,19 +136,19 @@ impl Application for ProjectTrackerApp {
 		else {
 			match message {
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
-				UiMessage::GotoStartPage => { self.page = Box::new(StartPage::new()); Command::none() },
-				UiMessage::GotoProjectPage(project_name) => { self.page = Box::new(ProjectPage::new(project_name)); Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::Save => Command::none(),
 				UiMessage::Saved => Command::none(),
+				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
+				UiMessage::SelectProject(project_name) => { self.project_page = Some(ProjectPage::new(project_name)); Command::none() },
 				UiMessage::CreateProject(_) => self.update(CreateNewProjectModalMessage::Close.into()),
 				UiMessage::CreateTask { .. } => self.update(CreateNewTaskModalMessage::Close.into()),
 				UiMessage::CreateNewProjectModalMessage(message) => {
-					self.page.update_create_new_project_modal(message);
+					self.create_new_project_modal.update(message);
 					Command::none()
 				},
 				UiMessage::CreateNewTaskModalMessage(message) => {
-					self.page.update_create_new_task_modal(message);
+					self.create_new_task_modal.update(message);
 					Command::none()
 				},
 			}
@@ -152,6 +156,35 @@ impl Application for ProjectTrackerApp {
 	}
 
 	fn view(&self) -> Element<UiMessage> {
-		self.page.view(self)
+		let project_page = if let Some(project_page) = &self.project_page {
+			project_page.view(self)
+		}
+		else {
+			container(text("select project"))
+				.width(Length::Fill)
+				.height(Length::Fill)
+				.center_x()
+				.center_y()
+				.into()
+		};
+
+		let underlay: Element<UiMessage> = Split::new(
+			self.project_list_page.view(self),
+			project_page,
+			self.sidebar_position,
+			iced_aw::split::Axis::Vertical,
+			UiMessage::SidebarMoved
+		)
+		.into();
+
+		let is_dark_mode = self.is_dark_mode();
+
+		let selected_project_name = if let Some(project_page) = &self.project_page { project_page.project_name.clone() } else { String::new() };
+		let modal_view = self.create_new_project_modal.view(is_dark_mode).or(self.create_new_task_modal.view(selected_project_name, is_dark_mode));
+		let close_modal_message: UiMessage = if self.create_new_project_modal.is_opened() { CreateNewProjectModalMessage::Close.into() } else { CreateNewTaskModalMessage::Close.into() };
+		modal(underlay, modal_view)
+				.backdrop(close_modal_message.clone())
+				.on_esc(close_modal_message)
+				.into()
 	}
 }
