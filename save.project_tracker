@@ -13,7 +13,7 @@
         },
         {
           "name": "test",
-          "state": "Done"
+          "state": "InProgress"
         },
         {
           "name": "task3",
@@ -52,7 +52,7 @@
       "tasks": [
         {
           "name": "test 2 2 1 123",
-          "state": "Todo"
+          "state": "InProgress"
         }
       ]
     },

@@ -3,12 +3,30 @@ use serde::{Serialize, Deserialize};
 
 use crate::project_tracker::UiMessage;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ThemeMode {
 	#[default]
 	System,
 	Dark,
 	Light
+}
+
+impl ThemeMode {
+	pub const ALL: [ThemeMode; 3] = [
+		ThemeMode::System,
+		ThemeMode::Dark,
+		ThemeMode::Light,
+	];
+}
+
+impl std::fmt::Display for ThemeMode {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			ThemeMode::System => f.write_str("System"),
+			ThemeMode::Dark => f.write_str("Dark"),
+			ThemeMode::Light => f.write_str("Light"),
+		}
+	}
 }
 
 pub fn get_theme(dark_mode: bool) -> Theme {

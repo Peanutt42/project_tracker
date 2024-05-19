@@ -1,5 +1,5 @@
 use iced::{widget::{scrollable, container, Column, column}, Element, Length, alignment::Horizontal};
-use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, horizontal_seperator};
+use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, horizontal_seperator, settings_button};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 use crate::project::Project;
 
@@ -60,6 +60,10 @@ impl SidebarPage {
 				.width(Length::Fill),
 
 			list,
+
+			container(settings_button())
+				.height(Length::Fill)
+				.align_y(iced::alignment::Vertical::Bottom)
 		]
 		.spacing(5)
 		.into()

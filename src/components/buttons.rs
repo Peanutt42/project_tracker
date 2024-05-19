@@ -29,6 +29,17 @@ pub fn create_new_task_button() -> Button<'static, UiMessage> {
 	.style(theme::Button::custom(GreenCircleButtonStyle))
 }
 
+pub fn settings_button() -> Button<'static, UiMessage> {
+	let settings_svg = svg::Handle::from_memory(include_bytes!("../../assets/settings.svg"));
+	
+	button(
+		svg(settings_svg)
+			.width(28)
+			.height(28)
+	)
+	.on_press(UiMessage::OpenSettings)
+}
+
 pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
 	button(
 		text("Todo Overview")

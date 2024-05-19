@@ -1,7 +1,12 @@
 use iced::{keyboard, Application, Command, Element, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, modal};
 use crate::{
-	components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModal, CreateNewTaskModalMessage}, pages::{SidebarPage, ProjectPage, OverviewPage}, project::{Project, Task}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModal, CreateNewTaskModalMessage},
+	pages::{SidebarPage, ProjectPage, OverviewPage, SettingsPage},
+	project::{Project, Task},
+	saved_state::SavedState,
+	styles::SplitStyle,
+	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
@@ -23,6 +28,8 @@ pub enum UiMessage {
 	Saved,
 	SidebarMoved(u16),
 	OpenOverview,
+	OpenSettings,
+	SetThemeMode(ThemeMode),
 	SelectProject(String),
 	CreateProject(String),
 	CreateTask {
@@ -57,7 +64,7 @@ impl Application for ProjectTrackerApp {
 	fn new(_flags: ()) -> (Self, Command<UiMessage>) {
 		(Self {
 			sidebar_page: SidebarPage::new(),
-			content_page: ContentPage::OverviewPage(OverviewPage::new()),
+			content_page: ContentPage::Overview(OverviewPage::new()),
 			selected_page_name: String::new(),
 			sidebar_position: Some(250),
 			create_new_project_modal: CreateNewProjectModal::new(),
@@ -106,13 +113,19 @@ impl Application for ProjectTrackerApp {
 				UiMessage::Saved => Command::none(),
 				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
 				UiMessage::OpenOverview => {
-					self.content_page = ContentPage::OverviewPage(OverviewPage::new());
-					self.selected_page_name = String::new();
+					self.content_page = ContentPage::Overview(OverviewPage::new());
+					self.selected_page_name.clear();
 					Command::none()
 				},
+				UiMessage::OpenSettings => {
+					self.content_page = ContentPage::Settings(SettingsPage::new());
+					self.selected_page_name.clear();
+					Command::none()
+				},
+				UiMessage::SetThemeMode(theme_mode) => { saved_state.theme_mode = theme_mode; self.update(UiMessage::Save) }
 				UiMessage::SelectProject(project_name) => {
 					self.selected_page_name = project_name.clone();
-					self.content_page = ContentPage::ProjectPage(ProjectPage::new(project_name));
+					self.content_page = ContentPage::Project(ProjectPage::new(project_name));
 					Command::none()
 				},
 				UiMessage::CreateProject(project_name) => {
@@ -153,13 +166,19 @@ impl Application for ProjectTrackerApp {
 				UiMessage::Saved => Command::none(),
 				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
 				UiMessage::OpenOverview => {
-					self.content_page = ContentPage::OverviewPage(OverviewPage::new());
-					self.selected_page_name = String::new();
+					self.content_page = ContentPage::Overview(OverviewPage::new());
+					self.selected_page_name.clear();
 					Command::none()
 				},
+				UiMessage::OpenSettings => {
+					self.content_page = ContentPage::Settings(SettingsPage::new());
+					self.selected_page_name.clear();
+					Command::none()
+				},
+				UiMessage::SetThemeMode(_) => Command::none(),
 				UiMessage::SelectProject(project_name) => {
 					self.selected_page_name = project_name.clone();
-					self.content_page = ContentPage::ProjectPage(ProjectPage::new(project_name));
+					self.content_page = ContentPage::Project(ProjectPage::new(project_name));
 					Command::none()
 				},
 				UiMessage::CreateProject(_) => self.update(CreateNewProjectModalMessage::Close.into()),
@@ -199,21 +218,23 @@ impl Application for ProjectTrackerApp {
 }
 
 pub enum ContentPage {
-	ProjectPage(ProjectPage),
-	OverviewPage(OverviewPage),
+	Project(ProjectPage),
+	Overview(OverviewPage),
+	Settings(SettingsPage),
 }
 
 impl ContentPage {
 	pub fn is_overview_page(&self) -> bool {
-		matches!(self, ContentPage::OverviewPage(_))
+		matches!(self, ContentPage::Overview(_))
 	}
 }
 
 impl ContentPage {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		match self {
-			ContentPage::ProjectPage(project_page) => project_page.view(app),
-			ContentPage::OverviewPage(todo_overview_page) => todo_overview_page.view(app),
+			ContentPage::Project(project_page) => project_page.view(app),
+			ContentPage::Overview(overview_page) => overview_page.view(app),
+			ContentPage::Settings(settings_page) => settings_page.view(app),
 		}
 	}
 }

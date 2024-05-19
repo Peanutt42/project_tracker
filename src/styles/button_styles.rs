@@ -1,4 +1,4 @@
-use iced::{widget::button, Background, Border, Color, Theme, Shadow, Vector};
+use iced::{widget::button, Background, Border, Color, Theme};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -78,11 +78,6 @@ impl button::StyleSheet for GreenCircleButtonStyle {
 		button::Appearance {
 			background: Some(Background::Color(Color::from_rgb(0.0, 0.9, 0.0))),
 			border: Border::with_radius(f32::MAX),
-			shadow: Shadow {
-				color: Color::BLACK,
-				offset: Vector::default(),
-				blur_radius: 20.0,
-			},
 			..Default::default()
 		}
 	}
@@ -91,11 +86,6 @@ impl button::StyleSheet for GreenCircleButtonStyle {
 		button::Appearance {
 			background: Some(Background::Color(Color::from_rgb(0.0, 1.0, 0.0))),
 			border: Border::with_radius(f32::MAX),
-			shadow: Shadow {
-				color: Color::BLACK,
-				offset: Vector::default(),
-				blur_radius: 30.0,
-			},
 			..Default::default()
 		}
 	}
@@ -104,11 +94,6 @@ impl button::StyleSheet for GreenCircleButtonStyle {
 		button::Appearance {
 			background: Some(Background::Color(Color::from_rgb(0.0, 0.8, 0.0))),
 			border: Border::with_radius(f32::MAX),
-			shadow: Shadow {
-				color: Color::BLACK,
-				offset: Vector::default(),
-				blur_radius: 40.0,
-			},
 			..Default::default()
 		}
 	}
