@@ -20,4 +20,4 @@ mod project_preview;
 pub use project_preview::project_preview;
 
 mod seperator;
-pub use seperator::{horizontal_seperator, vertical_seperator};
+pub use seperator::{horizontal_seperator, partial_horizontal_seperator};

@@ -1,5 +1,5 @@
-use iced::{alignment::Horizontal, theme, widget::{button, column, row, scrollable, text, Column}, Alignment, Element, Length, Padding};
-use crate::{components::{horizontal_seperator, loading_screen, vertical_seperator}, project::{Project, TaskState}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::ProjectPreviewButtonStyle};
+use iced::{alignment::Horizontal, theme, widget::{button, column, scrollable, text, Column}, Alignment, Element, Length, Padding};
+use crate::{components::{horizontal_seperator, loading_screen}, project::Project, project_tracker::{ProjectTrackerApp, UiMessage}, styles::ProjectPreviewButtonStyle};
 
 #[derive(Debug, Clone)]
 pub struct OverviewPage {
@@ -13,17 +13,17 @@ impl OverviewPage {
 		}
 	}
 
-	fn tasks_filtered_by_state_list(projects: &[Project], task_state: TaskState) -> Element<UiMessage> {
+	fn todo_tasks_list(projects: &[Project]) -> Element<UiMessage> {
 		scrollable(
 			Column::from_vec(projects.iter()
 				.filter(|p| {
 					p.tasks.iter()
-					.filter(|t| t.state == task_state)
+					.filter(|t| !t.is_done())
 					.count() != 0
 				})
 				.map(|project| {
 					let task_list = project.tasks.iter()
-						.filter(|t| t.state == task_state)
+						.filter(|t| !t.state.is_done())
 						.map(|t| text(&t.name).into())
 						.collect();
 
@@ -48,37 +48,21 @@ impl OverviewPage {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		if let Some(saved_state) = &app.saved_state {
 			column![
-				text("Todo Overview").size(35),
-				row![
-					column![
-						text("Todo")
-							.size(25)
-							.width(Length::Fill)
-							.horizontal_alignment(Horizontal::Center),
-						
-						horizontal_seperator(1.0),
-
-						Self::tasks_filtered_by_state_list(&saved_state.projects, TaskState::Todo),
-					]
-					.width(Length::FillPortion(1)),
-
-					vertical_seperator(1.0),
+				text("Overview").size(35),
+				column![
+					text("Todo")
+						.size(25)
+						.width(Length::Fill)
+						.horizontal_alignment(Horizontal::Center),
 					
-					column![
-						text("In Progress")
-							.size(25)
-							.width(Length::Fill)
-							.horizontal_alignment(Horizontal::Center),
+					horizontal_seperator(1.0),
 
-						horizontal_seperator(1.0),
-						
-						Self::tasks_filtered_by_state_list(&saved_state.projects, TaskState::InProgress),
-					]
-					.width(Length::FillPortion(1)),
+					Self::todo_tasks_list(&saved_state.projects),
 				]
 				.width(Length::Fill)
 			]
 			.spacing(10)
+			.padding(Padding{ left: 10.0, right: 10.0, ..Padding::ZERO })
 			.align_items(Alignment::Center)
 			.into()
 		}

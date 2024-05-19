@@ -2,8 +2,8 @@ use iced::{keyboard, Application, Command, Element, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, modal};
 use crate::{
 	components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModal, CreateNewTaskModalMessage},
-	pages::{SidebarPage, ProjectPage, OverviewPage, SettingsPage},
-	project::{Project, Task},
+	pages::{OverviewPage, ProjectPage, SettingsPage, SidebarPage},
+	project::{Project, Task, TaskState},
 	saved_state::SavedState,
 	styles::SplitStyle,
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
@@ -35,6 +35,10 @@ pub enum UiMessage {
 	CreateTask {
 		project_name: String,
 		task: Task,
+	},
+	SetTaskState {
+		task_name: String,
+		task_state: TaskState,
 	},
 	CreateNewProjectModalMessage(CreateNewProjectModalMessage),
 	CreateNewTaskModalMessage(CreateNewTaskModalMessage),
@@ -138,7 +142,7 @@ impl Application for ProjectTrackerApp {
 				},
 				UiMessage::CreateTask { project_name, task } => {
 					for project in saved_state.projects.iter_mut() {
-						if project.name == *project_name {
+						if project.name == project_name {
 							project.tasks.push(task);
 							break;
 						}
@@ -147,6 +151,23 @@ impl Application for ProjectTrackerApp {
 						self.update(UiMessage::Save),
 						self.update(CreateNewTaskModalMessage::Close.into())
 					])
+				},
+				UiMessage::SetTaskState { task_name, task_state } => {
+					if let ContentPage::Project(project_page) = &self.content_page {
+						for project in saved_state.projects.iter_mut() {
+							if project.name == project_page.project_name {
+								for task in project.tasks.iter_mut() {
+									if task.name == task_name {
+										task.state = task_state;
+										break;
+									}
+								}
+								break;
+							}
+						}
+					}
+
+					self.update(UiMessage::Save)
 				},
 				UiMessage::CreateNewProjectModalMessage(message) => {
 					self.create_new_project_modal.update(message);
@@ -183,6 +204,7 @@ impl Application for ProjectTrackerApp {
 				},
 				UiMessage::CreateProject(_) => self.update(CreateNewProjectModalMessage::Close.into()),
 				UiMessage::CreateTask { .. } => self.update(CreateNewTaskModalMessage::Close.into()),
+				UiMessage::SetTaskState { .. } => Command::none(),
 				UiMessage::CreateNewProjectModalMessage(message) => {
 					self.create_new_project_modal.update(message);
 					Command::none()

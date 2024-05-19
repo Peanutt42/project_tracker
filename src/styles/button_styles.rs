@@ -11,7 +11,7 @@ impl button::StyleSheet for ProjectPreviewButtonStyle {
 		button::Appearance {
 			background: Some(Background::Color(
 				if self.selected {
-					style.extended_palette().secondary.base.color
+					style.extended_palette().primary.base.color
 				}
 				else {
 					style.palette().background
@@ -25,10 +25,8 @@ impl button::StyleSheet for ProjectPreviewButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> button::Appearance {
 		button::Appearance {
-			background: Some(Background::Color(style.extended_palette().secondary.base.color)),
-			text_color: style.palette().text,
-			border: Border::with_radius(5.0),
-			..Default::default()
+			background: Some(Background::Color(style.extended_palette().primary.base.color)),
+			..self.active(style)
 		}
 	}
 
@@ -69,34 +67,29 @@ impl button::StyleSheet for GreenButtonStyle {
 
 
 
-pub struct GreenCircleButtonStyle;
+pub struct TransparentButtonStyle;
 
-impl button::StyleSheet for GreenCircleButtonStyle {
+impl button::StyleSheet for TransparentButtonStyle {
 	type Style = Theme;
 
-	fn active(&self, _style: &Self::Style) -> button::Appearance {
+	fn active(&self, style: &Self::Style) -> button::Appearance {
 		button::Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 0.9, 0.0))),
-			border: Border::with_radius(f32::MAX),
+			background: Some(Background::Color(Color::TRANSPARENT)),
+			text_color: style.extended_palette().secondary.base.text,
 			..Default::default()
 		}
 	}
 
-	fn hovered(&self, _style: &Self::Style) -> button::Appearance {
-		button::Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 1.0, 0.0))),
-			border: Border::with_radius(f32::MAX),
-			..Default::default()
-		}
-	}
+	//fn hovered(&self, style: &Self::Style) -> button::Appearance {
+	//	button::Appearance {
+	//		background: Some(Background::Color(style.extended_palette().secondary.base.color)),
+	//		..Default::default()
+	//	}
+	//}
 
-	fn pressed(&self, _style: &Self::Style) -> button::Appearance {
-		button::Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 0.8, 0.0))),
-			border: Border::with_radius(f32::MAX),
-			..Default::default()
-		}
-	}
+	//fn pressed(&self, style: &Self::Style) -> button::Appearance {
+	//	self.active(style)
+	//}
 }
 
 

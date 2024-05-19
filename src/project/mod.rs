@@ -1,9 +1,12 @@
-use iced::{Element, widget::{column, text}};
+use iced::{widget::{column, text}, Element, Padding};
 use serde::{Serialize, Deserialize};
 use crate::{components::{task_list, completion_bar}, project_tracker::UiMessage};
 
 mod task;
-pub use task::{Task, TaskState};
+pub use task::Task;
+
+mod task_state;
+pub use task_state::TaskState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
@@ -51,6 +54,7 @@ impl Project {
 			task_list(&self.tasks)
 		]
 		.spacing(10)
+		.padding(Padding{ left: 10.0, right: 10.0, ..Padding::ZERO })
 		.into()
 	}
 }

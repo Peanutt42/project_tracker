@@ -13,7 +13,7 @@
         },
         {
           "name": "test",
-          "state": "InProgress"
+          "state": "Todo"
         },
         {
           "name": "task3",
@@ -36,6 +36,14 @@
         {
           "name": "test3",
           "state": "Done"
+        },
+        {
+          "name": "This is a large task name that is quite big, so that it fill test how large task names will look, lets see!",
+          "state": "Todo"
+        },
+        {
+          "name": "Damn, we really need a longer text Damn, we really need a longer text Damn, we really need a longer text Damn, we really need a longer text Damn, we really need a longer text Damn, we really need a longer text Damn, we really need a longer text Damn, we really need a longer text Damn, we really need a longer text ",
+          "state": "Todo"
         }
       ]
     },
@@ -52,13 +60,50 @@
       "tasks": [
         {
           "name": "test 2 2 1 123",
-          "state": "InProgress"
+          "state": "Todo"
         }
       ]
     },
     {
       "name": "another one",
       "tasks": []
+    },
+    {
+      "name": "Actual Todo for Project Tracker",
+      "tasks": [
+        {
+          "name": "seperate config file in styles for normed padding/sizes",
+          "state": "Todo"
+        },
+        {
+          "name": "more fluid workflow by auto selecting the text input and accepting by pressing enter",
+          "state": "Todo"
+        },
+        {
+          "name": "support for large task names by making them multiline + put checkbox to the top left",
+          "state": "Todo"
+        },
+        {
+          "name": "new project/task not by modal but by placeholder project/task with a text input for name",
+          "state": "Todo"
+        },
+        {
+          "name": "Create task to the bottum not the top right",
+          "state": "Todo"
+        },
+        {
+          "name": "project icons",
+          "state": "Todo"
+        },
+        {
+          "name": "overview icon",
+          "state": "Todo"
+        },
+        {
+          "name": "maybe add InProgress TaskState back",
+          "state": "Todo"
+        }
+      ]
     }
   ],
   "theme_mode": "System"
