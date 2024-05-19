@@ -80,16 +80,13 @@ impl button::StyleSheet for TransparentButtonStyle {
 		}
 	}
 
-	//fn hovered(&self, style: &Self::Style) -> button::Appearance {
-	//	button::Appearance {
-	//		background: Some(Background::Color(style.extended_palette().secondary.base.color)),
-	//		..Default::default()
-	//	}
-	//}
-
-	//fn pressed(&self, style: &Self::Style) -> button::Appearance {
-	//	self.active(style)
-	//}
+	fn hovered(&self, style: &Self::Style) -> button::Appearance {
+		button::Appearance {
+			background: Some(Background::Color(style.extended_palette().background.strong.color)),
+			border: Border::with_radius(5.0),
+			..self.active(style)
+		}
+	}
 }
 
 

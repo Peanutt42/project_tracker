@@ -89,7 +89,7 @@
         },
         {
           "name": "Create task to the bottum not the top right",
-          "state": "Todo"
+          "state": "Done"
         },
         {
           "name": "project icons",
@@ -101,6 +101,10 @@
         },
         {
           "name": "maybe add InProgress TaskState back",
+          "state": "Todo"
+        },
+        {
+          "name": "fix setttings and new project button being squished instead of the project list",
           "state": "Todo"
         }
       ]

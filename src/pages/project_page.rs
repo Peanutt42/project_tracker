@@ -1,4 +1,4 @@
-use iced::{widget::{column, text, container}, alignment::Horizontal, Element, Length};
+use iced::{widget::{column, text}, Element};
 use crate::project_tracker::UiMessage;
 use crate::components::create_new_task_button;
 
@@ -32,10 +32,8 @@ impl ProjectPage {
 				text("Invalid Project").into()
 			};
 			column![
-				container(create_new_task_button())
-						.align_x(Horizontal::Right)
-						.width(Length::Fill),
 				project_element,
+				create_new_task_button(),
 			]
 			.spacing(10)
 			.into()

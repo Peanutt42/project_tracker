@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, theme, widget::{button, column, scrollable, text, Column}, Alignment, Element, Length, Padding};
+use iced::{theme, widget::{button, column, row, scrollable, text, Column}, Element, Length, Padding};
 use crate::{components::{horizontal_seperator, loading_screen}, project::Project, project_tracker::{ProjectTrackerApp, UiMessage}, styles::ProjectPreviewButtonStyle};
 
 #[derive(Debug, Clone)]
@@ -24,7 +24,14 @@ impl OverviewPage {
 				.map(|project| {
 					let task_list = project.tasks.iter()
 						.filter(|t| !t.state.is_done())
-						.map(|t| text(&t.name).into())
+						.map(|t| {
+							row![
+								text("-"),
+								text(&t.name)
+							]
+							.spacing(5)
+							.into()
+						})
 						.collect();
 
 					button(column![
@@ -49,21 +56,15 @@ impl OverviewPage {
 		if let Some(saved_state) = &app.saved_state {
 			column![
 				text("Overview").size(35),
-				column![
-					text("Todo")
-						.size(25)
-						.width(Length::Fill)
-						.horizontal_alignment(Horizontal::Center),
-					
-					horizontal_seperator(1.0),
+			
+				horizontal_seperator(1.0),
 
-					Self::todo_tasks_list(&saved_state.projects),
-				]
-				.width(Length::Fill)
+				Self::todo_tasks_list(&saved_state.projects),
 			]
+			.width(Length::Fill)
 			.spacing(10)
 			.padding(Padding{ left: 10.0, right: 10.0, ..Padding::ZERO })
-			.align_items(Alignment::Center)
+			//.align_items(Alignment::Center)
 			.into()
 		}
 		else {

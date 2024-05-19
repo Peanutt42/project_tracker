@@ -70,7 +70,7 @@ impl Application for ProjectTrackerApp {
 			sidebar_page: SidebarPage::new(),
 			content_page: ContentPage::Overview(OverviewPage::new()),
 			selected_page_name: String::new(),
-			sidebar_position: Some(250),
+			sidebar_position: Some(300),
 			create_new_project_modal: CreateNewProjectModal::new(),
 			create_new_task_modal: CreateNewTaskModal::new(),
 			saved_state: None,

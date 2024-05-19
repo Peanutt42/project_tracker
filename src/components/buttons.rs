@@ -17,7 +17,7 @@ pub fn create_new_project_button() -> Button<'static, UiMessage> {
 			text("New Project")
 		]
 		.align_items(iced::Alignment::Center)
-		.spacing(10)
+		.spacing(5)
 	)
 	.on_press(CreateNewProjectModalMessage::Open.into())
 	.style(theme::Button::custom(TransparentButtonStyle))
