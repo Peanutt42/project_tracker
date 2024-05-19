@@ -1,5 +1,6 @@
-use iced::{alignment::Horizontal, widget::{column, container, scrollable, Column}, Element, Length, Padding};
+use iced::{alignment::Horizontal, widget::{column, container, scrollable, Column}, Element, Length};
 use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, partial_horizontal_seperator, settings_button};
+use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 use crate::project::Project;
 
@@ -27,7 +28,7 @@ impl SidebarPage {
 		scrollable(
 			Column::from_vec(list)
 				.width(Length::Fill)
-				.spacing(10)
+				.spacing(SPACING_AMOUNT)
 		)
 		.width(Length::Fill)
 		.height(Length::Shrink)
@@ -39,7 +40,7 @@ impl SidebarPage {
 			overview_button(app.content_page.is_overview_page()),
 			partial_horizontal_seperator(2.5),
 		]
-		.spacing(20);
+		.spacing(LARGE_SPACING_AMOUNT);
 
 		let list: Element<UiMessage> =
 			if let Some(saved_state) = &app.saved_state {
@@ -51,7 +52,7 @@ impl SidebarPage {
 					loading_screen(),
 				]
 				.width(Length::Fill)
-				.spacing(10)
+				.spacing(SPACING_AMOUNT)
 				.into()
 			};
 
@@ -66,10 +67,10 @@ impl SidebarPage {
 						.align_x(Horizontal::Center)
 						.width(Length::Fill),
 				]
-				.spacing(20)
+				.spacing(LARGE_SPACING_AMOUNT)
 			]
-			.spacing(10)
-			.padding(Padding{ left: 10.0, right: 10.0, ..Padding::ZERO }),
+			.spacing(SPACING_AMOUNT)
+			.padding(HORIZONTAL_PADDING),
 			
 			container(settings_button())
 				.height(Length::Fill)

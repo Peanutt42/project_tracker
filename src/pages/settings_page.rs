@@ -1,6 +1,7 @@
 use iced::{widget::{pick_list, row, container, text}, Element, Length, alignment::{Alignment, Horizontal, Vertical}};
 
 use crate::components::loading_screen;
+use crate::styles::LARGE_PADDING_AMOUNT;
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 use crate::theme_mode::ThemeMode;
 
@@ -24,7 +25,7 @@ impl SettingsPage {
 					.width(Length::Fill)
 					.align_x(Horizontal::Right)
 			]
-			.padding(20)
+			.padding(LARGE_PADDING_AMOUNT)
 			.align_items(Alignment::Center)
 			.into()
 		}

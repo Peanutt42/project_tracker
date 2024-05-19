@@ -12,3 +12,12 @@ pub use svg_styles::{BlackWhiteSvgStyle, GreenSvgStyle};
 
 mod checkbox_style;
 pub use checkbox_style::GreenCheckboxStyle;
+
+mod paddings;
+pub use paddings::{HORIZONTAL_PADDING, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};
+
+mod size;
+pub use size::{ICON_SIZE, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE};
+
+mod spacing;
+pub use spacing::{SMALL_SPACING_AMOUNT, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};

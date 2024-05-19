@@ -73,15 +73,15 @@
       "tasks": [
         {
           "name": "seperate config file in styles for normed padding/sizes",
-          "state": "Todo"
+          "state": "Done"
         },
         {
-          "name": "more fluid workflow by auto selecting the text input and accepting by pressing enter",
+          "name": "more fluid workflow by auto selecting the text input",
           "state": "Todo"
         },
         {
           "name": "support for large task names by making them multiline + put checkbox to the top left",
-          "state": "Todo"
+          "state": "Done"
         },
         {
           "name": "new project/task not by modal but by placeholder project/task with a text input for name",

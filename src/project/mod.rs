@@ -1,6 +1,6 @@
-use iced::{widget::{column, text}, Element, Padding};
+use iced::{widget::{column, text}, Element};
 use serde::{Serialize, Deserialize};
-use crate::{components::{task_list, completion_bar}, project_tracker::UiMessage};
+use crate::{components::{task_list, completion_bar}, project_tracker::UiMessage, styles::{HORIZONTAL_PADDING, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
 mod task;
 pub use task::Task;
@@ -48,13 +48,13 @@ impl Project {
 		let completion_percentage = Self::calculate_completion_percentage(tasks_done, tasks_len);
 
 		column![
-			text(&self.name).size(35),
+			text(&self.name).size(TITLE_TEXT_SIZE),
 			completion_bar(completion_percentage),
 			text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round())),
 			task_list(&self.tasks)
 		]
-		.spacing(10)
-		.padding(Padding{ left: 10.0, right: 10.0, ..Padding::ZERO })
+		.spacing(SPACING_AMOUNT)
+		.padding(HORIZONTAL_PADDING)
 		.into()
 	}
 }

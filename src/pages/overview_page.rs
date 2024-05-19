@@ -1,5 +1,5 @@
 use iced::{theme, widget::{button, column, row, scrollable, text, Column}, Element, Length, Padding};
-use crate::{components::{horizontal_seperator, loading_screen}, project::Project, project_tracker::{ProjectTrackerApp, UiMessage}, styles::ProjectPreviewButtonStyle};
+use crate::{components::{horizontal_seperator, loading_screen}, project::Project, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{ProjectPreviewButtonStyle, HORIZONTAL_PADDING, PADDING_AMOUNT, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}};
 
 #[derive(Debug, Clone)]
 pub struct OverviewPage {
@@ -29,15 +29,15 @@ impl OverviewPage {
 								text("-"),
 								text(&t.name)
 							]
-							.spacing(5)
+							.spacing(SMALL_SPACING_AMOUNT)
 							.into()
 						})
 						.collect();
 
 					button(column![
-						text(&project.name).size(20),
+						text(&project.name).size(LARGE_TEXT_SIZE),
 						horizontal_seperator(1.0),
-						Column::from_vec(task_list).padding(Padding{ left: 10.0, ..Padding::ZERO }),
+						Column::from_vec(task_list).padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO }),
 					])
 					.width(Length::Fill)
 					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected: false }))
@@ -47,7 +47,7 @@ impl OverviewPage {
 				.collect()
 			)
 			.width(Length::Fill)
-			.spacing(15)
+			.spacing(SMALL_SPACING_AMOUNT + SPACING_AMOUNT)
 		)
 		.into()
 	}
@@ -55,16 +55,15 @@ impl OverviewPage {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		if let Some(saved_state) = &app.saved_state {
 			column![
-				text("Overview").size(35),
+				text("Overview").size(TITLE_TEXT_SIZE),
 			
 				horizontal_seperator(1.0),
 
 				Self::todo_tasks_list(&saved_state.projects),
 			]
 			.width(Length::Fill)
-			.spacing(10)
-			.padding(Padding{ left: 10.0, right: 10.0, ..Padding::ZERO })
-			//.align_items(Alignment::Center)
+			.spacing(SPACING_AMOUNT)
+			.padding(HORIZONTAL_PADDING)
 			.into()
 		}
 		else {

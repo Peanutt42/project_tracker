@@ -1,5 +1,5 @@
 use iced::theme;
-use iced::{widget::checkbox, Element};
+use iced::{widget::{row, checkbox, text}, Element};
 use serde::{Serialize, Deserialize};
 use crate::styles::GreenCheckboxStyle;
 use crate::project_tracker::UiMessage;
@@ -24,7 +24,8 @@ impl Task {
 	}
 
 	pub fn view(&self) -> Element<UiMessage> {
-		checkbox(&self.name, self.state.is_done())
+		row![
+			checkbox("", self.state.is_done())
 			.on_toggle(|checked| {
 				UiMessage::SetTaskState {
 					task_name: self.name.clone(),
@@ -37,7 +38,11 @@ impl Task {
 						},
 				}
 			})
-			.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle)))
-			.into()
+			.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle))),
+
+			text(&self.name),
+		]
+		.align_items(iced::Alignment::Start)
+		.into()
 	}
 }

@@ -1,6 +1,7 @@
 use iced::{widget::{column, text}, Element};
 use crate::project_tracker::UiMessage;
 use crate::components::create_new_task_button;
+use crate::styles::SPACING_AMOUNT;
 
 #[derive(Debug, Clone)]
 pub struct ProjectPage {
@@ -35,7 +36,7 @@ impl ProjectPage {
 				project_element,
 				create_new_task_button(),
 			]
-			.spacing(10)
+			.spacing(SPACING_AMOUNT)
 			.into()
 		}
 		else {
