@@ -16,6 +16,7 @@ fn main() -> Result<(), iced::Error> {
 				include_bytes!("../assets/icon-handdrawn.png"),
 				Some(image::ImageFormat::Png)
 			).ok(),
+			exit_on_close_request: false,
 			..Default::default()
 		},
 		antialiasing: true,

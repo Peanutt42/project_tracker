@@ -1,4 +1,4 @@
-use iced::{keyboard, Application, Command, Element, Subscription, Theme};
+use iced::{keyboard, window, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{Split, SplitStyles};
 use crate::{
 	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, project::{Project, Task, TaskState}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
@@ -15,6 +15,7 @@ pub struct ProjectTrackerApp {
 
 #[derive(Debug, Clone)]
 pub enum UiMessage {
+	Event(Event),
 	SystemTheme { is_dark: bool },
 	Loaded(SavedState),
 	Save,
@@ -81,6 +82,7 @@ impl Application for ProjectTrackerApp {
 				},
 				_ => None,
 			}),
+			iced::event::listen().map(UiMessage::Event),
 			system_theme_subscription(),
 		])
 	}
@@ -88,6 +90,22 @@ impl Application for ProjectTrackerApp {
 	fn update(&mut self, message: UiMessage) -> Command<UiMessage> {
 		if let Some(saved_state) = &mut self.saved_state {
 			match message {
+				UiMessage::Event(event) => {
+					if let Event::Window(id, event) = event {
+						match event {
+							window::Event::CloseRequested => {
+								Command::batch([
+									self.update(UiMessage::Save),
+									window::close(id),
+								])
+							},
+							_ => Command::none(),
+						}
+					}
+					else {
+						Command::none()
+					}
+				},
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::Save => Command::perform(saved_state.clone().save(), |_| UiMessage::Saved),
@@ -147,7 +165,7 @@ impl Application for ProjectTrackerApp {
 				UiMessage::SetThemeMode(theme_mode) => { saved_state.theme_mode = theme_mode; self.update(UiMessage::Save) }
 				UiMessage::ProjectPageMessage(message) => {
 					if let ContentPage::Project(project_page) = &mut self.content_page {
-						project_page.update(message.clone(), &mut self.saved_state)
+						project_page.update(message.clone())
 					}
 					else {
 						Command::none()
@@ -178,7 +196,7 @@ impl Application for ProjectTrackerApp {
 				},
 				UiMessage::ProjectPageMessage(message) => {
 					if let ContentPage::Project(project_page) = &mut self.content_page {
-						project_page.update(message, &mut self.saved_state)
+						project_page.update(message)
 					}
 					else {
 						Command::none()
@@ -186,6 +204,7 @@ impl Application for ProjectTrackerApp {
 				},
 				UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
 
+				UiMessage::Event(_) |
 				UiMessage::CreateProject(_) |
 				UiMessage::CreateTask { .. } |
 				UiMessage::SetTaskState { .. } |

@@ -1,5 +1,5 @@
-use iced::{widget::{column, text, text_input, row, button}, Command, Element};
-use crate::{project_tracker::{ProjectTrackerApp, UiMessage}, saved_state::SavedState};
+use iced::{widget::{column, text, text_input, row}, Alignment, Command, Element};
+use crate::{components::cancel_button, project_tracker::{ProjectTrackerApp, UiMessage}};
 use crate::components::create_new_task_button;
 use crate::styles::SPACING_AMOUNT;
 
@@ -32,7 +32,7 @@ impl ProjectPage {
 }
 
 impl ProjectPage {
-	pub fn update<'a>(&'a mut self, message: ProjectPageMessage, mut saved_state: &'a mut Option<SavedState>) -> Command<UiMessage> {
+	pub fn update(&mut self, message: ProjectPageMessage) -> Command<UiMessage> {
 		match message {
 			ProjectPageMessage::OpenCreateNewTask => {  self.create_new_task_name = Some(String::new()); Command::none() },
 			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task_name = None; Command::none() },
@@ -64,15 +64,17 @@ impl ProjectPage {
 			let create_new_task_element: Element<UiMessage> = if let Some(create_new_task_name) = &self.create_new_task_name {
 				row![
 					text_input("New task name", create_new_task_name)
-					.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
-					.on_submit(UiMessage::CreateTask {
-						project_name: self.project_name.clone(),
-						task_name: self.create_new_task_name.clone().unwrap_or(String::from("<invalid task name input>")),
-					}),
+						.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
+						.on_submit(UiMessage::CreateTask {
+							project_name: self.project_name.clone(),
+							task_name: self.create_new_task_name.clone().unwrap_or(String::from("<invalid task name input>")),
+						}),
 
-					button(text("X"))
+					cancel_button()
 						.on_press(ProjectPageMessage::CloseCreateNewTask.into())					
-				].into()
+				]
+				.align_items(Alignment::Center)
+				.into()
 			}
 			else {
 				create_new_task_button().into()

@@ -106,6 +106,10 @@
         {
           "name": "fix setttings and new project button being squished instead of the project list",
           "state": "Todo"
+        },
+        {
+          "name": "save on exit",
+          "state": "Done"
         }
       ]
     }

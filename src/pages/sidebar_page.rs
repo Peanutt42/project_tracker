@@ -1,5 +1,5 @@
-use iced::{alignment::Horizontal, widget::{button, column, container, row, text, scrollable, text_input, Column}, Command, Element, Length};
-use crate::{components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button}, project_tracker::UiMessage};
+use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable, text_input, Column}, Command, Element, Length};
+use crate::{components::{create_new_project_button, cancel_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button}, project_tracker::UiMessage};
 use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::project::Project;
@@ -85,9 +85,10 @@ impl SidebarPage {
 					.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
 					.on_submit(UiMessage::CreateProject(new_project_name)),
 
-				button(text("X"))
+				cancel_button()
 					.on_press(SidebarPageMessage::CloseCreateNewProject.into())
 			]
+			.align_items(Alignment::Center)
 			.into()
 		}
 		else {
