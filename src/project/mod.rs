@@ -1,6 +1,6 @@
 use iced::{widget::{column, text}, Element};
 use serde::{Serialize, Deserialize};
-use crate::{components::{task_list, completion_bar}, project_tracker::UiMessage, styles::{HORIZONTAL_PADDING, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
+use crate::{components::{task_list, completion_bar}, project_tracker::UiMessage, styles::{SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
 mod task;
 pub use task::Task;
@@ -54,7 +54,6 @@ impl Project {
 			task_list(&self.tasks, &self.name)
 		]
 		.spacing(SPACING_AMOUNT)
-		.padding(HORIZONTAL_PADDING)
 		.into()
 	}
 }

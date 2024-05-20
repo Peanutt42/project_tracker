@@ -1,5 +1,4 @@
-use iced::theme;
-use iced::{widget::{row, checkbox, text}, Element};
+use iced::{widget::{row, checkbox, text}, Color, theme, Element};
 use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
 use crate::styles::GreenCheckboxStyle;
@@ -41,7 +40,15 @@ impl Task {
 			})
 			.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle))),
 
-			text(&self.name),
+			text(&self.name)
+				.style(
+					if self.is_done() {
+						theme::Text::Color(Color::from_rgb(0.5, 0.5, 0.5))
+					}
+					else {
+						theme::Text::Default
+					}
+				),
 		]
 		.align_items(iced::Alignment::Start)
 		.into()

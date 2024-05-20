@@ -16,6 +16,7 @@ pub struct ProjectTrackerApp {
 #[derive(Debug, Clone)]
 pub enum UiMessage {
 	Event(Event),
+	EscapePressed,
 	SystemTheme { is_dark: bool },
 	Loaded(SavedState),
 	Save,
@@ -80,6 +81,19 @@ impl Application for ProjectTrackerApp {
 				keyboard::Key::Character("s") if modifiers.command() => {
 					Some(UiMessage::Save)
 				},
+				keyboard::Key::Character("n") if modifiers.command() => {
+					Some(
+						if modifiers.shift() {
+							SidebarPageMessage::OpenCreateNewProject.into()
+						}
+						else {
+							ProjectPageMessage::OpenCreateNewTask.into()
+						}
+					)
+				},
+				keyboard::Key::Named(keyboard::key::Named::Escape) => {
+					Some(UiMessage::EscapePressed)
+				}
 				_ => None,
 			}),
 			iced::event::listen().map(UiMessage::Event),
@@ -91,21 +105,20 @@ impl Application for ProjectTrackerApp {
 		if let Some(saved_state) = &mut self.saved_state {
 			match message {
 				UiMessage::Event(event) => {
-					if let Event::Window(id, event) = event {
-						match event {
-							window::Event::CloseRequested => {
-								Command::batch([
-									self.update(UiMessage::Save),
-									window::close(id),
-								])
-							},
-							_ => Command::none(),
-						}
+					if let Event::Window(id, window::Event::CloseRequested) = event {
+						Command::batch([
+							self.update(UiMessage::Save),
+							window::close(id),
+						])
 					}
 					else {
 						Command::none()
 					}
 				},
+				UiMessage::EscapePressed => Command::batch([
+					self.update(SidebarPageMessage::CloseCreateNewProject.into()),
+					self.update(ProjectPageMessage::CloseCreateNewTask.into())
+				]),
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::Save => Command::perform(saved_state.clone().save(), |_| UiMessage::Saved),
@@ -176,6 +189,10 @@ impl Application for ProjectTrackerApp {
 		}
 		else {
 			match message {
+				UiMessage::EscapePressed => Command::batch([
+					self.update(SidebarPageMessage::CloseCreateNewProject.into()),
+					self.update(ProjectPageMessage::CloseCreateNewTask.into())
+				]),
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },

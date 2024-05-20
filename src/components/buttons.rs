@@ -1,6 +1,6 @@
-use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{button, container, row, svg, text, Button}, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{button, row, svg, text, Button}, Length};
 use crate::{
-	pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{BlackWhiteSvgStyle, GreenSvgStyle, ProjectPreviewButtonStyle, TransparentButtonStyle, SMALL_ICON_SIZE, ICON_SIZE, SMALL_SPACING_AMOUNT}
+	pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{BlackWhiteSvgStyle, GreenSvgStyle, ProjectPreviewButtonStyle, TransparentButtonStyle, ICON_SIZE, SMALL_SPACING_AMOUNT}
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -26,11 +26,16 @@ pub fn create_new_task_button() -> Button<'static, UiMessage> {
 	let add_task_svg = svg::Handle::from_memory(include_bytes!("../../assets/add_task.svg"));
 
 	button(
-		container(svg(add_task_svg)
+		row![
+			svg(add_task_svg)
 			.width(ICON_SIZE)
 			.height(ICON_SIZE)
-			.style(theme::Svg::Custom(Box::new(GreenSvgStyle))))
-				.padding(Padding::new(2.5))
+			.style(theme::Svg::Custom(Box::new(GreenSvgStyle))),
+
+			text("New Task")
+		]
+		.align_items(Alignment::Center)
+		.spacing(SMALL_SPACING_AMOUNT)
 	)
 	.on_press(ProjectPageMessage::OpenCreateNewTask.into())
 	.style(theme::Button::custom(TransparentButtonStyle))
@@ -41,8 +46,8 @@ pub fn cancel_button() -> Button<'static, UiMessage> {
 
 	button(
 		svg(cancel_svg)
-			.width(SMALL_ICON_SIZE)
-			.height(SMALL_ICON_SIZE)
+			.width(ICON_SIZE)
+			.height(ICON_SIZE)
 			.style(theme::Svg::Custom(Box::new(BlackWhiteSvgStyle)))
 	)
 }

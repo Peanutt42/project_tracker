@@ -1,6 +1,5 @@
 
-pub const SMALL_ICON_SIZE: f32 = 22.0;
-pub const ICON_SIZE: f32 = 32.0;
+pub const ICON_SIZE: f32 = 22.0;
 
 pub const SMALL_TEXT_SIZE: f32 = 13.0;
 pub const LARGE_TEXT_SIZE: f32 = 20.0;

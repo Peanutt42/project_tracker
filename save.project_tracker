@@ -126,6 +126,22 @@
         {
           "name": "create new project/task text input style",
           "state": "Todo"
+        },
+        {
+          "name": "shortcuts",
+          "state": "Done"
+        },
+        {
+          "name": "close create new .. on unfocus",
+          "state": "Todo"
+        },
+        {
+          "name": "animations",
+          "state": "Todo"
+        },
+        {
+          "name": "highlight Todo / make done tasks less noticable",
+          "state": "Done"
         }
       ]
     }

@@ -2,7 +2,7 @@ use iced::{widget::{column, text, text_input, row}, Alignment, Command, Element}
 use once_cell::sync::Lazy;
 use crate::{components::cancel_button, project_tracker::{ProjectTrackerApp, UiMessage}};
 use crate::components::create_new_task_button;
-use crate::styles::SPACING_AMOUNT;
+use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT};
 
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -89,6 +89,7 @@ impl ProjectPage {
 				create_new_task_element,
 			]
 			.spacing(SPACING_AMOUNT)
+			.padding(HORIZONTAL_PADDING)
 			.into()
 		}
 		else {
