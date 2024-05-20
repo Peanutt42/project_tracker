@@ -51,7 +51,7 @@ impl Project {
 			text(&self.name).size(TITLE_TEXT_SIZE),
 			completion_bar(completion_percentage),
 			text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round())),
-			task_list(&self.tasks)
+			task_list(&self.tasks, &self.name)
 		]
 		.spacing(SPACING_AMOUNT)
 		.padding(HORIZONTAL_PADDING)

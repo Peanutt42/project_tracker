@@ -84,8 +84,8 @@
           "state": "Done"
         },
         {
-          "name": "new project/task not by modal but by placeholder project/task with a text input for name",
-          "state": "Todo"
+          "name": "new project not by modal but by placeholder project with a text input for name",
+          "state": "Done"
         },
         {
           "name": "Create task to the bottum not the top right",

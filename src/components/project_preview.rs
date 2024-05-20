@@ -1,5 +1,5 @@
 use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text}, Color, Element, Length};
-use crate::project_tracker::UiMessage;
+use crate::{project_tracker::UiMessage, styles::SMALL_HORIZONTAL_PADDING};
 use crate::components::completion_bar;
 use crate::styles::{ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT};
 use crate::project::Project;
@@ -18,7 +18,8 @@ pub fn project_preview(project: &Project, selected: bool) -> Element<UiMessage> 
 		]
 		.spacing(SMALL_SPACING_AMOUNT),
 		completion_bar(project.get_completion_percentage())
-	];
+	]
+	.padding(SMALL_HORIZONTAL_PADDING);
 
 	button(inner)
 		.width(Length::Fill)

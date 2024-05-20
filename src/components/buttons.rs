@@ -1,7 +1,6 @@
-use iced::{theme, Length, alignment::{Horizontal, Vertical}, widget::{button, row, svg, text, Button}};
+use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, svg, text, Button}, Length, Padding};
 use crate::{
-	components::{CreateNewProjectModalMessage, CreateNewTaskModalMessage}, project_tracker::UiMessage,
-	styles::{BlackWhiteSvgStyle, GreenSvgStyle, ProjectPreviewButtonStyle, TransparentButtonStyle, ICON_SIZE, SMALL_SPACING_AMOUNT}
+	pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{BlackWhiteSvgStyle, GreenSvgStyle, ProjectPreviewButtonStyle, TransparentButtonStyle, ICON_SIZE, SMALL_SPACING_AMOUNT}
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -19,7 +18,7 @@ pub fn create_new_project_button() -> Button<'static, UiMessage> {
 		.align_items(iced::Alignment::Center)
 		.spacing(SMALL_SPACING_AMOUNT)
 	)
-	.on_press(CreateNewProjectModalMessage::Open.into())
+	.on_press(SidebarPageMessage::OpenCreateNewProject.into())
 	.style(theme::Button::custom(TransparentButtonStyle))
 }
 
@@ -27,12 +26,13 @@ pub fn create_new_task_button() -> Button<'static, UiMessage> {
 	let add_task_svg = svg::Handle::from_memory(include_bytes!("../../assets/add_task.svg"));
 
 	button(
-		svg(add_task_svg)
+		container(svg(add_task_svg)
 			.width(ICON_SIZE)
 			.height(ICON_SIZE)
-			.style(theme::Svg::Custom(Box::new(GreenSvgStyle)))
+			.style(theme::Svg::Custom(Box::new(GreenSvgStyle))))
+				.padding(Padding::new(2.5))
 	)
-	.on_press(CreateNewTaskModalMessage::Open.into())
+	.on_press(ProjectPageMessage::OpenCreateNewTask.into())
 	.style(theme::Button::custom(TransparentButtonStyle))
 }
 

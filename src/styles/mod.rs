@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, GreenButtonStyle, TransparentButtonStyle, SecondaryButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
@@ -14,7 +14,7 @@ mod checkbox_style;
 pub use checkbox_style::GreenCheckboxStyle;
 
 mod paddings;
-pub use paddings::{HORIZONTAL_PADDING, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};
+pub use paddings::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};
 
 mod size;
 pub use size::{ICON_SIZE, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE};

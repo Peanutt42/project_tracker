@@ -1,8 +1,7 @@
-use iced::{Element, Length, Background, Color};
+use iced::{Length, Background, Color};
 use iced_aw::quad::Quad;
-use crate::project_tracker::UiMessage;
 
-pub fn horizontal_seperator(heigth: f32) -> Element<'static, UiMessage> {
+pub fn horizontal_seperator(heigth: f32) -> Quad {
 	Quad {
 		width: Length::Fill,
 		height: Length::Fixed(heigth),
@@ -10,10 +9,9 @@ pub fn horizontal_seperator(heigth: f32) -> Element<'static, UiMessage> {
 		quad_color: Background::Color(Color::from_rgb(0.5, 0.5, 0.5)),
 		..Default::default()
 	}
-	.into()
 }
 
-pub fn partial_horizontal_seperator(heigth: f32) -> Element<'static, UiMessage> {
+pub fn partial_horizontal_seperator(heigth: f32) -> Quad {
 	Quad {
 		width: Length::Fill,
 		height: Length::Fixed(heigth),
@@ -21,5 +19,4 @@ pub fn partial_horizontal_seperator(heigth: f32) -> Element<'static, UiMessage> 
 		quad_color: Background::Color(Color::from_rgb(0.5, 0.5, 0.5)),
 		..Default::default()
 	}
-	.into()
 }

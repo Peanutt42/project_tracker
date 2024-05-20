@@ -1,18 +1,31 @@
-use iced::{alignment::Horizontal, widget::{column, container, scrollable, Column}, Element, Length};
-use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, partial_horizontal_seperator, settings_button};
+use iced::{alignment::Horizontal, widget::{button, column, container, row, text, scrollable, text_input, Column}, Command, Element, Length};
+use crate::{components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button}, project_tracker::UiMessage};
 use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};
-use crate::project_tracker::{ProjectTrackerApp, UiMessage};
+use crate::project_tracker::ProjectTrackerApp;
 use crate::project::Project;
 
 #[derive(Debug, Clone)]
+pub enum SidebarPageMessage {
+	OpenCreateNewProject,
+	CloseCreateNewProject,
+	ChangeCreateNewProjectName(String),
+}
+
+impl From<SidebarPageMessage> for UiMessage {
+	fn from(value: SidebarPageMessage) -> Self {
+		UiMessage::SidebarPageMessage(value)
+	}
+}
+
+#[derive(Debug, Clone)]
 pub struct SidebarPage {
-	
+	create_new_project_name: Option<String>,
 }
 
 impl SidebarPage {
 	pub fn new() -> Self {
 		Self {
-			
+			create_new_project_name: None,
 		}
 	}
 
@@ -33,6 +46,14 @@ impl SidebarPage {
 		.width(Length::Fill)
 		.height(Length::Shrink)
 		.into()
+	}
+
+	pub fn update(&mut self, message: SidebarPageMessage) -> Command<UiMessage> {
+		match message {
+			SidebarPageMessage::OpenCreateNewProject => { self.create_new_project_name = Some(String::new()); Command::none() },
+			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; Command::none() },
+			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Command::none() },
+		}		
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
@@ -56,6 +77,26 @@ impl SidebarPage {
 				.into()
 			};
 
+		let create_new_project_element: Element<UiMessage> = if let Some(create_new_project_name) = &self.create_new_project_name {
+			let new_project_name = self.create_new_project_name.clone().unwrap_or(String::from("<no project name input>"));
+			
+			row![
+				text_input("New project name", create_new_project_name)
+					.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
+					.on_submit(UiMessage::CreateProject(new_project_name)),
+
+				button(text("X"))
+					.on_press(SidebarPageMessage::CloseCreateNewProject.into())
+			]
+			.into()
+		}
+		else {
+			container(create_new_project_button())
+				.align_x(Horizontal::Center)
+				.width(Length::Fill)
+				.into()
+		};
+
 		column![
 			column![
 				list,
@@ -63,9 +104,7 @@ impl SidebarPage {
 				column![
 					partial_horizontal_seperator(2.5),
 	
-					container(create_new_project_button())
-						.align_x(Horizontal::Center)
-						.width(Length::Fill),
+					create_new_project_element,
 				]
 				.spacing(LARGE_SPACING_AMOUNT)
 			]

@@ -1,12 +1,7 @@
 use iced::{keyboard, Application, Command, Element, Subscription, Theme};
-use iced_aw::{Split, SplitStyles, modal};
+use iced_aw::{Split, SplitStyles};
 use crate::{
-	components::{CreateNewProjectModal, CreateNewProjectModalMessage, CreateNewTaskModal, CreateNewTaskModalMessage},
-	pages::{OverviewPage, ProjectPage, SettingsPage, SidebarPage},
-	project::{Project, Task, TaskState},
-	saved_state::SavedState,
-	styles::SplitStyle,
-	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, project::{Project, Task, TaskState}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
@@ -14,8 +9,6 @@ pub struct ProjectTrackerApp {
 	pub content_page: ContentPage,
 	pub selected_page_name: String,
 	pub sidebar_position: Option<u16>,
-	create_new_project_modal: CreateNewProjectModal,
-	create_new_task_modal: CreateNewTaskModal,
 	pub saved_state: Option<SavedState>,
 	pub is_system_theme_dark: bool,
 }
@@ -27,36 +20,22 @@ pub enum UiMessage {
 	Save,
 	Saved,
 	SidebarMoved(u16),
-	OpenOverview,
-	OpenSettings,
-	SetThemeMode(ThemeMode),
 	SelectProject(String),
 	CreateProject(String),
 	CreateTask {
 		project_name: String,
-		task: Task,
+		task_name: String,
 	},
 	SetTaskState {
+		project_name: String,
 		task_name: String,
 		task_state: TaskState,
 	},
-	CreateNewProjectModalMessage(CreateNewProjectModalMessage),
-	CreateNewTaskModalMessage(CreateNewTaskModalMessage),
-}
-
-impl ProjectTrackerApp {
-	pub fn is_dark_mode(&self) -> bool {
-		if let Some(saved_state) = &self.saved_state {
-			match &saved_state.theme_mode {
-				ThemeMode::Dark => true,
-				ThemeMode::Light => false,
-				ThemeMode::System => self.is_system_theme_dark
-			}
-		}
-		else {
-			true
-		}
-	}
+	OpenOverview,
+	OpenSettings,
+	SetThemeMode(ThemeMode),
+	ProjectPageMessage(ProjectPageMessage),
+	SidebarPageMessage(SidebarPageMessage),
 }
 
 impl Application for ProjectTrackerApp {
@@ -71,8 +50,6 @@ impl Application for ProjectTrackerApp {
 			content_page: ContentPage::Overview(OverviewPage::new()),
 			selected_page_name: String::new(),
 			sidebar_position: Some(300),
-			create_new_project_modal: CreateNewProjectModal::new(),
-			create_new_task_modal: CreateNewTaskModal::new(),
 			saved_state: None,
 			is_system_theme_dark: is_system_theme_dark(),
 		},
@@ -126,65 +103,63 @@ impl Application for ProjectTrackerApp {
 					self.selected_page_name.clear();
 					Command::none()
 				},
-				UiMessage::SetThemeMode(theme_mode) => { saved_state.theme_mode = theme_mode; self.update(UiMessage::Save) }
 				UiMessage::SelectProject(project_name) => {
 					self.selected_page_name = project_name.clone();
 					self.content_page = ContentPage::Project(ProjectPage::new(project_name));
 					Command::none()
 				},
 				UiMessage::CreateProject(project_name) => {
-					saved_state.projects.push(Project::new(project_name, Vec::new()));
-
+					saved_state.projects.push(Project::new(project_name.clone(), Vec::new()));
 					Command::batch([
 						self.update(UiMessage::Save),
-						self.update(CreateNewProjectModalMessage::Close.into()),
+						self.update(UiMessage::SelectProject(project_name)),
+						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
 					])
 				},
-				UiMessage::CreateTask { project_name, task } => {
+				UiMessage::CreateTask { project_name, task_name } => {
 					for project in saved_state.projects.iter_mut() {
 						if project.name == project_name {
-							project.tasks.push(task);
+							project.tasks.push(Task::new(task_name, TaskState::Todo));
 							break;
 						}
 					}
+
 					Command::batch([
 						self.update(UiMessage::Save),
-						self.update(CreateNewTaskModalMessage::Close.into())
+						self.update(ProjectPageMessage::CloseCreateNewTask.into()),
 					])
 				},
-				UiMessage::SetTaskState { task_name, task_state } => {
-					if let ContentPage::Project(project_page) = &self.content_page {
-						for project in saved_state.projects.iter_mut() {
-							if project.name == project_page.project_name {
-								for task in project.tasks.iter_mut() {
-									if task.name == task_name {
-										task.state = task_state;
-										break;
-									}
+				UiMessage::SetTaskState { project_name, task_name, task_state } => {
+					for project in saved_state.projects.iter_mut() {
+						if project.name == project_name {
+							for task in project.tasks.iter_mut() {
+								if task.name == task_name {
+									task.state = task_state;
+									break;
 								}
-								break;
 							}
+							break;
 						}
 					}
 
 					self.update(UiMessage::Save)
 				},
-				UiMessage::CreateNewProjectModalMessage(message) => {
-					self.create_new_project_modal.update(message);
-					Command::none()
+				UiMessage::SetThemeMode(theme_mode) => { saved_state.theme_mode = theme_mode; self.update(UiMessage::Save) }
+				UiMessage::ProjectPageMessage(message) => {
+					if let ContentPage::Project(project_page) = &mut self.content_page {
+						project_page.update(message.clone(), &mut self.saved_state)
+					}
+					else {
+						Command::none()
+					}
 				},
-				UiMessage::CreateNewTaskModalMessage(message) => {
-					self.create_new_task_modal.update(message);
-					Command::none()
-				},
+				UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message.clone()),
 			}
 		}
 		else {
 			match message {
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
-				UiMessage::Save => Command::none(),
-				UiMessage::Saved => Command::none(),
 				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
 				UiMessage::OpenOverview => {
 					self.content_page = ContentPage::Overview(OverviewPage::new());
@@ -196,29 +171,33 @@ impl Application for ProjectTrackerApp {
 					self.selected_page_name.clear();
 					Command::none()
 				},
-				UiMessage::SetThemeMode(_) => Command::none(),
 				UiMessage::SelectProject(project_name) => {
 					self.selected_page_name = project_name.clone();
 					self.content_page = ContentPage::Project(ProjectPage::new(project_name));
 					Command::none()
 				},
-				UiMessage::CreateProject(_) => self.update(CreateNewProjectModalMessage::Close.into()),
-				UiMessage::CreateTask { .. } => self.update(CreateNewTaskModalMessage::Close.into()),
-				UiMessage::SetTaskState { .. } => Command::none(),
-				UiMessage::CreateNewProjectModalMessage(message) => {
-					self.create_new_project_modal.update(message);
-					Command::none()
+				UiMessage::ProjectPageMessage(message) => {
+					if let ContentPage::Project(project_page) = &mut self.content_page {
+						project_page.update(message, &mut self.saved_state)
+					}
+					else {
+						Command::none()
+					}
 				},
-				UiMessage::CreateNewTaskModalMessage(message) => {
-					self.create_new_task_modal.update(message);
-					Command::none()
-				},
+				UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
+
+				UiMessage::CreateProject(_) |
+				UiMessage::CreateTask { .. } |
+				UiMessage::SetTaskState { .. } |
+				UiMessage::SetThemeMode(_) |
+				UiMessage::Save |
+				UiMessage::Saved => Command::none(),
 			}
 		}
 	}
 
 	fn view(&self) -> Element<UiMessage> {
-		let underlay: Element<UiMessage> = Split::new(
+		Split::new(
 			self.sidebar_page.view(self),
 			self.content_page.view(self),
 			self.sidebar_position,
@@ -226,16 +205,7 @@ impl Application for ProjectTrackerApp {
 			UiMessage::SidebarMoved
 		)
 		.style(SplitStyles::custom(SplitStyle))
-		.into();
-
-		let is_dark_mode = self.is_dark_mode();
-
-		let modal_view = self.create_new_project_modal.view(is_dark_mode).or(self.create_new_task_modal.view(self.selected_page_name.clone(), is_dark_mode));
-		let close_modal_message: UiMessage = if self.create_new_project_modal.is_opened() { CreateNewProjectModalMessage::Close.into() } else { CreateNewTaskModalMessage::Close.into() };
-		modal(underlay, modal_view)
-				.backdrop(close_modal_message.clone())
-				.on_esc(close_modal_message)
-				.into()
+		.into()
 	}
 }
 
