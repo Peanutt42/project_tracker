@@ -77,7 +77,7 @@
         },
         {
           "name": "more fluid workflow by auto selecting the text input",
-          "state": "Todo"
+          "state": "Done"
         },
         {
           "name": "support for large task names by making them multiline + put checkbox to the top left",
@@ -110,6 +110,22 @@
         {
           "name": "save on exit",
           "state": "Done"
+        },
+        {
+          "name": "improve UiMessage mess, make more specialized Message enums for different pages",
+          "state": "Todo"
+        },
+        {
+          "name": "maybe a container style encaplusation for every project/task",
+          "state": "Todo"
+        },
+        {
+          "name": "project/task name editing, project/task deleting",
+          "state": "Todo"
+        },
+        {
+          "name": "create new project/task text input style",
+          "state": "Todo"
         }
       ]
     }

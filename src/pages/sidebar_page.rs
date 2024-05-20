@@ -1,8 +1,11 @@
 use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable, text_input, Column}, Command, Element, Length};
+use once_cell::sync::Lazy;
 use crate::{components::{create_new_project_button, cancel_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button}, project_tracker::UiMessage};
 use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::project::Project;
+
+static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[derive(Debug, Clone)]
 pub enum SidebarPageMessage {
@@ -50,7 +53,7 @@ impl SidebarPage {
 
 	pub fn update(&mut self, message: SidebarPageMessage) -> Command<UiMessage> {
 		match message {
-			SidebarPageMessage::OpenCreateNewProject => { self.create_new_project_name = Some(String::new()); Command::none() },
+			SidebarPageMessage::OpenCreateNewProject => { self.create_new_project_name = Some(String::new()); text_input::focus(TEXT_INPUT_ID.clone()) },
 			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; Command::none() },
 			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Command::none() },
 		}		
@@ -82,6 +85,7 @@ impl SidebarPage {
 			
 			row![
 				text_input("New project name", create_new_project_name)
+					.id(TEXT_INPUT_ID.clone())
 					.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
 					.on_submit(UiMessage::CreateProject(new_project_name)),
 

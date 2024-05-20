@@ -2456,6 +2456,7 @@ dependencies = [
  "iced",
  "iced_aw",
  "image",
+ "once_cell",
  "serde",
  "serde_json",
  "tokio",

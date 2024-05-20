@@ -1,7 +1,10 @@
 use iced::{widget::{column, text, text_input, row}, Alignment, Command, Element};
+use once_cell::sync::Lazy;
 use crate::{components::cancel_button, project_tracker::{ProjectTrackerApp, UiMessage}};
 use crate::components::create_new_task_button;
 use crate::styles::SPACING_AMOUNT;
+
+static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[derive(Debug, Clone)]
 pub enum ProjectPageMessage {
@@ -34,7 +37,7 @@ impl ProjectPage {
 impl ProjectPage {
 	pub fn update(&mut self, message: ProjectPageMessage) -> Command<UiMessage> {
 		match message {
-			ProjectPageMessage::OpenCreateNewTask => {  self.create_new_task_name = Some(String::new()); Command::none() },
+			ProjectPageMessage::OpenCreateNewTask => {  self.create_new_task_name = Some(String::new()); text_input::focus(TEXT_INPUT_ID.clone()) },
 			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task_name = None; Command::none() },
 			ProjectPageMessage::ChangeCreateNewTaskName(new_task_name) => {
 				if let Some(create_new_task_name) = &mut self.create_new_task_name {
@@ -64,6 +67,7 @@ impl ProjectPage {
 			let create_new_task_element: Element<UiMessage> = if let Some(create_new_task_name) = &self.create_new_task_name {
 				row![
 					text_input("New task name", create_new_task_name)
+						.id(TEXT_INPUT_ID.clone())
 						.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
 						.on_submit(UiMessage::CreateTask {
 							project_name: self.project_name.clone(),
