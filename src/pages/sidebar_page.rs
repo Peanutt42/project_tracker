@@ -1,7 +1,7 @@
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text_input, Column}, Command, Element, Length};
 use once_cell::sync::Lazy;
 use crate::{components::{cancel_button, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button}, project_tracker::UiMessage, styles::TextInputStyle};
-use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};
+use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::project::Project;
 
@@ -46,7 +46,7 @@ impl SidebarPage {
 				.spacing(SPACING_AMOUNT)
 		)
 		.width(Length::Fill)
-		.height(Length::Shrink)
+		.height(Length::Fill)
 		.into()
 	}
 
@@ -70,17 +70,24 @@ impl SidebarPage {
 		let create_new_project_element: Element<UiMessage> = if let Some(create_new_project_name) = &self.create_new_project_name {
 			let new_project_name = self.create_new_project_name.clone().unwrap_or(String::from("<no project name input>"));
 			
-			row![
-				text_input("New project name", create_new_project_name)
-					.id(TEXT_INPUT_ID.clone())
-					.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
-					.on_submit(UiMessage::CreateProject(new_project_name))
-					.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
-
-				cancel_button()
-					.on_press(SidebarPageMessage::CloseCreateNewProject.into())
-			]
-			.align_items(Alignment::Center)
+			container(
+				container(
+					row![
+						text_input("New project name", create_new_project_name)
+							.id(TEXT_INPUT_ID.clone())
+							.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
+							.on_submit(UiMessage::CreateProject(new_project_name))
+							.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+		
+						cancel_button()
+							.on_press(SidebarPageMessage::CloseCreateNewProject.into())
+					]
+					.align_items(Alignment::Center)
+				)
+				.max_width(300.0)
+			)
+			.width(Length::Fill)
+			.align_x(Horizontal::Center)
 			.into()
 		}
 		else {
@@ -92,28 +99,25 @@ impl SidebarPage {
 
 		column![
 			column![
-				column![
-					overview_button(app.content_page.is_overview_page()),
-					partial_horizontal_seperator(2.5),
-				]
-				.spacing(LARGE_SPACING_AMOUNT),
+				overview_button(app.content_page.is_overview_page()),
+				partial_horizontal_seperator(),
 
 				list,
 	
-				column![
-					partial_horizontal_seperator(2.5),
+				partial_horizontal_seperator(),
 	
-					create_new_project_element,
-				]
-				.spacing(LARGE_SPACING_AMOUNT)
+				create_new_project_element,
 			]
+			.height(Length::Fill)
 			.spacing(SPACING_AMOUNT)
 			.padding(HORIZONTAL_PADDING),
 			
 			container(settings_button())
-				.height(Length::Fill)
 				.align_y(iced::alignment::Vertical::Bottom)
 		]
+		.width(Length::Fill)
+		.height(Length::Fill)
+		.spacing(SPACING_AMOUNT)
 		.into()
 	}
 }

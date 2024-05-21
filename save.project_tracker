@@ -105,7 +105,7 @@
         },
         {
           "name": "fix setttings and new project button being squished instead of the project list",
-          "state": "Todo"
+          "state": "Done"
         },
         {
           "name": "save on exit",
@@ -146,6 +146,14 @@
         {
           "name": "Filter tasks by all | todo | done",
           "state": "Done"
+        },
+        {
+          "name": "save state into AppData/etc. instead of working dir",
+          "state": "Todo"
+        },
+        {
+          "name": "Project/Task reordering",
+          "state": "Todo"
         }
       ]
     }

@@ -36,7 +36,7 @@ impl OverviewPage {
 
 					button(column![
 						text(&project.name).size(LARGE_TEXT_SIZE),
-						horizontal_seperator(1.0),
+						horizontal_seperator(),
 						Column::from_vec(task_list).padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO }),
 					])
 					.width(Length::Fill)
@@ -57,7 +57,7 @@ impl OverviewPage {
 			column![
 				text("Overview").size(TITLE_TEXT_SIZE),
 			
-				horizontal_seperator(1.0),
+				horizontal_seperator(),
 
 				Self::todo_tasks_list(&saved_state.projects),
 			]

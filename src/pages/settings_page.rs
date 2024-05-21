@@ -28,7 +28,7 @@ impl SettingsPage {
 				]
 				.align_items(Alignment::Center),
 
-				horizontal_seperator(1.0),
+				horizontal_seperator(),
 
 				column![
 					text("Shortcuts").size(LARGE_TEXT_SIZE),

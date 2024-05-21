@@ -1,8 +1,8 @@
-use iced::{theme, widget::{button, column, row, text, text_input}, Alignment, Command, Element, Length};
+use iced::{theme, widget::{button, column, container, row, text, text_input}, alignment::{Alignment, Horizontal}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, task_list}, project::{Project, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{GreenButtonStyle, TextInputStyle, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 use crate::components::create_new_task_button;
-use crate::styles::{HORIZONTAL_PADDING, LARGE_SPACING_AMOUNT};
+use crate::styles::PADDING_AMOUNT;
 
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -95,7 +95,7 @@ impl ProjectPage {
 					.width(Length::Fill)
 					.align_items(Alignment::Center),
 
-					partial_horizontal_seperator(1.0),
+					partial_horizontal_seperator(),
 
 					task_list(&project.tasks, self.task_filter, &project.name)
 				]
@@ -107,20 +107,24 @@ impl ProjectPage {
 			};
 
 			let create_new_task_element: Element<UiMessage> = if let Some(create_new_task_name) = &self.create_new_task_name {
-				row![
-					text_input("New task name", create_new_task_name)
-						.id(TEXT_INPUT_ID.clone())
-						.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
-						.on_submit(UiMessage::CreateTask {
-							project_name: self.project_name.clone(),
-							task_name: self.create_new_task_name.clone().unwrap_or(String::from("<invalid task name input>")),
-						})
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
-
-					cancel_button()
-						.on_press(ProjectPageMessage::CloseCreateNewTask.into())					
-				]
-				.align_items(Alignment::Center)
+				container(
+					row![
+						text_input("New task name", create_new_task_name)
+							.id(TEXT_INPUT_ID.clone())
+							.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
+							.on_submit(UiMessage::CreateTask {
+								project_name: self.project_name.clone(),
+								task_name: self.create_new_task_name.clone().unwrap_or(String::from("<invalid task name input>")),
+							})
+							.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+	
+						cancel_button()
+							.on_press(ProjectPageMessage::CloseCreateNewTask.into())					
+					]
+					.align_items(Alignment::Center)
+				)
+				.max_width(600.0)
+				.align_x(Horizontal::Center)
 				.into()
 			}
 			else {
@@ -129,11 +133,13 @@ impl ProjectPage {
 
 			column![
 				project_element,
-				partial_horizontal_seperator(1.0),
+				partial_horizontal_seperator(),
 				create_new_task_element,
 			]
-			.spacing(LARGE_SPACING_AMOUNT)
-			.padding(HORIZONTAL_PADDING)
+			.spacing(SPACING_AMOUNT)
+			.padding(Padding::new(PADDING_AMOUNT))
+			.height(Length::Fill)
+			.align_items(Alignment::Center)
 			.into()
 		}
 		else {

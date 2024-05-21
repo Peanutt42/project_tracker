@@ -14,5 +14,6 @@ pub fn task_list<'a>(tasks: &'a [Task], filter: TaskFilter, project_name: &'a st
 		.spacing(LARGE_SPACING_AMOUNT)
 	)
 	.width(Length::Fill)
+	.height(Length::Fill)
 	.into()
 }
