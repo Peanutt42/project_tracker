@@ -1,6 +1,6 @@
 use iced::{theme, widget::{button, column, row, text, text_input}, Alignment, Command, Element, Length};
 use once_cell::sync::Lazy;
-use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, task_list}, project::{Project, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
+use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, task_list}, project::{Project, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{GreenButtonStyle, TextInputStyle, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 use crate::components::create_new_task_button;
 use crate::styles::{HORIZONTAL_PADDING, LARGE_SPACING_AMOUNT};
 
@@ -64,9 +64,8 @@ impl ProjectPage {
 			
 			let filter_button = |label, filter, current_filter| {
 				button(text(label))
-					//.padding(8)
 					.style(if filter == current_filter {
-						theme::Button::Primary
+						theme::Button::custom(GreenButtonStyle)
 					} else {
 						theme::Button::Text
 					})
