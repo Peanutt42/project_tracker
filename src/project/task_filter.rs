@@ -1,4 +1,4 @@
-use iced::{Element, widget::{button, text, row}, Length, Padding, theme, alignment::Vertical};
+use iced::{Element, widget::{button, text, row}, Length, Padding, theme};
 use crate::{project::Task, project_tracker::UiMessage, pages::ProjectPageMessage, styles::{GreenButtonStyle, SPACING_AMOUNT}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -20,13 +20,13 @@ impl TaskFilter {
 
 	pub fn view(&self) -> Element<UiMessage> {
 		let filter_button = |label, filter, current_filter| {
-			button(text(label).vertical_alignment(Vertical::Center))
+			button(text(label))
 				.style(if filter == current_filter {
 					theme::Button::custom(GreenButtonStyle)
 				} else {
 					theme::Button::Text
 				})
-				.padding(Padding{ left: 5.0, right: 5.0, top: 2.5, bottom: 2.5 })
+				.padding(Padding{ left: 5.0, right: 5.0, top: 5.0, bottom: 0.0 })
 				.on_press(ProjectPageMessage::ChangeTaskFilter(filter).into())
 		};
 
