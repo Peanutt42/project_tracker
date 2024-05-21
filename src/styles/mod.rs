@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
@@ -12,6 +12,9 @@ pub use svg_styles::{BlackWhiteSvgStyle, GreenSvgStyle};
 
 mod checkbox_style;
 pub use checkbox_style::GreenCheckboxStyle;
+
+mod text_input;
+pub use text_input::TextInputStyle;
 
 mod paddings;
 pub use paddings::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};

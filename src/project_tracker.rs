@@ -157,7 +157,7 @@ impl Application for ProjectTrackerApp {
 
 					Command::batch([
 						self.update(UiMessage::Save),
-						self.update(ProjectPageMessage::CloseCreateNewTask.into()),
+						self.update(ProjectPageMessage::ChangeCreateNewTaskName(String::new()).into()),
 					])
 				},
 				UiMessage::SetTaskState { project_name, task_name, task_state } => {

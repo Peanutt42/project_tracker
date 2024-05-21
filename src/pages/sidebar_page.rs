@@ -1,6 +1,6 @@
-use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable, text_input, Column}, Command, Element, Length};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text_input, Column}, Command, Element, Length};
 use once_cell::sync::Lazy;
-use crate::{components::{create_new_project_button, cancel_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button}, project_tracker::UiMessage};
+use crate::{components::{cancel_button, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button}, project_tracker::UiMessage, styles::TextInputStyle};
 use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::project::Project;
@@ -87,7 +87,8 @@ impl SidebarPage {
 				text_input("New project name", create_new_project_name)
 					.id(TEXT_INPUT_ID.clone())
 					.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
-					.on_submit(UiMessage::CreateProject(new_project_name)),
+					.on_submit(UiMessage::CreateProject(new_project_name))
+					.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
 
 				cancel_button()
 					.on_press(SidebarPageMessage::CloseCreateNewProject.into())

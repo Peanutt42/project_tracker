@@ -1,6 +1,6 @@
 use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{button, row, svg, text, Button}, Length};
 use crate::{
-	pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{BlackWhiteSvgStyle, GreenSvgStyle, ProjectPreviewButtonStyle, TransparentButtonStyle, ICON_SIZE, SMALL_SPACING_AMOUNT}
+	pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{BlackWhiteSvgStyle, GreenSvgStyle, ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle, ICON_SIZE, SMALL_SPACING_AMOUNT}
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -50,6 +50,7 @@ pub fn cancel_button() -> Button<'static, UiMessage> {
 			.height(ICON_SIZE)
 			.style(theme::Svg::Custom(Box::new(BlackWhiteSvgStyle)))
 	)
+	.style(theme::Button::custom(GreenButtonStyle))
 }
 
 pub fn settings_button() -> Button<'static, UiMessage> {

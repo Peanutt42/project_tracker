@@ -1,6 +1,6 @@
-use iced::{widget::{column, text, text_input, row}, Alignment, Command, Element};
+use iced::{theme, widget::{column, row, text, text_input}, Alignment, Command, Element};
 use once_cell::sync::Lazy;
-use crate::{components::cancel_button, project_tracker::{ProjectTrackerApp, UiMessage}};
+use crate::{components::cancel_button, project_tracker::{ProjectTrackerApp, UiMessage}, styles::TextInputStyle};
 use crate::components::create_new_task_button;
 use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT};
 
@@ -72,7 +72,8 @@ impl ProjectPage {
 						.on_submit(UiMessage::CreateTask {
 							project_name: self.project_name.clone(),
 							task_name: self.create_new_task_name.clone().unwrap_or(String::from("<invalid task name input>")),
-						}),
+						})
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
 
 					cancel_button()
 						.on_press(ProjectPageMessage::CloseCreateNewTask.into())					
