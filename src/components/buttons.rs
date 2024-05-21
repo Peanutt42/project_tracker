@@ -1,6 +1,6 @@
-use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{button, row, svg, text, Button}, Length};
+use iced::{Alignment, theme, widget::{button, row, svg, text, Button}, Length};
 use crate::{
-	pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{BlackWhiteSvgStyle, GreenSvgStyle, ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle, ICON_SIZE, SMALL_SPACING_AMOUNT}
+	pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{BlackWhiteSvgStyle, GreenButtonStyle, GreenSvgStyle, ProjectPreviewButtonStyle, TransparentButtonStyle, ICON_SIZE, LARGE_ICON_SIZE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -67,12 +67,22 @@ pub fn settings_button() -> Button<'static, UiMessage> {
 }
 
 pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
+	let overview_svg = svg::Handle::from_memory(include_bytes!("../../assets/overview.svg"));
+
 	button(
-		text("Overview")
-			.size(22)
-			.width(Length::Fill)
-			.horizontal_alignment(Horizontal::Center)
-			.vertical_alignment(Vertical::Center)
+		row![
+			svg(overview_svg)
+				.width(LARGE_ICON_SIZE)
+				.width(LARGE_ICON_SIZE)
+				.style(theme::Svg::Custom(Box::new(BlackWhiteSvgStyle))),
+
+			text("Overview")
+				.size(LARGE_TEXT_SIZE)
+				.width(Length::Fill)
+		]
+		.align_items(Alignment::Center)
+		.spacing(SPACING_AMOUNT)
+		.width(Length::Fill)
 	)
 	.width(Length::Fill)
 	.on_press(UiMessage::OpenOverview)

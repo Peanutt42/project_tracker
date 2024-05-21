@@ -32,15 +32,14 @@ impl SidebarPage {
 		}
 	}
 
-	fn project_preview_list<'a>(projects: &'a [Project], app: &'a ProjectTrackerApp, overview_button: Column<'a, UiMessage>) -> Element<'a, UiMessage> {
-		let mut list: Vec<Element<UiMessage>> = projects.iter()
-		.map(|project| {
-			let selected = project.name == app.selected_page_name;
-			project_preview(project, selected)
-		})
-		.collect();
-		list.insert(0, overview_button.into());
-
+	fn project_preview_list<'a>(projects: &'a [Project], app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
+		let list: Vec<Element<UiMessage>> = projects.iter()
+			.map(|project| {
+				let selected = project.name == app.selected_page_name;
+				project_preview(project, selected)
+			})
+			.collect();
+		
 		scrollable(
 			Column::from_vec(list)
 				.width(Length::Fill)
@@ -60,24 +59,12 @@ impl SidebarPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
-		let overview_button = column![
-			overview_button(app.content_page.is_overview_page()),
-			partial_horizontal_seperator(2.5),
-		]
-		.spacing(LARGE_SPACING_AMOUNT);
-
 		let list: Element<UiMessage> =
 			if let Some(saved_state) = &app.saved_state {
-				Self::project_preview_list(&saved_state.projects, app, overview_button)
+				Self::project_preview_list(&saved_state.projects, app)
 			}
 			else {
-				column![
-					overview_button,
-					loading_screen(),
-				]
-				.width(Length::Fill)
-				.spacing(SPACING_AMOUNT)
-				.into()
+				loading_screen()
 			};
 
 		let create_new_project_element: Element<UiMessage> = if let Some(create_new_project_name) = &self.create_new_project_name {
@@ -105,6 +92,12 @@ impl SidebarPage {
 
 		column![
 			column![
+				column![
+					overview_button(app.content_page.is_overview_page()),
+					partial_horizontal_seperator(2.5),
+				]
+				.spacing(LARGE_SPACING_AMOUNT),
+
 				list,
 	
 				column![

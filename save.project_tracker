@@ -97,7 +97,7 @@
         },
         {
           "name": "overview icon",
-          "state": "Todo"
+          "state": "Done"
         },
         {
           "name": "maybe add InProgress TaskState back",
