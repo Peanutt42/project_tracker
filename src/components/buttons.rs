@@ -1,17 +1,15 @@
-use iced::{Alignment, theme, widget::{button, row, svg, text, Button}, Length};
+use iced::{theme, widget::{button, container, row, text, Button}, Alignment, Length, Padding};
+use iced_aw::core::icons::bootstrap::{self, Bootstrap};
 use crate::{
-	pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{BlackWhiteSvgStyle, GreenButtonStyle, GreenSvgStyle, ProjectPreviewButtonStyle, TransparentButtonStyle, ICON_SIZE, LARGE_ICON_SIZE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}
+	pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{GreenButtonStyle, GREEN_TEXT_STYLE, ProjectPreviewButtonStyle, TransparentButtonStyle, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
-	let add_project_svg = svg::Handle::from_memory(include_bytes!("../../assets/add_project.svg"));
-
 	button(
 		row![
-			svg(add_project_svg)
-				.width(ICON_SIZE)
-				.height(ICON_SIZE)
-				.style(theme::Svg::Custom(Box::new(GreenSvgStyle))),
+			bootstrap::icon_to_text(Bootstrap::PlusSquare)
+				.size(LARGE_TEXT_SIZE)
+				.style(GREEN_TEXT_STYLE),
 
 			text("New Project")
 		]
@@ -23,14 +21,11 @@ pub fn create_new_project_button() -> Button<'static, UiMessage> {
 }
 
 pub fn create_new_task_button() -> Button<'static, UiMessage> {
-	let add_task_svg = svg::Handle::from_memory(include_bytes!("../../assets/add_task.svg"));
-
 	button(
 		row![
-			svg(add_task_svg)
-			.width(ICON_SIZE)
-			.height(ICON_SIZE)
-			.style(theme::Svg::Custom(Box::new(GreenSvgStyle))),
+			bootstrap::icon_to_text(Bootstrap::PlusCircle)
+				.size(LARGE_TEXT_SIZE)
+				.style(GREEN_TEXT_STYLE),
 
 			text("New Task")
 		]
@@ -42,39 +37,27 @@ pub fn create_new_task_button() -> Button<'static, UiMessage> {
 }
 
 pub fn cancel_button() -> Button<'static, UiMessage> {
-	let cancel_svg = svg::Handle::from_memory(include_bytes!("../../assets/cancel.svg"));
-
-	button(
-		svg(cancel_svg)
-			.width(ICON_SIZE)
-			.height(ICON_SIZE)
-			.style(theme::Svg::Custom(Box::new(BlackWhiteSvgStyle)))
-	)
-	.style(theme::Button::custom(GreenButtonStyle))
+	button(bootstrap::icon_to_text(Bootstrap::XLg))
+		.style(theme::Button::custom(GreenButtonStyle))
 }
 
 pub fn settings_button() -> Button<'static, UiMessage> {
-	let settings_svg = svg::Handle::from_memory(include_bytes!("../../assets/settings.svg"));
-	
 	button(
-		svg(settings_svg)
-			.width(ICON_SIZE)
-			.height(ICON_SIZE)
-			.style(theme::Svg::Custom(Box::new(BlackWhiteSvgStyle)))
+		container(
+			bootstrap::icon_to_text(Bootstrap::Gear)
+				.size(LARGE_TEXT_SIZE)
+		)
+		.padding(Padding{ left: 2.5, right: 2.5, top: 0.0, bottom: 0.0 })
 	)
 	.on_press(UiMessage::OpenSettings)
 	.style(theme::Button::Secondary)
 }
 
 pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
-	let overview_svg = svg::Handle::from_memory(include_bytes!("../../assets/overview.svg"));
-
 	button(
 		row![
-			svg(overview_svg)
-				.width(LARGE_ICON_SIZE)
-				.width(LARGE_ICON_SIZE)
-				.style(theme::Svg::Custom(Box::new(BlackWhiteSvgStyle))),
+			bootstrap::icon_to_text(Bootstrap::List)
+				.size(LARGE_TEXT_SIZE),
 
 			text("Overview")
 				.size(LARGE_TEXT_SIZE)

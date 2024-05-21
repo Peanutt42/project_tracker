@@ -1,5 +1,5 @@
-use iced::{keyboard, window, Application, Command, Element, Event, Subscription, Theme};
-use iced_aw::{Split, SplitStyles};
+use iced::{keyboard, window, font, Application, Command, Element, Event, Subscription, Theme};
+use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
 use crate::{
 	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, project::{Project, Task, TaskState}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -17,6 +17,7 @@ pub struct ProjectTrackerApp {
 pub enum UiMessage {
 	Event(Event),
 	EscapePressed,
+	FontLoaded(Result<(), font::Error>),
 	SystemTheme { is_dark: bool },
 	Loaded(SavedState),
 	Save,
@@ -47,15 +48,20 @@ impl Application for ProjectTrackerApp {
 	type Message = UiMessage;
 
 	fn new(_flags: ()) -> (Self, Command<UiMessage>) {
-		(Self {
-			sidebar_page: SidebarPage::new(),
-			content_page: ContentPage::Overview(OverviewPage::new()),
-			selected_page_name: String::new(),
-			sidebar_position: Some(300),
-			saved_state: None,
-			is_system_theme_dark: is_system_theme_dark(),
-		},
-		Command::perform(SavedState::load(), UiMessage::Loaded))
+		(
+			Self {
+				sidebar_page: SidebarPage::new(),
+				content_page: ContentPage::Overview(OverviewPage::new()),
+				selected_page_name: String::new(),
+				sidebar_position: Some(300),
+				saved_state: None,
+				is_system_theme_dark: is_system_theme_dark(),
+			},
+			Command::batch([
+				Command::perform(SavedState::load(), UiMessage::Loaded),
+				font::load(BOOTSTRAP_FONT_BYTES).map(UiMessage::FontLoaded),
+			])
+		)
 	}
 
 	fn title(&self) -> String {
@@ -119,6 +125,7 @@ impl Application for ProjectTrackerApp {
 					self.update(SidebarPageMessage::CloseCreateNewProject.into()),
 					self.update(ProjectPageMessage::CloseCreateNewTask.into())
 				]),
+				UiMessage::FontLoaded(_) => Command::none(),
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
 				UiMessage::Loaded(saved_state) => { self.saved_state = Some(saved_state); Command::none() },
 				UiMessage::Save => Command::perform(saved_state.clone().save(), |_| UiMessage::Saved),
@@ -222,6 +229,7 @@ impl Application for ProjectTrackerApp {
 				UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
 
 				UiMessage::Event(_) |
+				UiMessage::FontLoaded(_) |
 				UiMessage::CreateProject(_) |
 				UiMessage::CreateTask { .. } |
 				UiMessage::SetTaskState { .. } |

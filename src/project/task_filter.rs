@@ -21,11 +21,14 @@ impl TaskFilter {
 	pub fn view(&self) -> Element<UiMessage> {
 		let filter_button = |label, filter, current_filter| {
 			button(text(label).vertical_alignment(Vertical::Center))
-				.style(if filter == current_filter {
-					theme::Button::custom(GreenButtonStyle)
-				} else {
-					theme::Button::Text
-				})
+				.style(
+					if filter == current_filter {
+						theme::Button::custom(GreenButtonStyle)
+					}
+					else {
+						theme::Button::Text
+					}
+				)
 				.padding(Padding{ left: 5.0, right: 5.0, top: 2.5, bottom: 2.5 })
 				.on_press(ProjectPageMessage::ChangeTaskFilter(filter).into())
 		};
