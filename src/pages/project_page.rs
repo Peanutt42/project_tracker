@@ -1,8 +1,8 @@
-use iced::{theme, widget::{column, row, text, text_input}, Alignment, Command, Element};
+use iced::{theme, widget::{button, column, row, text, text_input}, Alignment, Command, Element, Length};
 use once_cell::sync::Lazy;
-use crate::{components::cancel_button, project_tracker::{ProjectTrackerApp, UiMessage}, styles::TextInputStyle};
+use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, task_list}, project::{Project, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 use crate::components::create_new_task_button;
-use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT};
+use crate::styles::{HORIZONTAL_PADDING, LARGE_SPACING_AMOUNT};
 
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -11,6 +11,7 @@ pub enum ProjectPageMessage {
 	OpenCreateNewTask,
 	CloseCreateNewTask,
 	ChangeCreateNewTaskName(String),
+	ChangeTaskFilter(TaskFilter),
 }
 
 impl From<ProjectPageMessage> for UiMessage {
@@ -23,6 +24,7 @@ impl From<ProjectPageMessage> for UiMessage {
 pub struct ProjectPage {
 	pub project_name: String,
 	pub create_new_task_name: Option<String>,
+	task_filter: TaskFilter,
 }
 
 impl ProjectPage {
@@ -30,6 +32,7 @@ impl ProjectPage {
 		Self {
 			project_name,
 			create_new_task_name: None,
+			task_filter: TaskFilter::All,
 		}
 	}
 }
@@ -45,6 +48,7 @@ impl ProjectPage {
 				}
 				Command::none()
 			},
+			ProjectPageMessage::ChangeTaskFilter(new_task_filter) => { self.task_filter = new_task_filter; Command::none() },
 		}
 	}
 
@@ -57,8 +61,47 @@ impl ProjectPage {
 					break;
 				}
 			}
-			let project_element = if let Some(project) = current_project {
-				project.view()
+			
+			let filter_button = |label, filter, current_filter| {
+				button(text(label))
+					//.padding(8)
+					.style(if filter == current_filter {
+						theme::Button::Primary
+					} else {
+						theme::Button::Text
+					})
+					.on_press(ProjectPageMessage::ChangeTaskFilter(filter).into())
+			};
+
+			let project_element: Element<UiMessage> = if let Some(project) = current_project {
+				let tasks_done = project.get_tasks_done();
+				let tasks_len = project.tasks.len();
+				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);
+
+				column![
+					text(&project.name).size(TITLE_TEXT_SIZE),
+					completion_bar(completion_percentage),
+					row![
+						text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
+							.width(Length::Fill),
+
+						row![
+							filter_button("All", TaskFilter::All, self.task_filter),
+							filter_button("Todo", TaskFilter::Todo, self.task_filter),
+							filter_button("Done", TaskFilter::Done, self.task_filter)
+						]
+						.width(Length::Shrink)
+						.spacing(SPACING_AMOUNT),
+					]
+					.width(Length::Fill)
+					.align_items(Alignment::Center),
+
+					partial_horizontal_seperator(1.0),
+
+					task_list(&project.tasks, self.task_filter, &project.name)
+				]
+				.spacing(SPACING_AMOUNT)
+				.into()
 			}
 			else {
 				text("Invalid Project").into()
@@ -87,9 +130,10 @@ impl ProjectPage {
 
 			column![
 				project_element,
+				partial_horizontal_seperator(1.0),
 				create_new_task_element,
 			]
-			.spacing(SPACING_AMOUNT)
+			.spacing(LARGE_SPACING_AMOUNT)
 			.padding(HORIZONTAL_PADDING)
 			.into()
 		}

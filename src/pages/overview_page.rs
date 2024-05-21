@@ -1,5 +1,5 @@
 use iced::{theme, widget::{button, column, row, scrollable, text, Column}, Element, Length, Padding};
-use crate::{components::{horizontal_seperator, loading_screen}, project::Project, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{ProjectPreviewButtonStyle, HORIZONTAL_PADDING, PADDING_AMOUNT, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}};
+use crate::{components::{horizontal_seperator, loading_screen}, project::{Project, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{ProjectPreviewButtonStyle, HORIZONTAL_PADDING, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
 #[derive(Debug, Clone)]
 pub struct OverviewPage {
@@ -23,7 +23,7 @@ impl OverviewPage {
 				})
 				.map(|project| {
 					let task_list = project.tasks.iter()
-						.filter(|t| !t.state.is_done())
+						.filter(|t| TaskFilter::Todo.matches(t))
 						.map(|t| {
 							row![
 								text("-"),

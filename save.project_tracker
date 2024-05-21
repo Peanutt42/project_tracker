@@ -142,6 +142,10 @@
         {
           "name": "highlight Todo / make done tasks less noticable",
           "state": "Done"
+        },
+        {
+          "name": "Filter tasks by all | todo | done",
+          "state": "Done"
         }
       ]
     }
