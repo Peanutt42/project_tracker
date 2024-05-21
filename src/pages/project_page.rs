@@ -1,6 +1,6 @@
-use iced::{theme, widget::{button, column, container, row, text, text_input}, alignment::{Alignment, Horizontal}, Command, Element, Length, Padding};
+use iced::{theme, widget::{column, container, row, text, text_input}, alignment::{Alignment, Horizontal}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, task_list}, project::{Project, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{GreenButtonStyle, TextInputStyle, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
+use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, task_list}, project::{Project, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 use crate::components::create_new_task_button;
 use crate::styles::PADDING_AMOUNT;
 
@@ -61,16 +61,6 @@ impl ProjectPage {
 					break;
 				}
 			}
-			
-			let filter_button = |label, filter, current_filter| {
-				button(text(label))
-					.style(if filter == current_filter {
-						theme::Button::custom(GreenButtonStyle)
-					} else {
-						theme::Button::Text
-					})
-					.on_press(ProjectPageMessage::ChangeTaskFilter(filter).into())
-			};
 
 			let project_element: Element<UiMessage> = if let Some(project) = current_project {
 				let tasks_done = project.get_tasks_done();
@@ -84,13 +74,7 @@ impl ProjectPage {
 						text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
 							.width(Length::Fill),
 
-						row![
-							filter_button("All", TaskFilter::All, self.task_filter),
-							filter_button("Todo", TaskFilter::Todo, self.task_filter),
-							filter_button("Done", TaskFilter::Done, self.task_filter)
-						]
-						.width(Length::Shrink)
-						.spacing(SPACING_AMOUNT),
+						self.task_filter.view(),
 					]
 					.width(Length::Fill)
 					.align_items(Alignment::Center),
