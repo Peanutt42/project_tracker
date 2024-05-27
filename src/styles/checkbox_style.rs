@@ -1,4 +1,5 @@
-use iced::{widget::checkbox::{Appearance, StyleSheet}, Border, Color, Theme};
+use iced::{widget::checkbox::{Appearance, StyleSheet}, Border, Theme};
+use crate::styles::NICE_GREEN;
 
 pub struct GreenCheckboxStyle;
 
@@ -9,7 +10,7 @@ impl StyleSheet for GreenCheckboxStyle {
 		Appearance {
 			background: iced::Background::Color(
 				if is_checked {
-					Color::from_rgb(0.0, 1.0, 0.0)
+					NICE_GREEN
 				}
 				else {
 					style.extended_palette().background.base.color
@@ -20,7 +21,7 @@ impl StyleSheet for GreenCheckboxStyle {
 			border: Border {
 				radius: 2.0.into(),
 				width: 1.0,
-				color: Color::from_rgb(0.0, 1.0, 0.0),
+				color: NICE_GREEN,
 			},
 		}
 	}
@@ -29,7 +30,7 @@ impl StyleSheet for GreenCheckboxStyle {
 		Appearance {
 			background: iced::Background::Color(
 				if is_checked {
-					Color::from_rgb(0.0, 1.0, 0.0)
+					NICE_GREEN
 				}
 				else {
 					style.extended_palette().background.weak.color
@@ -40,7 +41,7 @@ impl StyleSheet for GreenCheckboxStyle {
 			border: Border {
 				radius: 2.0.into(),
 				width: 1.0,
-				color: Color::from_rgb(0.0, 1.0, 0.0),
+				color: NICE_GREEN,
 			},
 		}
 	}

@@ -1,5 +1,5 @@
 use iced::{widget::text_input::{Appearance, StyleSheet}, Color, Border, Theme};
-
+use crate::styles::NICE_GREEN;
 
 pub struct TextInputStyle;
 
@@ -42,7 +42,7 @@ impl StyleSheet for TextInputStyle {
             border: Border {
                 radius: 2.0.into(),
                 width: 1.0,
-                color: Color::from_rgb(0.0, 1.0, 0.0),//palette.primary.strong.color,
+                color: NICE_GREEN,
             },
             icon_color: palette.background.weak.text,
         }

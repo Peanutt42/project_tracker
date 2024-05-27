@@ -1,3 +1,4 @@
-use iced::{Color, theme};
+use iced::theme;
+use crate::styles::NICE_GREEN;
 
-pub const GREEN_TEXT_STYLE: theme::Text = theme::Text::Color(Color::from_rgb(0.0, 1.0, 0.0));
+pub const GREEN_TEXT_STYLE: theme::Text = theme::Text::Color(NICE_GREEN);

@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle, SecondaryButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle, SecondaryButtonStyle, TaskFilterButtonStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
@@ -18,6 +18,9 @@ pub use checkbox_style::GreenCheckboxStyle;
 
 mod text_input;
 pub use text_input::TextInputStyle;
+
+mod colors;
+pub use colors::{NICE_GREEN, DARK_GREEN, LIGHT_GREY, GREY, DARK_GREY};
 
 mod paddings;
 pub use paddings::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};

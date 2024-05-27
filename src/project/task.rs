@@ -1,7 +1,7 @@
-use iced::{widget::{row, checkbox, text}, Color, Alignment, theme, Element};
+use iced::{widget::{row, checkbox, text}, Alignment, theme, Element};
 use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
-use crate::styles::GreenCheckboxStyle;
+use crate::styles::{GreenCheckboxStyle, GREY};
 use crate::project::TaskState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,7 +43,7 @@ impl Task {
 			text(&self.name)
 				.style(
 					if self.is_done() {
-						theme::Text::Color(Color::from_rgb(0.5, 0.5, 0.5))
+						theme::Text::Color(GREY)
 					}
 					else {
 						theme::Text::Default

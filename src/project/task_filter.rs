@@ -1,5 +1,5 @@
-use iced::{Element, widget::{button, text, row}, alignment::Vertical, Length, Padding, theme};
-use crate::{project::Task, project_tracker::UiMessage, pages::ProjectPageMessage, styles::{GreenButtonStyle, SPACING_AMOUNT}};
+use iced::{theme, widget::{button, row, text}, Element, Length, Padding};
+use crate::{pages::ProjectPageMessage, project::Task, project_tracker::UiMessage, styles::{TaskFilterButtonStyle, PADDING_AMOUNT, SPACING_AMOUNT}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TaskFilter {
@@ -20,16 +20,9 @@ impl TaskFilter {
 
 	pub fn view(&self) -> Element<UiMessage> {
 		let filter_button = |label, filter, current_filter| {
-			button(text(label).vertical_alignment(Vertical::Center))
-				.style(
-					if filter == current_filter {
-						theme::Button::custom(GreenButtonStyle)
-					}
-					else {
-						theme::Button::Text
-					}
-				)
-				.padding(Padding{ left: 5.0, right: 5.0, top: 2.5, bottom: 2.5 })
+			button(text(label))
+				.style(theme::Button::custom(TaskFilterButtonStyle{ selected: filter == current_filter }))
+				.padding(Padding{ left: PADDING_AMOUNT, right: PADDING_AMOUNT, top: 3.5, bottom: 3.5 })
 				.on_press(ProjectPageMessage::ChangeTaskFilter(filter).into())
 		};
 
