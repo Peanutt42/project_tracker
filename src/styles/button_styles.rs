@@ -11,7 +11,7 @@ impl button::StyleSheet for ProjectPreviewButtonStyle {
 		button::Appearance {
 			background: Some(Background::Color(
 				if self.selected {
-					style.extended_palette().primary.base.color
+					style.extended_palette().primary.weak.color
 				}
 				else {
 					style.palette().background
@@ -25,7 +25,14 @@ impl button::StyleSheet for ProjectPreviewButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> button::Appearance {
 		button::Appearance {
-			background: Some(Background::Color(style.extended_palette().primary.base.color)),
+			background: Some(Background::Color(
+				if self.selected {
+					style.extended_palette().primary.weak.color
+				}
+				else {
+					style.extended_palette().background.strong.color
+				}
+			)),
 			..self.active(style)
 		}
 	}

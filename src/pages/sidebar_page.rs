@@ -1,7 +1,7 @@
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text_input, Column}, Command, Element, Length};
+use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{column, container, row, scrollable, text_input, Column}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{components::{cancel_button, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button}, project_tracker::UiMessage, styles::TextInputStyle};
-use crate::styles::{HORIZONTAL_PADDING, SPACING_AMOUNT};
+use crate::styles::{HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::project::Project;
 
@@ -113,11 +113,12 @@ impl SidebarPage {
 			.padding(HORIZONTAL_PADDING),
 			
 			container(settings_button())
-				.align_y(iced::alignment::Vertical::Bottom)
+				.align_y(Vertical::Bottom)
 		]
 		.width(Length::Fill)
 		.height(Length::Fill)
 		.spacing(SPACING_AMOUNT)
+		.padding(Padding { top: SMALL_PADDING_AMOUNT, ..Padding::ZERO })
 		.into()
 	}
 }

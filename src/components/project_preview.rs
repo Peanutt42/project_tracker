@@ -1,7 +1,8 @@
-use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text}, Color, Element, Length};
-use crate::{project_tracker::UiMessage, styles::SMALL_HORIZONTAL_PADDING};
-use crate::components::completion_bar;
-use crate::styles::{ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT};
+use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text}, Color, Element, Length, Padding};
+use iced_aw::ContextMenu;
+use crate::{project_tracker::UiMessage, styles::{ContextMenuContainerStyle, SMALL_PADDING_AMOUNT}};
+use crate::components::{completion_bar, delete_project_button};
+use crate::styles::{ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_HORIZONTAL_PADDING};
 use crate::project::Project;
 
 pub fn project_preview(project: &Project, selected: bool) -> Element<UiMessage> {
@@ -21,9 +22,22 @@ pub fn project_preview(project: &Project, selected: bool) -> Element<UiMessage> 
 	]
 	.padding(SMALL_HORIZONTAL_PADDING);
 
-	button(inner)
+	let underlay = button(inner)
 		.width(Length::Fill)
 		.on_press(UiMessage::SelectProject(project.name.clone()))
-		.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
+		.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }));
+
+	let context_overlay = || {
+		container(
+			column![
+				delete_project_button(project.name.clone()),
+			]
+		)
+		.padding(Padding::new(SMALL_PADDING_AMOUNT))
+		.style(theme::Container::Custom(Box::new(ContextMenuContainerStyle)))
+		.into()
+	};
+
+	ContextMenu::new(underlay, context_overlay)
 		.into()
 }

@@ -1,8 +1,11 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle, SecondaryButtonStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
+
+mod container_styles;
+pub use container_styles::ContextMenuContainerStyle;
 
 mod split_style;
 pub use split_style::SplitStyle;
@@ -17,7 +20,7 @@ mod text_input;
 pub use text_input::TextInputStyle;
 
 mod paddings;
-pub use paddings::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};
+pub use paddings::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};
 
 mod size;
 pub use size::{SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE};

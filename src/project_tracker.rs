@@ -25,6 +25,7 @@ pub enum UiMessage {
 	SidebarMoved(u16),
 	SelectProject(String),
 	CreateProject(String),
+	DeleteProject(String),
 	CreateTask {
 		project_name: String,
 		task_name: String,
@@ -154,6 +155,27 @@ impl Application for ProjectTrackerApp {
 						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
 					])
 				},
+				UiMessage::DeleteProject(project_name) => {
+					let mut project_index = None;
+					for (i, project) in saved_state.projects.iter().enumerate() {
+						if project.name == project_name {
+							project_index = Some(i);
+							break;
+						}
+					}
+					if let Some(project_index) = project_index {
+						saved_state.projects.remove(project_index);
+					}
+					if self.selected_page_name == project_name {
+						Command::batch([
+							self.update(UiMessage::Save),
+							self.update(UiMessage::OpenOverview),								
+						])
+					}
+					else {
+						self.update(UiMessage::Save)
+					}
+				},
 				UiMessage::CreateTask { project_name, task_name } => {
 					for project in saved_state.projects.iter_mut() {
 						if project.name == project_name {
@@ -231,6 +253,7 @@ impl Application for ProjectTrackerApp {
 				UiMessage::Event(_) |
 				UiMessage::FontLoaded(_) |
 				UiMessage::CreateProject(_) |
+				UiMessage::DeleteProject(_) |
 				UiMessage::CreateTask { .. } |
 				UiMessage::SetTaskState { .. } |
 				UiMessage::SetThemeMode(_) |
