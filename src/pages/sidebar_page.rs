@@ -1,4 +1,5 @@
-use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Command, Element, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
+use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
 use crate::{project_tracker::UiMessage, styles::LARGE_TEXT_SIZE};
 use crate::components::{cancel_button, custom_project_preview, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button};
@@ -68,6 +69,9 @@ impl SidebarPage {
 		};
 
 		list.push(create_new_project_element);
+
+		// some space at the bottom so that the + button doesn't block any view to the last project
+		list.push(Space::with_height(50.0).into());
 		
 		scrollable(
 			Column::from_vec(list)
@@ -107,10 +111,7 @@ impl SidebarPage {
 			column![].into()
 		}
 		else {
-			container(create_new_project_button())
-				.align_x(Horizontal::Center)
-				.width(Length::Fill)
-				.into()
+			create_new_project_button().into()
 		};
 
 		column![
@@ -118,11 +119,13 @@ impl SidebarPage {
 				overview_button(app.content_page.is_overview_page()),
 				partial_horizontal_seperator(),
 
-				list,
-	
+				floating_element(
+					list,
+					create_new_project_button
+				)
+				.anchor(Anchor::SouthEast)
+				.offset(10.0),
 				partial_horizontal_seperator(),
-	
-				create_new_project_button,
 			]
 			.height(Length::Fill)
 			.spacing(SPACING_AMOUNT)

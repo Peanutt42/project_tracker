@@ -6,16 +6,18 @@ use crate::{
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
 	button(
-		row![
-			icon_to_text(Bootstrap::PlusSquare)
-				.size(LARGE_TEXT_SIZE)
-				.style(GREEN_TEXT_STYLE),
-
-			text("New Project")
-		]
-		.align_items(Alignment::Center)
-		.spacing(SMALL_SPACING_AMOUNT)
+		container(
+			icon_to_text(Bootstrap::PlusSquareFill)
+				.size(LARGE_TEXT_SIZE * 1.7)
+				.style(GREEN_TEXT_STYLE)
+		)
+		.width(Length::Fill)
+		.height(Length::Fill)
+		.center_x()
+		.center_y()
 	)
+	.width(LARGE_TEXT_SIZE * 2.75)
+	.height(LARGE_TEXT_SIZE * 2.75)
 	.on_press(SidebarPageMessage::OpenCreateNewProject.into())
 	.style(theme::Button::custom(TransparentButtonStyle))
 }
