@@ -11,7 +11,7 @@ mod loading_screen;
 pub use loading_screen::loading_screen;
 
 mod project_preview;
-pub use project_preview::project_preview;
+pub use project_preview::{project_preview, custom_project_preview};
 
 mod seperator;
 pub use seperator::{horizontal_seperator, partial_horizontal_seperator};
