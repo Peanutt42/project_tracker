@@ -1,8 +1,8 @@
 use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text}, Element, Length, Padding};
 use iced_aw::ContextMenu;
-use crate::{project_tracker::UiMessage, styles::{ContextMenuContainerStyle, LIGHT_GREY, SMALL_PADDING_AMOUNT}};
+use crate::{project_tracker::UiMessage, styles::SMALL_PADDING_AMOUNT};
 use crate::components::{completion_bar, delete_project_button};
-use crate::styles::{ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_HORIZONTAL_PADDING};
+use crate::styles::{ContextMenuContainerStyle, ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, SMALL_SPACING_AMOUNT};
 use crate::project::Project;
 
 pub fn project_preview(project: &Project, selected: bool) -> Element<UiMessage> {
@@ -37,10 +37,14 @@ pub fn custom_project_preview<'a>(project_name: Option<&'a String>, project_comp
 	]
 	.padding(SMALL_HORIZONTAL_PADDING);
 
-	let underlay = button(inner)
-		.width(Length::Fill)
-		.on_press_maybe(project_name.map(|project_name| UiMessage::SelectProject(project_name.clone())))
-		.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }));
+	let underlay = 
+		container(
+				button(inner)
+					.width(Length::Fill)
+					.on_press_maybe(project_name.map(|project_name| UiMessage::SelectProject(project_name.clone())))
+					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
+		)
+		.padding(Padding{ right: PADDING_AMOUNT, ..Padding::ZERO });
 
 	if let Some(project_name) = project_name {
 		let context_overlay = || {
@@ -58,11 +62,6 @@ pub fn custom_project_preview<'a>(project_name: Option<&'a String>, project_comp
 			.into()
 	}
 	else {
-		container(
-			underlay
-		)
-		.padding(Padding::new(SMALL_PADDING_AMOUNT))
-		.style(theme::Container::Custom(Box::new(ContextMenuContainerStyle)))
-		.into()
+		underlay.into()
 	}
 }
