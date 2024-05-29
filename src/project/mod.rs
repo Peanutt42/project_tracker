@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use serde::{Serialize, Deserialize};
 
 mod task;
-pub use task::Task;
+pub use task::{Task, TaskId, generate_task_id};
 
 mod task_state;
 pub use task_state::TaskState;
@@ -9,15 +11,23 @@ pub use task_state::TaskState;
 mod task_filter;
 pub use task_filter::TaskFilter;
 
+pub type ProjectId = usize;
+
+pub fn generate_project_id() -> ProjectId {
+	rand::random()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
+	pub id: ProjectId,
 	pub name: String,
-	pub tasks: Vec<Task>,
+	pub tasks: HashMap<TaskId, Task>,
 }
 
 impl Project {
-	pub fn new(name: String, tasks: Vec<Task>) -> Self {
+	pub fn new(id: ProjectId, name: String, tasks: HashMap<TaskId, Task>) -> Self {
 		Self {
+			id,
 			name,
 			tasks,
 		}
@@ -25,7 +35,7 @@ impl Project {
 
 	pub fn get_tasks_done(&self) -> usize {
 		self.tasks
-			.iter()
+			.values()
 			.filter(|t| t.is_done())
 			.count()
 	}

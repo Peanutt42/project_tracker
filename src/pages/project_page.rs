@@ -1,8 +1,6 @@
 use iced::{theme, widget::{column, container, row, text, text_input}, alignment::{Alignment, Horizontal}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, task_list}, project::{Project, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
-use crate::components::create_new_task_button;
-use crate::styles::PADDING_AMOUNT;
+use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, create_new_task_button, task_list}, project::{Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, PADDING_AMOUNT, TITLE_TEXT_SIZE}};
 
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -22,15 +20,15 @@ impl From<ProjectPageMessage> for UiMessage {
 
 #[derive(Debug, Clone)]
 pub struct ProjectPage {
-	pub project_name: String,
+	pub project_id: ProjectId,
 	pub create_new_task_name: Option<String>,
 	task_filter: TaskFilter,
 }
 
 impl ProjectPage {
-	pub fn new(project_name: String) -> Self {
+	pub fn new(project_id: ProjectId) -> Self {
 		Self {
-			project_name,
+			project_id,
 			create_new_task_name: None,
 			task_filter: TaskFilter::All,
 		}
@@ -54,15 +52,7 @@ impl ProjectPage {
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		if let Some(saved_state) = &app.saved_state {
-			let mut current_project = None;
-			for project in saved_state.projects.iter() {
-				if project.name == self.project_name {
-					current_project = Some(project);
-					break;
-				}
-			}
-
-			let project_element: Element<UiMessage> = if let Some(project) = current_project {
+			let project_element: Element<UiMessage> = if let Some(project) = saved_state.projects.get(&self.project_id) {
 				let tasks_done = project.get_tasks_done();
 				let tasks_len = project.tasks.len();
 				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);
@@ -81,13 +71,13 @@ impl ProjectPage {
 
 					partial_horizontal_seperator(),
 
-					task_list(&project.tasks, self.task_filter, &project.name)
+					task_list(&project.tasks, self.task_filter, project.id)
 				]
 				.spacing(SPACING_AMOUNT)
 				.into()
 			}
 			else {
-				text("Invalid Project").into()
+				text("<Invalid ProjectId>").into()
 			};
 
 			let create_new_task_element: Element<UiMessage> = if let Some(create_new_task_name) = &self.create_new_task_name {
@@ -97,7 +87,7 @@ impl ProjectPage {
 							.id(TEXT_INPUT_ID.clone())
 							.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
 							.on_submit(UiMessage::CreateTask {
-								project_name: self.project_name.clone(),
+								project_id: self.project_id,
 								task_name: self.create_new_task_name.clone().unwrap_or(String::from("<invalid task name input>")),
 							})
 							.style(theme::TextInput::Custom(Box::new(TextInputStyle))),

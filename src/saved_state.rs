@@ -1,11 +1,12 @@
 use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::project::Project;
+use crate::project::{Project, ProjectId};
 use crate::theme_mode::ThemeMode;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SavedState {
-	pub projects: Vec<Project>,
+	pub projects: HashMap<ProjectId, Project>,
 	pub theme_mode: ThemeMode,
 }
 

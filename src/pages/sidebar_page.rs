@@ -1,11 +1,13 @@
+use std::collections::HashMap;
+
 use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
 use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
-use crate::{project_tracker::UiMessage, styles::LARGE_TEXT_SIZE};
+use crate::{project::ProjectId, project_tracker::UiMessage, styles::LARGE_TEXT_SIZE};
 use crate::components::{cancel_button, custom_project_preview, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button};
 use crate::styles::{TextInputStyle, HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
-use crate::project::Project;
+use crate::project::{generate_project_id, Project};
 
 static SCROLLABLE_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -35,10 +37,13 @@ impl SidebarPage {
 		}
 	}
 
-	fn project_preview_list<'a>(&self, projects: &'a [Project], app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
+	fn project_preview_list<'a>(&self, projects: &'a HashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
 		let mut list: Vec<Element<UiMessage>> = projects.iter()
-			.map(|project| {
-				let selected = project.name == app.selected_page_name;
+			.map(|(project_id, project)| {
+				let selected = match app.selected_project_id {
+					Some(selected_project_id) => *project_id == selected_project_id,
+					None => false,
+				};
 				project_preview(project, selected)
 			})
 			.collect();
@@ -50,7 +55,7 @@ impl SidebarPage {
 						.id(TEXT_INPUT_ID.clone())
 						.size(LARGE_TEXT_SIZE)
 						.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
-						.on_submit(UiMessage::CreateProject(create_new_project_name.clone()))
+						.on_submit(UiMessage::CreateProject{ project_id: generate_project_id(), project_name: create_new_project_name.clone() })
 						.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
 	
 					cancel_button()

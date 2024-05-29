@@ -1,13 +1,15 @@
+use std::collections::HashMap;
+
 use iced::{keyboard, window, font, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
 use crate::{
-	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, project::{Project, Task, TaskState}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, project::{generate_task_id, Project, ProjectId, Task, TaskId, TaskState}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
 	pub sidebar_page: SidebarPage,
 	pub content_page: ContentPage,
-	pub selected_page_name: String,
+	pub selected_project_id: Option<ProjectId>,
 	pub sidebar_position: Option<u16>,
 	pub saved_state: Option<SavedState>,
 	pub is_system_theme_dark: bool,
@@ -23,16 +25,19 @@ pub enum UiMessage {
 	Save,
 	Saved,
 	SidebarMoved(u16),
-	SelectProject(String),
-	CreateProject(String),
-	DeleteProject(String),
-	CreateTask {
+	SelectProject(ProjectId),
+	CreateProject {
+		project_id: ProjectId,
 		project_name: String,
+	},
+	DeleteProject(ProjectId),
+	CreateTask {
+		project_id: ProjectId,
 		task_name: String,
 	},
 	SetTaskState {
-		project_name: String,
-		task_name: String,
+		project_id: ProjectId,
+		task_id: TaskId,
 		task_state: TaskState,
 	},
 	OpenOverview,
@@ -53,7 +58,7 @@ impl Application for ProjectTrackerApp {
 			Self {
 				sidebar_page: SidebarPage::new(),
 				content_page: ContentPage::Overview(OverviewPage::new()),
-				selected_page_name: String::new(),
+				selected_project_id: None,
 				sidebar_position: Some(300),
 				saved_state: None,
 				is_system_theme_dark: is_system_theme_dark(),
@@ -134,54 +139,51 @@ impl Application for ProjectTrackerApp {
 				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
 				UiMessage::OpenOverview => {
 					self.content_page = ContentPage::Overview(OverviewPage::new());
-					self.selected_page_name.clear();
+					self.selected_project_id = None;
 					Command::none()
 				},
 				UiMessage::OpenSettings => {
 					self.content_page = ContentPage::Settings(SettingsPage::new());
-					self.selected_page_name.clear();
+					self.selected_project_id = None;
 					Command::none()
 				},
-				UiMessage::SelectProject(project_name) => {
-					self.selected_page_name = project_name.clone();
-					self.content_page = ContentPage::Project(ProjectPage::new(project_name));
+				UiMessage::SelectProject(project_id) => {
+					self.selected_project_id = Some(project_id);
+					self.content_page = ContentPage::Project(ProjectPage::new(project_id));
 					Command::none()
 				},
-				UiMessage::CreateProject(project_name) => {
-					saved_state.projects.push(Project::new(project_name.clone(), Vec::new()));
+				UiMessage::CreateProject{ project_id, project_name } => {
+					saved_state.projects.insert(project_id, Project::new(project_id, project_name.clone(), HashMap::new()));
 					Command::batch([
 						self.update(UiMessage::Save),
-						self.update(UiMessage::SelectProject(project_name)),
+						self.update(UiMessage::SelectProject(project_id)),
 						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
 					])
 				},
-				UiMessage::DeleteProject(project_name) => {
-					let mut project_index = None;
-					for (i, project) in saved_state.projects.iter().enumerate() {
-						if project.name == project_name {
-							project_index = Some(i);
-							break;
-						}
-					}
-					if let Some(project_index) = project_index {
-						saved_state.projects.remove(project_index);
-					}
-					if self.selected_page_name == project_name {
-						Command::batch([
-							self.update(UiMessage::Save),
-							self.update(UiMessage::OpenOverview),								
-						])
-					}
-					else {
-						self.update(UiMessage::Save)
+				UiMessage::DeleteProject(project_id) => {
+					saved_state.projects.remove(&project_id);
+					
+					match self.selected_project_id {
+						Some(selected_project_id) => {
+							if selected_project_id == project_id {
+								Command::batch([
+									self.update(UiMessage::Save),
+									self.update(UiMessage::OpenOverview),								
+								])
+							}
+							else {
+								self.update(UiMessage::Save)
+							}
+						},
+						None => {
+							self.update(UiMessage::Save)
+						},
 					}
 				},
-				UiMessage::CreateTask { project_name, task_name } => {
-					for project in saved_state.projects.iter_mut() {
-						if project.name == project_name {
-							project.tasks.push(Task::new(task_name, TaskState::Todo));
-							break;
-						}
+				UiMessage::CreateTask { project_id, task_name } => {
+					if let Some(project) = saved_state.projects.get_mut(&project_id) {
+						let task_id = generate_task_id();
+						project.tasks.insert(task_id, Task::new(task_id, task_name, TaskState::Todo));
 					}
 
 					Command::batch([
@@ -189,16 +191,10 @@ impl Application for ProjectTrackerApp {
 						self.update(ProjectPageMessage::ChangeCreateNewTaskName(String::new()).into()),
 					])
 				},
-				UiMessage::SetTaskState { project_name, task_name, task_state } => {
-					for project in saved_state.projects.iter_mut() {
-						if project.name == project_name {
-							for task in project.tasks.iter_mut() {
-								if task.name == task_name {
-									task.state = task_state;
-									break;
-								}
-							}
-							break;
+				UiMessage::SetTaskState { project_id, task_id, task_state } => {
+					if let Some(project) = saved_state.projects.get_mut(&project_id) {
+						if let Some(task) = project.tasks.get_mut(&task_id) {
+							task.state = task_state;
 						}
 					}
 
@@ -227,17 +223,17 @@ impl Application for ProjectTrackerApp {
 				UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
 				UiMessage::OpenOverview => {
 					self.content_page = ContentPage::Overview(OverviewPage::new());
-					self.selected_page_name.clear();
+					self.selected_project_id = None;
 					Command::none()
 				},
 				UiMessage::OpenSettings => {
 					self.content_page = ContentPage::Settings(SettingsPage::new());
-					self.selected_page_name.clear();
+					self.selected_project_id = None;
 					Command::none()
 				},
-				UiMessage::SelectProject(project_name) => {
-					self.selected_page_name = project_name.clone();
-					self.content_page = ContentPage::Project(ProjectPage::new(project_name));
+				UiMessage::SelectProject(project_id) => {
+					self.selected_project_id = Some(project_id);
+					self.content_page = ContentPage::Project(ProjectPage::new(project_id));
 					Command::none()
 				},
 				UiMessage::ProjectPageMessage(message) => {
@@ -252,7 +248,7 @@ impl Application for ProjectTrackerApp {
 
 				UiMessage::Event(_) |
 				UiMessage::FontLoaded(_) |
-				UiMessage::CreateProject(_) |
+				UiMessage::CreateProject{ .. } |
 				UiMessage::DeleteProject(_) |
 				UiMessage::CreateTask { .. } |
 				UiMessage::SetTaskState { .. } |

@@ -2,17 +2,25 @@ use iced::{widget::{row, checkbox, text}, Alignment, theme, Element};
 use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
 use crate::styles::{GreenCheckboxStyle, GREY};
-use crate::project::TaskState;
+use crate::project::{ProjectId, TaskState};
+
+pub type TaskId = usize;
+
+pub fn generate_task_id() -> TaskId {
+	rand::random()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
+	pub id: TaskId,
 	pub name: String,
 	pub state: TaskState,
 }
 
 impl Task {
-	pub fn new(name: String, state: TaskState) -> Self {
+	pub fn new(id: TaskId, name: String, state: TaskState) -> Self {
 		Self {
+			id,
 			name,
 			state,
 		}
@@ -22,13 +30,13 @@ impl Task {
 		self.state.is_done()
 	}
 
-	pub fn view<'a>(&'a self, project_name: &'a str) -> Element<UiMessage> {
+	pub fn view(&self, project_id: ProjectId) -> Element<UiMessage> {
 		row![
 			checkbox("", self.state.is_done())
-			.on_toggle(|checked| {
+			.on_toggle(move |checked| {
 				UiMessage::SetTaskState {
-					project_name: project_name.to_string(),
-					task_name: self.name.clone(),
+					project_id,
+					task_id: self.id,
 					task_state:
 						if checked {
 							TaskState::Done

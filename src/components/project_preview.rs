@@ -1,13 +1,13 @@
 use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text}, Element, Length, Padding};
 use iced_aw::ContextMenu;
-use crate::{project_tracker::UiMessage, styles::SMALL_PADDING_AMOUNT};
+use crate::{project::ProjectId, project_tracker::UiMessage, styles::SMALL_PADDING_AMOUNT};
 use crate::components::{completion_bar, delete_project_button};
 use crate::styles::{ContextMenuContainerStyle, ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, SMALL_SPACING_AMOUNT};
 use crate::project::Project;
 
 pub fn project_preview(project: &Project, selected: bool) -> Element<UiMessage> {
 	custom_project_preview(
-		Some(&project.name),
+		Some(project.id),
 		project.get_completion_percentage(),
 		project.get_tasks_done(),
 		project.tasks.len(),
@@ -18,7 +18,7 @@ pub fn project_preview(project: &Project, selected: bool) -> Element<UiMessage> 
 	)
 }
 
-pub fn custom_project_preview<'a>(project_name: Option<&'a String>, project_completion_percentage: f32, tasks_done: usize, task_len: usize, inner_text_element: Element<'a, UiMessage>, selected: bool) -> Element<'a, UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, project_completion_percentage: f32, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool) -> Element<UiMessage> {
 	let inner = column![
 		row![
 			inner_text_element,
@@ -27,7 +27,7 @@ pub fn custom_project_preview<'a>(project_name: Option<&'a String>, project_comp
 					.style(theme::Text::Color(LIGHT_GREY))
 					.size(SMALL_TEXT_SIZE)
 			)
-			.width(if project_name.is_some() { Length::Fill } else { Length::Shrink })
+			.width(if project_id.is_some() { Length::Fill } else { Length::Shrink })
 			.align_x(Horizontal::Right),
 		]
 		.width(Length::Fill)
@@ -41,16 +41,16 @@ pub fn custom_project_preview<'a>(project_name: Option<&'a String>, project_comp
 		container(
 				button(inner)
 					.width(Length::Fill)
-					.on_press_maybe(project_name.map(|project_name| UiMessage::SelectProject(project_name.clone())))
+					.on_press_maybe(project_id.map(UiMessage::SelectProject))
 					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
 		)
 		.padding(Padding{ right: PADDING_AMOUNT, ..Padding::ZERO });
 
-	if let Some(project_name) = project_name {
-		let context_overlay = || {
+	if let Some(project_id) = project_id {
+		let context_overlay = move || {
 			container(
 				column![
-					delete_project_button(project_name.clone()),
+					delete_project_button(project_id),
 				]
 			)
 			.padding(Padding::new(SMALL_PADDING_AMOUNT))
