@@ -8,9 +8,9 @@ pub fn task_list(tasks: &HashMap<TaskId, Task>, filter: TaskFilter, project_id: 
 	scrollable(
 		column(
 			tasks
-				.values()
-				.filter(|t| filter.matches(t))
-				.map(|task| task.view(project_id))
+				.iter()
+				.filter(|(_task_id, task)| filter.matches(task))
+				.map(|(task_id, task)| task.view(project_id, *task_id))
 		)
 		.spacing(LARGE_SPACING_AMOUNT)
 	)

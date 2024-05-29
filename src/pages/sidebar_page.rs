@@ -44,7 +44,7 @@ impl SidebarPage {
 					Some(selected_project_id) => *project_id == selected_project_id,
 					None => false,
 				};
-				project_preview(project, selected)
+				project_preview(project, *project_id, selected)
 			})
 			.collect();
 

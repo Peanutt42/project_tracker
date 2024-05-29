@@ -12,15 +12,13 @@ pub fn generate_task_id() -> TaskId {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
-	pub id: TaskId,
 	pub name: String,
 	pub state: TaskState,
 }
 
 impl Task {
-	pub fn new(id: TaskId, name: String, state: TaskState) -> Self {
+	pub fn new(name: String, state: TaskState) -> Self {
 		Self {
-			id,
 			name,
 			state,
 		}
@@ -30,13 +28,13 @@ impl Task {
 		self.state.is_done()
 	}
 
-	pub fn view(&self, project_id: ProjectId) -> Element<UiMessage> {
+	pub fn view(&self, project_id: ProjectId, self_task_id: TaskId) -> Element<UiMessage> {
 		row![
 			checkbox("", self.state.is_done())
 			.on_toggle(move |checked| {
 				UiMessage::SetTaskState {
 					project_id,
-					task_id: self.id,
+					task_id: self_task_id,
 					task_state:
 						if checked {
 							TaskState::Done

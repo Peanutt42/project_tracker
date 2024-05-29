@@ -19,15 +19,13 @@ pub fn generate_project_id() -> ProjectId {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
-	pub id: ProjectId,
 	pub name: String,
 	pub tasks: HashMap<TaskId, Task>,
 }
 
 impl Project {
-	pub fn new(id: ProjectId, name: String, tasks: HashMap<TaskId, Task>) -> Self {
+	pub fn new(name: String, tasks: HashMap<TaskId, Task>) -> Self {
 		Self {
-			id,
 			name,
 			tasks,
 		}

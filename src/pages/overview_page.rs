@@ -17,13 +17,13 @@ impl OverviewPage {
 
 	fn todo_tasks_list(projects: &HashMap<ProjectId, Project>) -> Element<UiMessage> {
 		scrollable(
-			Column::from_vec(projects.values()
-				.filter(|p| {
-					p.tasks.values()
+			Column::from_vec(projects.iter()
+				.filter(|(_project_id, project)| {
+					project.tasks.values()
 					.filter(|t| !t.is_done())
 					.count() != 0
 				})
-				.map(|project| {
+				.map(|(project_id, project)| {
 					let task_list = project.tasks.values()
 						.filter(|t| TaskFilter::Todo.matches(t))
 						.map(|t| {
@@ -43,7 +43,7 @@ impl OverviewPage {
 					])
 					.width(Length::Fill)
 					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected: false }))
-					.on_press(UiMessage::SelectProject(project.id))
+					.on_press(UiMessage::SelectProject(*project_id))
 					.into()
 				})
 				.collect()

@@ -153,7 +153,7 @@ impl Application for ProjectTrackerApp {
 					Command::none()
 				},
 				UiMessage::CreateProject{ project_id, project_name } => {
-					saved_state.projects.insert(project_id, Project::new(project_id, project_name.clone(), HashMap::new()));
+					saved_state.projects.insert(project_id, Project::new(project_name.clone(), HashMap::new()));
 					Command::batch([
 						self.update(UiMessage::Save),
 						self.update(UiMessage::SelectProject(project_id)),
@@ -182,8 +182,7 @@ impl Application for ProjectTrackerApp {
 				},
 				UiMessage::CreateTask { project_id, task_name } => {
 					if let Some(project) = saved_state.projects.get_mut(&project_id) {
-						let task_id = generate_task_id();
-						project.tasks.insert(task_id, Task::new(task_id, task_name, TaskState::Todo));
+						project.tasks.insert(generate_task_id(), Task::new(task_name, TaskState::Todo));
 					}
 
 					Command::batch([

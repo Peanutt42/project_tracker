@@ -5,9 +5,9 @@ use crate::components::{completion_bar, delete_project_button};
 use crate::styles::{ContextMenuContainerStyle, ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, SMALL_SPACING_AMOUNT};
 use crate::project::Project;
 
-pub fn project_preview(project: &Project, selected: bool) -> Element<UiMessage> {
+pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool) -> Element<UiMessage> {
 	custom_project_preview(
-		Some(project.id),
+		Some(project_id),
 		project.get_completion_percentage(),
 		project.get_tasks_done(),
 		project.tasks.len(),
