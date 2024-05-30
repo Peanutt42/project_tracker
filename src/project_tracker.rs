@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
 use iced::{keyboard, window, font, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
 use crate::{
-	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, project::{generate_task_id, Project, ProjectId, Task, TaskId, TaskState}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, project::{ProjectId, TaskId, TaskState}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
@@ -153,7 +151,8 @@ impl Application for ProjectTrackerApp {
 					Command::none()
 				},
 				UiMessage::CreateProject{ project_id, project_name } => {
-					saved_state.projects.insert(project_id, Project::new(project_name.clone(), HashMap::new()));
+					saved_state.create_project(project_id, project_name);
+
 					Command::batch([
 						self.update(UiMessage::Save),
 						self.update(UiMessage::SelectProject(project_id)),
@@ -161,7 +160,7 @@ impl Application for ProjectTrackerApp {
 					])
 				},
 				UiMessage::DeleteProject(project_id) => {
-					saved_state.projects.remove(&project_id);
+					saved_state.delete_project(project_id);
 					
 					match self.selected_project_id {
 						Some(selected_project_id) => {
@@ -182,7 +181,7 @@ impl Application for ProjectTrackerApp {
 				},
 				UiMessage::CreateTask { project_id, task_name } => {
 					if let Some(project) = saved_state.projects.get_mut(&project_id) {
-						project.tasks.insert(generate_task_id(), Task::new(task_name, TaskState::Todo));
+						project.add_task(task_name);
 					}
 
 					Command::batch([

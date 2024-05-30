@@ -7,10 +7,25 @@ use crate::theme_mode::ThemeMode;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SavedState {
 	pub projects: HashMap<ProjectId, Project>,
+	project_ordering: Vec<ProjectId>,
 	pub theme_mode: ThemeMode,
 }
 
 impl SavedState {
+	pub fn create_project(&mut self, project_id: ProjectId, project_name: String) {
+		self.projects.insert(project_id, Project::new(project_name));
+		self.project_ordering.push(project_id);
+	}
+
+	pub fn delete_project(&mut self, project_id: ProjectId) {
+		self.projects.remove(&project_id);
+		self.project_ordering.remove(project_id);
+	}
+
+	pub fn project_ordering(&self) -> &Vec<ProjectId> {
+		&self.project_ordering
+	}
+
 	async fn filepath() -> PathBuf {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
 		.expect("Failed to get saved state filepath");

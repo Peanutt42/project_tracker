@@ -37,14 +37,14 @@ impl SidebarPage {
 		}
 	}
 
-	fn project_preview_list<'a>(&self, projects: &'a HashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
-		let mut list: Vec<Element<UiMessage>> = projects.iter()
-			.map(|(project_id, project)| {
+	fn project_preview_list<'a>(&self, projects: &'a HashMap<ProjectId, Project>, project_ordering: &'a [ProjectId], app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
+		let mut list: Vec<Element<UiMessage>> = project_ordering.iter()
+			.map(|project_id| {
 				let selected = match app.selected_project_id {
 					Some(selected_project_id) => *project_id == selected_project_id,
 					None => false,
 				};
-				project_preview(project, *project_id, selected)
+				project_preview(projects.get(project_id).unwrap(), *project_id, selected)
 			})
 			.collect();
 
@@ -106,7 +106,7 @@ impl SidebarPage {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		let list: Element<UiMessage> =
 			if let Some(saved_state) = &app.saved_state {
-				self.project_preview_list(&saved_state.projects, app)
+				self.project_preview_list(&saved_state.projects, saved_state.project_ordering(), app)
 			}
 			else {
 				loading_screen()

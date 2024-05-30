@@ -15,21 +15,26 @@ impl OverviewPage {
 		}
 	}
 
-	fn todo_tasks_list(projects: &HashMap<ProjectId, Project>) -> Element<UiMessage> {
+	fn todo_tasks_list<'a>(projects: &'a HashMap<ProjectId, Project>, project_ordering: &'a [ProjectId]) -> Element<'a, UiMessage> {
 		scrollable(
-			Column::from_vec(projects.iter()
+			Column::from_vec(project_ordering.iter()
+				.map(|project_id| {
+					(project_id, projects.get(project_id).unwrap())
+				})
 				.filter(|(_project_id, project)| {
 					project.tasks.values()
-					.filter(|t| !t.is_done())
-					.count() != 0
+						.filter(|t| !t.is_done())
+						.count() != 0
 				})
 				.map(|(project_id, project)| {
-					let task_list = project.tasks.values()
-						.filter(|t| TaskFilter::Todo.matches(t))
-						.map(|t| {
+					let task_list = project.task_ordering().iter()
+						.filter(|task_id| TaskFilter::Todo.matches(project.tasks.get(task_id).unwrap()))
+						.map(|task_id| {
+							let task = project.tasks.get(task_id).unwrap();
+
 							row![
 								text("-"),
-								text(&t.name)
+								text(&task.name)
 							]
 							.spacing(SMALL_SPACING_AMOUNT)
 							.into()
@@ -61,7 +66,7 @@ impl OverviewPage {
 			
 				horizontal_seperator(),
 
-				Self::todo_tasks_list(&saved_state.projects),
+				Self::todo_tasks_list(&saved_state.projects, saved_state.project_ordering()),
 			]
 			.width(Length::Fill)
 			.spacing(SPACING_AMOUNT)

@@ -71,7 +71,7 @@ impl ProjectPage {
 
 					partial_horizontal_seperator(),
 
-					task_list(&project.tasks, self.task_filter, self.project_id)
+					task_list(&project.tasks, project.task_ordering(), self.task_filter, self.project_id)
 				]
 				.spacing(SPACING_AMOUNT)
 				.into()

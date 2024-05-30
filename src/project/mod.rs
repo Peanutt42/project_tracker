@@ -21,14 +21,26 @@ pub fn generate_project_id() -> ProjectId {
 pub struct Project {
 	pub name: String,
 	pub tasks: HashMap<TaskId, Task>,
+	task_ordering: Vec<TaskId>,
 }
 
 impl Project {
-	pub fn new(name: String, tasks: HashMap<TaskId, Task>) -> Self {
+	pub fn new(name: String) -> Self {
 		Self {
 			name,
-			tasks,
+			tasks: HashMap::new(),
+			task_ordering: Vec::new(),
 		}
+	}
+
+	pub fn task_ordering(&self) -> &Vec<TaskId> {
+		&self.task_ordering
+	}
+
+	pub fn add_task(&mut self, name: String) {
+		let task_id = generate_task_id();
+		self.tasks.insert(task_id, Task::new(name, TaskState::Todo));
+		self.task_ordering.push(task_id);
 	}
 
 	pub fn get_tasks_done(&self) -> usize {
