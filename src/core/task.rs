@@ -2,7 +2,7 @@ use iced::{widget::{row, checkbox, text}, Alignment, theme, Element};
 use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
 use crate::styles::{GreenCheckboxStyle, GREY};
-use crate::project::{ProjectId, TaskState};
+use crate::core::{ProjectId, TaskState};
 
 pub type TaskId = usize;
 

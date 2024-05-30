@@ -1,12 +1,11 @@
 use iced::{Settings, Application, window::{self, icon}};
 
+mod core;
 mod components;
 mod pages;
 mod styles;
-mod project;
 mod project_tracker;
 use project_tracker::ProjectTrackerApp;
-mod saved_state;
 mod theme_mode;
 
 fn main() -> Result<(), iced::Error> {

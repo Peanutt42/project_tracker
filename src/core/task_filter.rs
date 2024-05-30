@@ -1,5 +1,5 @@
 use iced::{theme, widget::{button, row, text}, Element, Length, Padding};
-use crate::{pages::ProjectPageMessage, project::Task, project_tracker::UiMessage, styles::{TaskFilterButtonStyle, PADDING_AMOUNT, SPACING_AMOUNT}};
+use crate::{pages::ProjectPageMessage, core::Task, project_tracker::UiMessage, styles::{TaskFilterButtonStyle, PADDING_AMOUNT, SPACING_AMOUNT}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TaskFilter {

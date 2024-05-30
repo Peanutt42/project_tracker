@@ -2,7 +2,7 @@ mod completion_bar;
 pub use completion_bar::completion_bar;
 
 mod buttons;
-pub use buttons::{create_new_project_button, create_new_task_button, delete_project_button, cancel_button, overview_button, settings_button};
+pub use buttons::{create_new_project_button, create_new_task_button, delete_project_button, move_project_up_button, move_project_down_button, cancel_button, overview_button, settings_button};
 
 mod task_list;
 pub use task_list::task_list;

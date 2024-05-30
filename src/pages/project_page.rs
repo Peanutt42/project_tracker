@@ -1,6 +1,6 @@
 use iced::{theme, widget::{column, container, row, text, text_input}, alignment::{Alignment, Horizontal}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, create_new_task_button, task_list}, project::{Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, PADDING_AMOUNT, TITLE_TEXT_SIZE}};
+use crate::{components::{cancel_button, completion_bar, partial_horizontal_seperator, create_new_task_button, task_list}, core::{Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, PADDING_AMOUNT, TITLE_TEXT_SIZE}};
 
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -71,7 +71,7 @@ impl ProjectPage {
 
 					partial_horizontal_seperator(),
 
-					task_list(&project.tasks, project.task_ordering(), self.task_filter, self.project_id)
+					task_list(&project.tasks, self.task_filter, self.project_id)
 				]
 				.spacing(SPACING_AMOUNT)
 				.into()

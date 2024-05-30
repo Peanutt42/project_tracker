@@ -1,13 +1,12 @@
-use std::collections::HashMap;
 use iced::{widget::{column, scrollable}, Element, Length};
-use crate::{project::{ProjectId, TaskFilter}, project_tracker::UiMessage};
-use crate::project::{Task, TaskId};
+use crate::project_tracker::UiMessage;
+use crate::core::{OrderedHashMap, Task, TaskId, ProjectId, TaskFilter};
 use crate::styles::LARGE_SPACING_AMOUNT;
 
-pub fn task_list<'a>(tasks: &'a HashMap<TaskId, Task>, task_ordering: &'a [TaskId], filter: TaskFilter, project_id: ProjectId) -> Element<'a, UiMessage>{
+pub fn task_list(tasks: &OrderedHashMap<TaskId, Task>, filter: TaskFilter, project_id: ProjectId) -> Element<UiMessage>{
 	scrollable(
 		column(
-			task_ordering
+			tasks
 				.iter()
 				.filter(|task_id| filter.matches(tasks.get(task_id).unwrap()))
 				.map(|task_id| tasks.get(task_id).unwrap().view(project_id, *task_id))

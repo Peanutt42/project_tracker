@@ -1,7 +1,7 @@
 use iced::{keyboard, window, font, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
 use crate::{
-	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, project::{ProjectId, TaskId, TaskState}, saved_state::SavedState, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, core::{Project, ProjectId, TaskId, TaskState, SavedState}, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
@@ -28,6 +28,8 @@ pub enum UiMessage {
 		project_id: ProjectId,
 		project_name: String,
 	},
+	MoveProjectUp(ProjectId),
+	MoveProjectDown(ProjectId),
 	DeleteProject(ProjectId),
 	CreateTask {
 		project_id: ProjectId,
@@ -151,7 +153,7 @@ impl Application for ProjectTrackerApp {
 					Command::none()
 				},
 				UiMessage::CreateProject{ project_id, project_name } => {
-					saved_state.create_project(project_id, project_name);
+					saved_state.projects.insert(project_id, Project::new(project_name));
 
 					Command::batch([
 						self.update(UiMessage::Save),
@@ -159,8 +161,16 @@ impl Application for ProjectTrackerApp {
 						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
 					])
 				},
+				UiMessage::MoveProjectUp(project_id) => {
+					saved_state.projects.move_up(&project_id);
+					self.update(UiMessage::Save)
+				},
+				UiMessage::MoveProjectDown(project_id) => {
+					saved_state.projects.move_down(&project_id);
+					self.update(UiMessage::Save)
+				},
 				UiMessage::DeleteProject(project_id) => {
-					saved_state.delete_project(project_id);
+					saved_state.projects.remove(&project_id);
 					
 					match self.selected_project_id {
 						Some(selected_project_id) => {
@@ -247,6 +257,8 @@ impl Application for ProjectTrackerApp {
 				UiMessage::Event(_) |
 				UiMessage::FontLoaded(_) |
 				UiMessage::CreateProject{ .. } |
+				UiMessage::MoveProjectUp(_) |
+				UiMessage::MoveProjectDown(_) |
 				UiMessage::DeleteProject(_) |
 				UiMessage::CreateTask { .. } |
 				UiMessage::SetTaskState { .. } |

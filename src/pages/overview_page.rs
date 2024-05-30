@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use iced::{theme, widget::{button, column, row, scrollable, text, Column}, Element, Length, Padding};
-use crate::{components::{horizontal_seperator, loading_screen}, project::{Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{ProjectPreviewButtonStyle, HORIZONTAL_PADDING, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
+use crate::{components::{horizontal_seperator, loading_screen}, core::{OrderedHashMap, Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{ProjectPreviewButtonStyle, HORIZONTAL_PADDING, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
 #[derive(Debug, Clone)]
 pub struct OverviewPage {
@@ -15,9 +13,9 @@ impl OverviewPage {
 		}
 	}
 
-	fn todo_tasks_list<'a>(projects: &'a HashMap<ProjectId, Project>, project_ordering: &'a [ProjectId]) -> Element<'a, UiMessage> {
+	fn todo_tasks_list(projects: &OrderedHashMap<ProjectId, Project>) -> Element<UiMessage> {
 		scrollable(
-			Column::from_vec(project_ordering.iter()
+			Column::from_vec(projects.iter()
 				.map(|project_id| {
 					(project_id, projects.get(project_id).unwrap())
 				})
@@ -27,7 +25,7 @@ impl OverviewPage {
 						.count() != 0
 				})
 				.map(|(project_id, project)| {
-					let task_list = project.task_ordering().iter()
+					let task_list = project.tasks.iter()
 						.filter(|task_id| TaskFilter::Todo.matches(project.tasks.get(task_id).unwrap()))
 						.map(|task_id| {
 							let task = project.tasks.get(task_id).unwrap();
@@ -66,7 +64,7 @@ impl OverviewPage {
 			
 				horizontal_seperator(),
 
-				Self::todo_tasks_list(&saved_state.projects, saved_state.project_ordering()),
+				Self::todo_tasks_list(&saved_state.projects),
 			]
 			.width(Length::Fill)
 			.spacing(SPACING_AMOUNT)

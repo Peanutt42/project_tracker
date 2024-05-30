@@ -1,29 +1,20 @@
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::project::{Project, ProjectId};
+use serde::{Serialize, Deserialize};
+use crate::core::{OrderedHashMap, Project, ProjectId};
 use crate::theme_mode::ThemeMode;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SavedState {
-	pub projects: HashMap<ProjectId, Project>,
-	project_ordering: Vec<ProjectId>,
+	pub projects: OrderedHashMap<ProjectId, Project>,
 	pub theme_mode: ThemeMode,
 }
 
 impl SavedState {
-	pub fn create_project(&mut self, project_id: ProjectId, project_name: String) {
-		self.projects.insert(project_id, Project::new(project_name));
-		self.project_ordering.push(project_id);
-	}
-
-	pub fn delete_project(&mut self, project_id: ProjectId) {
-		self.projects.remove(&project_id);
-		self.project_ordering.remove(project_id);
-	}
-
-	pub fn project_ordering(&self) -> &Vec<ProjectId> {
-		&self.project_ordering
+	pub fn new() -> Self {
+		Self {
+			projects: OrderedHashMap::new(),
+			theme_mode: ThemeMode::default(),
+		}
 	}
 
 	async fn filepath() -> PathBuf {
@@ -46,12 +37,12 @@ impl SavedState {
 			Ok(file_content) => {
 				serde_json::from_str(&file_content).unwrap_or_else(|_| {
 					println!("Failed to load previous projects in {}", filepath.display());
-					SavedState::default()
+					SavedState::new()
 				})
 			},
 			Err(_) => {
 				println!("Could not find previous projects in {}", filepath.display());
-				SavedState::default()
+				SavedState::new()
 			}
 		}
 	}

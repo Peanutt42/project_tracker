@@ -1,13 +1,11 @@
-use std::collections::HashMap;
-
 use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
 use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
-use crate::{project::ProjectId, project_tracker::UiMessage, styles::LARGE_TEXT_SIZE};
+use crate::{project_tracker::UiMessage, styles::LARGE_TEXT_SIZE};
 use crate::components::{cancel_button, custom_project_preview, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button};
 use crate::styles::{TextInputStyle, HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
-use crate::project::{generate_project_id, Project};
+use crate::core::{OrderedHashMap, ProjectId, generate_project_id, Project};
 
 static SCROLLABLE_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -37,14 +35,16 @@ impl SidebarPage {
 		}
 	}
 
-	fn project_preview_list<'a>(&self, projects: &'a HashMap<ProjectId, Project>, project_ordering: &'a [ProjectId], app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
-		let mut list: Vec<Element<UiMessage>> = project_ordering.iter()
+	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
+		let mut list: Vec<Element<UiMessage>> = projects.iter()
 			.map(|project_id| {
 				let selected = match app.selected_project_id {
 					Some(selected_project_id) => *project_id == selected_project_id,
 					None => false,
 				};
-				project_preview(projects.get(project_id).unwrap(), *project_id, selected)
+				let can_move_up = projects.can_move_up(project_id);
+				let can_move_down = projects.can_move_down(project_id);
+				project_preview(projects.get(project_id).unwrap(), *project_id, can_move_up, can_move_down, selected)
 			})
 			.collect();
 
@@ -67,7 +67,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			custom_project_preview(None, 0.0, 0, 0, project_name_text_input_element, true)
+			custom_project_preview(None, false, false, 0.0, 0, 0, project_name_text_input_element, true)
 		}
 		else {
 			column![].into()
@@ -106,7 +106,7 @@ impl SidebarPage {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		let list: Element<UiMessage> =
 			if let Some(saved_state) = &app.saved_state {
-				self.project_preview_list(&saved_state.projects, saved_state.project_ordering(), app)
+				self.project_preview_list(&saved_state.projects, app)
 			}
 			else {
 				loading_screen()
