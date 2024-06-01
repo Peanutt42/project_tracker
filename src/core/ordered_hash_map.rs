@@ -24,20 +24,6 @@ impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
 		None
 	}
 
-	pub fn can_move_up(&self, key: &K) -> bool {
-		match self.get_order(key) {
-			Some(order) => order != 0,
-			None => false,
-		}
-	}
-
-	pub fn can_move_down(&self, key: &K) -> bool {
-		match self.get_order(key) {
-			Some(order) => order != self.len() - 1,
-			None => false,
-		}
-	}
-
 	pub fn move_up(&mut self, key: &K) {
 		if let Some(index) = self.get_order(key) {
 			if index != 0 {

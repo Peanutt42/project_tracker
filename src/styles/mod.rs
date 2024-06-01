@@ -4,9 +4,6 @@ pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, Green
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
 
-mod container_styles;
-pub use container_styles::ContextMenuContainerStyle;
-
 mod split_style;
 pub use split_style::SplitStyle;
 

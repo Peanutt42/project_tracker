@@ -28,6 +28,10 @@ pub enum UiMessage {
 		project_id: ProjectId,
 		project_name: String,
 	},
+	ChangeProjectName {
+		project_id: ProjectId,
+		new_project_name: String,
+	},
 	MoveProjectUp(ProjectId),
 	MoveProjectDown(ProjectId),
 	DeleteProject(ProjectId),
@@ -129,7 +133,8 @@ impl Application for ProjectTrackerApp {
 				},
 				UiMessage::EscapePressed => Command::batch([
 					self.update(SidebarPageMessage::CloseCreateNewProject.into()),
-					self.update(ProjectPageMessage::CloseCreateNewTask.into())
+					self.update(SidebarPageMessage::StopEditingProject.into()),
+					self.update(ProjectPageMessage::CloseCreateNewTask.into()),
 				]),
 				UiMessage::FontLoaded(_) => Command::none(),
 				UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
@@ -150,6 +155,10 @@ impl Application for ProjectTrackerApp {
 				UiMessage::SelectProject(project_id) => {
 					self.selected_project_id = Some(project_id);
 					self.content_page = ContentPage::Project(ProjectPage::new(project_id));
+					self.sidebar_page.project_being_edited = match self.sidebar_page.project_being_edited {
+						Some(project_being_edited_id) => if project_being_edited_id == project_id { Some(project_being_edited_id) } else { None },
+						None => None, 
+					};
 					Command::none()
 				},
 				UiMessage::CreateProject{ project_id, project_name } => {
@@ -161,6 +170,12 @@ impl Application for ProjectTrackerApp {
 						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
 					])
 				},
+				UiMessage::ChangeProjectName { project_id, new_project_name } => {
+					if let Some(project) = saved_state.projects.get_mut(&project_id) {
+						project.name = new_project_name;
+					}
+					self.update(UiMessage::Save)
+				}
 				UiMessage::MoveProjectUp(project_id) => {
 					saved_state.projects.move_up(&project_id);
 					self.update(UiMessage::Save)
@@ -257,6 +272,7 @@ impl Application for ProjectTrackerApp {
 				UiMessage::Event(_) |
 				UiMessage::FontLoaded(_) |
 				UiMessage::CreateProject{ .. } |
+				UiMessage::ChangeProjectName { .. } |
 				UiMessage::MoveProjectUp(_) |
 				UiMessage::MoveProjectDown(_) |
 				UiMessage::DeleteProject(_) |

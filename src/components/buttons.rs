@@ -43,6 +43,14 @@ pub fn cancel_button() -> Button<'static, UiMessage> {
 		.style(theme::Button::custom(GreenButtonStyle))
 }
 
+pub fn edit_project_button(project_id: ProjectId) -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::Pencil)
+	)
+	.on_press(SidebarPageMessage::EditProject(project_id).into())
+	.style(theme::Button::custom(SecondaryButtonStyle))
+} 
+
 fn context_menu_button(content: impl Into<Element<'static, UiMessage>>) -> Button<'static, UiMessage>{
 	button(content)
 		.style(theme::Button::custom(SecondaryButtonStyle))
@@ -50,36 +58,21 @@ fn context_menu_button(content: impl Into<Element<'static, UiMessage>>) -> Butto
 
 pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage> {
 	context_menu_button(
-		row![
-			icon_to_text(Bootstrap::Trash),
-			text("Delete")
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
-		.align_items(Alignment::Center)
+		icon_to_text(Bootstrap::Trash)	
 	)
 	.on_press(UiMessage::DeleteProject(project_id))
 }
 
 pub fn move_project_up_button(project_id: ProjectId) -> Button<'static, UiMessage> {
 	context_menu_button(
-		row![
-			icon_to_text(Bootstrap::ArrowUp),
-			text("Move up")
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
-		.align_items(Alignment::Center)
+		icon_to_text(Bootstrap::ArrowUp),
 	)
 	.on_press(UiMessage::MoveProjectUp(project_id))
 }
 
 pub fn move_project_down_button(project_id: ProjectId) -> Button<'static, UiMessage> {
 	context_menu_button(
-		row![
-			icon_to_text(Bootstrap::ArrowDown),
-			text("Move down")
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
-		.align_items(Alignment::Center)
+		icon_to_text(Bootstrap::ArrowDown),
 	)
 	.on_press(UiMessage::MoveProjectDown(project_id))
 }

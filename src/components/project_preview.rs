@@ -1,28 +1,44 @@
-use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text}, Element, Length, Padding};
-use iced_aw::ContextMenu;
-use crate::{project_tracker::UiMessage, styles::SMALL_PADDING_AMOUNT};
-use crate::components::{completion_bar, delete_project_button, move_project_up_button, move_project_down_button};
-use crate::styles::{ContextMenuContainerStyle, ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, SMALL_SPACING_AMOUNT};
+use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text, text_input, Row}, Alignment, Element, Length, Padding};
+use once_cell::sync::Lazy;
+use crate::{pages::SidebarPageMessage, project_tracker::UiMessage};
+use crate::components::{completion_bar, edit_project_button, delete_project_button, move_project_up_button, move_project_down_button};
+use crate::styles::{ProjectPreviewButtonStyle, TextInputStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, SMALL_SPACING_AMOUNT};
 use crate::core::{Project, ProjectId};
 
+pub static EDIT_PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-pub fn project_preview(project: &Project, project_id: ProjectId, can_move_up: bool, can_move_down: bool, selected: bool) -> Element<UiMessage> {
+pub fn project_preview(project: &Project, project_id: ProjectId, editing: bool, can_move_up: bool, can_move_down: bool, selected: bool) -> Element<UiMessage> {
+	let inner_text_element = if editing {
+		text_input("project name", &project.name)
+			.id(EDIT_PROJECT_NAME_TEXT_INPUT_ID.clone())
+			.width(Length::Fill)
+			.size(LARGE_TEXT_SIZE)
+			.on_input(move |new_project_name| UiMessage::ChangeProjectName { project_id, new_project_name })
+			.on_submit(SidebarPageMessage::StopEditingProject.into())
+			.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
+			.into()
+	}
+	else {
+		text(&project.name)
+			.size(LARGE_TEXT_SIZE)
+			.into()
+	};
+
 	custom_project_preview(
 		Some(project_id),
+		editing,
 		can_move_up,
 		can_move_down,
 		project.get_completion_percentage(),
 		project.get_tasks_done(),
 		project.tasks.len(),
-		text(&project.name)
-			.size(LARGE_TEXT_SIZE)
-			.into(),
+		inner_text_element,
 		selected
 	)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_project_preview(project_id: Option<ProjectId>, can_move_up: bool, can_move_down: bool, project_completion_percentage: f32, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool) -> Element<UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, editing: bool, can_move_up: bool, can_move_down: bool, project_completion_percentage: f32, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool) -> Element<UiMessage> {
 	let inner = column![
 		row![
 			inner_text_element,
@@ -31,7 +47,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, can_move_up: bool, 
 					.style(theme::Text::Color(LIGHT_GREY))
 					.size(SMALL_TEXT_SIZE)
 			)
-			.width(if project_id.is_some() { Length::Fill } else { Length::Shrink })
+			.width(if project_id.is_some() && !editing { Length::Fill } else { Length::Shrink })
 			.align_x(Horizontal::Right),
 		]
 		.width(Length::Fill)
@@ -48,21 +64,17 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, can_move_up: bool, 
 					.on_press_maybe(project_id.map(UiMessage::SelectProject))
 					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
 		)
+		.width(Length::Fill)
 		.padding(Padding{ right: PADDING_AMOUNT, ..Padding::ZERO });
 
 	if let Some(project_id) = project_id {
-		let context_overlay = move || {
-			let mut context_buttons = column![
-				delete_project_button(project_id),
-			]
-			.spacing(SMALL_SPACING_AMOUNT);
-	
-			if can_move_up {
-				context_buttons = context_buttons.push(move_project_up_button(project_id));
-			}
-			if can_move_down {
-				context_buttons = context_buttons.push(move_project_down_button(project_id));
-			}
+		/*let context_overlay = move || {
+			let context_buttons = Column::new()
+				.spacing(SMALL_SPACING_AMOUNT)
+				.push(delete_project_button(project_id))
+				.push(rename_project_button(project_id))
+				.push_maybe(if can_move_up { Some(move_project_up_button(project_id)) } else { None })
+				.push_maybe(if can_move_down { Some(move_project_down_button(project_id)) } else { None });
 
 			container(context_buttons)
 				.padding(Padding::new(SMALL_PADDING_AMOUNT))
@@ -71,7 +83,26 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, can_move_up: bool, 
 		};
 	
 		ContextMenu::new(underlay, context_overlay)
+			.into()*/
+		if editing {
+			Row::new()
+				.push(underlay)
+				.push_maybe(if can_move_up { Some(move_project_up_button(project_id)) } else { None })
+				.push_maybe(if can_move_down { Some(move_project_down_button(project_id)) } else { None })
+				.push(delete_project_button(project_id))
+				.align_items(Alignment::Center)
+				.width(Length::Fill)
+				.into()
+		}
+		else {
+			row![
+				underlay,
+				edit_project_button(project_id),
+			]
+			.align_items(Alignment::Center)
+			.width(Length::Fill)
 			.into()
+		}
 	}
 	else {
 		underlay.into()

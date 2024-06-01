@@ -2,7 +2,7 @@ use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{column,
 use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
 use crate::{project_tracker::UiMessage, styles::LARGE_TEXT_SIZE};
-use crate::components::{cancel_button, custom_project_preview, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, settings_button};
+use crate::components::{cancel_button, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
 use crate::styles::{TextInputStyle, HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::core::{OrderedHashMap, ProjectId, generate_project_id, Project};
@@ -15,6 +15,9 @@ pub enum SidebarPageMessage {
 	OpenCreateNewProject,
 	CloseCreateNewProject,
 	ChangeCreateNewProjectName(String),
+
+	EditProject(ProjectId),
+	StopEditingProject,
 }
 
 impl From<SidebarPageMessage> for UiMessage {
@@ -26,25 +29,31 @@ impl From<SidebarPageMessage> for UiMessage {
 #[derive(Debug, Clone)]
 pub struct SidebarPage {
 	create_new_project_name: Option<String>,
+	pub project_being_edited: Option<ProjectId>,
 }
 
 impl SidebarPage {
 	pub fn new() -> Self {
 		Self {
 			create_new_project_name: None,
+			project_being_edited: None,
 		}
 	}
 
 	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
-		let mut list: Vec<Element<UiMessage>> = projects.iter()
-			.map(|project_id| {
+		let mut list: Vec<Element<UiMessage>> = projects.iter().enumerate()
+			.map(|(i, project_id)| {
 				let selected = match app.selected_project_id {
 					Some(selected_project_id) => *project_id == selected_project_id,
 					None => false,
 				};
-				let can_move_up = projects.can_move_up(project_id);
-				let can_move_down = projects.can_move_down(project_id);
-				project_preview(projects.get(project_id).unwrap(), *project_id, can_move_up, can_move_down, selected)
+				let can_move_up = i != 0;
+				let can_move_down = i != projects.len() - 1;
+				let editing = match self.project_being_edited {
+					Some(project_being_edited_id) => project_being_edited_id == *project_id,
+					None => false,
+				};
+				project_preview(projects.get(project_id).unwrap(), *project_id, editing, can_move_up, can_move_down, selected)
 			})
 			.collect();
 
@@ -67,7 +76,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			custom_project_preview(None, false, false, 0.0, 0, 0, project_name_text_input_element, true)
+			custom_project_preview(None, false, false, false, 0.0, 0, 0, project_name_text_input_element, true)
 		}
 		else {
 			column![].into()
@@ -94,12 +103,25 @@ impl SidebarPage {
 			SidebarPageMessage::OpenCreateNewProject => {
 				self.create_new_project_name = Some(String::new());
 				Command::batch([
+					self.update(SidebarPageMessage::StopEditingProject),
 					text_input::focus(TEXT_INPUT_ID.clone()),
 					scrollable::snap_to(SCROLLABLE_ID.clone(), RelativeOffset::END),
 				])
 			},
 			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; Command::none() },
 			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Command::none() },
+
+			SidebarPageMessage::EditProject(project_id) => {
+				self.project_being_edited = Some(project_id);
+				Command::batch([
+					self.update(SidebarPageMessage::CloseCreateNewProject),
+					text_input::focus(EDIT_PROJECT_NAME_TEXT_INPUT_ID.clone())
+				])
+			},
+			SidebarPageMessage::StopEditingProject => {
+				self.project_being_edited = None;
+				Command::none()
+			},
 		}		
 	}
 
