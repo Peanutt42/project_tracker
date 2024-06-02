@@ -127,8 +127,8 @@ impl SidebarPage {
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		let list: Element<UiMessage> =
-			if let Some(saved_state) = &app.saved_state {
-				self.project_preview_list(&saved_state.projects, app)
+			if let Some(database) = &app.database {
+				self.project_preview_list(&database.projects, app)
 			}
 			else {
 				loading_screen()

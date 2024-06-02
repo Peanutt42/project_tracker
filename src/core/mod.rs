@@ -1,5 +1,8 @@
-mod saved_state;
-pub use saved_state::SavedState;
+mod database;
+pub use database::{Database, LoadDatabaseResult};
+
+mod preferences;
+pub use preferences::{Preferences, LoadPreferencesResult};
 
 mod ordered_hash_map;
 pub use ordered_hash_map::OrderedHashMap;

@@ -74,6 +74,35 @@ impl StyleSheet for GreenButtonStyle {
 	}
 }
 
+pub struct RedButtonStyle;
+
+impl StyleSheet for RedButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(Color::from_rgb(1.0, 0.0, 0.0))),
+			text_color: style.extended_palette().background.base.text,
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(Color::from_rgb(0.6, 0.0, 0.0))),
+			text_color: style.extended_palette().background.base.text,
+			..Default::default()
+		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(Color::from_rgb(0.5, 0.0, 0.0))),
+			text_color: style.extended_palette().background.base.text,
+			..Default::default()
+		}
+	}
+}
 
 
 pub struct TransparentButtonStyle;

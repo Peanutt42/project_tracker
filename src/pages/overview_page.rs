@@ -58,13 +58,13 @@ impl OverviewPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
-		if let Some(saved_state) = &app.saved_state {
+		if let Some(database) = &app.database {
 			column![
 				text("Overview").size(TITLE_TEXT_SIZE),
 			
 				horizontal_seperator(),
 
-				Self::todo_tasks_list(&saved_state.projects),
+				Self::todo_tasks_list(&database.projects),
 			]
 			.width(Length::Fill)
 			.spacing(SPACING_AMOUNT)

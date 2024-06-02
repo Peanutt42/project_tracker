@@ -1,9 +1,6 @@
-use iced::{widget::{pick_list, column, row, container, text}, Element, Length, alignment::{Alignment, Horizontal, Vertical}};
-
-use crate::{components::{horizontal_seperator, loading_screen}, styles::{LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE}};
-use crate::styles::LARGE_PADDING_AMOUNT;
+use iced::{widget::{column, row, text}, Element};
+use crate::{components::{horizontal_seperator, loading_screen, dangerous_button}, styles::{LARGE_PADDING_AMOUNT, SPACING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE}};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
-use crate::theme_mode::ThemeMode;
 
 
 pub struct SettingsPage {
@@ -18,21 +15,33 @@ impl SettingsPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
-		if let Some(saved_state) = &app.saved_state {
+		if let Some(preferences) = &app.preferences {
 			column![
-				row![
-					text("Theme Mode:").horizontal_alignment(Horizontal::Center).vertical_alignment(Vertical::Center),
-					container(pick_list(&ThemeMode::ALL[..], Some(&saved_state.theme_mode), UiMessage::SetThemeMode))
-						.width(Length::Fill)
-						.align_x(Horizontal::Right),
-				]
-				.align_items(Alignment::Center),
+				column![
+					text("Preferences").size(LARGE_TEXT_SIZE),
+	
+					preferences.view(),
+				],
+
+				horizontal_seperator(),
+				
+				column![
+					text("Database").size(LARGE_TEXT_SIZE),
+					row![
+						dangerous_button("Clear Database")
+							.on_press(UiMessage::ClearDatabase),
+						dangerous_button("Import Database")
+							.on_press(UiMessage::ImportDatabase),
+						dangerous_button("Export Database")
+							.on_press(UiMessage::ExportDatabase),
+					]
+					.spacing(SPACING_AMOUNT)
+				],
 
 				horizontal_seperator(),
 
 				column![
 					text("Shortcuts").size(LARGE_TEXT_SIZE),
-					text("Save: Ctrl + S"),
 					text("New Project: Ctrl + Shift + N"),
 					text("New Task: Ctrl + N"),
 				]

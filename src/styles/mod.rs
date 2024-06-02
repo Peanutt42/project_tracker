@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle, SecondaryButtonStyle, TaskFilterButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle, RedButtonStyle, SecondaryButtonStyle, TaskFilterButtonStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
@@ -27,3 +27,6 @@ pub use size::{SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE};
 
 mod spacing;
 pub use spacing::{SMALL_SPACING_AMOUNT, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};
+
+mod fonts;
+pub use fonts::BOLD_FONT;

@@ -51,8 +51,8 @@ impl ProjectPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
-		if let Some(saved_state) = &app.saved_state {
-			let project_element: Element<UiMessage> = if let Some(project) = saved_state.projects.get(&self.project_id) {
+		if let Some(database) = &app.database {
+			let project_element: Element<UiMessage> = if let Some(project) = database.projects.get(&self.project_id) {
 				let tasks_done = project.get_tasks_done();
 				let tasks_len = project.tasks.len();
 				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);

@@ -1,7 +1,7 @@
 use iced::{theme, widget::{button, container, row, text, Button}, Alignment, Element, Length, Padding};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	pages::{ProjectPageMessage, SidebarPageMessage}, core::ProjectId, project_tracker::UiMessage, styles::{GreenButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, TransparentButtonStyle, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}
+	core::ProjectId, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{GreenButtonStyle, ProjectPreviewButtonStyle, RedButtonStyle, SecondaryButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -87,6 +87,27 @@ pub fn settings_button() -> Button<'static, UiMessage> {
 	)
 	.on_press(UiMessage::OpenSettings)
 	.style(theme::Button::Secondary)
+}
+
+pub fn dangerous_button(label: &str) -> Button<'static, UiMessage> {
+	button(
+		text(label)
+			.font(BOLD_FONT)
+	)
+	.style(theme::Button::custom(RedButtonStyle))
+}
+
+pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode) -> Button<'static, UiMessage> {
+	button(text(format!("{:?}", theme_mode)))
+		.style(
+			if theme_mode == current_theme_mode {
+				theme::Button::Primary
+			}
+			else {
+				theme::Button::Secondary
+			}
+		)
+		.on_press(UiMessage::SetThemeMode(theme_mode))
 }
 
 pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
