@@ -77,18 +77,6 @@ pub fn move_project_down_button(project_id: ProjectId) -> Button<'static, UiMess
 	.on_press(UiMessage::MoveProjectDown(project_id))
 }
 
-pub fn settings_button() -> Button<'static, UiMessage> {
-	button(
-		container(
-			icon_to_text(Bootstrap::Gear)
-				.size(LARGE_TEXT_SIZE)
-		)
-		.padding(Padding{ left: 2.5, right: 2.5, top: 0.0, bottom: 0.0 })
-	)
-	.on_press(UiMessage::OpenSettings)
-	.style(theme::Button::Secondary)
-}
-
 pub fn dangerous_button(label: &str) -> Button<'static, UiMessage> {
 	button(
 		text(label)
@@ -126,5 +114,30 @@ pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
 	)
 	.width(Length::Fill)
 	.on_press(UiMessage::OpenOverview)
+	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
+}
+
+pub fn settings_button(selected: bool) -> Button<'static, UiMessage> {
+	button(
+		row![
+			icon_to_text(Bootstrap::Gear)
+				.size(LARGE_TEXT_SIZE),
+
+			text("Settings")
+				.size(LARGE_TEXT_SIZE)
+				.width(Length::Fill)
+		]
+		.align_items(Alignment::Center)
+		.spacing(SPACING_AMOUNT)
+		.width(Length::Fill)
+		/*
+		container(
+			icon_to_text(Bootstrap::Gear)
+				.size(LARGE_TEXT_SIZE)
+		)
+		.padding(Padding{ left: 2.5, right: 2.5, top: 0.0, bottom: 0.0 })*/
+	)
+	.width(Length::Fill)
+	.on_press(UiMessage::OpenSettings)
 	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
 }

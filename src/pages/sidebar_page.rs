@@ -1,7 +1,7 @@
 use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
 use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
-use crate::{project_tracker::UiMessage, styles::LARGE_TEXT_SIZE};
+use crate::{project_tracker::UiMessage, styles::{LARGE_TEXT_SIZE, PADDING_AMOUNT}};
 use crate::components::{cancel_button, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
 use crate::styles::{TextInputStyle, HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
@@ -142,29 +142,25 @@ impl SidebarPage {
 		};
 
 		column![
-			column![
-				overview_button(app.content_page.is_overview_page()),
-				partial_horizontal_seperator(),
-
-				floating_element(
-					list,
-					create_new_project_button
-				)
-				.anchor(Anchor::SouthEast)
-				.offset(10.0),
-				partial_horizontal_seperator(),
-			]
-			.height(Length::Fill)
-			.spacing(SPACING_AMOUNT)
-			.padding(HORIZONTAL_PADDING),
+			overview_button(app.content_page.is_overview_page()),
 			
-			container(settings_button())
-				.align_y(Vertical::Bottom)
+			partial_horizontal_seperator(),
+
+			floating_element(
+				list,
+				create_new_project_button
+			)
+			.anchor(Anchor::SouthEast)
+			.offset(SPACING_AMOUNT as f32),
+			
+			partial_horizontal_seperator(),
+
+			settings_button(app.content_page.is_settings_page()),
 		]
 		.width(Length::Fill)
 		.height(Length::Fill)
 		.spacing(SPACING_AMOUNT)
-		.padding(Padding { top: SMALL_PADDING_AMOUNT, ..Padding::ZERO })
+		.padding(Padding::new(PADDING_AMOUNT))
 		.into()
 	}
 }

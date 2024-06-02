@@ -415,6 +415,10 @@ impl ContentPage {
 	pub fn is_overview_page(&self) -> bool {
 		matches!(self, ContentPage::Overview(_))
 	}
+	
+	pub fn is_settings_page(&self) -> bool {
+		matches!(self, ContentPage::Settings(_))
+	}
 }
 
 impl ContentPage {
