@@ -1,3 +1,6 @@
+// only enables the 'windows' subsystem when compiling in release
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use iced::{Settings, Application, window::{self, icon}};
 
 mod core;
