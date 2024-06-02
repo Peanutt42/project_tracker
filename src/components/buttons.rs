@@ -1,7 +1,7 @@
-use iced::{theme, widget::{button, container, row, text, Button}, Alignment, Element, Length};
+use iced::{theme, widget::{button, container, row, text, Button}, Alignment, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::ProjectId, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{GreenButtonStyle, ProjectPreviewButtonStyle, RedButtonStyle, SecondaryButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
+	core::ProjectId, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{ProjectPreviewButtonStyle, RedButtonStyle, SecondaryButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -38,9 +38,10 @@ pub fn create_new_task_button() -> Button<'static, UiMessage> {
 	.style(theme::Button::custom(TransparentButtonStyle))
 }
 
-pub fn cancel_button() -> Button<'static, UiMessage> {
+pub fn cancel_create_project_button() -> Button<'static, UiMessage> {
 	button(icon_to_text(Bootstrap::XLg))
-		.style(theme::Button::custom(GreenButtonStyle))
+		.on_press(SidebarPageMessage::CloseCreateNewProject.into())
+		.style(theme::Button::custom(SecondaryButtonStyle))
 }
 
 pub fn edit_project_button(project_id: ProjectId) -> Button<'static, UiMessage> {
@@ -51,30 +52,28 @@ pub fn edit_project_button(project_id: ProjectId) -> Button<'static, UiMessage> 
 	.style(theme::Button::custom(SecondaryButtonStyle))
 } 
 
-fn context_menu_button(content: impl Into<Element<'static, UiMessage>>) -> Button<'static, UiMessage>{
-	button(content)
-		.style(theme::Button::custom(SecondaryButtonStyle))
-}
-
 pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage> {
-	context_menu_button(
+	button(
 		icon_to_text(Bootstrap::Trash)	
 	)
 	.on_press(UiMessage::DeleteProject(project_id))
+	.style(theme::Button::custom(SecondaryButtonStyle))
 }
 
 pub fn move_project_up_button(project_id: ProjectId) -> Button<'static, UiMessage> {
-	context_menu_button(
+	button(
 		icon_to_text(Bootstrap::ArrowUp),
 	)
 	.on_press(UiMessage::MoveProjectUp(project_id))
+	.style(theme::Button::custom(SecondaryButtonStyle))
 }
 
 pub fn move_project_down_button(project_id: ProjectId) -> Button<'static, UiMessage> {
-	context_menu_button(
+	button(
 		icon_to_text(Bootstrap::ArrowDown),
 	)
 	.on_press(UiMessage::MoveProjectDown(project_id))
+	.style(theme::Button::custom(SecondaryButtonStyle))
 }
 
 pub fn dangerous_button(label: &str) -> Button<'static, UiMessage> {

@@ -44,36 +44,6 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 	}
 }
 
-pub struct GreenButtonStyle;
-
-impl StyleSheet for GreenButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, _style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 0.9, 0.0))),
-			border: Border::with_radius(7.5),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, _style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 1.0, 0.0))),
-			border: Border::with_radius(7.5),
-			..Default::default()
-		}
-	}
-
-	fn pressed(&self, _style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.0, 0.8, 0.0))),
-			border: Border::with_radius(7.5),
-			..Default::default()
-		}
-	}
-}
-
 pub struct RedButtonStyle;
 
 impl StyleSheet for RedButtonStyle {

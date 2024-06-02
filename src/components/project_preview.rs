@@ -1,7 +1,7 @@
 use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text, text_input, Row}, Alignment, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{pages::SidebarPageMessage, project_tracker::UiMessage};
-use crate::components::{completion_bar, edit_project_button, delete_project_button, move_project_up_button, move_project_down_button};
+use crate::components::{completion_bar, edit_project_button, cancel_create_project_button, delete_project_button, move_project_up_button, move_project_down_button};
 use crate::styles::{ProjectPreviewButtonStyle, TextInputStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, SMALL_SPACING_AMOUNT};
 use crate::core::{Project, ProjectId};
 
@@ -68,22 +68,6 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, editing: bool, can_
 		.padding(Padding{ right: PADDING_AMOUNT, ..Padding::ZERO });
 
 	if let Some(project_id) = project_id {
-		/*let context_overlay = move || {
-			let context_buttons = Column::new()
-				.spacing(SMALL_SPACING_AMOUNT)
-				.push(delete_project_button(project_id))
-				.push(rename_project_button(project_id))
-				.push_maybe(if can_move_up { Some(move_project_up_button(project_id)) } else { None })
-				.push_maybe(if can_move_down { Some(move_project_down_button(project_id)) } else { None });
-
-			container(context_buttons)
-				.padding(Padding::new(SMALL_PADDING_AMOUNT))
-				.style(theme::Container::Custom(Box::new(ContextMenuContainerStyle)))
-				.into()
-		};
-	
-		ContextMenu::new(underlay, context_overlay)
-			.into()*/
 		if editing {
 			Row::new()
 				.push(underlay)
@@ -105,6 +89,12 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, editing: bool, can_
 		}
 	}
 	else {
-		underlay.into()
+		row![
+			underlay,
+			cancel_create_project_button()
+		]
+		.align_items(Alignment::Center)
+		.width(Length::Fill)
+		.into()
 	}
 }

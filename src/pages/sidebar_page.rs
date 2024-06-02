@@ -1,8 +1,8 @@
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{column, container, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
 use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
 use crate::{project_tracker::UiMessage, styles::{LARGE_TEXT_SIZE, PADDING_AMOUNT}};
-use crate::components::{cancel_button, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
+use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
 use crate::styles::{TextInputStyle, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::core::{OrderedHashMap, ProjectId, generate_project_id, Project};
@@ -57,32 +57,21 @@ impl SidebarPage {
 			})
 			.collect();
 
-		let create_new_project_element = if let Some(create_new_project_name) = &self.create_new_project_name {
+		if let Some(create_new_project_name) = &self.create_new_project_name {
 			let project_name_text_input_element = container(
-				row![
-					text_input("New project name", create_new_project_name)
-						.id(TEXT_INPUT_ID.clone())
-						.size(LARGE_TEXT_SIZE)
-						.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
-						.on_submit(UiMessage::CreateProject{ project_id: generate_project_id(), project_name: create_new_project_name.clone() })
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
-	
-					cancel_button()
-						.on_press(SidebarPageMessage::CloseCreateNewProject.into())
-				]
-				.align_items(Alignment::Center)
+				text_input("New project name", create_new_project_name)
+					.id(TEXT_INPUT_ID.clone())
+					.size(LARGE_TEXT_SIZE)
+					.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
+					.on_submit(UiMessage::CreateProject{ project_id: generate_project_id(), project_name: create_new_project_name.clone() })
+					.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
 			)
 			.width(Length::Fill)
 			.align_x(Horizontal::Center)
 			.into();
 
-			custom_project_preview(None, false, false, false, 0.0, 0, 0, project_name_text_input_element, true)
+			list.push(custom_project_preview(None, false, false, false, 0.0, 0, 0, project_name_text_input_element, true));
 		}
-		else {
-			column![].into()
-		};
-
-		list.push(create_new_project_element);
 
 		// some space at the bottom so that the + button doesn't block any view to the last project
 		list.push(Space::with_height(50.0).into());

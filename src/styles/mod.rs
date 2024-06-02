@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, GreenButtonStyle, RedButtonStyle, SecondaryButtonStyle, TaskFilterButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, RedButtonStyle, SecondaryButtonStyle, TaskFilterButtonStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
