@@ -1,4 +1,4 @@
-use iced::{theme, widget::{button, container, row, text, Button}, Alignment, Element, Length, Padding};
+use iced::{theme, widget::{button, container, row, text, Button}, Alignment, Element, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
 	core::ProjectId, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{GreenButtonStyle, ProjectPreviewButtonStyle, RedButtonStyle, SecondaryButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
@@ -130,12 +130,6 @@ pub fn settings_button(selected: bool) -> Button<'static, UiMessage> {
 		.align_items(Alignment::Center)
 		.spacing(SPACING_AMOUNT)
 		.width(Length::Fill)
-		/*
-		container(
-			icon_to_text(Bootstrap::Gear)
-				.size(LARGE_TEXT_SIZE)
-		)
-		.padding(Padding{ left: 2.5, right: 2.5, top: 0.0, bottom: 0.0 })*/
 	)
 	.width(Length::Fill)
 	.on_press(UiMessage::OpenSettings)

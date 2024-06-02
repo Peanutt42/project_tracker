@@ -1,7 +1,6 @@
 use iced::Padding;
 
-
-pub const SMALL_PADDING_AMOUNT: f32 = 5.0;
+const SMALL_PADDING_AMOUNT: f32 = 5.0;
 pub const PADDING_AMOUNT: f32 = 10.0;
 pub const LARGE_PADDING_AMOUNT: f32 = 20.0;
 

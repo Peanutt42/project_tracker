@@ -1,9 +1,9 @@
-use iced::{alignment::{Alignment, Horizontal, Vertical}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
 use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
 use crate::{project_tracker::UiMessage, styles::{LARGE_TEXT_SIZE, PADDING_AMOUNT}};
 use crate::components::{cancel_button, create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
-use crate::styles::{TextInputStyle, HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SPACING_AMOUNT};
+use crate::styles::{TextInputStyle, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::core::{OrderedHashMap, ProjectId, generate_project_id, Project};
 
