@@ -1,6 +1,5 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Background, Border, Color, Theme};
-
-use crate::styles::{NICE_GREEN, DARK_GREEN};
+use crate::styles::{NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, CIRCLE_BORDER_RADIUS, LARGE_BORDER_RADIUS};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -20,7 +19,7 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 				}
 			)),
 			text_color: style.palette().text,
-			border: Border::with_radius(5.0),
+			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}
 	}
@@ -44,31 +43,34 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 	}
 }
 
-pub struct RedButtonStyle;
+pub struct DangerousButtonStyle;
 
-impl StyleSheet for RedButtonStyle {
+impl StyleSheet for DangerousButtonStyle {
 	type Style = Theme;
 
-	fn active(&self, style: &Self::Style) -> Appearance {
+	fn active(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(Background::Color(Color::from_rgb(1.0, 0.0, 0.0))),
-			text_color: style.extended_palette().background.base.text,
+			text_color: Color::WHITE,
+			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}
 	}
 
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.6, 0.0, 0.0))),
-			text_color: style.extended_palette().background.base.text,
-			..Default::default()
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
+	fn hovered(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(Background::Color(Color::from_rgb(0.5, 0.0, 0.0))),
-			text_color: style.extended_palette().background.base.text,
+			text_color: Color::WHITE,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn pressed(&self, _style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(Color::from_rgb(0.4, 0.0, 0.0))),
+			text_color: Color::WHITE,
+			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}
 	}
@@ -91,16 +93,16 @@ impl StyleSheet for TransparentButtonStyle {
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(Background::Color(style.extended_palette().background.strong.color)),
-			border: Border::with_radius(5.0),
+			border: Border::with_radius(BORDER_RADIUS),
 			..self.active(style)
 		}
 	}
 }
 
 
-pub struct SecondaryButtonStyle;
+pub struct ProjectContextButtonStyle;
 
-impl StyleSheet for SecondaryButtonStyle {
+impl StyleSheet for ProjectContextButtonStyle {
 	type Style = Theme;
 
 	fn active(&self, style: &Self::Style) -> Appearance {
@@ -109,7 +111,7 @@ impl StyleSheet for SecondaryButtonStyle {
 		Appearance {
 			background: Some(Background::Color(pair.color)),
 			text_color: pair.text,
-			border: Border::with_radius(7.5),
+			border: Border::with_radius(LARGE_BORDER_RADIUS),
 			..Default::default()
 		}
 	}
@@ -118,7 +120,7 @@ impl StyleSheet for SecondaryButtonStyle {
 		Appearance {
 			background: Some(Background::Color(style.extended_palette().background.strong.color)),
 			text_color: style.extended_palette().secondary.base.text,
-			border: Border::with_radius(7.5),
+			border: Border::with_radius(LARGE_BORDER_RADIUS),
 			..Default::default()
 		}
 	}
@@ -140,20 +142,77 @@ impl StyleSheet for TaskFilterButtonStyle {
 		Appearance {
 			background: Some(Background::Color(
 				if self.selected {
-					DARK_GREEN
+					LIGHT_DARK_GREEN
 				}
 				else {
-					style.extended_palette().background.weak.color
+					style.extended_palette().secondary.base.color
 				}
 			)),
 			text_color: if self.selected {
-				NICE_GREEN
+				style.extended_palette().secondary.base.text
 			}
 			else {
-				style.extended_palette().background.base.text
+				style.extended_palette().secondary.base.text
 			},
-			border: Border::with_radius(f32::MAX),
+			border: Border::with_radius(CIRCLE_BORDER_RADIUS),
 			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(
+				if self.selected {
+					NICE_GREEN
+				}
+				else {
+					style.extended_palette().background.strong.color
+				}
+			)),
+			..self.active(style)
+		}
+	}
+}
+
+pub struct ThemeModeButtonStyle {
+	pub selected: bool,
+}
+
+impl StyleSheet for ThemeModeButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(
+				if self.selected {
+					NICE_GREEN
+				}
+				else {
+					style.extended_palette().secondary.base.color
+				}
+			)),
+			border: Border::with_radius(BORDER_RADIUS),
+			text_color: if self.selected {
+				style.extended_palette().primary.base.text
+			}
+			else {
+				style.extended_palette().secondary.base.text
+			},
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(
+				if self.selected {
+					LIGHT_DARK_GREEN
+				}
+				else {
+					style.extended_palette().background.strong.color
+				}
+			)),
+			..self.active(style)
 		}
 	}
 }

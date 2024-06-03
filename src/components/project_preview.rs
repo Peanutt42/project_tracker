@@ -57,7 +57,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, editing: bool, can_
 	]
 	.padding(SMALL_HORIZONTAL_PADDING);
 
-	let underlay = 
+	let underlay =
 		container(
 				button(inner)
 					.width(Length::Fill)
@@ -69,14 +69,29 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, editing: bool, can_
 
 	if let Some(project_id) = project_id {
 		if editing {
-			Row::new()
-				.push(underlay)
-				.push_maybe(if can_move_up { Some(move_project_up_button(project_id)) } else { None })
-				.push_maybe(if can_move_down { Some(move_project_down_button(project_id)) } else { None })
-				.push(delete_project_button(project_id))
-				.align_items(Alignment::Center)
-				.width(Length::Fill)
-				.into()
+			let move_project_element: Option<Element<UiMessage>> = {
+				match (can_move_up, can_move_down) {
+					(true, true) => Some(column![
+						move_project_up_button(project_id),
+						move_project_down_button(project_id),
+					].into()),
+					(true, false) => Some(move_project_up_button(project_id).into()),
+					(false, true) => Some(move_project_down_button(project_id).into()),
+					(false, false) => None,
+				}
+			};
+
+			row![
+				underlay,
+				Row::new()
+					.push_maybe(move_project_element)
+					.push(delete_project_button(project_id))
+					.spacing(SMALL_SPACING_AMOUNT)
+					.align_items(Alignment::Center)
+			]
+			.align_items(Alignment::Center)
+			.width(Length::Fill)
+			.into()
 		}
 		else {
 			row![

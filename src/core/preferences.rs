@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Element, Length};
 use serde::{Serialize, Deserialize};
-use crate::{project_tracker::UiMessage, styles::SPACING_AMOUNT, components::{dangerous_button, theme_mode_button}, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, theme_mode_button}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -68,7 +68,7 @@ impl Preferences {
 			self.save_to(result.path().to_path_buf()).await;
 		}
 	}
-	
+
 	pub async fn import_file_dialog() -> Option<LoadPreferencesResult> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.add_filter("Preference", &["json"])
@@ -107,12 +107,13 @@ impl Preferences {
 
 				dangerous_button("Import Preferences")
 					.on_press(UiMessage::ImportPreferences),
-				
+
 				dangerous_button("Export Preferences")
 					.on_press(UiMessage::ExportPreferences),
 			]
 			.spacing(SPACING_AMOUNT)
 		]
+		.spacing(SPACING_AMOUNT)
 		.into()
 	}
 }
