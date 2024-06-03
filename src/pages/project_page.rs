@@ -1,6 +1,6 @@
-use iced::{theme, widget::{column, container, row, text, text_input}, alignment::{Alignment, Horizontal}, Command, Element, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, text, text::LineHeight, text_input}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{components::{completion_bar, partial_horizontal_seperator, create_new_task_button, cancel_create_project_button, task_list}, core::{Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, PADDING_AMOUNT, TITLE_TEXT_SIZE}};
+use crate::{components::{completion_bar, partial_horizontal_seperator, create_new_task_button, cancel_create_project_button, task_list}, core::{Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, PADDING_AMOUNT, MIDDLE_TEXT_SIZE, TITLE_TEXT_SIZE}};
 
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -85,15 +85,17 @@ impl ProjectPage {
 					row![
 						text_input("New task name", create_new_task_name)
 							.id(TEXT_INPUT_ID.clone())
+							.size(MIDDLE_TEXT_SIZE)
+							.line_height(LineHeight::Relative(1.2))
 							.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
 							.on_submit(UiMessage::CreateTask {
 								project_id: self.project_id,
 								task_name: self.create_new_task_name.clone().unwrap_or(String::from("<invalid task name input>")),
 							})
 							.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
-	
+
 						cancel_create_project_button()
-							.on_press(ProjectPageMessage::CloseCreateNewTask.into())					
+							.on_press(ProjectPageMessage::CloseCreateNewTask.into())
 					]
 					.align_items(Alignment::Center)
 				)

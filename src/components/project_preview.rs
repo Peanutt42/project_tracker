@@ -2,7 +2,7 @@ use iced::{alignment::Horizontal, theme, widget::{button, column, container, row
 use once_cell::sync::Lazy;
 use crate::{pages::SidebarPageMessage, project_tracker::UiMessage};
 use crate::components::{completion_bar, edit_project_button, cancel_create_project_button, delete_project_button, move_project_up_button, move_project_down_button};
-use crate::styles::{ProjectPreviewButtonStyle, TextInputStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, SMALL_SPACING_AMOUNT};
+use crate::styles::{ProjectPreviewButtonStyle, TextInputStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT};
 use crate::core::{Project, ProjectId};
 
 pub static EDIT_PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -55,7 +55,8 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, editing: bool, can_
 
 		completion_bar(project_completion_percentage)
 	]
-	.padding(SMALL_HORIZONTAL_PADDING);
+	.padding(SMALL_HORIZONTAL_PADDING)
+	.spacing(TINY_SPACING_AMOUNT);
 
 	let underlay =
 		container(
