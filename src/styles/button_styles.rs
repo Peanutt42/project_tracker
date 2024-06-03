@@ -5,6 +5,15 @@ pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
 }
 
+fn mix_color(a: Color, b: Color) -> Color {
+	Color {
+		r: (a.r + b.r) / 2.0,
+		g: (a.g + b.g) / 2.0,
+		b: (a.b + b.b) / 2.0,
+		a: (a.a + b.a) / 2.0,
+	}
+}
+
 impl StyleSheet for ProjectPreviewButtonStyle {
 	type Style = Theme;
 
@@ -12,10 +21,10 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 		Appearance {
 			background: Some(Background::Color(
 				if self.selected {
-					style.extended_palette().primary.weak.color
+					style.extended_palette().background.weak.color
 				}
 				else {
-					style.palette().background
+					style.extended_palette().background.base.color
 				}
 			)),
 			text_color: style.palette().text,
@@ -28,10 +37,10 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 		Appearance {
 			background: Some(Background::Color(
 				if self.selected {
-					style.extended_palette().primary.weak.color
+					style.extended_palette().background.weak.color
 				}
 				else {
-					style.extended_palette().background.weak.color
+					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color)
 				}
 			)),
 			..self.active(style)
