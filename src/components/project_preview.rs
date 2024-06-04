@@ -7,7 +7,18 @@ use crate::core::{Project, ProjectId};
 
 pub static EDIT_PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-pub fn project_preview(project: &Project, project_id: ProjectId, editing: bool, can_move_up: bool, can_move_down: bool, selected: bool) -> Element<UiMessage> {
+fn mouse_area<'a>(content: impl Into<Element<'a, UiMessage>>, project_id: Option<ProjectId>) -> Element<'a, UiMessage> {
+	let mut mouse_area = iced::widget::mouse_area(content)
+		.on_exit(SidebarPageMessage::MouseStoppedHoveringProject.into());
+
+	if let Some(project_id) = project_id {
+		mouse_area = mouse_area.on_enter(SidebarPageMessage::MouseHoveredProject(project_id).into())
+	}
+	
+	mouse_area.into()
+}
+
+pub fn project_preview(project: &Project, project_id: ProjectId, hovered: bool, editing: bool, can_move_up: bool, can_move_down: bool, selected: bool) -> Element<UiMessage> {
 	let inner_text_element = if editing {
 		text_input("project name", &project.name)
 			.id(EDIT_PROJECT_NAME_TEXT_INPUT_ID.clone())
@@ -26,6 +37,7 @@ pub fn project_preview(project: &Project, project_id: ProjectId, editing: bool, 
 
 	custom_project_preview(
 		Some(project_id),
+		hovered,
 		editing,
 		can_move_up,
 		can_move_down,
@@ -38,7 +50,7 @@ pub fn project_preview(project: &Project, project_id: ProjectId, editing: bool, 
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_project_preview(project_id: Option<ProjectId>, editing: bool, can_move_up: bool, can_move_down: bool, project_completion_percentage: f32, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool) -> Element<UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, editing: bool, can_move_up: bool, can_move_down: bool, project_completion_percentage: f32, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool) -> Element<UiMessage> {
 	let inner = column![
 		row![
 			inner_text_element,
@@ -82,35 +94,43 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, editing: bool, can_
 				}
 			};
 
-			row![
-				underlay,
-				Row::new()
-					.push_maybe(move_project_element)
-					.push(delete_project_button(project_id))
-					.spacing(SMALL_SPACING_AMOUNT)
-					.align_items(Alignment::Center)
-			]
-			.align_items(Alignment::Center)
-			.width(Length::Fill)
-			.into()
+			mouse_area(
+				row![
+					underlay,
+					Row::new()
+						.push_maybe(move_project_element)
+						.push(delete_project_button(project_id))
+						.spacing(SMALL_SPACING_AMOUNT)
+						.align_items(Alignment::Center)
+				]
+				.align_items(Alignment::Center)
+				.width(Length::Fill),
+
+				Some(project_id),
+			)
 		}
 		else {
-			row![
-				underlay,
-				edit_project_button(project_id),
-			]
-			.align_items(Alignment::Center)
-			.width(Length::Fill)
-			.into()
+			mouse_area(
+				Row::new()
+					.push(underlay)
+					.push_maybe(if hovered { Some(edit_project_button(project_id)) } else { None })
+					.align_items(Alignment::Center)
+					.width(Length::Fill),
+							
+				Some(project_id),
+			)
 		}
 	}
 	else {
-		row![
-			underlay,
-			cancel_create_project_button()
-		]
-		.align_items(Alignment::Center)
-		.width(Length::Fill)
-		.into()
+		mouse_area(
+			row![
+				underlay,
+				cancel_create_project_button()
+			]
+			.align_items(Alignment::Center)
+			.width(Length::Fill),
+
+			None,
+		)
 	}
 }

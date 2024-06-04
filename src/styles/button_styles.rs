@@ -157,12 +157,7 @@ impl StyleSheet for TaskFilterButtonStyle {
 					style.extended_palette().secondary.base.color
 				}
 			)),
-			text_color: if self.selected {
-				style.extended_palette().secondary.base.text
-			}
-			else {
-				style.extended_palette().secondary.base.text
-			},
+			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(CIRCLE_BORDER_RADIUS),
 			..Default::default()
 		}
