@@ -159,7 +159,8 @@ impl Application for ProjectTrackerApp {
 					},
 					LoadDatabaseResult::FailedToReadFile(filepath) => {
 						println!("Could not find previous projects in {}", filepath.display());
-						Command::none()
+						self.database = Some(Database::new());
+						self.update(UiMessage::SaveDatabase)
 					},
 					LoadDatabaseResult::FailedToParse(filepath) => {
 						println!("Failed to load previous projects in {}", filepath.display());
@@ -175,7 +176,8 @@ impl Application for ProjectTrackerApp {
 					},
 					LoadPreferencesResult::FailedToReadFile(filepath) => {
 						println!("Could not find preferences in {}", filepath.display());
-						Command::none()
+						self.preferences = Some(Preferences::default());
+						self.update(UiMessage::SavePreferences)
 					},
 					LoadPreferencesResult::FailedToParse(filepath) => {
 						println!("Failed to load preferences in {}", filepath.display());
