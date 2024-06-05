@@ -16,6 +16,9 @@ pub use checkbox_style::GreenCheckboxStyle;
 mod text_input;
 pub use text_input::TextInputStyle;
 
+mod scrollable;
+pub use scrollable::{ScrollableStyle, scrollable_vertical_direction};
+
 mod colors;
 pub use colors::{NICE_GREEN, LIGHT_DARK_GREEN, LIGHT_GREY, GREY, DARK_GREY};
 

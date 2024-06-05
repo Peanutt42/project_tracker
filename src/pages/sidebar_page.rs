@@ -1,9 +1,9 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
 use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
-use crate::{project_tracker::UiMessage, styles::{LARGE_TEXT_SIZE, PADDING_AMOUNT}};
+use crate::project_tracker::UiMessage;
 use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
-use crate::styles::{TextInputStyle, SPACING_AMOUNT};
+use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::core::{OrderedHashMap, ProjectId, generate_project_id, Project};
 
@@ -84,7 +84,7 @@ impl SidebarPage {
 
 		// some space at the bottom so that the + button doesn't block any view to the last project
 		list.push(Space::with_height(50.0).into());
-		
+
 		scrollable(
 			Column::from_vec(list)
 				.width(Length::Fill)
@@ -93,6 +93,8 @@ impl SidebarPage {
 		.id(SCROLLABLE_ID.clone())
 		.width(Length::Fill)
 		.height(Length::Fill)
+		.style(theme::Scrollable::custom(ScrollableStyle))
+		.direction(scrollable_vertical_direction())
 		.into()
 	}
 
@@ -129,7 +131,7 @@ impl SidebarPage {
 				self.hovered_project_id = None;
 				Command::none()
 			},
-		}		
+		}
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
@@ -150,7 +152,7 @@ impl SidebarPage {
 
 		column![
 			overview_button(app.content_page.is_overview_page()),
-			
+
 			partial_horizontal_seperator(),
 
 			floating_element(
@@ -159,7 +161,7 @@ impl SidebarPage {
 			)
 			.anchor(Anchor::SouthEast)
 			.offset(SPACING_AMOUNT as f32),
-			
+
 			partial_horizontal_seperator(),
 
 			settings_button(app.content_page.is_settings_page()),

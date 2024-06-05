@@ -1,5 +1,5 @@
 use iced::{theme, widget::{button, column, row, scrollable, text, Column}, Element, Length, Padding};
-use crate::{components::{horizontal_seperator, loading_screen}, core::{OrderedHashMap, Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{ProjectPreviewButtonStyle, HORIZONTAL_PADDING, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
+use crate::{components::{horizontal_seperator, loading_screen}, core::{OrderedHashMap, Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{ProjectPreviewButtonStyle, ScrollableStyle, scrollable_vertical_direction, HORIZONTAL_PADDING, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
 #[derive(Debug, Clone)]
 pub struct OverviewPage {
@@ -54,6 +54,8 @@ impl OverviewPage {
 			.width(Length::Fill)
 			.spacing(SMALL_SPACING_AMOUNT + SPACING_AMOUNT)
 		)
+		.style(theme::Scrollable::custom(ScrollableStyle))
+		.direction(scrollable_vertical_direction())
 		.into()
 	}
 
@@ -61,7 +63,7 @@ impl OverviewPage {
 		if let Some(database) = &app.database {
 			column![
 				text("Overview").size(TITLE_TEXT_SIZE),
-			
+
 				horizontal_seperator(),
 
 				Self::todo_tasks_list(&database.projects),

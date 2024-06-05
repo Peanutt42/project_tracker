@@ -1,7 +1,7 @@
-use iced::{widget::{column, scrollable}, Element, Length};
+use iced::{widget::{column, scrollable}, theme, Element, Length};
 use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, Task, TaskId, ProjectId, TaskFilter};
-use crate::styles::LARGE_SPACING_AMOUNT;
+use crate::styles::{LARGE_SPACING_AMOUNT, ScrollableStyle, scrollable_vertical_direction};
 
 pub fn task_list(tasks: &OrderedHashMap<TaskId, Task>, filter: TaskFilter, project_id: ProjectId) -> Element<UiMessage>{
 	scrollable(
@@ -15,5 +15,7 @@ pub fn task_list(tasks: &OrderedHashMap<TaskId, Task>, filter: TaskFilter, proje
 	)
 	.width(Length::Fill)
 	.height(Length::Fill)
+	.style(theme::Scrollable::custom(ScrollableStyle))
+	.direction(scrollable_vertical_direction())
 	.into()
 }
