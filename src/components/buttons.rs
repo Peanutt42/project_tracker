@@ -1,7 +1,7 @@
 use iced::{theme, widget::{button, container, row, text, Button}, Alignment, alignment::Horizontal, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::ProjectId, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{ProjectPreviewButtonStyle, DangerousButtonStyle, ProjectContextButtonStyle, TransparentButtonStyle, ThemeModeButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
+	core::ProjectId, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{ProjectPreviewButtonStyle, DangerousButtonStyle, ProjectContextButtonStyle, TransparentButtonStyle, InvisibleButtonStyle, ThemeModeButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -44,12 +44,12 @@ pub fn cancel_create_project_button() -> Button<'static, UiMessage> {
 		.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
-pub fn edit_project_button(project_id: ProjectId) -> Button<'static, UiMessage> {
+pub fn edit_project_button(project_id: ProjectId, visible: bool) -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::Pencil)
 	)
 	.on_press(SidebarPageMessage::EditProject(project_id).into())
-	.style(theme::Button::custom(ProjectContextButtonStyle))
+	.style(if visible { theme::Button::custom(ProjectContextButtonStyle) } else { theme::Button::custom(InvisibleButtonStyle) })
 }
 
 pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage> {

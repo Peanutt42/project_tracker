@@ -1,8 +1,8 @@
-use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text, text_input, Row}, Alignment, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text, text_input, Row}, Alignment, Element, Length};
 use once_cell::sync::Lazy;
 use crate::{pages::SidebarPageMessage, project_tracker::UiMessage};
 use crate::components::{completion_bar, edit_project_button, cancel_create_project_button, delete_project_button, move_project_up_button, move_project_down_button};
-use crate::styles::{ProjectPreviewButtonStyle, TextInputStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT};
+use crate::styles::{ProjectPreviewButtonStyle, TextInputStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT};
 use crate::core::{Project, ProjectId};
 
 pub static EDIT_PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -14,7 +14,7 @@ fn mouse_area<'a>(content: impl Into<Element<'a, UiMessage>>, project_id: Option
 	if let Some(project_id) = project_id {
 		mouse_area = mouse_area.on_enter(SidebarPageMessage::MouseHoveredProject(project_id).into())
 	}
-	
+
 	mouse_area.into()
 }
 
@@ -77,8 +77,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, edit
 					.on_press_maybe(project_id.map(UiMessage::SelectProject))
 					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
 		)
-		.width(Length::Fill)
-		.padding(Padding{ right: PADDING_AMOUNT, ..Padding::ZERO });
+		.width(Length::Fill);
 
 	if let Some(project_id) = project_id {
 		if editing {
@@ -111,12 +110,13 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, edit
 		}
 		else {
 			mouse_area(
-				Row::new()
-					.push(underlay)
-					.push_maybe(if hovered { Some(edit_project_button(project_id)) } else { None })
-					.align_items(Alignment::Center)
-					.width(Length::Fill),
-							
+				row![
+					underlay,
+					edit_project_button(project_id, hovered),
+				]
+				.align_items(Alignment::Center)
+				.width(Length::Fill),
+
 				Some(project_id),
 			)
 		}

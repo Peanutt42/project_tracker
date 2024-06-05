@@ -169,7 +169,7 @@ impl SidebarPage {
 		.width(Length::Fill)
 		.height(Length::Fill)
 		.spacing(SPACING_AMOUNT)
-		.padding(Padding::new(PADDING_AMOUNT))
+		.padding(Padding{ top: PADDING_AMOUNT, bottom: PADDING_AMOUNT, left: PADDING_AMOUNT, right: 0.0 })
 		.into()
 	}
 }
