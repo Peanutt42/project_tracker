@@ -19,8 +19,8 @@ pub enum SidebarPageMessage {
 	EditProject(ProjectId),
 	StopEditingProject,
 
-	MouseHoveredProject(ProjectId),
-	MouseStoppedHoveringProject,
+	HoveringProject(ProjectId),
+	StoppedHoveringProject,
 }
 
 impl From<SidebarPageMessage> for UiMessage {
@@ -123,11 +123,11 @@ impl SidebarPage {
 				Command::none()
 			},
 
-			SidebarPageMessage::MouseHoveredProject(project_id) => {
+			SidebarPageMessage::HoveringProject(project_id) => {
 				self.hovered_project_id = Some(project_id);
 				Command::none()
 			},
-			SidebarPageMessage::MouseStoppedHoveringProject => {
+			SidebarPageMessage::StoppedHoveringProject => {
 				self.hovered_project_id = None;
 				Command::none()
 			},
@@ -169,7 +169,7 @@ impl SidebarPage {
 		.width(Length::Fill)
 		.height(Length::Fill)
 		.spacing(SPACING_AMOUNT)
-		.padding(Padding{ top: PADDING_AMOUNT, bottom: PADDING_AMOUNT, left: PADDING_AMOUNT, right: 0.0 })
+		.padding(Padding::new(PADDING_AMOUNT))
 		.into()
 	}
 }

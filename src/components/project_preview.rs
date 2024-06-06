@@ -9,10 +9,10 @@ pub static EDIT_PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(tex
 
 fn mouse_area<'a>(content: impl Into<Element<'a, UiMessage>>, project_id: Option<ProjectId>) -> Element<'a, UiMessage> {
 	let mut mouse_area = iced::widget::mouse_area(content)
-		.on_exit(SidebarPageMessage::MouseStoppedHoveringProject.into());
+		.on_exit(SidebarPageMessage::StoppedHoveringProject.into());
 
 	if let Some(project_id) = project_id {
-		mouse_area = mouse_area.on_move(move |_pos| SidebarPageMessage::MouseHoveredProject(project_id).into())
+		mouse_area = mouse_area.on_move(move |_pos| SidebarPageMessage::HoveringProject(project_id).into())
 	}
 
 	mouse_area.into()
@@ -83,7 +83,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, edit
 		if editing {
 			let move_project_element: Option<Element<UiMessage>> = {
 				match (can_move_up, can_move_down) {
-					(true, true) => Some(column![
+					(true, true) => Some(row![
 						move_project_up_button(project_id),
 						move_project_down_button(project_id),
 					].into()),
@@ -93,20 +93,16 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, edit
 				}
 			};
 
-			mouse_area(
-				row![
-					underlay,
-					Row::new()
-						.push_maybe(move_project_element)
-						.push(delete_project_button(project_id))
-						.spacing(SMALL_SPACING_AMOUNT)
-						.align_items(Alignment::Center)
-				]
-				.align_items(Alignment::Center)
-				.width(Length::Fill),
-
-				Some(project_id),
-			)
+			row![
+				underlay,
+				Row::new()
+					.push_maybe(move_project_element)
+					.push(delete_project_button(project_id))
+					.align_items(Alignment::Center)
+			]
+			.align_items(Alignment::Center)
+			.width(Length::Fill)
+			.into()
 		}
 		else {
 			mouse_area(
@@ -122,15 +118,12 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, edit
 		}
 	}
 	else {
-		mouse_area(
-			row![
-				underlay,
-				cancel_create_project_button()
-			]
-			.align_items(Alignment::Center)
-			.width(Length::Fill),
-
-			None,
-		)
+		row![
+			underlay,
+			cancel_create_project_button()
+		]
+		.align_items(Alignment::Center)
+		.width(Length::Fill)
+   		.into()
 	}
 }

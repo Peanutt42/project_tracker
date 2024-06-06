@@ -58,6 +58,23 @@ pub enum UiMessage {
 		task_id: TaskId,
 		task_state: TaskState,
 	},
+	ChangeTaskName {
+		project_id: ProjectId,
+		task_id: TaskId,
+		new_task_name: String,
+	},
+	MoveTaskUp {
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
+	MoveTaskDown {
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
+	DeleteTask {
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
 	OpenOverview,
 	OpenSettings,
 	SetThemeMode(ThemeMode),
@@ -148,6 +165,7 @@ impl Application for ProjectTrackerApp {
 				self.update(SidebarPageMessage::CloseCreateNewProject.into()),
 				self.update(SidebarPageMessage::StopEditingProject.into()),
 				self.update(ProjectPageMessage::CloseCreateNewTask.into()),
+				self.update(ProjectPageMessage::StopEditing.into()),
 			]),
 			UiMessage::FontLoaded(_) => Command::none(),
 			UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
@@ -266,14 +284,14 @@ impl Application for ProjectTrackerApp {
 				self.content_page = ContentPage::Project(ProjectPage::new(project_id));
 				self.sidebar_page.project_being_edited = match self.sidebar_page.project_being_edited {
 					Some(project_being_edited_id) => if project_being_edited_id == project_id { Some(project_being_edited_id) } else { None },
-					None => None, 
+					None => None,
 				};
 				Command::none()
 			},
 			UiMessage::CreateProject{ project_id, project_name } => {
 				if let Some(database) = &mut self.database {
 					database.projects.insert(project_id, Project::new(project_name));
-	
+
 					Command::batch([
 						self.update(UiMessage::SaveDatabase),
 						self.update(UiMessage::SelectProject(project_id)),
@@ -316,13 +334,13 @@ impl Application for ProjectTrackerApp {
 			UiMessage::DeleteProject(project_id) => {
 				if let Some(database) = &mut self.database {
 					database.projects.remove(&project_id);
-					
+
 					match self.selected_project_id {
 						Some(selected_project_id) => {
 							if selected_project_id == project_id {
 								Command::batch([
 									self.update(UiMessage::SaveDatabase),
-									self.update(UiMessage::OpenOverview),								
+									self.update(UiMessage::OpenOverview),
 								])
 							}
 							else {
@@ -343,7 +361,7 @@ impl Application for ProjectTrackerApp {
 					if let Some(project) = database.projects.get_mut(&project_id) {
 						project.add_task(task_name);
 					}
-	
+
 					Command::batch([
 						self.update(UiMessage::SaveDatabase),
 						self.update(ProjectPageMessage::ChangeCreateNewTaskName(String::new()).into()),
@@ -360,12 +378,52 @@ impl Application for ProjectTrackerApp {
 							task.state = task_state;
 						}
 					}
-	
+
 					self.update(UiMessage::SavedDatabase)
 				}
 				else {
 					Command::none()
 				}
+			},
+			UiMessage::ChangeTaskName { project_id, task_id, new_task_name } => {
+				if let Some(database) = &mut self.database {
+					if let Some(project) = database.projects.get_mut(&project_id) {
+						if let Some(task) = project.tasks.get_mut(&task_id) {
+							task.name = new_task_name;
+							return self.update(UiMessage::SaveDatabase);
+						}
+					}
+				}
+
+				Command::none()
+			},
+			UiMessage::MoveTaskUp { project_id, task_id } => {
+				if let Some(database) = &mut self.database {
+					if let Some(project) = database.projects.get_mut(&project_id) {
+						project.tasks.move_up(&task_id);
+						return self.update(UiMessage::SaveDatabase);
+					}
+				}
+				Command::none()
+			},
+			UiMessage::MoveTaskDown { project_id, task_id } => {
+				if let Some(database) = &mut self.database {
+					if let Some(project) = database.projects.get_mut(&project_id) {
+						project.tasks.move_down(&task_id);
+						return self.update(UiMessage::SaveDatabase);
+					}
+				}
+				Command::none()
+			},
+			UiMessage::DeleteTask { project_id, task_id } => {
+				if let Some(database) = &mut self.database {
+					if let Some(project) = database.projects.get_mut(&project_id) {
+						project.tasks.remove(&task_id);
+						return self.update(UiMessage::SaveDatabase);
+					}
+				}
+
+				Command::none()
 			},
 			UiMessage::SetThemeMode(theme_mode) => {
 				if let Some(preferences) = &mut self.preferences {
@@ -384,8 +442,8 @@ impl Application for ProjectTrackerApp {
 					Command::none()
 				}
 			},
-			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message.clone()),
-			
+			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
+
 			UiMessage::SavedPreferences |
 			UiMessage::DatabaseExported |
 			UiMessage::DatabaseImportFailed |
@@ -417,7 +475,7 @@ impl ContentPage {
 	pub fn is_overview_page(&self) -> bool {
 		matches!(self, ContentPage::Overview(_))
 	}
-	
+
 	pub fn is_settings_page(&self) -> bool {
 		matches!(self, ContentPage::Settings(_))
 	}

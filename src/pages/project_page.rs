@@ -1,8 +1,8 @@
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, text, text::LineHeight, text_input}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{components::{completion_bar, partial_horizontal_seperator, create_new_task_button, cancel_create_project_button, task_list}, core::{Project, ProjectId, TaskFilter}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, SPACING_AMOUNT, PADDING_AMOUNT, MIDDLE_TEXT_SIZE, TITLE_TEXT_SIZE}};
+use crate::{components::{cancel_create_project_button, completion_bar, create_new_task_button, partial_horizontal_seperator, task_list}, core::{Project, ProjectId, TaskFilter, TaskId, EDIT_TASK_NAME_INPUT_ID}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, MIDDLE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
-static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[derive(Debug, Clone)]
 pub enum ProjectPageMessage {
@@ -10,6 +10,12 @@ pub enum ProjectPageMessage {
 	CloseCreateNewTask,
 	ChangeCreateNewTaskName(String),
 	ChangeTaskFilter(TaskFilter),
+
+	EditTask(TaskId),
+	StopEditing,
+
+	HoveringTask(TaskId),
+	StoppedHoveringTask,
 }
 
 impl From<ProjectPageMessage> for UiMessage {
@@ -23,6 +29,8 @@ pub struct ProjectPage {
 	pub project_id: ProjectId,
 	pub create_new_task_name: Option<String>,
 	task_filter: TaskFilter,
+	task_being_edited_id: Option<TaskId>,
+	hovered_task: Option<TaskId>,
 }
 
 impl ProjectPage {
@@ -31,6 +39,8 @@ impl ProjectPage {
 			project_id,
 			create_new_task_name: None,
 			task_filter: TaskFilter::All,
+			task_being_edited_id: None,
+			hovered_task: None,
 		}
 	}
 }
@@ -38,7 +48,13 @@ impl ProjectPage {
 impl ProjectPage {
 	pub fn update(&mut self, message: ProjectPageMessage) -> Command<UiMessage> {
 		match message {
-			ProjectPageMessage::OpenCreateNewTask => {  self.create_new_task_name = Some(String::new()); text_input::focus(TEXT_INPUT_ID.clone()) },
+			ProjectPageMessage::OpenCreateNewTask => {
+				self.create_new_task_name = Some(String::new());
+				Command::batch([
+					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
+					self.update(ProjectPageMessage::StopEditing),
+				])
+			},
 			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task_name = None; Command::none() },
 			ProjectPageMessage::ChangeCreateNewTaskName(new_task_name) => {
 				if let Some(create_new_task_name) = &mut self.create_new_task_name {
@@ -47,6 +63,16 @@ impl ProjectPage {
 				Command::none()
 			},
 			ProjectPageMessage::ChangeTaskFilter(new_task_filter) => { self.task_filter = new_task_filter; Command::none() },
+			ProjectPageMessage::EditTask(task_id) => {
+				self.task_being_edited_id = Some(task_id);
+				Command::batch([
+					text_input::focus(EDIT_TASK_NAME_INPUT_ID.clone()),
+					self.update(ProjectPageMessage::CloseCreateNewTask),
+				])
+			},
+			ProjectPageMessage::StopEditing => { self.task_being_edited_id = None; Command::none() },
+			ProjectPageMessage::HoveringTask(task_id) => { self.hovered_task = Some(task_id); Command::none() },
+			ProjectPageMessage::StoppedHoveringTask => { self.hovered_task = None; Command::none() },
 		}
 	}
 
@@ -71,7 +97,7 @@ impl ProjectPage {
 
 					partial_horizontal_seperator(),
 
-					task_list(&project.tasks, self.task_filter, self.project_id)
+					task_list(&project.tasks, self.task_filter, self.project_id, self.hovered_task, self.task_being_edited_id)
 				]
 				.spacing(SPACING_AMOUNT)
 				.into()
@@ -84,7 +110,7 @@ impl ProjectPage {
 				container(
 					row![
 						text_input("New task name", create_new_task_name)
-							.id(TEXT_INPUT_ID.clone())
+							.id(CREATE_NEW_TASK_NAME_INPUT_ID.clone())
 							.size(MIDDLE_TEXT_SIZE)
 							.line_height(LineHeight::Relative(1.2))
 							.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
