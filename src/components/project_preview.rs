@@ -12,7 +12,7 @@ fn mouse_area<'a>(content: impl Into<Element<'a, UiMessage>>, project_id: Option
 		.on_exit(SidebarPageMessage::MouseStoppedHoveringProject.into());
 
 	if let Some(project_id) = project_id {
-		mouse_area = mouse_area.on_enter(SidebarPageMessage::MouseHoveredProject(project_id).into())
+		mouse_area = mouse_area.on_move(move |_pos| SidebarPageMessage::MouseHoveredProject(project_id).into())
 	}
 
 	mouse_area.into()

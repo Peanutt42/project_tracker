@@ -1,4 +1,4 @@
-use iced::{Font, font::{Family, Weight, Stretch, Style}};
+use iced::{font::{Family, Stretch, Style, Weight}, Font};
 
 pub const BOLD_FONT: Font = Font{
 	weight: Weight::Bold,

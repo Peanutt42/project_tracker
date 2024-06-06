@@ -1,7 +1,7 @@
-use iced::{theme, widget::{button, container, row, text, Button}, Alignment, alignment::Horizontal, Length};
+use iced::{alignment::Horizontal, theme, widget::{button, container, row, text, Button}, Alignment, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::ProjectId, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{ProjectPreviewButtonStyle, DangerousButtonStyle, ProjectContextButtonStyle, TransparentButtonStyle, InvisibleButtonStyle, ThemeModeButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
+	core::ProjectId, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, DeleteButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -57,7 +57,7 @@ pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage
 		icon_to_text(Bootstrap::Trash)
 	)
 	.on_press(UiMessage::DeleteProject(project_id))
-	.style(theme::Button::custom(ProjectContextButtonStyle))
+	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
 pub fn move_project_up_button(project_id: ProjectId) -> Button<'static, UiMessage> {

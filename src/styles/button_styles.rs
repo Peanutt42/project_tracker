@@ -133,9 +133,38 @@ impl StyleSheet for ProjectContextButtonStyle {
 			..Default::default()
 		}
 	}
+}
+
+pub struct DeleteButtonStyle;
+
+impl StyleSheet for DeleteButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(Color::from_rgb(1.0, 0.0, 0.0))),
+			text_color: style.extended_palette().secondary.base.text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(Color::from_rgb(0.55, 0.0, 0.0))),
+			text_color: style.extended_palette().secondary.base.text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
 
 	fn pressed(&self, style: &Self::Style) -> Appearance {
-		self.active(style)
+		Appearance {
+			background: Some(Background::Color(Color::from_rgb(0.45, 0.0, 0.0))),
+			text_color: style.extended_palette().secondary.base.text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
 	}
 }
 
