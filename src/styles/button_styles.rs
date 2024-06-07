@@ -68,7 +68,7 @@ impl StyleSheet for DangerousButtonStyle {
 
 	fn hovered(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.5, 0.0, 0.0))),
+			background: Some(Background::Color(Color::from_rgb(0.8, 0.0, 0.0))),
 			text_color: Color::WHITE,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -77,7 +77,7 @@ impl StyleSheet for DangerousButtonStyle {
 
 	fn pressed(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.4, 0.0, 0.0))),
+			background: Some(Background::Color(Color::from_rgb(0.6, 0.0, 0.0))),
 			text_color: Color::WHITE,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
