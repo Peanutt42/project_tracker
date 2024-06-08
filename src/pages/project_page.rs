@@ -84,18 +84,22 @@ impl ProjectPage {
 				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);
 
 				column![
-					text(&project.name).size(TITLE_TEXT_SIZE),
-					completion_bar(completion_percentage),
-					row![
-						text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
-							.width(Length::Fill),
+					column![
+						text(&project.name).size(TITLE_TEXT_SIZE),
+						completion_bar(completion_percentage),
+						row![
+							text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
+								.width(Length::Fill),
 
-						self.task_filter.view(),
+							self.task_filter.view(),
+						]
+						.width(Length::Fill)
+						.align_items(Alignment::Center),
+
+						partial_horizontal_seperator(),
 					]
-					.width(Length::Fill)
-					.align_items(Alignment::Center),
-
-					partial_horizontal_seperator(),
+					.padding(Padding::new(PADDING_AMOUNT))
+					.spacing(SPACING_AMOUNT),
 
 					task_list(&project.tasks, self.task_filter, self.project_id, self.hovered_task, self.task_being_edited_id)
 				]
@@ -139,7 +143,6 @@ impl ProjectPage {
 				create_new_task_element,
 			]
 			.spacing(SPACING_AMOUNT)
-			.padding(Padding::new(PADDING_AMOUNT))
 			.height(Length::Fill)
 			.align_items(Alignment::Center)
 			.into()

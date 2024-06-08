@@ -1,5 +1,5 @@
 use iced::{widget::{column, scrollable}, theme, Element, Length};
-use crate::project_tracker::UiMessage;
+use crate::{project_tracker::UiMessage, styles::HORIZONTAL_PADDING};
 use crate::core::{OrderedHashMap, Task, TaskId, ProjectId, TaskFilter};
 use crate::styles::{SMALL_SPACING_AMOUNT, ScrollableStyle, scrollable_vertical_direction};
 
@@ -25,6 +25,7 @@ pub fn task_list(tasks: &OrderedHashMap<TaskId, Task>, filter: TaskFilter, proje
 				})
 		)
 		.spacing(SMALL_SPACING_AMOUNT)
+		.padding(HORIZONTAL_PADDING)
 	)
 	.width(Length::Fill)
 	.height(Length::Fill)

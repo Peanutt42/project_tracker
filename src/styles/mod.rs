@@ -1,6 +1,9 @@
 mod button_styles;
 pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, InvisibleButtonStyle, DangerousButtonStyle, DeleteButtonStyle, ProjectContextButtonStyle, TaskFilterButtonStyle, ThemeModeButtonStyle};
 
+mod container_style;
+pub use container_style::HoverBackgroundContainerStyle;
+
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
 
@@ -20,7 +23,7 @@ mod scrollable;
 pub use scrollable::{ScrollableStyle, scrollable_vertical_direction};
 
 mod colors;
-pub use colors::{NICE_GREEN, LIGHT_DARK_GREEN, LIGHT_GREY, GREY, DARK_GREY};
+pub use colors::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, LIGHT_GREY, GREY, DARK_GREY};
 
 mod paddings;
 pub use paddings::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};

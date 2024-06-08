@@ -1,17 +1,8 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Background, Border, Color, Theme};
-use crate::styles::{NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, CIRCLE_BORDER_RADIUS, LARGE_BORDER_RADIUS};
+use crate::styles::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, CIRCLE_BORDER_RADIUS, LARGE_BORDER_RADIUS};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
-}
-
-fn mix_color(a: Color, b: Color) -> Color {
-	Color {
-		r: (a.r + b.r) / 2.0,
-		g: (a.g + b.g) / 2.0,
-		b: (a.b + b.b) / 2.0,
-		a: (a.a + b.a) / 2.0,
-	}
 }
 
 impl StyleSheet for ProjectPreviewButtonStyle {
