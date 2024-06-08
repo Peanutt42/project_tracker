@@ -1,8 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, TransparentButtonStyle, InvisibleButtonStyle, DangerousButtonStyle, DeleteButtonStyle, ProjectContextButtonStyle, TaskFilterButtonStyle, ThemeModeButtonStyle};
-
-mod container_style;
-pub use container_style::HoverBackgroundContainerStyle;
+pub use button_styles::{ProjectPreviewButtonStyle, TaskButtonStyle, TransparentButtonStyle, InvisibleButtonStyle, DangerousButtonStyle, DeleteButtonStyle, ProjectContextButtonStyle, TaskFilterButtonStyle, ThemeModeButtonStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;

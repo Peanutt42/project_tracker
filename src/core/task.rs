@@ -1,8 +1,8 @@
-use iced::{theme, widget::{checkbox, container, mouse_area, row, text, text_input, Row}, Alignment, Padding, Element, Length};
+use iced::{theme, widget::{checkbox, button, mouse_area, row, text, text_input, Row}, Alignment, Padding, Element, Length};
 use serde::{Serialize, Deserialize};
 use once_cell::sync::Lazy;
 use crate::{pages::ProjectPageMessage, project_tracker::UiMessage, styles::{strikethrough_text, PADDING_AMOUNT}};
-use crate::styles::{MIDDLE_TEXT_SIZE, GREY, GreenCheckboxStyle, TextInputStyle, HoverBackgroundContainerStyle};
+use crate::styles::{MIDDLE_TEXT_SIZE, GREY, GreenCheckboxStyle, TextInputStyle, TaskButtonStyle};
 use crate::components::{edit_task_button, delete_task_button, move_task_up_button, move_task_down_button};
 use crate::core::{ProjectId, TaskState};
 
@@ -63,7 +63,7 @@ impl Task {
 		}
 		else {
 			mouse_area(
-				container(
+				button(
 					row![
 						row![
 							checkbox("", self.state.is_done())
@@ -101,8 +101,9 @@ impl Task {
 					.align_items(Alignment::Center)
 					.width(Length::Fill)
 				)
-				.style(theme::Container::Custom(Box::new(HoverBackgroundContainerStyle{ hovered })))
+				.style(theme::Button::custom(TaskButtonStyle))
 				.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
+				.on_press(UiMessage::Nothing)
 			)
 			.on_move(move |_pos| ProjectPageMessage::HoveringTask(self_task_id).into())
 			.on_exit(ProjectPageMessage::StoppedHoveringTask.into())

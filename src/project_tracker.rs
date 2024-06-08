@@ -16,6 +16,7 @@ pub struct ProjectTrackerApp {
 
 #[derive(Debug, Clone)]
 pub enum UiMessage {
+	Nothing,
 	Event(Event),
 	EscapePressed,
 	FontLoaded(Result<(), font::Error>),
@@ -150,6 +151,7 @@ impl Application for ProjectTrackerApp {
 
 	fn update(&mut self, message: UiMessage) -> Command<UiMessage> {
 		match message {
+			UiMessage::Nothing => Command::none(),
 			UiMessage::Event(event) => {
 				if let Event::Window(id, window::Event::CloseRequested) = event {
 					Command::batch([

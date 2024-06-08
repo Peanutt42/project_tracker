@@ -43,6 +43,34 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 	}
 }
 
+pub struct TaskButtonStyle;
+
+impl StyleSheet for TaskButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(style.extended_palette().background.base.color)),
+			text_color: style.palette().text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(
+				mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color)
+			)),
+			..self.active(style)
+		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		self.hovered(style)
+	}
+}
+
 pub struct DangerousButtonStyle;
 
 impl StyleSheet for DangerousButtonStyle {
