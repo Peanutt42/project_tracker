@@ -38,4 +38,4 @@ mod border_radius;
 pub use border_radius::{BORDER_RADIUS, LARGE_BORDER_RADIUS, CIRCLE_BORDER_RADIUS};
 
 mod fonts;
-pub use fonts::BOLD_FONT;
+pub use fonts::{strikethrough_text, BOLD_FONT};

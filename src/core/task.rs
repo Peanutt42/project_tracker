@@ -1,7 +1,7 @@
 use iced::{theme, widget::{checkbox, container, mouse_area, row, text, text_input, Row}, Alignment, Padding, Element, Length};
 use serde::{Serialize, Deserialize};
 use once_cell::sync::Lazy;
-use crate::{pages::ProjectPageMessage, project_tracker::UiMessage, styles::PADDING_AMOUNT};
+use crate::{pages::ProjectPageMessage, project_tracker::UiMessage, styles::{strikethrough_text, PADDING_AMOUNT}};
 use crate::styles::{MIDDLE_TEXT_SIZE, GREY, GreenCheckboxStyle, TextInputStyle, HoverBackgroundContainerStyle};
 use crate::components::{edit_task_button, delete_task_button, move_task_up_button, move_task_down_button};
 use crate::core::{ProjectId, TaskState};
@@ -82,7 +82,7 @@ impl Task {
 								})
 								.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle))),
 
-							text(&self.name)
+							text(if self.state.is_done() { strikethrough_text(&self.name) } else { self.name.clone() })
 								.style(
 									if self.is_done() {
 										theme::Text::Color(GREY)

@@ -1,7 +1,7 @@
 // only enables the 'windows' subsystem when compiling in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use iced::{Settings, Application, window::{self, icon}};
+use iced::{Settings, Application, Font, window::{self, icon}};
 
 mod core;
 mod components;
@@ -22,6 +22,7 @@ fn main() -> Result<(), iced::Error> {
 			..Default::default()
 		},
 		antialiasing: true,
+		default_font: Font::with_name("Fira Sans"),
 		..Default::default()
 	})
 }
