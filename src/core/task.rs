@@ -39,14 +39,19 @@ impl Task {
 	pub fn view(&self, project_id: ProjectId, self_task_id: TaskId, editing: bool, hovered: bool, can_move_up: bool, can_move_down: bool) -> Element<UiMessage> {
 		if editing {
 			let move_project_element: Option<Element<UiMessage>> = {
-				match (can_move_up, can_move_down) {
-					(true, true) => Some(row![
-						move_task_up_button(project_id, self_task_id),
-						move_task_down_button(project_id, self_task_id),
-					].into()),
-					(true, false) => Some(move_task_up_button(project_id, self_task_id).into()),
-					(false, true) => Some(move_task_down_button(project_id, self_task_id).into()),
-					(false, false) => None,
+				if self.is_todo() {
+					match (can_move_up, can_move_down) {
+						(true, true) => Some(row![
+							move_task_up_button(project_id, self_task_id),
+							move_task_down_button(project_id, self_task_id),
+						].into()),
+						(true, false) => Some(move_task_up_button(project_id, self_task_id).into()),
+						(false, true) => Some(move_task_down_button(project_id, self_task_id).into()),
+						(false, false) => None,
+					}
+				}
+				else {
+					None
 				}
 			};
 

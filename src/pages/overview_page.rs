@@ -21,12 +21,12 @@ impl OverviewPage {
 				})
 				.filter(|(_project_id, project)| {
 					project.tasks.values()
-						.filter(|t| !t.is_done())
+						.filter(|t| t.is_todo())
 						.count() != 0
 				})
 				.map(|(project_id, project)| {
 					let task_list = project.tasks.iter()
-						.filter(|task_id| project.tasks.get(task_id).unwrap().is_done())
+						.filter(|task_id| project.tasks.get(task_id).unwrap().is_todo())
 						.map(|task_id| {
 							let task = project.tasks.get(task_id).unwrap();
 
@@ -40,9 +40,13 @@ impl OverviewPage {
 						.collect();
 
 					button(column![
-						text(&project.name).size(LARGE_TEXT_SIZE),
+						text(&project.name)
+							.size(LARGE_TEXT_SIZE),
+
 						horizontal_seperator(),
-						Column::from_vec(task_list).padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO }),
+
+						Column::from_vec(task_list)
+							.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO }),
 					])
 					.width(Length::Fill)
 					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected: false }))

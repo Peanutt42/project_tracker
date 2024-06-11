@@ -37,14 +37,23 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 		}
 	}
 
+	let show_tasks_button: Element<UiMessage> =
+		if done_task_count == 0 {
+			column![].into()
+		}
+		else {
+			container(show_done_tasks_button(show_done_tasks, done_task_count))
+				.padding(Padding{ left: LARGE_PADDING_AMOUNT, top: LARGE_PADDING_AMOUNT, ..Padding::ZERO })
+				.into()
+		};
+
 	scrollable(
 		column![
 			Column::with_children(todo_tasks)
 				.spacing(SMALL_SPACING_AMOUNT)
 				.padding(HORIZONTAL_PADDING),
 
-			container(show_done_tasks_button(show_done_tasks, done_task_count))
-				.padding(Padding{ left: LARGE_PADDING_AMOUNT, top: LARGE_PADDING_AMOUNT, ..Padding::ZERO }),
+			show_tasks_button,
 
 			Column::with_children(done_tasks)
 				.spacing(SMALL_SPACING_AMOUNT)
