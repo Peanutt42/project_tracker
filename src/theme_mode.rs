@@ -1,7 +1,7 @@
 use iced::{Subscription, Theme, time};
 use serde::{Serialize, Deserialize};
-
 use crate::project_tracker::UiMessage;
+use crate::styles::ProjectTrackerTheme;
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ThemeMode {
@@ -13,10 +13,10 @@ pub enum ThemeMode {
 
 pub fn get_theme(dark_mode: bool) -> Theme {
 	if dark_mode {
-		Theme::Dark
+		ProjectTrackerTheme::Dark.get_theme()
 	}
 	else {
-		Theme::Light
+		ProjectTrackerTheme::Light.get_theme()
 	}
 }
 
