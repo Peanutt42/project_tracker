@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, TaskButtonStyle, TransparentButtonStyle, InvisibleButtonStyle, DangerousButtonStyle, DeleteButtonStyle, ProjectContextButtonStyle, TaskFilterButtonStyle, ThemeModeButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, TaskButtonStyle, TransparentButtonStyle, InvisibleButtonStyle, DangerousButtonStyle, DeleteButtonStyle, ProjectContextButtonStyle, ThemeModeButtonStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
@@ -32,7 +32,7 @@ mod spacing;
 pub use spacing::{TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};
 
 mod border_radius;
-pub use border_radius::{BORDER_RADIUS, LARGE_BORDER_RADIUS, CIRCLE_BORDER_RADIUS};
+pub use border_radius::{BORDER_RADIUS, LARGE_BORDER_RADIUS};
 
 mod fonts;
 pub use fonts::{strikethrough_text, BOLD_FONT};

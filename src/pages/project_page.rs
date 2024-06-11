@@ -1,6 +1,6 @@
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, text, text::LineHeight, text_input}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{components::{cancel_create_project_button, completion_bar, create_new_task_button, partial_horizontal_seperator, task_list}, core::{Project, ProjectId, TaskFilter, TaskId, EDIT_TASK_NAME_INPUT_ID}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, MIDDLE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
+use crate::{components::{cancel_create_project_button, completion_bar, create_new_task_button, partial_horizontal_seperator, task_list}, core::{Project, ProjectId, TaskId, EDIT_TASK_NAME_INPUT_ID}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, MIDDLE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
 static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -9,7 +9,8 @@ pub enum ProjectPageMessage {
 	OpenCreateNewTask,
 	CloseCreateNewTask,
 	ChangeCreateNewTaskName(String),
-	ChangeTaskFilter(TaskFilter),
+
+	ShowDoneTasks(bool),
 
 	EditTask(TaskId),
 	StopEditing,
@@ -28,9 +29,9 @@ impl From<ProjectPageMessage> for UiMessage {
 pub struct ProjectPage {
 	pub project_id: ProjectId,
 	pub create_new_task_name: Option<String>,
-	task_filter: TaskFilter,
 	task_being_edited_id: Option<TaskId>,
 	hovered_task: Option<TaskId>,
+	show_done_tasks: bool,
 }
 
 impl ProjectPage {
@@ -38,9 +39,9 @@ impl ProjectPage {
 		Self {
 			project_id,
 			create_new_task_name: None,
-			task_filter: TaskFilter::All,
 			task_being_edited_id: None,
 			hovered_task: None,
+			show_done_tasks: false,
 		}
 	}
 }
@@ -62,7 +63,7 @@ impl ProjectPage {
 				}
 				Command::none()
 			},
-			ProjectPageMessage::ChangeTaskFilter(new_task_filter) => { self.task_filter = new_task_filter; Command::none() },
+			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; Command::none() },
 			ProjectPageMessage::EditTask(task_id) => {
 				self.task_being_edited_id = Some(task_id);
 				Command::batch([
@@ -90,8 +91,6 @@ impl ProjectPage {
 						row![
 							text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
 								.width(Length::Fill),
-
-							self.task_filter.view(),
 						]
 						.width(Length::Fill)
 						.align_items(Alignment::Center),
@@ -101,7 +100,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(&project.tasks, self.task_filter, self.project_id, self.hovered_task, self.task_being_edited_id)
+					task_list(&project.tasks, self.project_id, self.hovered_task, self.task_being_edited_id, self.show_done_tasks)
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)

@@ -1,5 +1,5 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Background, Border, Color, Theme};
-use crate::styles::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, CIRCLE_BORDER_RADIUS, LARGE_BORDER_RADIUS};
+use crate::styles::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, LARGE_BORDER_RADIUS};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -197,44 +197,6 @@ impl StyleSheet for InvisibleButtonStyle {
 			background: None,
 			text_color: Color::TRANSPARENT,
 			..Default::default()
-		}
-	}
-}
-
-pub struct TaskFilterButtonStyle {
-	pub selected: bool,
-}
-
-impl StyleSheet for TaskFilterButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(Background::Color(
-				if self.selected {
-					LIGHT_DARK_GREEN
-				}
-				else {
-					style.extended_palette().secondary.base.color
-				}
-			)),
-			text_color: style.extended_palette().secondary.base.text,
-			border: Border::with_radius(CIRCLE_BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(Background::Color(
-				if self.selected {
-					NICE_GREEN
-				}
-				else {
-					style.extended_palette().background.strong.color
-				}
-			)),
-			..self.active(style)
 		}
 	}
 }

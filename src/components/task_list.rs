@@ -1,31 +1,56 @@
-use iced::{widget::{column, scrollable}, theme, Element, Length};
-use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, Task, TaskId, ProjectId, TaskFilter};
-use crate::styles::{SMALL_SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, scrollable_vertical_direction};
+use iced::{theme, widget::{column, container, scrollable, Column}, Element, Length, Padding};
+use crate::{project_tracker::UiMessage, styles::LARGE_PADDING_AMOUNT};
+use crate::core::{OrderedHashMap, Task, TaskId, ProjectId};
+use crate::components::show_done_tasks_button;
+use crate::styles::{SMALL_SPACING_AMOUNT, SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, scrollable_vertical_direction};
 
-pub fn task_list(tasks: &OrderedHashMap<TaskId, Task>, filter: TaskFilter, project_id: ProjectId, hovered_task_id: Option<TaskId>, project_being_edited_id: Option<TaskId>) -> Element<UiMessage>{
+pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, hovered_task_id: Option<TaskId>, project_being_edited_id: Option<TaskId>, show_done_tasks: bool) -> Element<'a, UiMessage> {
+	let mut todo_tasks = Vec::new();
+	let mut done_tasks = Vec::new(); // only gets populated when 'show_done_tasks'
+	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks'
+
+	let task_view = |i: usize, task_id: TaskId, task: &'a Task| {
+		let editing = match project_being_edited_id {
+			Some(project_being_edited_id) => task_id == project_being_edited_id,
+			None => false,
+		};
+		let hovered = match hovered_task_id {
+			Some(hovered_task_id) => task_id == hovered_task_id,
+			None => false,
+		};
+		let can_move_up = i != 0;
+		let can_move_down = i != tasks.len() - 1;
+		task.view(project_id, task_id, editing, hovered, can_move_up, can_move_down)
+	};
+
+	for (i, task_id) in tasks.iter().enumerate() {
+		if let Some(task) = tasks.get(task_id) {
+			if task.is_todo() {
+				todo_tasks.push(task_view(i, *task_id, task));
+			}
+			else {
+				done_task_count += 1;
+				if show_done_tasks {
+					done_tasks.push(task_view(i, *task_id, task));
+				}
+			}
+		}
+	}
+
 	scrollable(
-		column(
-			tasks
-				.iter()
-				.enumerate()
-				.filter(|(_i, task_id)| filter.matches(tasks.get(task_id).unwrap()))
-				.map(|(i, task_id)| {
-					let editing = match project_being_edited_id {
-						Some(project_being_edited_id) => *task_id == project_being_edited_id,
-						None => false,
-					};
-					let hovered = match hovered_task_id {
-						Some(hovered_task_id) => *task_id == hovered_task_id,
-						None => false,
-					};
-					let can_move_up = i != 0;
-					let can_move_down = i != tasks.len() - 1;
-					tasks.get(task_id).unwrap().view(project_id, *task_id, editing, hovered, can_move_up, can_move_down)
-				})
-		)
-		.spacing(SMALL_SPACING_AMOUNT)
-		.padding(HORIZONTAL_PADDING)
+		column![
+			Column::with_children(todo_tasks)
+				.spacing(SMALL_SPACING_AMOUNT)
+				.padding(HORIZONTAL_PADDING),
+
+			container(show_done_tasks_button(show_done_tasks, done_task_count))
+				.padding(Padding{ left: LARGE_PADDING_AMOUNT, top: LARGE_PADDING_AMOUNT, ..Padding::ZERO }),
+
+			Column::with_children(done_tasks)
+				.spacing(SMALL_SPACING_AMOUNT)
+				.padding(HORIZONTAL_PADDING),
+		]
+		.spacing(SPACING_AMOUNT)
 	)
 	.width(Length::Fill)
 	.height(Length::Fill)

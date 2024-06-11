@@ -15,6 +15,3 @@ pub use task::{Task, TaskId, generate_task_id, EDIT_TASK_NAME_INPUT_ID};
 
 mod task_state;
 pub use task_state::TaskState;
-
-mod task_filter;
-pub use task_filter::TaskFilter;

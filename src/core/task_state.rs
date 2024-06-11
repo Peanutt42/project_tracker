@@ -11,4 +11,8 @@ impl TaskState {
 	pub fn is_done(&self) -> bool {
 		*self == TaskState::Done
 	}
+
+	pub fn is_todo(&self) -> bool {
+		*self == TaskState::Todo
+	}
 }

@@ -32,6 +32,10 @@ impl Task {
 		self.state.is_done()
 	}
 
+	pub fn is_todo(&self) -> bool {
+		self.state.is_todo()
+	}
+
 	pub fn view(&self, project_id: ProjectId, self_task_id: TaskId, editing: bool, hovered: bool, can_move_up: bool, can_move_down: bool) -> Element<UiMessage> {
 		if editing {
 			let move_project_element: Option<Element<UiMessage>> = {
