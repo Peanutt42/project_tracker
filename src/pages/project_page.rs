@@ -1,5 +1,4 @@
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, text, text::LineHeight, text_input}, Command, Element, Length, Padding};
-use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
 use crate::{components::{cancel_create_project_button, completion_bar, create_new_task_button, partial_horizontal_seperator, task_list}, core::{Project, ProjectId, TaskFilter, TaskId, EDIT_TASK_NAME_INPUT_ID}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, MIDDLE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
@@ -79,13 +78,6 @@ impl ProjectPage {
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		if let Some(database) = &app.database {
-			let create_new_task_button: Element<UiMessage> = if self.create_new_task_name.is_some() {
-				column![].into()
-			}
-			else {
-				create_new_task_button().into()
-			};
-
 			let project_element: Element<UiMessage> = if let Some(project) = database.projects.get(&self.project_id) {
 				let tasks_done = project.get_tasks_done();
 				let tasks_len = project.tasks.len();
@@ -109,12 +101,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					floating_element(
-						task_list(&project.tasks, self.task_filter, self.project_id, self.hovered_task, self.task_being_edited_id),
-						create_new_task_button
-					)
-					.anchor(Anchor::SouthEast)
-					.offset(SPACING_AMOUNT as f32)
+					task_list(&project.tasks, self.task_filter, self.project_id, self.hovered_task, self.task_being_edited_id)
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)
@@ -149,7 +136,7 @@ impl ProjectPage {
 				.into()
 			}
 			else {
-				column![].into()
+				create_new_task_button().into()
 			};
 
 			column![

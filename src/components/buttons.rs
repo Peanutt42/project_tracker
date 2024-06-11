@@ -1,7 +1,7 @@
 use iced::{alignment::Horizontal, theme, widget::{button, container, row, text, Button}, Alignment, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::{ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	core::{ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button() -> Button<'static, UiMessage> {
@@ -11,26 +11,27 @@ pub fn create_new_project_button() -> Button<'static, UiMessage> {
 				.size(LARGE_TEXT_SIZE * 1.7)
 				.style(GREEN_TEXT_STYLE)
 		)
-		.width(Length::Fill)
-		.height(Length::Fill)
 		.center_x()
 		.center_y()
 	)
-	.width(LARGE_TEXT_SIZE * 2.75)
-	.height(LARGE_TEXT_SIZE * 2.75)
+	.width(LARGE_TEXT_SIZE * 2.715)
+	.height(LARGE_TEXT_SIZE * 2.715)
 	.on_press(SidebarPageMessage::OpenCreateNewProject.into())
 	.style(theme::Button::custom(TransparentButtonStyle))
 }
 
 pub fn create_new_task_button() -> Button<'static, UiMessage> {
 	button(
-		text("new task")
-		/*icon_to_text(Bootstrap::PlusCircleFill)
-					.size(LARGE_TEXT_SIZE * 1.7)
-					.style(GREEN_TEXT_STYLE)*/
+		row![
+			icon_to_text(Bootstrap::PlusCircle)
+				.size(LARGE_TEXT_SIZE)
+				.style(GREEN_TEXT_STYLE),
+
+			text("New Task")
+		]
+		.align_items(Alignment::Center)
+		.spacing(SMALL_SPACING_AMOUNT)
 	)
-	.width(LARGE_TEXT_SIZE * 2.75)
-	.height(LARGE_TEXT_SIZE * 2.75)
 	.on_press(ProjectPageMessage::OpenCreateNewTask.into())
 	.style(theme::Button::custom(TransparentButtonStyle))
 }
