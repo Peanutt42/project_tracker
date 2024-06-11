@@ -17,13 +17,13 @@ mod text_input;
 pub use text_input::TextInputStyle;
 
 mod scrollable;
-pub use scrollable::{ScrollableStyle, scrollable_vertical_direction};
+pub use scrollable::{ScrollableStyle, scrollable_vertical_direction, SCROLLBAR_WIDTH};
 
 mod colors;
 pub use colors::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, LIGHT_GREY, GREY, DARK_GREY};
 
 mod paddings;
-pub use paddings::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};
+pub use paddings::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};
 
 mod size;
 pub use size::{SMALL_TEXT_SIZE, MIDDLE_TEXT_SIZE, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE};

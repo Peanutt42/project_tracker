@@ -3,7 +3,7 @@ use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
 use crate::project_tracker::UiMessage;
 use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
-use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT};
+use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::core::{OrderedHashMap, ProjectId, generate_project_id, Project};
 
@@ -89,6 +89,7 @@ impl SidebarPage {
 			Column::from_vec(list)
 				.width(Length::Fill)
 				.spacing(SPACING_AMOUNT)
+    			.padding(Padding{ right: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO })
 		)
 		.id(SCROLLABLE_ID.clone())
 		.width(Length::Fill)
@@ -135,12 +136,15 @@ impl SidebarPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
-		let list: Element<UiMessage> =
-			if let Some(database) = &app.database {
+		let scrollbar_padding = Padding{ right: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO };
+
+		let list: Element<UiMessage> = if let Some(database) = &app.database {
 				self.project_preview_list(&database.projects, self.hovered_project_id, app)
 			}
 			else {
-				loading_screen()
+				container(loading_screen())
+					.padding(scrollbar_padding)
+					.into()
 			};
 
 		let create_new_project_button: Element<UiMessage> = if self.create_new_project_name.is_some() {
@@ -151,9 +155,14 @@ impl SidebarPage {
 		};
 
 		column![
-			overview_button(app.content_page.is_overview_page()),
-
-			partial_horizontal_seperator(),
+			container(
+				column![
+					overview_button(app.content_page.is_overview_page()),
+					partial_horizontal_seperator(),
+				]
+				.spacing(SPACING_AMOUNT)
+			)
+			.padding(scrollbar_padding),
 
 			floating_element(
 				list,
@@ -162,14 +171,19 @@ impl SidebarPage {
 			.anchor(Anchor::SouthEast)
 			.offset(SPACING_AMOUNT as f32),
 
-			partial_horizontal_seperator(),
-
-			settings_button(app.content_page.is_settings_page()),
+			container(
+				column![
+					partial_horizontal_seperator(),
+					settings_button(app.content_page.is_settings_page()),
+				]
+				.spacing(SPACING_AMOUNT)
+			)
+			.padding(scrollbar_padding),
 		]
 		.width(Length::Fill)
 		.height(Length::Fill)
 		.spacing(SPACING_AMOUNT)
-		.padding(Padding::new(PADDING_AMOUNT))
+		.padding(Padding{ left: PADDING_AMOUNT, right: 0.0, top: PADDING_AMOUNT, bottom: PADDING_AMOUNT })
 		.into()
 	}
 }
