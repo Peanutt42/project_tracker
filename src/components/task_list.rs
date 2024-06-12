@@ -19,7 +19,8 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			None => false,
 		};
 		let can_move_up = i != 0;
-		let can_move_down = i != tasks.len() - 1;
+		// once there is a done task, all other tasks after that are also done
+		let can_move_down = i < tasks.len() - 1 && if let Some(task) = tasks.get(&tasks.order[i + 1]) { task.is_todo() } else { false };
 		task.view(project_id, task_id, editing, hovered, can_move_up, can_move_down)
 	};
 

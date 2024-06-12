@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderedHashMap<K: Copy + std::cmp::Eq + std::hash::Hash, V> {
 	hash_map: HashMap<K, V>,
-	order: Vec<K>,
+	pub order: Vec<K>,
 }
 
 impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
@@ -58,6 +58,14 @@ impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
 
 	pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
 		self.hash_map.get_mut(key)
+	}
+
+	pub fn move_to_bottom(&mut self, key: &K) {
+		if let Some(index) = self.get_order(key) {
+			self.order.remove(index);
+		}
+
+		self.order.push(*key);
 	}
 
 	pub fn len(&self) -> usize {

@@ -380,6 +380,28 @@ impl Application for ProjectTrackerApp {
 						if let Some(task) = project.tasks.get_mut(&task_id) {
 							task.state = task_state;
 						}
+						// reorder
+						match task_state {
+							TaskState::Todo => {
+								if let Some(task_order_index) = project.tasks.get_order(&task_id) {
+									// put new todo task at the top of the done tasks / at the end of all todo tasks
+									for (i, task_id) in project.tasks.iter().enumerate() {
+										if project.tasks.get(task_id).unwrap().is_done() {
+											if i == 0 {
+												project.tasks.order.insert(0, *task_id);
+											}
+											else {
+												project.tasks.order.swap(task_order_index, i - 1);
+											}
+											break;
+										}
+									}
+								}
+							},
+							TaskState::Done => {
+								project.tasks.move_to_bottom(&task_id);
+							},
+						}
 					}
 
 					self.update(UiMessage::SavedDatabase)
