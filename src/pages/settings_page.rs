@@ -1,5 +1,5 @@
 use iced::{theme, widget::{column, row, scrollable, text}, Element};
-use crate::components::{dangerous_button, horizontal_seperator, loading_screen};
+use crate::{components::{dangerous_button, horizontal_seperator, loading_screen}, core::DatabaseMessage};
 use crate::styles::{scrollable_vertical_direction, ScrollableStyle, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 
@@ -31,11 +31,11 @@ impl SettingsPage {
 						text("Database").size(LARGE_TEXT_SIZE),
 						row![
 							dangerous_button("Clear Database")
-								.on_press(UiMessage::ClearDatabase),
+								.on_press(DatabaseMessage::Clear.into()),
 							dangerous_button("Import Database")
-								.on_press(UiMessage::ImportDatabase),
+								.on_press(DatabaseMessage::Import.into()),
 							dangerous_button("Export Database")
-								.on_press(UiMessage::ExportDatabase),
+								.on_press(DatabaseMessage::Export.into()),
 						]
 						.spacing(SPACING_AMOUNT)
 					],

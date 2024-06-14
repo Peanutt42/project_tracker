@@ -1,8 +1,8 @@
 mod database;
-pub use database::{Database, LoadDatabaseResult};
+pub use database::{Database, LoadDatabaseResult, DatabaseMessage};
 
 mod preferences;
-pub use preferences::{Preferences, LoadPreferencesResult};
+pub use preferences::{Preferences, LoadPreferencesResult, PreferenceMessage};
 
 mod ordered_hash_map;
 pub use ordered_hash_map::OrderedHashMap;

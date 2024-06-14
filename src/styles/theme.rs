@@ -15,7 +15,7 @@ impl ProjectTrackerTheme {
 			ProjectTrackerTheme::Dark => Theme::custom(
 				"Dark".to_string(),
 				Palette {
-					background: Color::from_rgb(0.075, 0.075, 0.075),
+					background: Color::from_rgb(0.1, 0.1, 0.1),
 					text: Color::from_rgb(0.9, 0.9, 0.9),
 					primary: NICE_GREEN,
 					success: LIGHT_DARK_GREEN,

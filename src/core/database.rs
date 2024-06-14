@@ -1,10 +1,29 @@
 use std::path::PathBuf;
+use iced::Command;
 use serde::{Serialize, Deserialize};
+use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, ProjectId, Project};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Database {
 	pub projects: OrderedHashMap<ProjectId, Project>,
+}
+
+#[derive(Debug, Clone)]
+pub enum DatabaseMessage {
+	Save,
+	Saved,
+	Clear,
+	Export,
+	Exported,
+	Import,
+	ImportFailed,
+}
+
+impl From<DatabaseMessage> for UiMessage {
+	fn from(value: DatabaseMessage) -> Self {
+		UiMessage::DatabaseMessage(value)
+	}
 }
 
 #[derive(Debug, Clone)]
@@ -18,6 +37,27 @@ impl Database {
 	pub fn new() -> Self {
 		Self {
 			projects: OrderedHashMap::new(),
+		}
+	}
+
+	pub fn update(&mut self, message: DatabaseMessage) -> Command<UiMessage> {
+		match message {
+			DatabaseMessage::Save => Command::perform(self.clone().save(), |_| DatabaseMessage::Saved.into()),
+			DatabaseMessage::Saved => Command::none(),
+			DatabaseMessage::Clear => { *self = Self::new(); self.update(DatabaseMessage::Save) },
+			DatabaseMessage::Export => Command::perform(self.clone().export_file_dialog(), |_| DatabaseMessage::Exported.into()),
+			DatabaseMessage::Exported => Command::none(),
+			DatabaseMessage::Import => Command::perform(
+								Database::import_file_dialog(),
+								|result| {
+									if let Some(load_database_result) = result {
+										UiMessage::LoadedDatabase(load_database_result)
+									}
+									else {
+										DatabaseMessage::ImportFailed.into()
+									}
+								}),
+			DatabaseMessage::ImportFailed => Command::none(),
 		}
 	}
 
@@ -58,11 +98,11 @@ impl Database {
 		}
 	}
 
-	pub async fn save(self) {
-		self.save_to(Self::filepath().await).await;		
+	async fn save(self) {
+		self.save_to(Self::filepath().await).await;
 	}
 
-	pub async fn export_file_dialog(self) {
+	async fn export_file_dialog(self) {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.add_filter("Database", &["json"])
 			.save_file()
@@ -72,8 +112,8 @@ impl Database {
 			self.save_to(result.path().to_path_buf()).await;
 		}
 	}
-	
-	pub async fn import_file_dialog() -> Option<LoadDatabaseResult> {
+
+	async fn import_file_dialog() -> Option<LoadDatabaseResult> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.add_filter("Database", &["json"])
 			.pick_file()

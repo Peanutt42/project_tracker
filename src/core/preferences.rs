@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Element, Length};
+use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Command, Element, Length};
 use serde::{Serialize, Deserialize};
 use crate::{components::{dangerous_button, theme_mode_button}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
@@ -7,6 +7,23 @@ use crate::{components::{dangerous_button, theme_mode_button}, project_tracker::
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Preferences {
 	pub theme_mode: ThemeMode,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum PreferenceMessage {
+	Save,
+	Saved,
+	Reset,
+	Export,
+	Exported,
+	Import,
+	ImportFailed,
+}
+
+impl From<PreferenceMessage> for UiMessage {
+	fn from(value: PreferenceMessage) -> Self {
+		UiMessage::PreferenceMessage(value)
+	}
 }
 
 #[derive(Debug, Clone)]
@@ -17,6 +34,27 @@ pub enum LoadPreferencesResult {
 }
 
 impl Preferences {
+	pub fn update(&mut self, message: PreferenceMessage) -> Command<UiMessage> {
+		match message {
+			PreferenceMessage::Save => Command::perform(self.clone().save(), |_| PreferenceMessage::Saved.into()),
+			PreferenceMessage::Saved => Command::none(),
+			PreferenceMessage::Reset => { *self = Preferences::default(); self.update(PreferenceMessage::Save) },
+			PreferenceMessage::Export => Command::perform(self.clone().export_file_dialog(), |_| PreferenceMessage::Exported.into()),
+			PreferenceMessage::Exported => Command::none(),
+			PreferenceMessage::Import => Command::perform(
+				Preferences::import_file_dialog(),
+				|result| {
+					if let Some(load_preference_result) = result {
+						UiMessage::LoadedPreferences(load_preference_result)
+					}
+					else {
+						PreferenceMessage::ImportFailed.into()
+					}
+			}),
+			PreferenceMessage::ImportFailed => Command::none(),
+		}
+	}
+
 	async fn filepath() -> PathBuf {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
 		.expect("Failed to get saved state filepath");
@@ -103,13 +141,13 @@ impl Preferences {
 
 			row![
 				dangerous_button("Reset Preferences")
-					.on_press(UiMessage::ResetPreferences),
+					.on_press(PreferenceMessage::Reset.into()),
 
 				dangerous_button("Import Preferences")
-					.on_press(UiMessage::ImportPreferences),
+					.on_press(PreferenceMessage::Import.into()),
 
 				dangerous_button("Export Preferences")
-					.on_press(UiMessage::ExportPreferences),
+					.on_press(PreferenceMessage::Export.into()),
 			]
 			.spacing(SPACING_AMOUNT)
 		]

@@ -108,20 +108,11 @@ pub fn move_task_down_button(project_id: ProjectId, task_id: TaskId) -> Button<'
 
 pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'static, UiMessage> {
 	button(
-		if show {
-			row![
-				icon_to_text(Bootstrap::CaretDownFill),
-				text("Hide done"),
-			]
-			.spacing(SMALL_SPACING_AMOUNT)
-		}
-		else {
-			row![
-				icon_to_text(Bootstrap::CaretRightFill),
-				text(format!("Show done ({done_task_len})")),
-			]
-			.spacing(SMALL_SPACING_AMOUNT)
-		}
+		row![
+			icon_to_text(if show { Bootstrap::CaretDownFill } else { Bootstrap::CaretRightFill }),
+			text(format!("{} done ({done_task_len})", if show { "Hide" } else { "Show" })),
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
 	)
 	.on_press(ProjectPageMessage::ShowDoneTasks(!show).into())
 	.style(theme::Button::Secondary)

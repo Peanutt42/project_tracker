@@ -1,7 +1,7 @@
 use iced::{keyboard, window, font, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
 use crate::{
-	core::{Database, LoadDatabaseResult, LoadPreferencesResult, Preferences, Project, ProjectId, TaskId, TaskState}, pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	core::{Database, LoadDatabaseResult, DatabaseMessage, LoadPreferencesResult, Preferences, PreferenceMessage, Project, ProjectId, TaskId, TaskState}, pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
@@ -23,20 +23,8 @@ pub enum UiMessage {
 	SystemTheme { is_dark: bool },
 	LoadedPreferences(LoadPreferencesResult),
 	LoadedDatabase(LoadDatabaseResult),
-	SaveDatabase,
-	SavedDatabase,
-	ClearDatabase,
-	ExportDatabase,
-	DatabaseExported,
-	ImportDatabase,
-	DatabaseImportFailed,
-	SavePreferences,
-	SavedPreferences,
-	ResetPreferences,
-	ExportPreferences,
-	PreferencesExported,
-	ImportPreferences,
-	PreferenceImportFailed,
+	DatabaseMessage(DatabaseMessage),
+	PreferenceMessage(PreferenceMessage),
 	SidebarMoved(u16),
 	SelectProject(ProjectId),
 	CreateProject {
@@ -155,8 +143,8 @@ impl Application for ProjectTrackerApp {
 			UiMessage::Event(event) => {
 				if let Event::Window(id, window::Event::CloseRequested) = event {
 					Command::batch([
-						self.update(UiMessage::SaveDatabase),
-						self.update(UiMessage::SavePreferences),
+						self.update(DatabaseMessage::Save.into()),
+						self.update(PreferenceMessage::Save.into()),
 						window::close(id),
 					])
 				}
@@ -176,12 +164,12 @@ impl Application for ProjectTrackerApp {
 				match load_database_result {
 					LoadDatabaseResult::Ok(database) => {
 						self.database = Some(database);
-						self.update(UiMessage::SaveDatabase)
+						self.update(DatabaseMessage::Save.into())
 					},
 					LoadDatabaseResult::FailedToReadFile(filepath) => {
 						println!("Could not find previous projects in {}", filepath.display());
 						self.database = Some(Database::new());
-						self.update(UiMessage::SaveDatabase)
+						self.update(DatabaseMessage::Save.into())
 					},
 					LoadDatabaseResult::FailedToParse(filepath) => {
 						println!("Failed to load previous projects in {}", filepath.display());
@@ -193,12 +181,12 @@ impl Application for ProjectTrackerApp {
 				match load_preferences_result {
 					LoadPreferencesResult::Ok(preferences) => {
 						self.preferences = Some(preferences);
-						self.update(UiMessage::SavePreferences)
+						self.update(PreferenceMessage::Save.into())
 					},
 					LoadPreferencesResult::FailedToReadFile(filepath) => {
 						println!("Could not find preferences in {}", filepath.display());
 						self.preferences = Some(Preferences::default());
-						self.update(UiMessage::SavePreferences)
+						self.update(PreferenceMessage::Save.into())
 					},
 					LoadPreferencesResult::FailedToParse(filepath) => {
 						println!("Failed to load preferences in {}", filepath.display());
@@ -206,70 +194,21 @@ impl Application for ProjectTrackerApp {
 					}
 				}
 			},
-			UiMessage::SaveDatabase => {
-				if let Some(database) = &self.database {
-					Command::perform(database.clone().save(), |_| UiMessage::SavedDatabase)
+			UiMessage::DatabaseMessage(database_message) => {
+				if let Some(database) = &mut self.database {
+					database.update(database_message)
 				}
 				else {
 					Command::none()
 				}
 			},
-			UiMessage::SavedDatabase => Command::none(),
-			UiMessage::ClearDatabase => {
-				self.database = Some(Database::new());
-				self.update(UiMessage::SaveDatabase)
-			},
-			UiMessage::ExportDatabase => {
-				if let Some(database) = &self.database {
-					Command::perform(database.clone().export_file_dialog(), |_| UiMessage::DatabaseExported)
+			UiMessage::PreferenceMessage(preference_message) => {
+				if let Some(preferences) = &mut self.preferences {
+					preferences.update(preference_message)
 				}
 				else {
 					Command::none()
 				}
-			},
-			UiMessage::ImportDatabase => {
-				Command::perform(
-					Database::import_file_dialog(),
-					|result| {
-						if let Some(load_database_result) = result {
-							UiMessage::LoadedDatabase(load_database_result)
-						}
-						else {
-							UiMessage::DatabaseImportFailed
-						}
-					})
-			},
-			UiMessage::SavePreferences => {
-				if let Some(preferences) = &self.preferences {
-					Command::perform(preferences.clone().save(), |_| UiMessage::SavedPreferences)
-				}
-				else {
-					Command::none()
-				}
-			},
-			UiMessage::ResetPreferences => {
-				self.preferences = Some(Preferences::default());
-				self.update(UiMessage::SavePreferences)
-			},
-			UiMessage::ExportPreferences => {
-				if let Some(preferences) = &self.preferences {
-					Command::perform(preferences.clone().export_file_dialog(), |_| UiMessage::PreferencesExported)
-				}
-				else {
-					Command::none()
-				}
-			},
-			UiMessage::ImportPreferences => {
-				Command::perform(
-					Preferences::import_file_dialog(),
-					|result| {
-						if let Some(load_preference_result) = result {
-							UiMessage::LoadedPreferences(load_preference_result)
-						}
-						else {
-							UiMessage::PreferenceImportFailed
-						}
-				})
 			},
 			UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
 			UiMessage::OpenOverview => {
@@ -296,7 +235,7 @@ impl Application for ProjectTrackerApp {
 					database.projects.insert(project_id, Project::new(project_name));
 
 					Command::batch([
-						self.update(UiMessage::SaveDatabase),
+						self.update(DatabaseMessage::Save.into()),
 						self.update(UiMessage::SelectProject(project_id)),
 						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
 					])
@@ -310,7 +249,7 @@ impl Application for ProjectTrackerApp {
 					if let Some(project) = database.projects.get_mut(&project_id) {
 						project.name = new_project_name;
 					}
-					self.update(UiMessage::SaveDatabase)
+					self.update(DatabaseMessage::Save.into())
 				}
 				else {
 					Command::none()
@@ -319,7 +258,7 @@ impl Application for ProjectTrackerApp {
 			UiMessage::MoveProjectUp(project_id) => {
 				if let Some(database) = &mut self.database {
 					database.projects.move_up(&project_id);
-					self.update(UiMessage::SaveDatabase)
+					self.update(DatabaseMessage::Save.into())
 				}
 				else {
 					Command::none()
@@ -328,7 +267,7 @@ impl Application for ProjectTrackerApp {
 			UiMessage::MoveProjectDown(project_id) => {
 				if let Some(database) = &mut self.database {
 					database.projects.move_down(&project_id);
-					self.update(UiMessage::SavedDatabase)
+					self.update(DatabaseMessage::Save.into())
 				}
 				else {
 					Command::none()
@@ -342,16 +281,16 @@ impl Application for ProjectTrackerApp {
 						Some(selected_project_id) => {
 							if selected_project_id == project_id {
 								Command::batch([
-									self.update(UiMessage::SaveDatabase),
+									self.update(DatabaseMessage::Save.into()),
 									self.update(UiMessage::OpenOverview),
 								])
 							}
 							else {
-								self.update(UiMessage::SaveDatabase)
+								self.update(DatabaseMessage::Save.into())
 							}
 						},
 						None => {
-							self.update(UiMessage::SaveDatabase)
+							self.update(DatabaseMessage::Save.into())
 						},
 					}
 				}
@@ -366,7 +305,7 @@ impl Application for ProjectTrackerApp {
 					}
 
 					Command::batch([
-						self.update(UiMessage::SaveDatabase),
+						self.update(DatabaseMessage::Save.into()),
 						self.update(ProjectPageMessage::ChangeCreateNewTaskName(String::new()).into()),
 					])
 				}
@@ -404,7 +343,7 @@ impl Application for ProjectTrackerApp {
 						}
 					}
 
-					self.update(UiMessage::SavedDatabase)
+					self.update(DatabaseMessage::Save.into())
 				}
 				else {
 					Command::none()
@@ -415,7 +354,7 @@ impl Application for ProjectTrackerApp {
 					if let Some(project) = database.projects.get_mut(&project_id) {
 						if let Some(task) = project.tasks.get_mut(&task_id) {
 							task.name = new_task_name;
-							return self.update(UiMessage::SaveDatabase);
+							return self.update(DatabaseMessage::Save.into());
 						}
 					}
 				}
@@ -426,7 +365,7 @@ impl Application for ProjectTrackerApp {
 				if let Some(database) = &mut self.database {
 					if let Some(project) = database.projects.get_mut(&project_id) {
 						project.tasks.move_up(&task_id);
-						return self.update(UiMessage::SaveDatabase);
+						return self.update(DatabaseMessage::Save.into());
 					}
 				}
 				Command::none()
@@ -435,7 +374,7 @@ impl Application for ProjectTrackerApp {
 				if let Some(database) = &mut self.database {
 					if let Some(project) = database.projects.get_mut(&project_id) {
 						project.tasks.move_down(&task_id);
-						return self.update(UiMessage::SaveDatabase);
+						return self.update(DatabaseMessage::Save.into());
 					}
 				}
 				Command::none()
@@ -444,7 +383,7 @@ impl Application for ProjectTrackerApp {
 				if let Some(database) = &mut self.database {
 					if let Some(project) = database.projects.get_mut(&project_id) {
 						project.tasks.remove(&task_id);
-						return self.update(UiMessage::SaveDatabase);
+						return self.update(DatabaseMessage::Save.into());
 					}
 				}
 
@@ -453,7 +392,7 @@ impl Application for ProjectTrackerApp {
 			UiMessage::SetThemeMode(theme_mode) => {
 				if let Some(preferences) = &mut self.preferences {
 					preferences.theme_mode = theme_mode;
-					self.update(UiMessage::SavePreferences)
+					self.update(PreferenceMessage::Save.into())
 				}
 				else {
 					Command::none()
@@ -468,12 +407,6 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
-
-			UiMessage::SavedPreferences |
-			UiMessage::DatabaseExported |
-			UiMessage::DatabaseImportFailed |
-			UiMessage::PreferenceImportFailed |
-			UiMessage::PreferencesExported  => Command::none(),
 		}
 	}
 
