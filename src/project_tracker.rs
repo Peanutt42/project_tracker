@@ -1,4 +1,4 @@
-use iced::{keyboard, window, font, Application, Command, Element, Event, Subscription, Theme};
+use iced::{event::Status, font, keyboard, window, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
 use crate::{
 	core::{Database, LoadDatabaseResult, DatabaseMessage, LoadPreferencesResult, Preferences, PreferenceMessage, Project, ProjectId, TaskId, TaskState}, pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
@@ -17,7 +17,7 @@ pub struct ProjectTrackerApp {
 #[derive(Debug, Clone)]
 pub enum UiMessage {
 	Nothing,
-	Event(Event),
+	CloseWindowRequested(window::Id),
 	EscapePressed,
 	FontLoaded(Result<(), font::Error>),
 	SystemTheme { is_dark: bool },
@@ -132,7 +132,22 @@ impl Application for ProjectTrackerApp {
 				}
 				_ => None,
 			}),
-			iced::event::listen().map(UiMessage::Event),
+
+			iced::event::listen_with(move |event, status| {
+				match status {
+					Status::Ignored => {
+						if let Event::Window(id, window::Event::CloseRequested) = event {
+							Some(id)
+						}
+						else {
+							None
+						}
+					},
+					Status::Captured => None,
+				}
+			})
+			.map(UiMessage::CloseWindowRequested),
+
 			system_theme_subscription(),
 		])
 	}
@@ -140,17 +155,12 @@ impl Application for ProjectTrackerApp {
 	fn update(&mut self, message: UiMessage) -> Command<UiMessage> {
 		match message {
 			UiMessage::Nothing => Command::none(),
-			UiMessage::Event(event) => {
-				if let Event::Window(id, window::Event::CloseRequested) = event {
-					Command::batch([
-						self.update(DatabaseMessage::Save.into()),
-						self.update(PreferenceMessage::Save.into()),
-						window::close(id),
-					])
-				}
-				else {
-					Command::none()
-				}
+			UiMessage::CloseWindowRequested(id) => {
+				Command::batch([
+					self.update(DatabaseMessage::Save.into()),
+					self.update(PreferenceMessage::Save.into()),
+					window::close(id),
+				])
 			},
 			UiMessage::EscapePressed => Command::batch([
 				self.update(SidebarPageMessage::CloseCreateNewProject.into()),
@@ -164,7 +174,7 @@ impl Application for ProjectTrackerApp {
 				match load_database_result {
 					LoadDatabaseResult::Ok(database) => {
 						self.database = Some(database);
-						self.update(DatabaseMessage::Save.into())
+						Command::none()
 					},
 					LoadDatabaseResult::FailedToReadFile(filepath) => {
 						println!("Could not find previous projects in {}", filepath.display());

@@ -1,5 +1,5 @@
 use iced::{theme, widget::{column, row, scrollable, text}, Element};
-use crate::{components::{dangerous_button, horizontal_seperator, loading_screen}, core::DatabaseMessage};
+use crate::{components::{dangerous_button, horizontal_seperator, loading_screen}, core::{Database, DatabaseMessage}};
 use crate::styles::{scrollable_vertical_direction, ScrollableStyle, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 
@@ -37,8 +37,10 @@ impl SettingsPage {
 							dangerous_button("Export Database")
 								.on_press(DatabaseMessage::Export.into()),
 						]
-						.spacing(SPACING_AMOUNT)
-					],
+						.spacing(SPACING_AMOUNT),
+						text(format!("Database file location: {}", Database::get_filepath().display())),
+					]
+					.spacing(SPACING_AMOUNT),
 
 					horizontal_seperator(),
 

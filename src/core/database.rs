@@ -48,7 +48,7 @@ impl Database {
 			DatabaseMessage::Export => Command::perform(self.clone().export_file_dialog(), |_| DatabaseMessage::Exported.into()),
 			DatabaseMessage::Exported => Command::none(),
 			DatabaseMessage::Import => Command::perform(
-								Database::import_file_dialog(),
+								Self::import_file_dialog(),
 								|result| {
 									if let Some(load_database_result) = result {
 										UiMessage::LoadedDatabase(load_database_result)
@@ -61,17 +61,20 @@ impl Database {
 		}
 	}
 
-	async fn filepath() -> PathBuf {
+	pub fn get_filepath() -> PathBuf {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
-		.expect("Failed to get saved state filepath");
+				.expect("Failed to get saved state filepath");
 
-		let data_dir = project_dirs.data_local_dir();
-
-		tokio::fs::create_dir_all(data_dir).await.expect("Failed to create Local Data Directories");
-
-		data_dir
-			.join("database.json")
+		project_dirs.data_local_dir().join("database.json")
 			.to_path_buf()
+	}
+
+	async fn get_and_ensure_filepath() -> PathBuf {
+		let filepath = Self::get_filepath();
+
+		tokio::fs::create_dir_all(filepath.parent().unwrap()).await.expect("Failed to create Local Data Directories");
+
+		filepath
 	}
 
 	async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
@@ -89,7 +92,7 @@ impl Database {
 	}
 
 	pub async fn load() -> LoadDatabaseResult {
-		Self::load_from(Self::filepath().await).await
+		Self::load_from(Self::get_and_ensure_filepath().await).await
 	}
 
 	async fn save_to(self, filepath: PathBuf) {
@@ -99,7 +102,7 @@ impl Database {
 	}
 
 	async fn save(self) {
-		self.save_to(Self::filepath().await).await;
+		self.save_to(Self::get_and_ensure_filepath().await).await;
 	}
 
 	async fn export_file_dialog(self) {

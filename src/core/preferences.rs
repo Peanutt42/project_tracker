@@ -55,17 +55,20 @@ impl Preferences {
 		}
 	}
 
-	async fn filepath() -> PathBuf {
+	fn get_filepath() -> PathBuf {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
-		.expect("Failed to get saved state filepath");
+			.expect("Failed to get saved state filepath");
 
-		let config_dir = project_dirs.config_local_dir();
-
-		tokio::fs::create_dir_all(config_dir).await.expect("Failed to create Local Config Directories");
-
-		config_dir
-			.join("preferences.json")
+		project_dirs.config_local_dir().join("preferences.json")
 			.to_path_buf()
+	}
+
+	async fn get_and_ensure_filepath() -> PathBuf {
+		let filepath = Self::get_filepath();
+
+		tokio::fs::create_dir_all(filepath.parent().unwrap()).await.expect("Failed to create Local Config Directories");
+
+		filepath
 	}
 
 	async fn load_from(filepath: PathBuf) -> LoadPreferencesResult {
@@ -83,7 +86,7 @@ impl Preferences {
 	}
 
 	pub async fn load() -> LoadPreferencesResult {
-		Self::load_from(Self::filepath().await).await
+		Self::load_from(Self::get_and_ensure_filepath().await).await
 	}
 
 	async fn save_to(self, filepath: PathBuf) {
@@ -93,7 +96,7 @@ impl Preferences {
 	}
 
 	pub async fn save(self) {
-		self.save_to(Self::filepath().await).await;
+		self.save_to(Self::get_and_ensure_filepath().await).await;
 	}
 
 	pub async fn export_file_dialog(self) {
@@ -149,7 +152,9 @@ impl Preferences {
 				dangerous_button("Export Preferences")
 					.on_press(PreferenceMessage::Export.into()),
 			]
-			.spacing(SPACING_AMOUNT)
+			.spacing(SPACING_AMOUNT),
+
+			text(format!("Preference file location: {}", Self::get_filepath().display()))
 		]
 		.spacing(SPACING_AMOUNT)
 		.into()
