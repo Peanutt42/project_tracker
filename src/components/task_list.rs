@@ -1,10 +1,14 @@
-use iced::{theme, widget::{column, container, scrollable, Column}, Element, Length, Padding};
-use crate::{project_tracker::UiMessage, styles::LARGE_PADDING_AMOUNT};
+use iced::{theme, widget::{column, container, scrollable, text_input, text::LineHeight, Column, row}, alignment::Alignment, Element, Length, Padding};
+use once_cell::sync::Lazy;
+use crate::{core::TaskState, project_tracker::UiMessage, styles::LARGE_PADDING_AMOUNT};
 use crate::core::{OrderedHashMap, Task, TaskId, ProjectId};
-use crate::components::show_done_tasks_button;
-use crate::styles::{SMALL_SPACING_AMOUNT, SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, scrollable_vertical_direction};
+use crate::components::{show_done_tasks_button, task_widget, custom_task_widget, cancel_create_task_button};
+use crate::styles::{SMALL_SPACING_AMOUNT, SPACING_AMOUNT, HORIZONTAL_PADDING, MIDDLE_TEXT_SIZE, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
+use crate::pages::ProjectPageMessage;
 
-pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, hovered_task_id: Option<TaskId>, project_being_edited_id: Option<TaskId>, show_done_tasks: bool) -> Element<'a, UiMessage> {
+pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+
+pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, hovered_task_id: Option<TaskId>, project_being_edited_id: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
 	let mut todo_tasks = Vec::new();
 	let mut done_tasks = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks'
@@ -21,7 +25,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 		let can_move_up = i != 0;
 		// once there is a done task, all other tasks after that are also done
 		let can_move_down = i < tasks.len() - 1 && if let Some(task) = tasks.get(&tasks.order[i + 1]) { task.is_todo() } else { false };
-		task.view(project_id, task_id, editing, hovered, can_move_up, can_move_down)
+		task_widget(task, task_id, project_id, editing, hovered, can_move_up, can_move_down)
 	};
 
 	for (i, task_id) in tasks.iter().enumerate() {
@@ -36,6 +40,28 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 				}
 			}
 		}
+	}
+
+	if let Some(create_new_task_name) = &create_new_task_name {
+		let inner_text_element =
+			row![
+				text_input("New task name", create_new_task_name)
+					.id(CREATE_NEW_TASK_NAME_INPUT_ID.clone())
+					.size(MIDDLE_TEXT_SIZE)
+					.line_height(LineHeight::Relative(1.2))
+					.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
+					.on_submit(UiMessage::CreateTask {
+						project_id,
+						task_name: create_new_task_name.clone(),
+					})
+					.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+
+				cancel_create_task_button(),
+			]
+			.align_items(Alignment::Center)
+			.into();
+
+		todo_tasks.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, false, false, false, false))
 	}
 
 	let show_tasks_button: Element<UiMessage> =

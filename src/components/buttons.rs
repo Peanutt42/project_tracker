@@ -1,44 +1,54 @@
-use iced::{alignment::Horizontal, theme, widget::{button, container, row, text, Button}, Alignment, Length};
+use iced::{alignment::Horizontal, theme, widget::{button, row, text, Button}, Alignment, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::{ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
+	core::{ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, DISABLED_GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
-pub fn create_new_project_button() -> Button<'static, UiMessage> {
+pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
 	button(
-		container(
-			icon_to_text(Bootstrap::PlusSquareFill)
-				.size(LARGE_TEXT_SIZE * 1.7)
-				.style(GREEN_TEXT_STYLE)
-		)
-		.center_x()
-		.center_y()
+		icon_to_text(Bootstrap::PlusSquareFill)
+			.size(LARGE_TEXT_SIZE * 1.7)
+			.horizontal_alignment(iced::alignment::Horizontal::Center)
+			.style(if enabled { GREEN_TEXT_STYLE } else { DISABLED_GREEN_TEXT_STYLE })
 	)
+	.on_press_maybe(if enabled {
+		Some(SidebarPageMessage::OpenCreateNewProject.into())
+	}
+	else {
+		None
+	})
 	.width(LARGE_TEXT_SIZE * 2.715)
 	.height(LARGE_TEXT_SIZE * 2.715)
-	.on_press(SidebarPageMessage::OpenCreateNewProject.into())
 	.style(theme::Button::custom(TransparentButtonStyle))
 }
 
-pub fn create_new_task_button() -> Button<'static, UiMessage> {
+pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
 	button(
-		row![
-			icon_to_text(Bootstrap::PlusCircle)
-				.size(LARGE_TEXT_SIZE)
-				.style(GREEN_TEXT_STYLE),
-
-			text("New Task")
-		]
-		.align_items(Alignment::Center)
-		.spacing(SMALL_SPACING_AMOUNT)
+		icon_to_text(Bootstrap::PlusCircleFill)
+			.size(LARGE_TEXT_SIZE * 1.7)
+			.horizontal_alignment(iced::alignment::Horizontal::Center)
+			.style(if enabled { GREEN_TEXT_STYLE } else { DISABLED_GREEN_TEXT_STYLE })
 	)
-	.on_press(ProjectPageMessage::OpenCreateNewTask.into())
+	.width(LARGE_TEXT_SIZE * 2.715)
+	.height(LARGE_TEXT_SIZE * 2.715)
+	.on_press_maybe(if enabled {
+		Some(ProjectPageMessage::OpenCreateNewTask.into())
+	}
+	else {
+		None
+	})
 	.style(theme::Button::custom(TransparentButtonStyle))
 }
 
 pub fn cancel_create_project_button() -> Button<'static, UiMessage> {
 	button(icon_to_text(Bootstrap::XLg))
 		.on_press(SidebarPageMessage::CloseCreateNewProject.into())
+		.style(theme::Button::custom(ProjectContextButtonStyle))
+}
+
+pub fn cancel_create_task_button() -> Button<'static, UiMessage> {
+	button(icon_to_text(Bootstrap::XLg))
+		.on_press(ProjectPageMessage::CloseCreateNewTask.into())
 		.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 

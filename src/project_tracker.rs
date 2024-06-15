@@ -316,7 +316,7 @@ impl Application for ProjectTrackerApp {
 
 					Command::batch([
 						self.update(DatabaseMessage::Save.into()),
-						self.update(ProjectPageMessage::ChangeCreateNewTaskName(String::new()).into()),
+						self.update(ProjectPageMessage::OpenCreateNewTask.into()),
 					])
 				}
 				else {

@@ -1,8 +1,6 @@
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, text, text::LineHeight, text_input}, Command, Element, Length, Padding};
-use once_cell::sync::Lazy;
-use crate::{components::{cancel_create_project_button, completion_bar, create_new_task_button, partial_horizontal_seperator, task_list}, core::{Project, ProjectId, TaskId, EDIT_TASK_NAME_INPUT_ID}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{TextInputStyle, MIDDLE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
-
-static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+use iced::{alignment::Alignment, widget::{column, row, text, text_input}, Command, Element, Length, Padding};
+use iced_aw::{floating_element, floating_element::Anchor};
+use crate::{components::{completion_bar, create_new_task_button, partial_horizontal_seperator, task_list, EDIT_TASK_NAME_INPUT_ID, CREATE_NEW_TASK_NAME_INPUT_ID}, core::{Project, ProjectId, TaskId}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
 #[derive(Debug, Clone)]
 pub enum ProjectPageMessage {
@@ -79,7 +77,7 @@ impl ProjectPage {
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		if let Some(database) = &app.database {
-			let project_element: Element<UiMessage> = if let Some(project) = database.projects.get(&self.project_id) {
+			if let Some(project) = database.projects.get(&self.project_id) {
 				let tasks_done = project.get_tasks_done();
 				let tasks_len = project.tasks.len();
 				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);
@@ -100,7 +98,12 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(&project.tasks, self.project_id, self.hovered_task, self.task_being_edited_id, self.show_done_tasks)
+					floating_element(
+						task_list(&project.tasks, self.project_id, self.hovered_task, self.task_being_edited_id, self.show_done_tasks, &self.create_new_task_name),
+						create_new_task_button(self.create_new_task_name.is_none())
+					)
+					.anchor(Anchor::SouthEast)
+					.offset(LARGE_PADDING_AMOUNT),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)
@@ -109,44 +112,7 @@ impl ProjectPage {
 			}
 			else {
 				text("<Invalid ProjectId>").into()
-			};
-
-			let create_new_task_element: Element<UiMessage> = if let Some(create_new_task_name) = &self.create_new_task_name {
-				container(
-					row![
-						text_input("New task name", create_new_task_name)
-							.id(CREATE_NEW_TASK_NAME_INPUT_ID.clone())
-							.size(MIDDLE_TEXT_SIZE)
-							.line_height(LineHeight::Relative(1.2))
-							.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
-							.on_submit(UiMessage::CreateTask {
-								project_id: self.project_id,
-								task_name: self.create_new_task_name.clone().unwrap_or(String::from("<invalid task name input>")),
-							})
-							.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
-
-						cancel_create_project_button()
-							.on_press(ProjectPageMessage::CloseCreateNewTask.into())
-					]
-					.align_items(Alignment::Center)
-				)
-				.max_width(600.0)
-				.align_x(Horizontal::Center)
-				.into()
 			}
-			else {
-				create_new_task_button().into()
-			};
-
-			column![
-				project_element,
-				partial_horizontal_seperator(),
-				create_new_task_element,
-			]
-			.spacing(SPACING_AMOUNT)
-			.height(Length::Fill)
-			.align_items(Alignment::Center)
-			.into()
 		}
 		else {
 			column![].into()

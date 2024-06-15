@@ -1,5 +1,4 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
-use iced_aw::{floating_element, floating_element::Anchor};
 use once_cell::sync::Lazy;
 use crate::project_tracker::UiMessage;
 use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
@@ -147,13 +146,6 @@ impl SidebarPage {
 					.into()
 			};
 
-		let create_new_project_button: Element<UiMessage> = if self.create_new_project_name.is_some() {
-			column![].into()
-		}
-		else {
-			create_new_project_button().into()
-		};
-
 		column![
 			container(
 				column![
@@ -164,15 +156,14 @@ impl SidebarPage {
 			)
 			.padding(scrollbar_padding),
 
-			floating_element(
-				list,
-				create_new_project_button
-			)
-			.anchor(Anchor::SouthEast)
-			.offset(SPACING_AMOUNT as f32),
+			list,
 
 			container(
 				column![
+					container(create_new_project_button(self.create_new_project_name.is_none()))
+												.width(Length::Fill)
+												.align_x(Horizontal::Right),
+
 					partial_horizontal_seperator(),
 					settings_button(app.content_page.is_settings_page()),
 				]

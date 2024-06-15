@@ -48,15 +48,16 @@ impl Database {
 			DatabaseMessage::Export => Command::perform(self.clone().export_file_dialog(), |_| DatabaseMessage::Exported.into()),
 			DatabaseMessage::Exported => Command::none(),
 			DatabaseMessage::Import => Command::perform(
-								Self::import_file_dialog(),
-								|result| {
-									if let Some(load_database_result) = result {
-										UiMessage::LoadedDatabase(load_database_result)
-									}
-									else {
-										DatabaseMessage::ImportFailed.into()
-									}
-								}),
+				Self::import_file_dialog(),
+				|result| {
+					if let Some(load_database_result) = result {
+						UiMessage::LoadedDatabase(load_database_result)
+					}
+					else {
+						DatabaseMessage::ImportFailed.into()
+					}
+				}
+			),
 			DatabaseMessage::ImportFailed => Command::none(),
 		}
 	}
