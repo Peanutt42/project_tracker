@@ -1,6 +1,6 @@
 use iced::{theme, widget::{column, container, scrollable, text_input, text::LineHeight, Column, row}, alignment::Alignment, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::TaskState, project_tracker::UiMessage, styles::LARGE_PADDING_AMOUNT};
+use crate::{core::{generate_task_id, TaskMessage, TaskState}, project_tracker::UiMessage, styles::LARGE_PADDING_AMOUNT};
 use crate::core::{OrderedHashMap, Task, TaskId, ProjectId};
 use crate::components::{show_done_tasks_button, task_widget, custom_task_widget, cancel_create_task_button};
 use crate::styles::{SMALL_SPACING_AMOUNT, SPACING_AMOUNT, HORIZONTAL_PADDING, MIDDLE_TEXT_SIZE, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
@@ -50,10 +50,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 					.size(MIDDLE_TEXT_SIZE)
 					.line_height(LineHeight::Relative(1.2))
 					.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
-					.on_submit(UiMessage::CreateTask {
-						project_id,
-						task_name: create_new_task_name.clone(),
-					})
+					.on_submit(TaskMessage::Create(create_new_task_name.clone()).to_ui_message(project_id, generate_task_id()))
 					.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
 
 				cancel_create_task_button(),

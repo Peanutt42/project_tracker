@@ -1,7 +1,7 @@
 use iced::{event::Status, font, keyboard, window, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
 use crate::{
-	core::{Database, LoadDatabaseResult, DatabaseMessage, LoadPreferencesResult, Preferences, PreferenceMessage, Project, ProjectId, TaskId, TaskState}, pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	core::{Database, LoadDatabaseResult, DatabaseMessage, LoadPreferencesResult, Preferences, PreferenceMessage, ProjectId, ProjectMessage, TaskId, TaskMessage}, pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
@@ -27,42 +27,14 @@ pub enum UiMessage {
 	PreferenceMessage(PreferenceMessage),
 	SidebarMoved(u16),
 	SelectProject(ProjectId),
-	CreateProject {
+	ProjectMessage {
 		project_id: ProjectId,
-		project_name: String,
+		message: ProjectMessage,
 	},
-	ChangeProjectName {
-		project_id: ProjectId,
-		new_project_name: String,
-	},
-	MoveProjectUp(ProjectId),
-	MoveProjectDown(ProjectId),
-	DeleteProject(ProjectId),
-	CreateTask {
-		project_id: ProjectId,
-		task_name: String,
-	},
-	SetTaskState {
+	TaskMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
-		task_state: TaskState,
-	},
-	ChangeTaskName {
-		project_id: ProjectId,
-		task_id: TaskId,
-		new_task_name: String,
-	},
-	MoveTaskUp {
-		project_id: ProjectId,
-		task_id: TaskId,
-	},
-	MoveTaskDown {
-		project_id: ProjectId,
-		task_id: TaskId,
-	},
-	DeleteTask {
-		project_id: ProjectId,
-		task_id: TaskId,
+		message: TaskMessage,
 	},
 	OpenOverview,
 	OpenSettings,
@@ -240,165 +212,8 @@ impl Application for ProjectTrackerApp {
 				};
 				Command::none()
 			},
-			UiMessage::CreateProject{ project_id, project_name } => {
-				if let Some(database) = &mut self.database {
-					database.projects.insert(project_id, Project::new(project_name));
-
-					Command::batch([
-						self.update(DatabaseMessage::Save.into()),
-						self.update(UiMessage::SelectProject(project_id)),
-						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
-					])
-				}
-				else {
-					Command::none()
-				}
-			},
-			UiMessage::ChangeProjectName { project_id, new_project_name } => {
-				if let Some(database) = &mut self.database {
-					if let Some(project) = database.projects.get_mut(&project_id) {
-						project.name = new_project_name;
-					}
-					self.update(DatabaseMessage::Save.into())
-				}
-				else {
-					Command::none()
-				}
-			}
-			UiMessage::MoveProjectUp(project_id) => {
-				if let Some(database) = &mut self.database {
-					database.projects.move_up(&project_id);
-					self.update(DatabaseMessage::Save.into())
-				}
-				else {
-					Command::none()
-				}
-			},
-			UiMessage::MoveProjectDown(project_id) => {
-				if let Some(database) = &mut self.database {
-					database.projects.move_down(&project_id);
-					self.update(DatabaseMessage::Save.into())
-				}
-				else {
-					Command::none()
-				}
-			},
-			UiMessage::DeleteProject(project_id) => {
-				if let Some(database) = &mut self.database {
-					database.projects.remove(&project_id);
-
-					match self.selected_project_id {
-						Some(selected_project_id) => {
-							if selected_project_id == project_id {
-								Command::batch([
-									self.update(DatabaseMessage::Save.into()),
-									self.update(UiMessage::OpenOverview),
-								])
-							}
-							else {
-								self.update(DatabaseMessage::Save.into())
-							}
-						},
-						None => {
-							self.update(DatabaseMessage::Save.into())
-						},
-					}
-				}
-				else {
-					Command::none()
-				}
-			},
-			UiMessage::CreateTask { project_id, task_name } => {
-				if let Some(database) = &mut self.database {
-					if let Some(project) = database.projects.get_mut(&project_id) {
-						project.add_task(task_name);
-					}
-
-					Command::batch([
-						self.update(DatabaseMessage::Save.into()),
-						self.update(ProjectPageMessage::OpenCreateNewTask.into()),
-					])
-				}
-				else {
-					Command::none()
-				}
-			},
-			UiMessage::SetTaskState { project_id, task_id, task_state } => {
-				if let Some(database) = &mut self.database {
-					if let Some(project) = database.projects.get_mut(&project_id) {
-						if let Some(task) = project.tasks.get_mut(&task_id) {
-							task.state = task_state;
-						}
-						// reorder
-						match task_state {
-							TaskState::Todo => {
-								if let Some(task_order_index) = project.tasks.get_order(&task_id) {
-									// put new todo task at the top of the done tasks / at the end of all todo tasks
-									for (i, task_id) in project.tasks.iter().enumerate() {
-										if project.tasks.get(task_id).unwrap().is_done() {
-											if i == 0 {
-												project.tasks.order.insert(0, *task_id);
-											}
-											else {
-												project.tasks.order.swap(task_order_index, i - 1);
-											}
-											break;
-										}
-									}
-								}
-							},
-							TaskState::Done => {
-								project.tasks.move_to_bottom(&task_id);
-							},
-						}
-					}
-
-					self.update(DatabaseMessage::Save.into())
-				}
-				else {
-					Command::none()
-				}
-			},
-			UiMessage::ChangeTaskName { project_id, task_id, new_task_name } => {
-				if let Some(database) = &mut self.database {
-					if let Some(project) = database.projects.get_mut(&project_id) {
-						if let Some(task) = project.tasks.get_mut(&task_id) {
-							task.name = new_task_name;
-							return self.update(DatabaseMessage::Save.into());
-						}
-					}
-				}
-
-				Command::none()
-			},
-			UiMessage::MoveTaskUp { project_id, task_id } => {
-				if let Some(database) = &mut self.database {
-					if let Some(project) = database.projects.get_mut(&project_id) {
-						project.tasks.move_up(&task_id);
-						return self.update(DatabaseMessage::Save.into());
-					}
-				}
-				Command::none()
-			},
-			UiMessage::MoveTaskDown { project_id, task_id } => {
-				if let Some(database) = &mut self.database {
-					if let Some(project) = database.projects.get_mut(&project_id) {
-						project.tasks.move_down(&task_id);
-						return self.update(DatabaseMessage::Save.into());
-					}
-				}
-				Command::none()
-			},
-			UiMessage::DeleteTask { project_id, task_id } => {
-				if let Some(database) = &mut self.database {
-					if let Some(project) = database.projects.get_mut(&project_id) {
-						project.tasks.remove(&task_id);
-						return self.update(DatabaseMessage::Save.into());
-					}
-				}
-
-				Command::none()
-			},
+			UiMessage::ProjectMessage { project_id, message } => self.update_project(project_id, message),
+			UiMessage::TaskMessage { project_id, task_id, message } => self.update_task(project_id, task_id, message),
 			UiMessage::SetThemeMode(theme_mode) => {
 				if let Some(preferences) = &mut self.preferences {
 					preferences.theme_mode = theme_mode;
