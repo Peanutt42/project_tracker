@@ -1,7 +1,7 @@
 use iced::{alignment::Horizontal, theme, widget::{button, row, text, Button}, Alignment, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::{ProjectId, ProjectMessage, TaskId, TaskMessage}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, GREEN_TEXT_STYLE, DISABLED_GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
+	core::{DatabaseMessage, ProjectId, ProjectMessage, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -72,7 +72,7 @@ pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage
 	button(
 		icon_to_text(Bootstrap::Trash)
 	)
-	.on_press(ProjectMessage::Delete.to_ui_message(project_id))
+	.on_press(DatabaseMessage::DeleteProject(project_id).into())
 	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
@@ -80,7 +80,7 @@ pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'sta
 	button(
 		icon_to_text(Bootstrap::Trash)
 	)
-	.on_press(TaskMessage::Delete.to_ui_message(project_id, task_id))
+	.on_press(DatabaseMessage::ProjectMessage { project_id, message: ProjectMessage::DeleteTask(task_id) }.into())
 	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
@@ -88,7 +88,7 @@ pub fn move_project_up_button(project_id: ProjectId) -> Button<'static, UiMessag
 	button(
 		icon_to_text(Bootstrap::ArrowUp),
 	)
-	.on_press(ProjectMessage::MoveUp.to_ui_message(project_id))
+	.on_press(DatabaseMessage::MoveProjectUp(project_id).into())
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
@@ -96,7 +96,7 @@ pub fn move_task_up_button(project_id: ProjectId, task_id: TaskId) -> Button<'st
 	button(
 		icon_to_text(Bootstrap::ArrowUp),
 	)
-	.on_press(TaskMessage::MoveUp.to_ui_message(project_id, task_id))
+	.on_press(DatabaseMessage::ProjectMessage { project_id, message: ProjectMessage::MoveTaskUp(task_id) }.into())
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
@@ -104,7 +104,7 @@ pub fn move_project_down_button(project_id: ProjectId) -> Button<'static, UiMess
 	button(
 		icon_to_text(Bootstrap::ArrowDown),
 	)
-	.on_press(ProjectMessage::MoveDown.to_ui_message(project_id))
+	.on_press(DatabaseMessage::MoveProjectDown(project_id).into())
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
@@ -112,7 +112,7 @@ pub fn move_task_down_button(project_id: ProjectId, task_id: TaskId) -> Button<'
 	button(
 		icon_to_text(Bootstrap::ArrowDown),
 	)
-	.on_press(TaskMessage::MoveDown.to_ui_message(project_id, task_id))
+	.on_press(DatabaseMessage::ProjectMessage { project_id, message: ProjectMessage::MoveTaskDown(task_id) }.into())
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 

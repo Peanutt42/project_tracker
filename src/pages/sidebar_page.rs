@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::ProjectMessage, project_tracker::UiMessage};
+use crate::{core::DatabaseMessage, project_tracker::UiMessage};
 use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
 use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
@@ -71,7 +71,10 @@ impl SidebarPage {
 					.id(TEXT_INPUT_ID.clone())
 					.size(LARGE_TEXT_SIZE)
 					.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
-					.on_submit(ProjectMessage::Create(create_new_project_name.clone()).to_ui_message(generate_project_id()))
+					.on_submit(DatabaseMessage::CreateProject{
+						project_id: generate_project_id(),
+						name: create_new_project_name.clone()
+					}.into())
 					.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
 			)
 			.width(Length::Fill)

@@ -1,7 +1,7 @@
 use iced::{event::Status, font, keyboard, window, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
 use crate::{
-	core::{Database, LoadDatabaseResult, DatabaseMessage, LoadPreferencesResult, Preferences, PreferenceMessage, ProjectId, ProjectMessage, TaskId, TaskMessage}, pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, ProjectMessage}, pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 
 pub struct ProjectTrackerApp {
@@ -21,21 +21,12 @@ pub enum UiMessage {
 	EscapePressed,
 	FontLoaded(Result<(), font::Error>),
 	SystemTheme { is_dark: bool },
-	LoadedPreferences(LoadPreferencesResult),
 	LoadedDatabase(LoadDatabaseResult),
+	LoadedPreferences(LoadPreferencesResult),
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
 	SidebarMoved(u16),
 	SelectProject(ProjectId),
-	ProjectMessage {
-		project_id: ProjectId,
-		message: ProjectMessage,
-	},
-	TaskMessage {
-		project_id: ProjectId,
-		task_id: TaskId,
-		message: TaskMessage,
-	},
 	OpenOverview,
 	OpenSettings,
 	SetThemeMode(ThemeMode),
@@ -144,17 +135,14 @@ impl Application for ProjectTrackerApp {
 			UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
 			UiMessage::LoadedDatabase(load_database_result) => {
 				match load_database_result {
-					LoadDatabaseResult::Ok(database) => {
-						self.database = Some(database);
-						Command::none()
-					},
+					LoadDatabaseResult::Ok(database) => { self.database = Some(database); Command::none() },
 					LoadDatabaseResult::FailedToReadFile(filepath) => {
 						println!("Could not find previous projects in {}", filepath.display());
 						self.database = Some(Database::new());
 						self.update(DatabaseMessage::Save.into())
 					},
 					LoadDatabaseResult::FailedToParse(filepath) => {
-						println!("Failed to load previous projects in {}", filepath.display());
+						eprintln!("Failed to load previous projects in {}", filepath.display());
 						Command::none()
 					}
 				}
@@ -177,11 +165,41 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::DatabaseMessage(database_message) => {
+				let command = match &database_message {
+					DatabaseMessage::CreateProject { project_id, .. } => Command::batch([
+						self.update(UiMessage::SelectProject(*project_id)),
+						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
+					]),
+					DatabaseMessage::DeleteProject(project_id) => {
+						match self.selected_project_id {
+							Some(selected_project_id) if selected_project_id == *project_id => {
+								self.update(UiMessage::OpenOverview)
+							},
+							Some(_) | None => {
+								Command::none()
+							},
+						}
+					},
+
+					DatabaseMessage::ProjectMessage { message, .. } => {
+						if let ProjectMessage::CreateTask{ .. } = message {
+							self.update(ProjectPageMessage::OpenCreateNewTask.into())
+						}
+						else {
+							Command::none()
+						}
+					},
+					_ => Command::none(),
+				};
+
 				if let Some(database) = &mut self.database {
-					database.update(database_message)
+					Command::batch([
+						command,
+						database.update(database_message),
+					])
 				}
 				else {
-					Command::none()
+					command
 				}
 			},
 			UiMessage::PreferenceMessage(preference_message) => {
@@ -212,8 +230,6 @@ impl Application for ProjectTrackerApp {
 				};
 				Command::none()
 			},
-			UiMessage::ProjectMessage { project_id, message } => self.update_project(project_id, message),
-			UiMessage::TaskMessage { project_id, task_id, message } => self.update_task(project_id, task_id, message),
 			UiMessage::SetThemeMode(theme_mode) => {
 				if let Some(preferences) = &mut self.preferences {
 					preferences.theme_mode = theme_mode;

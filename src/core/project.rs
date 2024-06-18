@@ -1,6 +1,7 @@
-use iced::{Command, Application};
 use serde::{Serialize, Deserialize};
-use crate::{core::{OrderedHashMap, DatabaseMessage, Task, TaskId, TaskState}, project_tracker::{ProjectTrackerApp, UiMessage}, pages::SidebarPageMessage};
+use crate::core::{OrderedHashMap, Task, TaskId, TaskState};
+
+use super::generate_task_id;
 
 pub type ProjectId = usize;
 
@@ -10,17 +11,18 @@ pub fn generate_project_id() -> ProjectId {
 
 #[derive(Debug, Clone)]
 pub enum ProjectMessage {
-	Create(String),
-	ChangeName(String),
-	MoveUp,
-	MoveDown,
-	Delete
-}
-
-impl ProjectMessage {
-	pub fn to_ui_message(self, project_id: ProjectId) -> UiMessage {
-		UiMessage::ProjectMessage { project_id, message: self }
-	}
+	CreateTask(String),
+	ChangeTaskName {
+		task_id: TaskId,
+		new_name: String,
+	},
+	ChangeTaskState {
+		task_id: TaskId,
+		new_state: TaskState,
+	},
+	MoveTaskUp(TaskId),
+	MoveTaskDown(TaskId),
+	DeleteTask(TaskId),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,54 +62,45 @@ impl Project {
 	pub fn get_completion_percentage(&self) -> f32 {
 		Self::calculate_completion_percentage(self.get_tasks_done(), self.tasks.len())
 	}
-}
 
-impl ProjectTrackerApp {
-	pub fn update_project(&mut self, project_id: ProjectId, message: ProjectMessage) -> Command<UiMessage> {
-		if let Some(database) = &mut self.database {
-			let command = match message {
-				ProjectMessage::Create(name) => {
-					database.projects.insert(project_id, Project::new(name));
-					Command::batch([
-						self.update(UiMessage::SelectProject(project_id)),
-						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
-					])
-				},
-				ProjectMessage::ChangeName(new_name) => {
-					if let Some(project) = database.projects.get_mut(&project_id) {
-						project.name = new_name;
-					}
-					Command::none()
-				},
-				ProjectMessage::MoveUp => {
-					database.projects.move_up(&project_id);
-					Command::none()
-				},
-				ProjectMessage::MoveDown => {
-					database.projects.move_down(&project_id);
-					Command::none()
-				},
-				ProjectMessage::Delete => {
-					database.projects.remove(&project_id);
-
-					match self.selected_project_id {
-						Some(selected_project_id) if selected_project_id == project_id => {
-							self.update(UiMessage::OpenOverview)
-						},
-						Some(_) | None => {
-							Command::none()
-						},
-					}
-				},
-			};
-
-			Command::batch([
-				command,
-				self.update(DatabaseMessage::Save.into()),
-			])
-		}
-		else {
-			Command::none()
+	pub fn update(&mut self, message: ProjectMessage) {
+		match message {
+			ProjectMessage::CreateTask(name) => self.add_task(generate_task_id(), name),
+			ProjectMessage::ChangeTaskName { task_id, new_name } => {
+				if let Some(task) = self.tasks.get_mut(&task_id) {
+					task.name = new_name;
+				}
+			},
+			ProjectMessage::ChangeTaskState { task_id, new_state } => {
+				if let Some(task) = self.tasks.get_mut(&task_id) {
+					task.state = new_state;
+				}
+				// reorder
+				match new_state {
+					TaskState::Todo => {
+						if let Some(task_order_index) = self.tasks.get_order(&task_id) {
+							// put new todo task at the top of the done tasks / at the end of all todo tasks
+							for (i, task_id) in self.tasks.iter().enumerate() {
+								if self.tasks.get(task_id).unwrap().is_done() {
+									if i == 0 {
+										self.tasks.order.insert(0, *task_id);
+									}
+									else {
+										self.tasks.order.swap(task_order_index, i - 1);
+									}
+									break;
+								}
+							}
+						}
+					},
+					TaskState::Done => {
+						self.tasks.move_to_bottom(&task_id);
+					},
+				}
+			},
+			ProjectMessage::MoveTaskUp(task_id) => self.tasks.move_up(&task_id),
+			ProjectMessage::MoveTaskDown(task_id) => self.tasks.move_down(&task_id),
+			ProjectMessage::DeleteTask(task_id) => self.tasks.remove(&task_id),
 		}
 	}
 }

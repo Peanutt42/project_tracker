@@ -1,9 +1,9 @@
 use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text, text_input, Row}, Alignment, Element, Length};
 use once_cell::sync::Lazy;
-use crate::{core::ProjectMessage, pages::SidebarPageMessage, project_tracker::UiMessage};
+use crate::{pages::SidebarPageMessage, project_tracker::UiMessage};
 use crate::components::{completion_bar, edit_project_button, cancel_create_project_button, delete_project_button, move_project_up_button, move_project_down_button};
 use crate::styles::{ProjectPreviewButtonStyle, TextInputStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, SMALL_HORIZONTAL_PADDING, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT};
-use crate::core::{Project, ProjectId};
+use crate::core::{Project, ProjectId, DatabaseMessage};
 
 pub static EDIT_PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -24,7 +24,7 @@ pub fn project_preview(project: &Project, project_id: ProjectId, hovered: bool, 
 			.id(EDIT_PROJECT_NAME_TEXT_INPUT_ID.clone())
 			.width(Length::Fill)
 			.size(LARGE_TEXT_SIZE)
-			.on_input(move |new_project_name| ProjectMessage::ChangeName(new_project_name).to_ui_message(project_id))
+			.on_input(move |new_project_name| DatabaseMessage::ChangeProjectName{ project_id, new_name: new_project_name }.into())
 			.on_submit(SidebarPageMessage::StopEditingProject.into())
 			.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
 			.into()

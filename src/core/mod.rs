@@ -1,5 +1,5 @@
 mod database;
-pub use database::{Database, LoadDatabaseResult, DatabaseMessage};
+pub use database::{Database, DatabaseMessage, LoadDatabaseResult};
 
 mod preferences;
 pub use preferences::{Preferences, LoadPreferencesResult, PreferenceMessage};
@@ -11,7 +11,7 @@ mod project;
 pub use project::{Project, ProjectId, ProjectMessage, generate_project_id};
 
 mod task;
-pub use task::{Task, TaskId, TaskMessage, generate_task_id};
+pub use task::{Task, TaskId, generate_task_id};
 
 mod task_state;
 pub use task_state::TaskState;

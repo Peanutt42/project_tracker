@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::Command;
 use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, ProjectId, Project};
+use crate::core::{OrderedHashMap, ProjectId, Project, ProjectMessage};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Database {
@@ -18,6 +18,23 @@ pub enum DatabaseMessage {
 	Exported,
 	Import,
 	ImportFailed,
+
+	CreateProject {
+		project_id: ProjectId,
+		name: String,
+	},
+	ChangeProjectName {
+		project_id: ProjectId,
+		new_name: String,
+	},
+	MoveProjectUp(ProjectId),
+	MoveProjectDown(ProjectId),
+	DeleteProject(ProjectId),
+
+	ProjectMessage {
+		project_id: ProjectId,
+		message: ProjectMessage,
+	},
 }
 
 impl From<DatabaseMessage> for UiMessage {
@@ -61,6 +78,39 @@ impl Database {
 				}
 			),
 			DatabaseMessage::ImportFailed => Command::none(),
+
+			DatabaseMessage::CreateProject { project_id, name } => {
+				self.projects.insert(project_id, Project::new(name));
+				self.update(DatabaseMessage::Save.into())
+			},
+			DatabaseMessage::ChangeProjectName { project_id, new_name } => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					project.name = new_name;
+				}
+				self.update(DatabaseMessage::Save.into())
+			},
+			DatabaseMessage::MoveProjectUp(project_id) => {
+				self.projects.move_up(&project_id);
+				self.update(DatabaseMessage::Save.into())
+			},
+			DatabaseMessage::MoveProjectDown(project_id) => {
+				self.projects.move_down(&project_id);
+				self.update(DatabaseMessage::Save.into())
+			},
+			DatabaseMessage::DeleteProject(project_id) => {
+				self.projects.remove(&project_id);
+				self.update(DatabaseMessage::Save.into())
+			},
+
+			DatabaseMessage::ProjectMessage { project_id, message } => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					project.update(message);
+					self.update(DatabaseMessage::Save.into())
+				}
+				else {
+					Command::none()
+				}
+			},
 		}
 	}
 
