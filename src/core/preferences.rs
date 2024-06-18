@@ -34,6 +34,8 @@ pub enum LoadPreferencesResult {
 }
 
 impl Preferences {
+	const FILE_NAME: &'static str = "preferences.json";
+
 	pub fn update(&mut self, message: PreferenceMessage) -> Command<UiMessage> {
 		match message {
 			PreferenceMessage::Save => Command::perform(self.clone().save(), |_| PreferenceMessage::Saved.into()),
@@ -59,7 +61,7 @@ impl Preferences {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
 			.expect("Failed to get saved state filepath");
 
-		project_dirs.config_local_dir().join("preferences.json")
+		project_dirs.config_local_dir().join(Self::FILE_NAME)
 			.to_path_buf()
 	}
 
@@ -101,7 +103,9 @@ impl Preferences {
 
 	pub async fn export_file_dialog(self) {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
-			.add_filter("Preference", &["json"])
+    		.set_title("Export ProjectTracker Preferences")
+    		.set_file_name(Self::FILE_NAME)
+			.add_filter("Preference (.json)", &["json"])
 			.save_file()
 			.await;
 
@@ -112,6 +116,7 @@ impl Preferences {
 
 	pub async fn import_file_dialog() -> Option<LoadPreferencesResult> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
+			.set_title("Import ProjectTracker Preferences")
 			.add_filter("Preference", &["json"])
 			.pick_file()
 			.await;

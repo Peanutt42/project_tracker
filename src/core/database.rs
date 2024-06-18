@@ -34,6 +34,8 @@ pub enum LoadDatabaseResult {
 }
 
 impl Database {
+	const FILE_NAME: &'static str = "database.json";
+
 	pub fn new() -> Self {
 		Self {
 			projects: OrderedHashMap::new(),
@@ -66,7 +68,7 @@ impl Database {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
 				.expect("Failed to get saved state filepath");
 
-		project_dirs.data_local_dir().join("database.json")
+		project_dirs.data_local_dir().join(Self::FILE_NAME)
 			.to_path_buf()
 	}
 
@@ -108,7 +110,9 @@ impl Database {
 
 	async fn export_file_dialog(self) {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
-			.add_filter("Database", &["json"])
+    		.set_title("Export ProjectTracker Database")
+    		.set_file_name(Self::FILE_NAME)
+			.add_filter("Database (.json)", &["json"])
 			.save_file()
 			.await;
 
@@ -119,6 +123,7 @@ impl Database {
 
 	async fn import_file_dialog() -> Option<LoadDatabaseResult> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
+    		.set_title("Import ProjectTracker Database")
 			.add_filter("Database", &["json"])
 			.pick_file()
 			.await;
