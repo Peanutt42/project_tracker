@@ -15,6 +15,8 @@ pub enum SidebarPageMessage {
 	CloseCreateNewProject,
 	ChangeCreateNewProjectName(String),
 
+	SidebarMoved(u16),
+
 	EditProject(ProjectId),
 	StopEditingProject,
 
@@ -33,6 +35,7 @@ pub struct SidebarPage {
 	create_new_project_name: Option<String>,
 	pub project_being_edited: Option<ProjectId>,
 	hovered_project_id: Option<ProjectId>,
+	pub dividor_position: u16,
 }
 
 impl SidebarPage {
@@ -41,6 +44,7 @@ impl SidebarPage {
 			create_new_project_name: None,
 			project_being_edited: None,
 			hovered_project_id: None,
+			dividor_position: 300,
 		}
 	}
 
@@ -113,6 +117,11 @@ impl SidebarPage {
 			},
 			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; Command::none() },
 			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Command::none() },
+
+			SidebarPageMessage::SidebarMoved(positon) => {
+				self.dividor_position = positon;
+				Command::none()
+			},
 
 			SidebarPageMessage::EditProject(project_id) => {
 				self.project_being_edited = Some(project_id);

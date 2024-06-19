@@ -8,7 +8,6 @@ pub struct ProjectTrackerApp {
 	pub sidebar_page: SidebarPage,
 	pub content_page: ContentPage,
 	pub selected_project_id: Option<ProjectId>,
-	pub sidebar_position: Option<u16>,
 	pub database: Option<Database>,
 	pub preferences: Option<Preferences>,
 	pub is_system_theme_dark: bool,
@@ -26,7 +25,6 @@ pub enum UiMessage {
 	LoadedPreferences(LoadPreferencesResult),
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
-	SidebarMoved(u16),
 	SelectProject(ProjectId),
 	OpenOverview,
 	OpenSettings,
@@ -46,7 +44,6 @@ impl Application for ProjectTrackerApp {
 				sidebar_page: SidebarPage::new(),
 				content_page: ContentPage::Overview(OverviewPage::new()),
 				selected_project_id: None,
-				sidebar_position: Some(300),
 				database: None,
 				preferences: None,
 				is_system_theme_dark: is_system_theme_dark(),
@@ -210,7 +207,6 @@ impl Application for ProjectTrackerApp {
 					Command::none()
 				}
 			},
-			UiMessage::SidebarMoved(position) => { self.sidebar_position = Some(position); Command::none() },
 			UiMessage::OpenOverview => {
 				self.content_page = ContentPage::Overview(OverviewPage::new());
 				self.selected_project_id = None;
@@ -255,9 +251,9 @@ impl Application for ProjectTrackerApp {
 		Split::new(
 			self.sidebar_page.view(self),
 			self.content_page.view(self),
-			self.sidebar_position,
+			Some(self.sidebar_page.dividor_position),
 			iced_aw::split::Axis::Vertical,
-			UiMessage::SidebarMoved
+			|pos| SidebarPageMessage::SidebarMoved(pos).into()
 		)
 		.style(SplitStyles::custom(SplitStyle))
 		.into()
