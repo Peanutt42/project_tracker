@@ -16,10 +16,8 @@ pub fn task_widget(task: &Task, task_id: TaskId, project_id: ProjectId, editing:
 			.width(Length::Fill)
 			.on_input(move |new_task_name| DatabaseMessage::ProjectMessage {
 				project_id,
-				message: ProjectMessage::ChangeTaskName{
-					task_id,
-					new_name: new_task_name
-				},
+				task_id,
+				message: ProjectMessage::ChangeTaskName(new_task_name),
 			}.into())
 			.on_submit(ProjectPageMessage::StopEditing.into())
 			.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
@@ -78,15 +76,15 @@ pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: Ta
 								.on_toggle(move |checked| {
 									DatabaseMessage::ProjectMessage {
 										project_id,
-										message: ProjectMessage::ChangeTaskState {
-											task_id,
-											new_state: if checked {
+										task_id,
+										message: ProjectMessage::ChangeTaskState(
+											if checked {
 												TaskState::Done
 											}
 											else {
 												TaskState::Todo
-											},
-										},
+											}
+										),
 									}.into()
 								})
 								.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle))),

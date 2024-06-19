@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::Command;
 use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, ProjectId, Project, ProjectMessage};
+use crate::core::{OrderedHashMap, ProjectId, Project, ProjectMessage, TaskId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Database {
@@ -33,6 +33,7 @@ pub enum DatabaseMessage {
 
 	ProjectMessage {
 		project_id: ProjectId,
+		task_id: TaskId,
 		message: ProjectMessage,
 	},
 }
@@ -102,9 +103,9 @@ impl Database {
 				self.update(DatabaseMessage::Save.into())
 			},
 
-			DatabaseMessage::ProjectMessage { project_id, message } => {
+			DatabaseMessage::ProjectMessage { project_id, task_id, message } => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
-					project.update(message);
+					project.update(task_id, message);
 					self.update(DatabaseMessage::Save.into())
 				}
 				else {

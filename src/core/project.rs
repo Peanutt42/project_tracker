@@ -1,7 +1,6 @@
 use serde::{Serialize, Deserialize};
 use crate::core::{OrderedHashMap, Task, TaskId, TaskState};
 
-use super::generate_task_id;
 
 pub type ProjectId = usize;
 
@@ -12,17 +11,11 @@ pub fn generate_project_id() -> ProjectId {
 #[derive(Debug, Clone)]
 pub enum ProjectMessage {
 	CreateTask(String),
-	ChangeTaskName {
-		task_id: TaskId,
-		new_name: String,
-	},
-	ChangeTaskState {
-		task_id: TaskId,
-		new_state: TaskState,
-	},
-	MoveTaskUp(TaskId),
-	MoveTaskDown(TaskId),
-	DeleteTask(TaskId),
+	ChangeTaskName(String),
+	ChangeTaskState(TaskState),
+	MoveTaskUp,
+	MoveTaskDown,
+	DeleteTask,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,15 +56,15 @@ impl Project {
 		Self::calculate_completion_percentage(self.get_tasks_done(), self.tasks.len())
 	}
 
-	pub fn update(&mut self, message: ProjectMessage) {
+	pub fn update(&mut self, task_id: TaskId, message: ProjectMessage) {
 		match message {
-			ProjectMessage::CreateTask(name) => self.add_task(generate_task_id(), name),
-			ProjectMessage::ChangeTaskName { task_id, new_name } => {
+			ProjectMessage::CreateTask(name) => self.add_task(task_id, name),
+			ProjectMessage::ChangeTaskName(new_name) => {
 				if let Some(task) = self.tasks.get_mut(&task_id) {
 					task.name = new_name;
 				}
 			},
-			ProjectMessage::ChangeTaskState { task_id, new_state } => {
+			ProjectMessage::ChangeTaskState(new_state) => {
 				if let Some(task) = self.tasks.get_mut(&task_id) {
 					task.state = new_state;
 				}
@@ -98,9 +91,9 @@ impl Project {
 					},
 				}
 			},
-			ProjectMessage::MoveTaskUp(task_id) => self.tasks.move_up(&task_id),
-			ProjectMessage::MoveTaskDown(task_id) => self.tasks.move_down(&task_id),
-			ProjectMessage::DeleteTask(task_id) => self.tasks.remove(&task_id),
+			ProjectMessage::MoveTaskUp => self.tasks.move_up(&task_id),
+			ProjectMessage::MoveTaskDown => self.tasks.move_down(&task_id),
+			ProjectMessage::DeleteTask => self.tasks.remove(&task_id),
 		}
 	}
 }

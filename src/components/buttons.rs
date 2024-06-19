@@ -80,7 +80,7 @@ pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'sta
 	button(
 		icon_to_text(Bootstrap::Trash)
 	)
-	.on_press(DatabaseMessage::ProjectMessage { project_id, message: ProjectMessage::DeleteTask(task_id) }.into())
+	.on_press(DatabaseMessage::ProjectMessage { project_id, task_id, message: ProjectMessage::DeleteTask }.into())
 	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
@@ -96,7 +96,7 @@ pub fn move_task_up_button(project_id: ProjectId, task_id: TaskId) -> Button<'st
 	button(
 		icon_to_text(Bootstrap::ArrowUp),
 	)
-	.on_press(DatabaseMessage::ProjectMessage { project_id, message: ProjectMessage::MoveTaskUp(task_id) }.into())
+	.on_press(DatabaseMessage::ProjectMessage { project_id, task_id, message: ProjectMessage::MoveTaskUp }.into())
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
@@ -112,7 +112,7 @@ pub fn move_task_down_button(project_id: ProjectId, task_id: TaskId) -> Button<'
 	button(
 		icon_to_text(Bootstrap::ArrowDown),
 	)
-	.on_press(DatabaseMessage::ProjectMessage { project_id, message: ProjectMessage::MoveTaskDown(task_id) }.into())
+	.on_press(DatabaseMessage::ProjectMessage { project_id, task_id, message: ProjectMessage::MoveTaskDown }.into())
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 

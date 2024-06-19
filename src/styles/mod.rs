@@ -19,20 +19,14 @@ pub use text_input::TextInputStyle;
 mod scrollable;
 pub use scrollable::{ScrollableStyle, scrollable_vertical_direction, SCROLLBAR_WIDTH};
 
-mod colors;
-pub use colors::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, LIGHT_GREY, GREY, DARK_GREY};
-
-mod paddings;
-pub use paddings::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, LARGE_PADDING_AMOUNT};
-
-mod size;
-pub use size::{SMALL_TEXT_SIZE, MIDDLE_TEXT_SIZE, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE};
-
-mod spacing;
-pub use spacing::{TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, LARGE_SPACING_AMOUNT};
-
-mod border_radius;
-pub use border_radius::{BORDER_RADIUS, LARGE_BORDER_RADIUS};
+mod constants;
+pub use constants::{
+	colors::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, LIGHT_GREY, GREY, DARK_GREY},
+	padding::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, LARGE_PADDING_AMOUNT},
+	size::{SMALL_TEXT_SIZE, MIDDLE_TEXT_SIZE, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE},
+	spacing::{TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, LARGE_SPACING_AMOUNT},
+	border_radius::{BORDER_RADIUS, LARGE_BORDER_RADIUS},
+};
 
 mod fonts;
 pub use fonts::{strikethrough_text, BOLD_FONT};

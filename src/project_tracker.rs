@@ -21,6 +21,7 @@ pub enum UiMessage {
 	EscapePressed,
 	FontLoaded(Result<(), font::Error>),
 	SystemTheme { is_dark: bool },
+	SetThemeMode(ThemeMode),
 	LoadedDatabase(LoadDatabaseResult),
 	LoadedPreferences(LoadPreferencesResult),
 	DatabaseMessage(DatabaseMessage),
@@ -29,7 +30,6 @@ pub enum UiMessage {
 	SelectProject(ProjectId),
 	OpenOverview,
 	OpenSettings,
-	SetThemeMode(ThemeMode),
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
 }
