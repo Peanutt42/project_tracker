@@ -24,6 +24,13 @@ impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
 		None
 	}
 
+	pub fn get_at_order(&self, order: usize) -> Option<&V> {
+		match self.order.get(order) {
+			Some(key) => self.hash_map.get(key),
+			None => None,
+		}
+	}
+
 	pub fn move_up(&mut self, key: &K) {
 		if let Some(index) = self.get_order(key) {
 			if index != 0 {
@@ -60,6 +67,13 @@ impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
 		self.hash_map.get_mut(key)
 	}
 
+	pub fn move_to(&mut self, key: K, order: usize) {
+		if let Some(old_order) = self.get_order(&key) {
+			self.order.remove(old_order);
+			self.order.insert(order, key);
+		}
+	}
+
 	pub fn move_to_bottom(&mut self, key: &K) {
 		if let Some(index) = self.get_order(key) {
 			self.order.remove(index);
@@ -72,12 +86,8 @@ impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
 		self.order.len()
 	}
 
-	pub fn iter(&self) -> std::slice::Iter<K> {
-		self.order.iter()
-	}
-
-	pub fn key_value_iter(&self) -> OrderedKeyValueIter<K, V> {
-		OrderedKeyValueIter { order_iter: self.order.iter(), hash_map: &self.hash_map }
+	pub fn iter(&self) -> OrderedHashMapIter<K, V> {
+		OrderedHashMapIter { order_iter: self.order.iter(), hash_map: &self.hash_map }
 	}
 
 	pub fn values(&self) -> std::collections::hash_map::Values<K, V> {
@@ -85,22 +95,17 @@ impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
 	}
 }
 
-pub struct OrderedKeyValueIter<'a, K, V> where K: Eq + Copy + std::hash::Hash {
+pub struct OrderedHashMapIter<'a, K, V> where K: Eq + Copy + std::hash::Hash {
 	order_iter: std::slice::Iter<'a, K>,
 	hash_map: &'a HashMap<K, V>,
 }
 
-impl<'a, K, V> Iterator for OrderedKeyValueIter<'a, K, V> where K: Eq + Copy + std::hash::Hash {
+impl<'a, K, V> Iterator for OrderedHashMapIter<'a, K, V> where K: Eq + Copy + std::hash::Hash {
 	type Item = (K, &'a V);
 
 	fn next(&mut self) -> Option<Self::Item> {
 		if let Some(key) = self.order_iter.next() {
-			if let Some(value) = self.hash_map.get(&key) {
-				Some((*key, value))
-			}
-			else {
-				None
-			}
+			self.hash_map.get(key).map(|value| (*key, value))
 		}
 		else {
 			None

@@ -83,36 +83,36 @@ impl Database {
 
 			DatabaseMessage::CreateProject { project_id, name } => {
 				self.projects.insert(project_id, Project::new(name));
-				self.update(DatabaseMessage::Save.into())
+				self.update(DatabaseMessage::Save)
 			},
 			DatabaseMessage::ChangeProjectName { project_id, new_name } => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
 					project.name = new_name;
 				}
-				self.update(DatabaseMessage::Save.into())
+				self.update(DatabaseMessage::Save)
 			},
 			DatabaseMessage::MoveProjectUp(project_id) => {
 				self.projects.move_up(&project_id);
-				self.update(DatabaseMessage::Save.into())
+				self.update(DatabaseMessage::Save)
 			},
 			DatabaseMessage::MoveProjectDown(project_id) => {
 				self.projects.move_down(&project_id);
-				self.update(DatabaseMessage::Save.into())
+				self.update(DatabaseMessage::Save)
 			},
 			DatabaseMessage::DeleteProject(project_id) => {
 				self.projects.remove(&project_id);
-				self.update(DatabaseMessage::Save.into())
+				self.update(DatabaseMessage::Save)
 			},
 			DatabaseMessage::DeleteDoneTasks(project_id) => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
-					let done_tasks: Vec<TaskId> = project.tasks.key_value_iter()
+					let done_tasks: Vec<TaskId> = project.tasks.iter()
 						.filter(|(_task_id, task)| task.is_done())
 						.map(|(task_id, _task)| task_id)
 						.collect();
 					for task_id in done_tasks {
 						project.tasks.remove(&task_id);
 					}
-					self.update(DatabaseMessage::Save.into())
+					self.update(DatabaseMessage::Save)
 				}
 				else {
 					Command::none()
@@ -122,7 +122,7 @@ impl Database {
 			DatabaseMessage::ProjectMessage { project_id, task_id, message } => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
 					project.update(task_id, message);
-					self.update(DatabaseMessage::Save.into())
+					self.update(DatabaseMessage::Save)
 				}
 				else {
 					Command::none()

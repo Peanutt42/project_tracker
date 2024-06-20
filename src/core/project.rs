@@ -65,30 +65,24 @@ impl Project {
 				}
 			},
 			ProjectMessage::ChangeTaskState(new_state) => {
-				if let Some(task) = self.tasks.get_mut(&task_id) {
-					task.state = new_state;
-				}
 				// reorder
 				match new_state {
 					TaskState::Todo => {
-						if let Some(task_order_index) = self.tasks.get_order(&task_id) {
-							// put new todo task at the top of the done tasks / at the end of all todo tasks
-							for (i, task_id) in self.tasks.iter().enumerate() {
-								if self.tasks.get(task_id).unwrap().is_done() {
-									if i == 0 {
-										self.tasks.order.insert(0, *task_id);
-									}
-									else {
-										self.tasks.order.swap(task_order_index, i - 1);
-									}
-									break;
-								}
+						// put new todo task at the top of the done tasks / at the end of all todo tasks
+						for (i, (_task_id, task)) in self.tasks.iter().enumerate() {
+							if task.is_done() {
+								self.tasks.move_to(task_id, i);
+								break;
 							}
 						}
 					},
 					TaskState::Done => {
 						self.tasks.move_to_bottom(&task_id);
 					},
+				}
+
+				if let Some(task) = self.tasks.get_mut(&task_id) {
+					task.state = new_state;
 				}
 			},
 			ProjectMessage::MoveTaskUp => self.tasks.move_up(&task_id),

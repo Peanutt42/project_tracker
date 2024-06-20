@@ -16,20 +16,15 @@ impl OverviewPage {
 	fn todo_tasks_list(projects: &OrderedHashMap<ProjectId, Project>) -> Element<UiMessage> {
 		scrollable(
 			Column::from_vec(projects.iter()
-				.map(|project_id| {
-					(project_id, projects.get(project_id).unwrap())
-				})
 				.filter(|(_project_id, project)| {
 					project.tasks.values()
 						.filter(|t| t.is_todo())
 						.count() != 0
 				})
 				.map(|(project_id, project)| {
-					let task_list = project.tasks.iter()
-						.filter(|task_id| project.tasks.get(task_id).unwrap().is_todo())
-						.map(|task_id| {
-							let task = project.tasks.get(task_id).unwrap();
-
+					let task_list = project.tasks.values()
+						.filter(|task| task.is_todo())
+						.map(|task| {
 							row![
 								text("-"),
 								text(&task.name)
@@ -50,7 +45,7 @@ impl OverviewPage {
 					])
 					.width(Length::Fill)
 					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected: false }))
-					.on_press(UiMessage::SelectProject(*project_id))
+					.on_press(UiMessage::SelectProject(project_id))
 					.into()
 				})
 				.collect()

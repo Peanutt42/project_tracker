@@ -24,20 +24,18 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 		};
 		let can_move_up = i != 0;
 		// once there is a done task, all other tasks after that are also done
-		let can_move_down = i < tasks.len() - 1 && if let Some(task) = tasks.get(&tasks.order[i + 1]) { task.is_todo() } else { false };
+		let can_move_down = tasks.get_at_order(i + 1).map(|task| task.is_todo()).unwrap_or(false);//i < tasks.len() - 1 && if let Some(task) = tasks.get(&tasks.order[i + 1]) { task.is_todo() } else { false };
 		task_widget(task, task_id, project_id, editing, hovered, can_move_up, can_move_down)
 	};
 
-	for (i, task_id) in tasks.iter().enumerate() {
-		if let Some(task) = tasks.get(task_id) {
-			if task.is_todo() {
-				todo_task_elements.push(task_view(i, *task_id, task));
-			}
-			else {
-				done_task_count += 1;
-				if show_done_tasks {
-					done_task_elements.push(task_view(i, *task_id, task));
-				}
+	for (i, (task_id, task)) in tasks.iter().enumerate() {
+		if task.is_todo() {
+			todo_task_elements.push(task_view(i, task_id, task));
+		}
+		else {
+			done_task_count += 1;
+			if show_done_tasks {
+				done_task_elements.push(task_view(i, task_id, task));
 			}
 		}
 	}

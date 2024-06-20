@@ -50,22 +50,22 @@ impl SidebarPage {
 
 	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, hovered_project_id: Option<ProjectId>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
 		let mut list: Vec<Element<UiMessage>> = projects.iter().enumerate()
-			.map(|(i, project_id)| {
+			.map(|(i, (project_id, project))| {
 				let selected = match app.selected_project_id {
-					Some(selected_project_id) => *project_id == selected_project_id,
+					Some(selected_project_id) => project_id == selected_project_id,
 					None => false,
 				};
 				let hovered = match hovered_project_id {
-					Some(hovered_project_id) => *project_id == hovered_project_id,
+					Some(hovered_project_id) => project_id == hovered_project_id,
 					None => false,
 				};
 				let can_move_up = i != 0;
 				let can_move_down = i != projects.len() - 1;
 				let editing = match self.project_being_edited {
-					Some(project_being_edited_id) => project_being_edited_id == *project_id,
+					Some(project_being_edited_id) => project_being_edited_id == project_id,
 					None => false,
 				};
-				project_preview(projects.get(project_id).unwrap(), *project_id, hovered, editing, can_move_up, can_move_down, selected)
+				project_preview(project, project_id, hovered, editing, can_move_up, can_move_down, selected)
 			})
 			.collect();
 
