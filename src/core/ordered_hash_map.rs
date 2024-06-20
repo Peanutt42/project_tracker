@@ -76,7 +76,34 @@ impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
 		self.order.iter()
 	}
 
+	pub fn key_value_iter(&self) -> OrderedKeyValueIter<K, V> {
+		OrderedKeyValueIter { order_iter: self.order.iter(), hash_map: &self.hash_map }
+	}
+
 	pub fn values(&self) -> std::collections::hash_map::Values<K, V> {
 		self.hash_map.values()
+	}
+}
+
+pub struct OrderedKeyValueIter<'a, K, V> where K: Eq + Copy + std::hash::Hash {
+	order_iter: std::slice::Iter<'a, K>,
+	hash_map: &'a HashMap<K, V>,
+}
+
+impl<'a, K, V> Iterator for OrderedKeyValueIter<'a, K, V> where K: Eq + Copy + std::hash::Hash {
+	type Item = (K, &'a V);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if let Some(key) = self.order_iter.next() {
+			if let Some(value) = self.hash_map.get(&key) {
+				Some((*key, value))
+			}
+			else {
+				None
+			}
+		}
+		else {
+			None
+		}
 	}
 }

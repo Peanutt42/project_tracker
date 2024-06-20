@@ -1,7 +1,7 @@
 use iced::{alignment::Horizontal, theme, widget::{button, row, text, Button}, Alignment, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::{DatabaseMessage, ProjectId, ProjectMessage, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
+	core::{DatabaseMessage, ProjectId, ProjectMessage, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -82,6 +82,15 @@ pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'sta
 	)
 	.on_press(DatabaseMessage::ProjectMessage { project_id, task_id, message: ProjectMessage::DeleteTask }.into())
 	.style(theme::Button::custom(DeleteButtonStyle))
+}
+
+pub fn delete_all_done_tasks_button(project_id: ProjectId) -> Button<'static, UiMessage> {
+	button(row![
+		icon_to_text(Bootstrap::Trash),
+		text("Delete done tasks")
+	])
+	.on_press(DatabaseMessage::DeleteDoneTasks(project_id).into())
+	.style(theme::Button::custom(DeleteDoneTasksButtonStyle))
 }
 
 pub fn move_project_up_button(project_id: ProjectId) -> Button<'static, UiMessage> {

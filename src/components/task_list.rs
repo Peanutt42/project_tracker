@@ -1,16 +1,16 @@
-use iced::{theme, widget::{column, container, scrollable, text_input, text::LineHeight, Column, row}, alignment::Alignment, Element, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::{generate_task_id, TaskState}, project_tracker::UiMessage, styles::LARGE_PADDING_AMOUNT};
+use crate::{core::{generate_task_id, TaskState}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
 use crate::core::{OrderedHashMap, Task, TaskId, ProjectId, DatabaseMessage, ProjectMessage};
-use crate::components::{show_done_tasks_button, task_widget, custom_task_widget, cancel_create_task_button};
+use crate::components::{show_done_tasks_button, task_widget, custom_task_widget, cancel_create_task_button, delete_all_done_tasks_button};
 use crate::styles::{SMALL_SPACING_AMOUNT, SPACING_AMOUNT, HORIZONTAL_PADDING, MIDDLE_TEXT_SIZE, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
 use crate::pages::ProjectPageMessage;
 
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, hovered_task_id: Option<TaskId>, project_being_edited_id: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
-	let mut todo_tasks = Vec::new();
-	let mut done_tasks = Vec::new(); // only gets populated when 'show_done_tasks'
+	let mut todo_task_elements = Vec::new();
+	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks'
 
 	let task_view = |i: usize, task_id: TaskId, task: &'a Task| {
@@ -31,12 +31,12 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 	for (i, task_id) in tasks.iter().enumerate() {
 		if let Some(task) = tasks.get(task_id) {
 			if task.is_todo() {
-				todo_tasks.push(task_view(i, *task_id, task));
+				todo_task_elements.push(task_view(i, *task_id, task));
 			}
 			else {
 				done_task_count += 1;
 				if show_done_tasks {
-					done_tasks.push(task_view(i, *task_id, task));
+					done_task_elements.push(task_view(i, *task_id, task));
 				}
 			}
 		}
@@ -62,7 +62,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			.align_items(Alignment::Center)
 			.into();
 
-		todo_tasks.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, false, false, false, false))
+		todo_task_elements.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, false, false, false, false))
 	}
 
 	let show_tasks_button: Element<UiMessage> =
@@ -70,20 +70,36 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			column![].into()
 		}
 		else {
-			container(show_done_tasks_button(show_done_tasks, done_task_count))
-				.padding(Padding{ left: LARGE_PADDING_AMOUNT, top: LARGE_PADDING_AMOUNT, ..Padding::ZERO })
-				.into()
+			container(
+				row![
+					show_done_tasks_button(show_done_tasks, done_task_count)
+				]
+				.push_maybe(
+					if done_task_elements.is_empty() {
+						None
+					}
+					else {
+						Some(
+							container(delete_all_done_tasks_button(project_id))
+								.width(Length::Fill)
+								.align_x(Horizontal::Right)
+						)
+					}
+				)
+			)
+			.padding(Padding{ left: LARGE_PADDING_AMOUNT, right: PADDING_AMOUNT, top: LARGE_PADDING_AMOUNT, bottom: 0.0 })
+			.into()
 		};
 
 	scrollable(
 		column![
-			Column::with_children(todo_tasks)
+			Column::with_children(todo_task_elements)
 				.spacing(SMALL_SPACING_AMOUNT)
 				.padding(HORIZONTAL_PADDING),
 
 			show_tasks_button,
 
-			Column::with_children(done_tasks)
+			Column::with_children(done_task_elements)
 				.spacing(SMALL_SPACING_AMOUNT)
 				.padding(HORIZONTAL_PADDING),
 		]

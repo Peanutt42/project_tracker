@@ -104,6 +104,39 @@ impl StyleSheet for DangerousButtonStyle {
 	}
 }
 
+pub struct DeleteDoneTasksButtonStyle;
+
+impl StyleSheet for DeleteDoneTasksButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(style.extended_palette().secondary.base.color)),
+			text_color: style.extended_palette().secondary.base.text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, _style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(Color::from_rgb(0.8, 0.0, 0.0))),
+			text_color: Color::WHITE,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn pressed(&self, _style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(Color::from_rgb(0.6, 0.0, 0.0))),
+			text_color: Color::WHITE,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+}
+
 
 pub struct TransparentButtonStyle;
 

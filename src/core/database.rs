@@ -30,6 +30,7 @@ pub enum DatabaseMessage {
 	MoveProjectUp(ProjectId),
 	MoveProjectDown(ProjectId),
 	DeleteProject(ProjectId),
+	DeleteDoneTasks(ProjectId),
 
 	ProjectMessage {
 		project_id: ProjectId,
@@ -102,6 +103,21 @@ impl Database {
 				self.projects.remove(&project_id);
 				self.update(DatabaseMessage::Save.into())
 			},
+			DatabaseMessage::DeleteDoneTasks(project_id) => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					let done_tasks: Vec<TaskId> = project.tasks.key_value_iter()
+						.filter(|(_task_id, task)| task.is_done())
+						.map(|(task_id, _task)| task_id)
+						.collect();
+					for task_id in done_tasks {
+						project.tasks.remove(&task_id);
+					}
+					self.update(DatabaseMessage::Save.into())
+				}
+				else {
+					Command::none()
+				}
+			}
 
 			DatabaseMessage::ProjectMessage { project_id, task_id, message } => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
