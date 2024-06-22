@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Command, Element, Length};
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, theme_mode_button}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, file_location, theme_mode_button}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -159,7 +159,11 @@ impl Preferences {
 			]
 			.spacing(SPACING_AMOUNT),
 
-			text(format!("Preference file location: {}", Self::get_filepath().display()))
+			row![
+				text("Preference file location: "),
+				file_location(Self::get_filepath())
+			]
+			.align_items(Alignment::Center)
 		]
 		.spacing(SPACING_AMOUNT)
 		.into()

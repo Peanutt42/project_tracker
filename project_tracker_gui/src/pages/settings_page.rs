@@ -1,5 +1,5 @@
-use iced::{theme, widget::{column, row, scrollable, text}, Element};
-use crate::{components::{dangerous_button, horizontal_seperator, loading_screen}, core::{Database, DatabaseMessage}};
+use iced::{theme, widget::{column, row, scrollable, text}, Element, Alignment};
+use crate::{components::{dangerous_button, file_location, horizontal_seperator, loading_screen}, core::{Database, DatabaseMessage}};
 use crate::styles::{scrollable_vertical_direction, ScrollableStyle, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 
@@ -38,7 +38,12 @@ impl SettingsPage {
 								.on_press(DatabaseMessage::Export.into()),
 						]
 						.spacing(SPACING_AMOUNT),
-						text(format!("Database file location: {}", Database::get_filepath().display())),
+
+						row![
+							text("Database file location: "),
+							file_location(Database::get_filepath()),
+						]
+						.align_items(Alignment::Center),
 					]
 					.spacing(SPACING_AMOUNT),
 

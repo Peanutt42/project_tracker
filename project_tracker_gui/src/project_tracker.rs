@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use iced::{event::Status, font, keyboard, window, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
 use crate::{
@@ -18,6 +19,7 @@ pub enum UiMessage {
 	Nothing,
 	CloseWindowRequested(window::Id),
 	EscapePressed,
+	OpenFolderLocation(PathBuf),
 	FontLoaded(Result<(), font::Error>),
 	SystemTheme { is_dark: bool },
 	SetThemeMode(ThemeMode),
@@ -128,6 +130,10 @@ impl Application for ProjectTrackerApp {
 				self.update(ProjectPageMessage::CloseCreateNewTask.into()),
 				self.update(ProjectPageMessage::StopEditing.into()),
 			]),
+			UiMessage::OpenFolderLocation(filepath) => {
+				let _ = open::that(filepath);
+				Command::none()
+			},
 			UiMessage::FontLoaded(_) => Command::none(),
 			UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
 			UiMessage::LoadedDatabase(load_database_result) => {

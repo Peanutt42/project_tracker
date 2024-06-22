@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{button, row, text, Button}, Alignment, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
@@ -188,4 +189,12 @@ pub fn settings_button(selected: bool) -> Button<'static, UiMessage> {
 	.width(Length::Fill)
 	.on_press(UiMessage::OpenSettings)
 	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
+}
+
+pub fn open_location_button(filepath: Option<PathBuf>) -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::Folder)
+	)
+	.on_press_maybe(filepath.map(UiMessage::OpenFolderLocation))
+	.style(theme::Button::Secondary)
 }
