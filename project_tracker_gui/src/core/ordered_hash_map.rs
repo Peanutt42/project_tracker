@@ -1,13 +1,18 @@
-use std::collections::HashMap;
+use std::collections::hash_map::{HashMap, Values};
+use std::cmp::Eq;
+use std::hash::Hash;
+use std::slice::Iter;
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrderedHashMap<K: Copy + std::cmp::Eq + std::hash::Hash, V> {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct OrderedHashMap<K, V> where K: Copy + Eq + Hash, V: Eq {
 	hash_map: HashMap<K, V>,
-	pub order: Vec<K>,
+	order: Vec<K>,
 }
 
-impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
+impl<K, V> OrderedHashMap<K, V>
+	where K: Copy + Eq + Hash, V: Eq
+{
 	pub fn new() -> Self {
 		Self {
 			hash_map: HashMap::new(),
@@ -86,21 +91,35 @@ impl<K: Copy + std::cmp::Eq + std::hash::Hash, V> OrderedHashMap<K, V> {
 		self.order.len()
 	}
 
+	pub fn is_empty(&self) -> bool {
+		self.order.is_empty()
+	}
+
 	pub fn iter(&self) -> OrderedHashMapIter<K, V> {
 		OrderedHashMapIter { order_iter: self.order.iter(), hash_map: &self.hash_map }
 	}
 
-	pub fn values(&self) -> std::collections::hash_map::Values<K, V> {
+	pub fn values(&self) -> Values<K, V> {
 		self.hash_map.values()
 	}
 }
 
-pub struct OrderedHashMapIter<'a, K, V> where K: Eq + Copy + std::hash::Hash {
-	order_iter: std::slice::Iter<'a, K>,
+impl<K, V> Default for OrderedHashMap<K, V> where K: Copy + Eq + Hash, V: Eq {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+pub struct OrderedHashMapIter<'a, K, V>
+	where K: Eq + Copy + Hash, V: Eq
+{
+	order_iter: Iter<'a, K>,
 	hash_map: &'a HashMap<K, V>,
 }
 
-impl<'a, K, V> Iterator for OrderedHashMapIter<'a, K, V> where K: Eq + Copy + std::hash::Hash {
+impl<'a, K, V> Iterator for OrderedHashMapIter<'a, K, V>
+	where K: Eq + Copy + Hash, V: Eq
+{
 	type Item = (K, &'a V);
 
 	fn next(&mut self) -> Option<Self::Item> {

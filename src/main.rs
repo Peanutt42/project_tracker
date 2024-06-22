@@ -2,14 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use iced::{Settings, Application, Font, window::{self, icon}};
-
-mod core;
-mod components;
-mod pages;
-mod styles;
-mod project_tracker;
-use project_tracker::ProjectTrackerApp;
-mod theme_mode;
+use project_tracker_gui::ProjectTrackerApp;
 
 fn main() -> Result<(), iced::Error> {
 	ProjectTrackerApp::run(Settings {

@@ -190,3 +190,9 @@ impl SidebarPage {
 		.into()
 	}
 }
+
+impl Default for SidebarPage {
+	fn default() -> Self {
+		Self::new()
+	}
+}

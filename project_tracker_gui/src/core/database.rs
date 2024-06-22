@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, ProjectId, Project, ProjectMessage, TaskId};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Database {
 	pub projects: OrderedHashMap<ProjectId, Project>,
 }
@@ -45,7 +45,7 @@ impl From<DatabaseMessage> for UiMessage {
 	}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoadDatabaseResult {
 	Ok(Database),
 	FailedToReadFile(PathBuf),
@@ -147,7 +147,7 @@ impl Database {
 		filepath
 	}
 
-	async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
+	pub async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
 		let file_content = if let Ok(file_content) = tokio::fs::read_to_string(filepath.clone()).await {
 			file_content
 		}
@@ -165,7 +165,7 @@ impl Database {
 		Self::load_from(Self::get_and_ensure_filepath().await).await
 	}
 
-	async fn save_to(self, filepath: PathBuf) {
+	pub async fn save_to(self, filepath: PathBuf) {
 		if let Err(e) = tokio::fs::write(filepath.clone(), serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
 			eprintln!("Failed to save to {}: {e}", filepath.display());
 		}
@@ -201,5 +201,11 @@ impl Database {
 		else {
 			None
 		}
+	}
+}
+
+impl Default for Database {
+	fn default() -> Self {
+		Self::new()
 	}
 }

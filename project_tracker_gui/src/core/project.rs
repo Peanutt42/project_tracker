@@ -18,7 +18,7 @@ pub enum ProjectMessage {
 	DeleteTask,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Project {
 	pub name: String,
 	pub tasks: OrderedHashMap<TaskId, Task>,

@@ -62,3 +62,9 @@ impl SettingsPage {
 		}
 	}
 }
+
+impl Default for SettingsPage {
+	fn default() -> Self {
+		Self::new()
+	}
+}

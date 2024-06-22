@@ -7,7 +7,7 @@ pub fn generate_task_id() -> TaskId {
 	rand::random()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Task {
 	pub name: String,
 	pub state: TaskState,

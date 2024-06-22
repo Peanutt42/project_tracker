@@ -49,7 +49,7 @@ impl Application for ProjectTrackerApp {
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Command::batch([
-				font::load(include_bytes!("../assets/FiraSans-Regular.ttf")).map(UiMessage::FontLoaded),
+				font::load(include_bytes!("../../assets/FiraSans-Regular.ttf")).map(UiMessage::FontLoaded),
 				font::load(BOOTSTRAP_FONT_BYTES).map(UiMessage::FontLoaded),
 				Command::perform(Database::load(), UiMessage::LoadedDatabase),
 				Command::perform(Preferences::load(), UiMessage::LoadedPreferences),

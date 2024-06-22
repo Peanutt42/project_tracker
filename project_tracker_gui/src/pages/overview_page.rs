@@ -78,3 +78,9 @@ impl OverviewPage {
 		}
 	}
 }
+
+impl Default for OverviewPage {
+	fn default() -> Self {
+		Self::new()
+	}
+}
