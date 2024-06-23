@@ -143,6 +143,14 @@ impl Application for ProjectTrackerApp {
 				self.update(ProjectPageMessage::StopEditing.into()),
 				self.update(ConfirmModalMessage::Close.into()),
 			]),
+			UiMessage::EnterPressed => {
+				match &self.confirm_modal {
+					ConfirmModal::Opened{ on_confirmed, .. } => {
+						self.update(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())))
+					},
+					ConfirmModal::Closed => Command::none()
+				}
+			},
 			UiMessage::OpenFolderLocation(filepath) => {
 				let _ = open::that(filepath);
 				Command::none()
@@ -155,14 +163,6 @@ impl Application for ProjectTrackerApp {
 					self.update(ConfirmModalMessage::Close.into()),
 				])
 			},
-			UiMessage::EnterPressed => {
-				match &self.confirm_modal {
-					ConfirmModal::Opened{ on_confirmed, .. } => {
-						self.update(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())))
-					},
-					ConfirmModal::Closed => Command::none()
-				}
-			}
 			UiMessage::ConfirmModalMessage(message) => {
 				self.confirm_modal.update(message);
 				Command::none()

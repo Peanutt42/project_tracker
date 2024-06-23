@@ -22,7 +22,16 @@ impl ProjectTrackerTheme {
 					danger: Color::from_rgb(1.0, 0.0, 0.0),
 				}
 			),
-			ProjectTrackerTheme::Light => Theme::Light,
+			ProjectTrackerTheme::Light => Theme::custom(
+				"Light".to_string(),
+				Palette {
+					background: Color::WHITE,
+					text: Color::BLACK,
+					primary: NICE_GREEN,
+					success: LIGHT_DARK_GREEN,
+					danger: Color::from_rgb(1.0, 0.0, 0.0),
+				}
+			),
 		}
 	}
 }
