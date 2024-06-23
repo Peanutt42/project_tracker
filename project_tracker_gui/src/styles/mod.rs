@@ -19,6 +19,9 @@ pub use text_input::TextInputStyle;
 mod scrollable;
 pub use scrollable::{ScrollableStyle, scrollable_vertical_direction, SCROLLBAR_WIDTH};
 
+mod confirm_modal_style;
+pub use confirm_modal_style::{ConfirmModalStyle, ConfirmModalCardStyle};
+
 mod constants;
 pub use constants::{
 	colors::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, LIGHT_GREY, GREY, DARK_GREY},

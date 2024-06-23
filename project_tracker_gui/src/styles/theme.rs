@@ -2,7 +2,7 @@ use iced::{theme::Palette, Color, Theme};
 use crate::styles::{LIGHT_DARK_GREEN, NICE_GREEN};
 
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Default)]
 pub enum ProjectTrackerTheme {
 	#[default]
 	Dark,

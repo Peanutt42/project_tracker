@@ -4,12 +4,12 @@ use serde::{Serialize, Deserialize};
 use crate::{components::{dangerous_button, file_location, theme_mode_button}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
 	pub theme_mode: ThemeMode,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Debug, Copy)]
 pub enum PreferenceMessage {
 	Save,
 	Saved,
@@ -26,7 +26,7 @@ impl From<PreferenceMessage> for UiMessage {
 	}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum LoadPreferencesResult {
 	Ok(Preferences),
 	FailedToReadFile(PathBuf),
@@ -148,14 +148,11 @@ impl Preferences {
 			.align_items(Alignment::Center),
 
 			row![
-				dangerous_button("Reset Preferences")
-					.on_press(PreferenceMessage::Reset.into()),
+				dangerous_button("Reset Preferences", PreferenceMessage::Reset),
 
-				dangerous_button("Import Preferences")
-					.on_press(PreferenceMessage::Import.into()),
+				dangerous_button("Import Preferences", PreferenceMessage::Import),
 
-				dangerous_button("Export Preferences")
-					.on_press(PreferenceMessage::Export.into()),
+				dangerous_button("Export Preferences", PreferenceMessage::Export),
 			]
 			.spacing(SPACING_AMOUNT),
 

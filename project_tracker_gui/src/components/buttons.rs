@@ -5,6 +5,8 @@ use crate::{
 	core::{DatabaseMessage, ProjectId, ProjectMessage, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
+use super::ConfirmModalMessage;
+
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::PlusSquareFill)
@@ -73,7 +75,10 @@ pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage
 	button(
 		icon_to_text(Bootstrap::Trash)
 	)
-	.on_press(DatabaseMessage::DeleteProject(project_id).into())
+	.on_press(ConfirmModalMessage::Open {
+		title: "Delete Project".to_string(),
+		on_confirmed: Box::new(DatabaseMessage::DeleteProject(project_id).into()),
+	}.into())
 	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
@@ -138,12 +143,16 @@ pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'stati
 	.style(theme::Button::Secondary)
 }
 
-pub fn dangerous_button(label: &str) -> Button<'static, UiMessage> {
+pub fn dangerous_button(label: &str, on_press: impl Into<UiMessage>) -> Button<'static, UiMessage> {
 	button(
 		text(label)
 			.font(BOLD_FONT)
 	)
 	.style(theme::Button::custom(DangerousButtonStyle))
+	.on_press(ConfirmModalMessage::Open {
+		title: label.to_string(),
+		on_confirmed: Box::new(on_press.into())
+	}.into())
 }
 
 pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode) -> Button<'static, UiMessage> {

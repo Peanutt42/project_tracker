@@ -9,7 +9,7 @@ use crate::core::{OrderedHashMap, ProjectId, generate_project_id, Project};
 static SCROLLABLE_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum SidebarPageMessage {
 	OpenCreateNewProject,
 	CloseCreateNewProject,
@@ -30,7 +30,7 @@ impl From<SidebarPageMessage> for UiMessage {
 	}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SidebarPage {
 	create_new_project_name: Option<String>,
 	pub project_being_edited: Option<ProjectId>,

@@ -4,7 +4,7 @@ use std::hash::Hash;
 use std::slice::Iter;
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OrderedHashMap<K, V> where K: Copy + Eq + Hash, V: Eq {
 	hash_map: HashMap<K, V>,
 	order: Vec<K>,

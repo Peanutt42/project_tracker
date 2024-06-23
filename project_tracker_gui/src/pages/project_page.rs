@@ -2,7 +2,7 @@ use iced::{alignment::Alignment, widget::{column, row, text, text_input}, Comman
 use iced_aw::{floating_element, floating_element::Anchor};
 use crate::{components::{completion_bar, create_new_task_button, partial_horizontal_seperator, task_list, EDIT_TASK_NAME_INPUT_ID, CREATE_NEW_TASK_NAME_INPUT_ID}, core::{Project, ProjectId, TaskId}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum ProjectPageMessage {
 	OpenCreateNewTask,
 	CloseCreateNewTask,
@@ -23,7 +23,7 @@ impl From<ProjectPageMessage> for UiMessage {
 	}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct ProjectPage {
 	pub project_id: ProjectId,
 	pub create_new_task_name: Option<String>,

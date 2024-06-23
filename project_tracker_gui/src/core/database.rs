@@ -4,12 +4,12 @@ use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, ProjectId, Project, ProjectMessage, TaskId};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Database {
 	pub projects: OrderedHashMap<ProjectId, Project>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum DatabaseMessage {
 	Save,
 	Saved,
@@ -45,7 +45,7 @@ impl From<DatabaseMessage> for UiMessage {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LoadDatabaseResult {
 	Ok(Database),
 	FailedToReadFile(PathBuf),

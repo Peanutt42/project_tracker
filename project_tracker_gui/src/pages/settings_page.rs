@@ -30,12 +30,9 @@ impl SettingsPage {
 					column![
 						text("Database").size(LARGE_TEXT_SIZE),
 						row![
-							dangerous_button("Clear Database")
-								.on_press(DatabaseMessage::Clear.into()),
-							dangerous_button("Import Database")
-								.on_press(DatabaseMessage::Import.into()),
-							dangerous_button("Export Database")
-								.on_press(DatabaseMessage::Export.into()),
+							dangerous_button("Clear Database", DatabaseMessage::Clear),
+							dangerous_button("Import Database", DatabaseMessage::Import),
+							dangerous_button("Export Database", DatabaseMessage::Export),
 						]
 						.spacing(SPACING_AMOUNT),
 

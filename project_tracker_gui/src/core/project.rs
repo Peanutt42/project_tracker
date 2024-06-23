@@ -8,7 +8,7 @@ pub fn generate_project_id() -> ProjectId {
 	rand::random()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum ProjectMessage {
 	CreateTask(String),
 	ChangeTaskName(String),
@@ -18,7 +18,7 @@ pub enum ProjectMessage {
 	DeleteTask,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Project {
 	pub name: String,
 	pub tasks: OrderedHashMap<TaskId, Task>,

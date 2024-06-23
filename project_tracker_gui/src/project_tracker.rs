@@ -1,8 +1,12 @@
 use std::path::PathBuf;
 use iced::{event::Status, font, keyboard, window, Application, Command, Element, Event, Subscription, Theme};
-use iced_aw::{Split, SplitStyles, core::icons::BOOTSTRAP_FONT_BYTES};
+use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, modal, ModalStyles, Split, SplitStyles};
 use crate::{
-	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, ProjectMessage}, pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage}, styles::SplitStyle, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, ProjectMessage},
+	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
+	styles::{SplitStyle, ConfirmModalStyle},
+	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
+	components::{ConfirmModal, ConfirmModalMessage},
 };
 
 pub struct ProjectTrackerApp {
@@ -11,18 +15,22 @@ pub struct ProjectTrackerApp {
 	pub selected_project_id: Option<ProjectId>,
 	pub database: Option<Database>,
 	pub preferences: Option<Preferences>,
+	pub confirm_modal: ConfirmModal,
 	pub is_system_theme_dark: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub enum UiMessage {
 	Nothing,
 	CloseWindowRequested(window::Id),
 	EscapePressed,
+	EnterPressed,
 	OpenFolderLocation(PathBuf),
 	FontLoaded(Result<(), font::Error>),
 	SystemTheme { is_dark: bool },
 	SetThemeMode(ThemeMode),
+	ConfirmModalMessage(ConfirmModalMessage),
+	ConfirmModalConfirmed(Box<UiMessage>),
 	LoadedDatabase(LoadDatabaseResult),
 	LoadedPreferences(LoadPreferencesResult),
 	DatabaseMessage(DatabaseMessage),
@@ -48,6 +56,7 @@ impl Application for ProjectTrackerApp {
 				selected_project_id: None,
 				database: None,
 				preferences: None,
+				confirm_modal: ConfirmModal::Closed,
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Command::batch([
@@ -91,7 +100,10 @@ impl Application for ProjectTrackerApp {
 				},
 				keyboard::Key::Named(keyboard::key::Named::Escape) => {
 					Some(UiMessage::EscapePressed)
-				}
+				},
+				keyboard::Key::Named(keyboard::key::Named::Enter) => {
+					Some(UiMessage::EnterPressed)
+				},
 				_ => None,
 			}),
 
@@ -129,6 +141,7 @@ impl Application for ProjectTrackerApp {
 				self.update(SidebarPageMessage::StopEditingProject.into()),
 				self.update(ProjectPageMessage::CloseCreateNewTask.into()),
 				self.update(ProjectPageMessage::StopEditing.into()),
+				self.update(ConfirmModalMessage::Close.into()),
 			]),
 			UiMessage::OpenFolderLocation(filepath) => {
 				let _ = open::that(filepath);
@@ -136,6 +149,24 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::FontLoaded(_) => Command::none(),
 			UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Command::none() },
+			UiMessage::ConfirmModalConfirmed(message) => {
+				Command::batch([
+					self.update(*message),
+					self.update(ConfirmModalMessage::Close.into()),
+				])
+			},
+			UiMessage::EnterPressed => {
+				match &self.confirm_modal {
+					ConfirmModal::Opened{ on_confirmed, .. } => {
+						self.update(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())))
+					},
+					ConfirmModal::Closed => Command::none()
+				}
+			}
+			UiMessage::ConfirmModalMessage(message) => {
+				self.confirm_modal.update(message);
+				Command::none()
+			},
 			UiMessage::LoadedDatabase(load_database_result) => {
 				match load_database_result {
 					LoadDatabaseResult::Ok(database) => { self.database = Some(database); Command::none() },
@@ -254,14 +285,19 @@ impl Application for ProjectTrackerApp {
 	}
 
 	fn view(&self) -> Element<UiMessage> {
-		Split::new(
-			self.sidebar_page.view(self),
-			self.content_page.view(self),
-			Some(self.sidebar_page.dividor_position),
-			iced_aw::split::Axis::Vertical,
-			|pos| SidebarPageMessage::SidebarMoved(pos).into()
+		modal(
+			Split::new(
+				self.sidebar_page.view(self),
+				self.content_page.view(self),
+				Some(self.sidebar_page.dividor_position),
+				iced_aw::split::Axis::Vertical,
+				|pos| SidebarPageMessage::SidebarMoved(pos).into()
+			)
+			.style(SplitStyles::custom(SplitStyle)),
+
+			self.confirm_modal.view()
 		)
-		.style(SplitStyles::custom(SplitStyle))
+		.style(ModalStyles::custom(ConfirmModalStyle))
 		.into()
 	}
 }

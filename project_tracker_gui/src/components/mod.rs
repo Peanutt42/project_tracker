@@ -21,3 +21,6 @@ pub use seperator::{horizontal_seperator, partial_horizontal_seperator};
 
 mod file_location;
 pub use file_location::file_location;
+
+mod confirm_modal;
+pub use confirm_modal::{ConfirmModal, ConfirmModalMessage};

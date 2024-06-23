@@ -1,7 +1,7 @@
 use iced::{theme, widget::{button, column, row, scrollable, text, Column}, Element, Length, Padding};
 use crate::{components::{horizontal_seperator, loading_screen}, core::{OrderedHashMap, Project, ProjectId}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{scrollable_vertical_direction, ProjectPreviewButtonStyle, ScrollableStyle, LARGE_TEXT_SIZE, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct OverviewPage {
 
 }
