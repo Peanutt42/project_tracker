@@ -1,23 +1,50 @@
 use std::path::PathBuf;
+use std::time::Instant;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Command, Element, Length};
 use serde::{Serialize, Deserialize};
 use crate::{components::{dangerous_button, file_location, theme_mode_button}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
+fn default_sidebar_dividor_position() -> u16 {
+	300
+}
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
 	pub theme_mode: ThemeMode,
+
+	#[serde(default = "default_sidebar_dividor_position")]
+	pub sidebar_dividor_position: u16,
+
+	#[serde(skip, default = "Instant::now")]
+	last_changed_time: Instant,
+
+	#[serde(skip, default = "Instant::now")]
+	last_saved_time: Instant,
+}
+
+impl Default for Preferences {
+	fn default() -> Self {
+		Self {
+			theme_mode: ThemeMode::default(),
+			sidebar_dividor_position: default_sidebar_dividor_position(),
+			last_changed_time: Instant::now(),
+			last_saved_time: Instant::now(),
+		}
+	}
 }
 
 #[derive(Clone, Debug, Copy)]
 pub enum PreferenceMessage {
 	Save,
-	Saved,
+	Saved(Instant), // begin_time of saving
 	Reset,
 	Export,
 	Exported,
 	Import,
 	ImportFailed,
+
+	SetThemeMode(ThemeMode),
+	SetSidebarDividorPosition(u16),
 }
 
 impl From<PreferenceMessage> for UiMessage {
@@ -36,11 +63,19 @@ pub enum LoadPreferencesResult {
 impl Preferences {
 	const FILE_NAME: &'static str = "preferences.json";
 
+	fn change_was_made(&mut self) {
+		self.last_changed_time = Instant::now();
+	}
+
+	pub fn has_unsaved_changes(&self) -> bool {
+		self.last_changed_time > self.last_saved_time
+	}
+
 	pub fn update(&mut self, message: PreferenceMessage) -> Command<UiMessage> {
 		match message {
-			PreferenceMessage::Save => Command::perform(self.clone().save(), |_| PreferenceMessage::Saved.into()),
-			PreferenceMessage::Saved => Command::none(),
-			PreferenceMessage::Reset => { *self = Preferences::default(); self.update(PreferenceMessage::Save) },
+			PreferenceMessage::Save => Command::perform(self.clone().save(), |begin_time| PreferenceMessage::Saved(begin_time).into()),
+			PreferenceMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
+			PreferenceMessage::Reset => { *self = Preferences::default(); self.change_was_made(); Command::none() },
 			PreferenceMessage::Export => Command::perform(self.clone().export_file_dialog(), |_| PreferenceMessage::Exported.into()),
 			PreferenceMessage::Exported => Command::none(),
 			PreferenceMessage::Import => Command::perform(
@@ -54,6 +89,17 @@ impl Preferences {
 					}
 			}),
 			PreferenceMessage::ImportFailed => Command::none(),
+
+			PreferenceMessage::SetThemeMode(theme_mode) => {
+				self.theme_mode = theme_mode;
+				self.change_was_made();
+				Command::none()
+			},
+			PreferenceMessage::SetSidebarDividorPosition(dividor_position) => {
+				self.sidebar_dividor_position = dividor_position;
+				self.change_was_made();
+				Command::none()
+			},
 		}
 	}
 
@@ -92,13 +138,17 @@ impl Preferences {
 	}
 
 	async fn save_to(self, filepath: PathBuf) {
+		println!("save pref");
 		if let Err(e) = tokio::fs::write(filepath.clone(), serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
 			eprintln!("Failed to save to {}: {e}", filepath.display());
 		}
 	}
 
-	pub async fn save(self) {
+	// returns begin time of saving
+	pub async fn save(self) -> Instant {
+		let begin_time = Instant::now();
 		self.save_to(Self::get_and_ensure_filepath().await).await;
+		begin_time
 	}
 
 	pub async fn export_file_dialog(self) {

@@ -1,5 +1,5 @@
-use std::path::PathBuf;
-use iced::{event::Status, font, keyboard, window, Application, Command, Element, Event, Subscription, Theme};
+use std::{path::PathBuf, time::Duration};
+use iced::{event::Status, font, keyboard, window, time, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, modal, ModalStyles, Split, SplitStyles};
 use crate::{
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, ProjectMessage},
@@ -25,10 +25,10 @@ pub enum UiMessage {
 	CloseWindowRequested(window::Id),
 	EscapePressed,
 	EnterPressed,
+	SaveChangedFiles,
 	OpenFolderLocation(PathBuf),
 	FontLoaded(Result<(), font::Error>),
 	SystemTheme { is_dark: bool },
-	SetThemeMode(ThemeMode),
 	ConfirmModalMessage(ConfirmModalMessage),
 	ConfirmModalConfirmed(Box<UiMessage>),
 	LoadedDatabase(LoadDatabaseResult),
@@ -122,6 +122,9 @@ impl Application for ProjectTrackerApp {
 			})
 			.map(UiMessage::CloseWindowRequested),
 
+			time::every(Duration::from_secs(1))
+				.map(|_| UiMessage::SaveChangedFiles),
+
 			system_theme_subscription(),
 		])
 	}
@@ -150,6 +153,20 @@ impl Application for ProjectTrackerApp {
 					},
 					ConfirmModal::Closed => Command::none()
 				}
+			},
+			UiMessage::SaveChangedFiles => {
+				let mut commands = Vec::new();
+				if let Some(database) = &mut self.database {
+					if database.has_unsaved_changes() {
+						commands.push(database.update(DatabaseMessage::Save));
+					}
+				}
+				if let Some(preferences) = &mut self.preferences {
+					if preferences.has_unsaved_changes() {
+						commands.push(preferences.update(PreferenceMessage::Save));
+					}
+				}
+				Command::batch(commands)
 			},
 			UiMessage::OpenFolderLocation(filepath) => {
 				let _ = open::that(filepath);
@@ -263,15 +280,6 @@ impl Application for ProjectTrackerApp {
 				};
 				Command::none()
 			},
-			UiMessage::SetThemeMode(theme_mode) => {
-				if let Some(preferences) = &mut self.preferences {
-					preferences.theme_mode = theme_mode;
-					self.update(PreferenceMessage::Save.into())
-				}
-				else {
-					Command::none()
-				}
-			},
 			UiMessage::ProjectPageMessage(message) => {
 				if let ContentPage::Project(project_page) = &mut self.content_page {
 					project_page.update(message.clone())
@@ -289,9 +297,16 @@ impl Application for ProjectTrackerApp {
 			Split::new(
 				self.sidebar_page.view(self),
 				self.content_page.view(self),
-				Some(self.sidebar_page.dividor_position),
+				Some(
+					if let Some(preferences) = &self.preferences {
+						preferences.sidebar_dividor_position
+					}
+					else {
+						300
+					}
+				),
 				iced_aw::split::Axis::Vertical,
-				|pos| SidebarPageMessage::SidebarMoved(pos).into()
+				|pos| PreferenceMessage::SetSidebarDividorPosition(pos).into()
 			)
 			.style(SplitStyles::custom(SplitStyle)),
 

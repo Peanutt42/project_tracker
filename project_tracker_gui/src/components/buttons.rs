@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{button, row, text, Button}, Alignment, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::{DatabaseMessage, ProjectId, ProjectMessage, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
+	core::{DatabaseMessage, PreferenceMessage, ProjectId, ProjectMessage, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 use super::ConfirmModalMessage;
@@ -159,7 +159,7 @@ pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode) -
 	button(text(format!("{:?}", theme_mode)).horizontal_alignment(Horizontal::Center))
 		.style(theme::Button::custom(ThemeModeButtonStyle{ selected: theme_mode == current_theme_mode }))
 		.width(60.0)
-		.on_press(UiMessage::SetThemeMode(theme_mode))
+		.on_press(PreferenceMessage::SetThemeMode(theme_mode).into())
 }
 
 pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {

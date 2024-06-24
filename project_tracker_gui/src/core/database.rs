@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::time::Instant;
 use iced::Command;
 use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
@@ -7,12 +8,18 @@ use crate::core::{OrderedHashMap, ProjectId, Project, ProjectMessage, TaskId};
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Database {
 	pub projects: OrderedHashMap<ProjectId, Project>,
+
+	#[serde(skip, default = "Instant::now")]
+	last_changed_time: Instant,
+
+	#[serde(skip, default = "Instant::now")]
+	last_saved_time: Instant,
 }
 
 #[derive(Clone, Debug)]
 pub enum DatabaseMessage {
 	Save,
-	Saved,
+	Saved(Instant), // begin_time since saving
 	Clear,
 	Export,
 	Exported,
@@ -58,14 +65,24 @@ impl Database {
 	pub fn new() -> Self {
 		Self {
 			projects: OrderedHashMap::new(),
+			last_changed_time: Instant::now(),
+			last_saved_time: Instant::now(),
 		}
+	}
+
+	fn change_was_made(&mut self) {
+		self.last_changed_time = Instant::now();
+	}
+
+	pub fn has_unsaved_changes(&self) -> bool {
+		self.last_changed_time > self.last_saved_time
 	}
 
 	pub fn update(&mut self, message: DatabaseMessage) -> Command<UiMessage> {
 		match message {
-			DatabaseMessage::Save => Command::perform(self.clone().save(), |_| DatabaseMessage::Saved.into()),
-			DatabaseMessage::Saved => Command::none(),
-			DatabaseMessage::Clear => { *self = Self::new(); self.update(DatabaseMessage::Save) },
+			DatabaseMessage::Save => Command::perform(self.clone().save(), |begin_time| DatabaseMessage::Saved(begin_time).into()),
+			DatabaseMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
+			DatabaseMessage::Clear => { *self = Self::new(); self.change_was_made(); Command::none() },
 			DatabaseMessage::Export => Command::perform(self.clone().export_file_dialog(), |_| DatabaseMessage::Exported.into()),
 			DatabaseMessage::Exported => Command::none(),
 			DatabaseMessage::Import => Command::perform(
@@ -83,25 +100,30 @@ impl Database {
 
 			DatabaseMessage::CreateProject { project_id, name } => {
 				self.projects.insert(project_id, Project::new(name));
-				self.update(DatabaseMessage::Save)
+				self.change_was_made();
+				Command::none()
 			},
 			DatabaseMessage::ChangeProjectName { project_id, new_name } => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
 					project.name = new_name;
+					self.change_was_made();
 				}
-				self.update(DatabaseMessage::Save)
+				Command::none()
 			},
 			DatabaseMessage::MoveProjectUp(project_id) => {
 				self.projects.move_up(&project_id);
-				self.update(DatabaseMessage::Save)
+				self.change_was_made();
+				Command::none()
 			},
 			DatabaseMessage::MoveProjectDown(project_id) => {
 				self.projects.move_down(&project_id);
-				self.update(DatabaseMessage::Save)
+				self.change_was_made();
+				Command::none()
 			},
 			DatabaseMessage::DeleteProject(project_id) => {
 				self.projects.remove(&project_id);
-				self.update(DatabaseMessage::Save)
+				self.change_was_made();
+				Command::none()
 			},
 			DatabaseMessage::DeleteDoneTasks(project_id) => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
@@ -112,7 +134,8 @@ impl Database {
 					for task_id in done_tasks {
 						project.tasks.remove(&task_id);
 					}
-					self.update(DatabaseMessage::Save)
+					self.change_was_made();
+					Command::none()
 				}
 				else {
 					Command::none()
@@ -122,7 +145,8 @@ impl Database {
 			DatabaseMessage::ProjectMessage { project_id, task_id, message } => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
 					project.update(task_id, message);
-					self.update(DatabaseMessage::Save)
+					self.change_was_made();
+					Command::none()
 				}
 				else {
 					Command::none()
@@ -166,13 +190,17 @@ impl Database {
 	}
 
 	pub async fn save_to(self, filepath: PathBuf) {
+		println!("save db");
 		if let Err(e) = tokio::fs::write(filepath.clone(), serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
 			eprintln!("Failed to save to {}: {e}", filepath.display());
 		}
 	}
 
-	async fn save(self) {
+	// returns begin time of saving
+	async fn save(self) -> Instant {
+		let begin_time = Instant::now();
 		self.save_to(Self::get_and_ensure_filepath().await).await;
+		begin_time
 	}
 
 	async fn export_file_dialog(self) {
