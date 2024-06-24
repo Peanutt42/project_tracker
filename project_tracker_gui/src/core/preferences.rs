@@ -138,7 +138,6 @@ impl Preferences {
 	}
 
 	async fn save_to(self, filepath: PathBuf) {
-		println!("save pref");
 		if let Err(e) = tokio::fs::write(filepath.clone(), serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
 			eprintln!("Failed to save to {}: {e}", filepath.display());
 		}
@@ -167,7 +166,7 @@ impl Preferences {
 	pub async fn import_file_dialog() -> Option<LoadPreferencesResult> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Import ProjectTracker Preferences")
-			.add_filter("Preference", &["json"])
+			.add_filter("Preference (.json)", &["json"])
 			.pick_file()
 			.await;
 

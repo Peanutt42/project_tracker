@@ -22,9 +22,9 @@ impl OverviewPage {
 						.count() != 0
 				})
 				.map(|(project_id, project)| {
-					let task_list = project.tasks.values()
-						.filter(|task| task.is_todo())
-						.map(|task| {
+					let task_list = project.tasks.iter()
+						.filter(|(_, task)| task.is_todo())
+						.map(|(_, task)| {
 							row![
 								text("-"),
 								text(&task.name)

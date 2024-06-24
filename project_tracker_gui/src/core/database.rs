@@ -190,7 +190,6 @@ impl Database {
 	}
 
 	pub async fn save_to(self, filepath: PathBuf) {
-		println!("save db");
 		if let Err(e) = tokio::fs::write(filepath.clone(), serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
 			eprintln!("Failed to save to {}: {e}", filepath.display());
 		}
@@ -219,7 +218,7 @@ impl Database {
 	async fn import_file_dialog() -> Option<LoadDatabaseResult> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
     		.set_title("Import ProjectTracker Database")
-			.add_filter("Database", &["json"])
+			.add_filter("Database (.json)", &["json"])
 			.pick_file()
 			.await;
 
