@@ -70,6 +70,10 @@ impl Database {
 		}
 	}
 
+	pub fn has_same_content_as(&self, other: &Database) -> bool {
+		self.projects == other.projects
+	}
+
 	fn change_was_made(&mut self) {
 		self.last_changed_time = Instant::now();
 	}
