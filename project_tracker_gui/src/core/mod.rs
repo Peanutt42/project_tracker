@@ -8,7 +8,7 @@ mod ordered_hash_map;
 pub use ordered_hash_map::OrderedHashMap;
 
 mod project;
-pub use project::{Project, ProjectId, ProjectMessage, generate_project_id};
+pub use project::{Project, ProjectId, generate_project_id};
 
 mod task;
 pub use task::{Task, TaskId, generate_task_id};

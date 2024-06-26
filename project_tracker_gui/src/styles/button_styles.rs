@@ -1,4 +1,4 @@
-use iced::{widget::button::{Appearance, StyleSheet}, Background, Border, Color, Theme, Vector};
+use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
 use crate::styles::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, LARGE_BORDER_RADIUS};
 
 pub struct ProjectPreviewButtonStyle {
@@ -10,14 +10,14 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(
+			background: Some(
 				if self.selected {
-					style.extended_palette().background.weak.color
+					style.extended_palette().background.weak.color.into()
 				}
 				else {
-					style.extended_palette().background.base.color
+					style.extended_palette().background.base.color.into()
 				}
-			)),
+			),
 			text_color: style.palette().text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -26,14 +26,14 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(
+			background: Some(
 				if self.selected {
-					style.extended_palette().background.weak.color
+					style.extended_palette().background.weak.color.into()
 				}
 				else {
-					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color)
+					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
 				}
-			)),
+			),
 			..self.active(style)
 		}
 	}
@@ -50,7 +50,7 @@ impl StyleSheet for TaskButtonStyle {
 
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(style.extended_palette().background.base.color)),
+			background: Some(style.extended_palette().background.base.color.into()),
 			text_color: style.palette().text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -59,9 +59,7 @@ impl StyleSheet for TaskButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(
-				mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color)
-			)),
+			background: Some(mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()),
 			..self.active(style)
 		}
 	}
@@ -78,7 +76,7 @@ impl StyleSheet for DangerousButtonStyle {
 
 	fn active(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(1.0, 0.0, 0.0))),
+			background: Some(Color::from_rgb(1.0, 0.0, 0.0).into()),
 			text_color: Color::WHITE,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -87,7 +85,7 @@ impl StyleSheet for DangerousButtonStyle {
 
 	fn hovered(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.8, 0.0, 0.0))),
+			background: Some(Color::from_rgb(0.8, 0.0, 0.0).into()),
 			text_color: Color::WHITE,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -96,7 +94,7 @@ impl StyleSheet for DangerousButtonStyle {
 
 	fn pressed(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.6, 0.0, 0.0))),
+			background: Some(Color::from_rgb(0.6, 0.0, 0.0).into()),
 			text_color: Color::WHITE,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -111,7 +109,7 @@ impl StyleSheet for DeleteDoneTasksButtonStyle {
 
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(style.extended_palette().secondary.base.color)),
+			background: Some(style.extended_palette().secondary.base.color.into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -120,7 +118,7 @@ impl StyleSheet for DeleteDoneTasksButtonStyle {
 
 	fn hovered(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.8, 0.0, 0.0))),
+			background: Some(Color::from_rgb(0.8, 0.0, 0.0).into()),
 			text_color: Color::WHITE,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -129,7 +127,7 @@ impl StyleSheet for DeleteDoneTasksButtonStyle {
 
 	fn pressed(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.6, 0.0, 0.0))),
+			background: Some(Color::from_rgb(0.6, 0.0, 0.0).into()),
 			text_color: Color::WHITE,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -146,7 +144,7 @@ impl StyleSheet for RoundedSecondaryButtonStyle {
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
 			border: Border::with_radius(BORDER_RADIUS),
-			background: Some(Background::Color(style.extended_palette().secondary.base.color)),
+			background: Some(style.extended_palette().secondary.base.color.into()),
 			text_color: style.extended_palette().secondary.base.text,
 			..Default::default()
 		}
@@ -154,7 +152,7 @@ impl StyleSheet for RoundedSecondaryButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(style.extended_palette().background.strong.color)),
+			background: Some(style.extended_palette().background.strong.color.into()),
 			..self.active(style)
 		}
 	}
@@ -175,7 +173,7 @@ impl StyleSheet for TransparentButtonStyle {
 
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::TRANSPARENT)),
+			background: Some(Color::TRANSPARENT.into()),
 			text_color: style.extended_palette().secondary.base.text,
 			..Default::default()
 		}
@@ -183,7 +181,7 @@ impl StyleSheet for TransparentButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(style.extended_palette().background.strong.color)),
+			background: Some(style.extended_palette().background.strong.color.into()),
 			border: Border::with_radius(BORDER_RADIUS),
 			..self.active(style)
 		}
@@ -200,7 +198,7 @@ impl StyleSheet for ProjectContextButtonStyle {
 		let pair = style.extended_palette().secondary.base;
 
 		Appearance {
-			background: Some(Background::Color(pair.color)),
+			background: Some(pair.color.into()),
 			text_color: pair.text,
 			border: Border::with_radius(LARGE_BORDER_RADIUS),
 			..Default::default()
@@ -209,7 +207,7 @@ impl StyleSheet for ProjectContextButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(style.extended_palette().background.strong.color)),
+			background: Some(style.extended_palette().background.strong.color.into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(LARGE_BORDER_RADIUS),
 			..Default::default()
@@ -224,7 +222,7 @@ impl StyleSheet for DeleteButtonStyle {
 
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(1.0, 0.0, 0.0))),
+			background: Some(Color::from_rgb(1.0, 0.0, 0.0).into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -233,7 +231,7 @@ impl StyleSheet for DeleteButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.55, 0.0, 0.0))),
+			background: Some(Color::from_rgb(0.55, 0.0, 0.0).into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -242,7 +240,7 @@ impl StyleSheet for DeleteButtonStyle {
 
 	fn pressed(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(Color::from_rgb(0.45, 0.0, 0.0))),
+			background: Some(Color::from_rgb(0.45, 0.0, 0.0).into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -273,14 +271,14 @@ impl StyleSheet for ThemeModeButtonStyle {
 
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(
+			background: Some(
 				if self.selected {
-					NICE_GREEN
+					NICE_GREEN.into()
 				}
 				else {
-					style.extended_palette().secondary.base.color
+					style.extended_palette().secondary.base.color.into()
 				}
-			)),
+			),
 			border: Border::with_radius(BORDER_RADIUS),
 			text_color: if self.selected {
 				style.extended_palette().primary.base.text
@@ -294,14 +292,14 @@ impl StyleSheet for ThemeModeButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(
+			background: Some(
 				if self.selected {
-					LIGHT_DARK_GREEN
+					LIGHT_DARK_GREEN.into()
 				}
 				else {
-					style.extended_palette().background.strong.color
+					style.extended_palette().background.strong.color.into()
 				}
-			)),
+			),
 			..self.active(style)
 		}
 	}

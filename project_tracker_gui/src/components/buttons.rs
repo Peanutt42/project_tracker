@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{button, row, text, tooltip, tooltip::Position, Button}, Alignment, Element, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::{DatabaseMessage, PreferenceMessage, ProjectId, ProjectMessage, TaskId},
+	core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId},
 	components::ConfirmModalMessage,
 	pages::{ProjectPageMessage, SidebarPageMessage},
 	project_tracker::UiMessage,
@@ -82,13 +82,7 @@ pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage
 	button(
 		icon_to_text(Bootstrap::Trash)
 	)
-	.on_press(
-		ConfirmModalMessage::Open {
-			title: "Delete Project".to_string(),
-			on_confirmed: Box::new(DatabaseMessage::DeleteProject(project_id).into()),
-		}
-		.into()
-	)
+	.on_press(ConfirmModalMessage::open("Delete this Project?", DatabaseMessage::DeleteProject(project_id)))
 	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
@@ -96,7 +90,7 @@ pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'sta
 	button(
 		icon_to_text(Bootstrap::Trash)
 	)
-	.on_press(DatabaseMessage::ProjectMessage { project_id, task_id, message: ProjectMessage::DeleteTask }.into())
+	.on_press(DatabaseMessage::DeleteTask { project_id, task_id }.into())
 	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
@@ -105,7 +99,7 @@ pub fn delete_all_done_tasks_button(project_id: ProjectId) -> Button<'static, Ui
 		icon_to_text(Bootstrap::Trash),
 		text("Delete done tasks")
 	])
-	.on_press(DatabaseMessage::DeleteDoneTasks(project_id).into())
+	.on_press(ConfirmModalMessage::open("Delete all done tasks of this project?", DatabaseMessage::DeleteDoneTasks(project_id)))
 	.style(theme::Button::custom(DeleteDoneTasksButtonStyle))
 }
 
@@ -121,7 +115,7 @@ pub fn move_task_up_button(project_id: ProjectId, task_id: TaskId) -> Button<'st
 	button(
 		icon_to_text(Bootstrap::ArrowUp),
 	)
-	.on_press(DatabaseMessage::ProjectMessage { project_id, task_id, message: ProjectMessage::MoveTaskUp }.into())
+	.on_press(DatabaseMessage::MoveTaskUp { project_id, task_id }.into())
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
@@ -137,7 +131,7 @@ pub fn move_task_down_button(project_id: ProjectId, task_id: TaskId) -> Button<'
 	button(
 		icon_to_text(Bootstrap::ArrowDown),
 	)
-	.on_press(DatabaseMessage::ProjectMessage { project_id, task_id, message: ProjectMessage::MoveTaskDown }.into())
+	.on_press(DatabaseMessage::MoveTaskDown { project_id, task_id }.into())
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
@@ -153,19 +147,13 @@ pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'stati
 	.style(theme::Button::Secondary)
 }
 
-pub fn dangerous_button(label: &str, on_press: impl Into<UiMessage>) -> Button<'static, UiMessage> {
+pub fn dangerous_button(label: &'static str, on_press: impl Into<UiMessage>) -> Button<'static, UiMessage> {
 	button(
 		text(label)
 			.font(BOLD_FONT)
 	)
 	.style(theme::Button::custom(DangerousButtonStyle))
-	.on_press(
-		ConfirmModalMessage::Open {
-			title: label.to_string(),
-			on_confirmed: Box::new(on_press.into())
-		}
-		.into()
-	)
+	.on_press(ConfirmModalMessage::open(label, on_press))
 }
 
 pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode) -> Button<'static, UiMessage> {

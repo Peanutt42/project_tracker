@@ -78,7 +78,7 @@ impl Preferences {
 				|result| {
 					match result {
 						Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
-						Err(error_msg) => ErrorMsgModalMessage::Open { error_msg }.into(),
+						Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
 					}
 				}
 			),
@@ -89,7 +89,7 @@ impl Preferences {
 				|result| {
 					match result {
 						Ok(_) => PreferenceMessage::Exported.into(),
-						Err(error_msg) => ErrorMsgModalMessage::Open { error_msg }.into(),
+						Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
 					}
 				}
 			),

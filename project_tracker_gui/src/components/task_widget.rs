@@ -1,6 +1,6 @@
 use iced::{Alignment, Element, Length, Padding, widget::{row, Row, text, text_input, mouse_area, button, checkbox}, theme};
 use once_cell::sync::Lazy;
-use crate::core::{ProjectId, Task, TaskId, TaskState, DatabaseMessage, ProjectMessage};
+use crate::core::{ProjectId, Task, TaskId, TaskState, DatabaseMessage};
 use crate::project_tracker::UiMessage;
 use crate::pages::ProjectPageMessage;
 use crate::components::{edit_task_button, delete_task_button, move_task_up_button, move_task_down_button};
@@ -14,11 +14,7 @@ pub fn task_widget(task: &Task, task_id: TaskId, project_id: ProjectId, editing:
 			.id(EDIT_TASK_NAME_INPUT_ID.clone())
 			.size(MIDDLE_TEXT_SIZE)
 			.width(Length::Fill)
-			.on_input(move |new_task_name| DatabaseMessage::ProjectMessage {
-				project_id,
-				task_id,
-				message: ProjectMessage::ChangeTaskName(new_task_name),
-			}.into())
+			.on_input(move |new_task_name| DatabaseMessage::ChangeTaskName{ project_id, task_id, new_task_name }.into())
 			.on_submit(ProjectPageMessage::StopEditing.into())
 			.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
 			.into()
@@ -74,17 +70,16 @@ pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: Ta
 						row![
 							checkbox("", task_state.is_done())
 								.on_toggle(move |checked| {
-									DatabaseMessage::ProjectMessage {
+									DatabaseMessage::ChangeTaskState {
 										project_id,
 										task_id,
-										message: ProjectMessage::ChangeTaskState(
+										new_task_state:
 											if checked {
 												TaskState::Done
 											}
 											else {
 												TaskState::Todo
-											}
-										),
+											},
 									}.into()
 								})
 								.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle))),

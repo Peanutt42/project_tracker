@@ -5,10 +5,19 @@ use crate::{project_tracker::UiMessage, styles::{ConfirmModalCardStyle, Dangerou
 #[derive(Clone, Debug)]
 pub enum ConfirmModalMessage {
 	Open {
-		title: String,
+		title: &'static str,
 		on_confirmed: Box<UiMessage>,
 	},
 	Close,
+}
+
+impl ConfirmModalMessage {
+	pub fn open(title: &'static str, on_confirmed: impl Into<UiMessage>) -> UiMessage {
+		Self::Open {
+			title,
+			on_confirmed: Box::new(on_confirmed.into()),
+		}.into()
+	}
 }
 
 impl From<ConfirmModalMessage> for UiMessage {
@@ -19,7 +28,7 @@ impl From<ConfirmModalMessage> for UiMessage {
 
 pub enum ConfirmModal {
 	Opened {
-		title: String,
+		title: &'static str,
 		on_confirmed: UiMessage,
 	},
 	Closed,
@@ -81,10 +90,14 @@ pub enum ErrorMsgModal {
 
 #[derive(Clone, Debug)]
 pub enum ErrorMsgModalMessage {
-	Open {
-		error_msg: String,
-	},
+	Open(String),
 	Close,
+}
+
+impl ErrorMsgModalMessage {
+	pub fn open(error_msg: String) -> UiMessage {
+		Self::Open(error_msg).into()
+	}
 }
 
 impl From<ErrorMsgModalMessage> for UiMessage {
@@ -96,7 +109,7 @@ impl From<ErrorMsgModalMessage> for UiMessage {
 impl ErrorMsgModal {
 	pub fn update(&mut self, message: ErrorMsgModalMessage) {
 		match message {
-			ErrorMsgModalMessage::Open { error_msg } => {
+			ErrorMsgModalMessage::Open(error_msg) => {
 				*self = ErrorMsgModal::Open { error_msg };
 			},
 			ErrorMsgModalMessage::Close => {

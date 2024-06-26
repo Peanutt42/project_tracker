@@ -6,6 +6,12 @@ pub struct OverviewPage {
 
 }
 
+impl Default for OverviewPage {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl OverviewPage {
 	pub fn new() -> Self {
 		Self {
@@ -76,11 +82,5 @@ impl OverviewPage {
 		else {
 			loading_screen()
 		}
-	}
-}
-
-impl Default for OverviewPage {
-	fn default() -> Self {
-		Self::new()
 	}
 }

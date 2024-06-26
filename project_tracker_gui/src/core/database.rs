@@ -4,7 +4,9 @@ use iced::Command;
 use serde::{Serialize, Deserialize};
 use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, ProjectId, Project, ProjectMessage, TaskId};
+use crate::core::{OrderedHashMap, ProjectId, Project, TaskId};
+
+use super::TaskState;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Database {
@@ -40,10 +42,32 @@ pub enum DatabaseMessage {
 	DeleteProject(ProjectId),
 	DeleteDoneTasks(ProjectId),
 
-	ProjectMessage {
+	CreateTask {
 		project_id: ProjectId,
 		task_id: TaskId,
-		message: ProjectMessage,
+		task_name: String,
+	},
+	ChangeTaskName {
+		project_id: ProjectId,
+		task_id: TaskId,
+		new_task_name: String,
+	},
+	ChangeTaskState {
+		project_id: ProjectId,
+		task_id: TaskId,
+		new_task_state: TaskState,
+	},
+	MoveTaskUp {
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
+	MoveTaskDown {
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
+	DeleteTask {
+		project_id: ProjectId,
+		task_id: TaskId,
 	},
 }
 
@@ -90,7 +114,7 @@ impl Database {
 				|result| {
 					match result {
 						Ok(begin_time) => DatabaseMessage::Saved(begin_time).into(),
-						Err(error_msg) => ErrorMsgModalMessage::Open { error_msg }.into(),
+						Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
 					}
 				}
 			),
@@ -148,22 +172,51 @@ impl Database {
 						project.tasks.remove(&task_id);
 					}
 					self.change_was_made();
-					Command::none()
 				}
-				else {
-					Command::none()
-				}
+				Command::none()
 			},
 
-			DatabaseMessage::ProjectMessage { project_id, task_id, message } => {
+			DatabaseMessage::CreateTask { project_id, task_id, task_name } => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
-					project.update(task_id, message);
+					project.add_task(task_id, task_name);
 					self.change_was_made();
-					Command::none()
 				}
-				else {
-					Command::none()
+				Command::none()
+			},
+			DatabaseMessage::ChangeTaskName { project_id, task_id, new_task_name } => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					project.set_task_name(task_id, new_task_name);
+					self.change_was_made();
 				}
+				Command::none()
+			},
+			DatabaseMessage::ChangeTaskState { project_id, task_id, new_task_state } => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					project.set_task_state(task_id, new_task_state);
+					self.change_was_made();
+				}
+				Command::none()
+			},
+			DatabaseMessage::MoveTaskUp { project_id, task_id } => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					project.tasks.move_up(&task_id);
+					self.change_was_made();
+				}
+				Command::none()
+			},
+			DatabaseMessage::MoveTaskDown { project_id, task_id } => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					project.tasks.move_down(&task_id);
+					self.change_was_made();
+				}
+				Command::none()
+			},
+			DatabaseMessage::DeleteTask { project_id, task_id } => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					project.tasks.remove(&task_id);
+					self.change_was_made();
+				}
+				Command::none()
 			},
 		}
 	}

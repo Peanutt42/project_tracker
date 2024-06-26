@@ -1,11 +1,18 @@
 use iced::{theme, widget::{column, row, scrollable, text}, Element, Alignment};
-use crate::{components::{dangerous_button, file_location, horizontal_seperator, loading_screen}, core::{Database, DatabaseMessage}};
+use crate::components::{dangerous_button, file_location, horizontal_seperator, loading_screen};
+use crate::core::{Database, DatabaseMessage};
 use crate::styles::{scrollable_vertical_direction, ScrollableStyle, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 
 
 pub struct SettingsPage {
 
+}
+
+impl Default for SettingsPage {
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl SettingsPage {
@@ -62,11 +69,5 @@ impl SettingsPage {
 		else {
 			loading_screen()
 		}
-	}
-}
-
-impl Default for SettingsPage {
-	fn default() -> Self {
-		Self::new()
 	}
 }

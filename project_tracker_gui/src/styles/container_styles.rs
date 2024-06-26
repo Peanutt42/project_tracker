@@ -1,4 +1,4 @@
-use iced::{widget::container::{Appearance, StyleSheet}, Border, Theme, Background};
+use iced::{widget::container::{Appearance, StyleSheet}, Border, Theme};
 
 use super::BORDER_RADIUS;
 
@@ -9,7 +9,7 @@ impl StyleSheet for RoundedContainerStyle {
 
 	fn appearance(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Background::Color(style.extended_palette().background.weak.color)),
+			background: Some(style.extended_palette().background.weak.color.into()),
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}

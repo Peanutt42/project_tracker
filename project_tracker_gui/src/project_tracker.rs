@@ -1,10 +1,10 @@
 use std::{path::PathBuf, time::Duration};
 use iced::{event::Status, font, keyboard, window, time, clipboard, Application, Command, Element, Event, Subscription, Theme};
-use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, modal, ModalStyles, Split, SplitStyles};
+use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, ModalStyles, Split, SplitStyles};
 use crate::{
 	components::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage},
-	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, ProjectMessage},
-	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
+	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId},
+	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
 	styles::{ConfirmModalStyle, SplitStyle},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
@@ -149,8 +149,11 @@ impl Application for ProjectTrackerApp {
 				self.update(ProjectPageMessage::CloseCreateNewTask.into()),
 				self.update(ProjectPageMessage::StopEditing.into()),
 				self.update(ConfirmModalMessage::Close.into()),
+				self.update(ErrorMsgModalMessage::Close.into()),
 			]),
 			UiMessage::EnterPressed => {
+				self.error_msg_modal = ErrorMsgModal::Closed;
+
 				match &self.confirm_modal {
 					ConfirmModal::Opened{ on_confirmed, .. } => {
 						self.update(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())))
@@ -202,19 +205,10 @@ impl Application for ProjectTrackerApp {
 						}
 						Command::batch([
 							self.update(DatabaseMessage::Save.into()),
-							self.update(
-								ErrorMsgModalMessage::Open {
-									error_msg: format!("Could not open previous projects in \"{}\" (doesn't exist / permission issue)", filepath.display()),
-								}
-								.into()
-							)
+							self.show_error_msg(format!("Could not open previous projects in \"{}\" (doesn't exist / permission issue)", filepath.display())),
 						])
 					},
-					LoadDatabaseResult::FailedToParse(filepath) => {
-						self.update(ErrorMsgModalMessage::Open {
-							error_msg: format!("Failed to load previous projects in \"{}\" (parsing error)", filepath.display()),
-						}.into())
-					}
+					LoadDatabaseResult::FailedToParse(filepath) => self.show_error_msg(format!("Failed to load previous projects in \"{}\" (parsing error)", filepath.display())),
 				}
 			},
 			UiMessage::LoadedPreferences(load_preferences_result) => {
@@ -227,16 +221,10 @@ impl Application for ProjectTrackerApp {
 						self.preferences = Some(Preferences::default());
 						Command::batch([
 							self.update(PreferenceMessage::Save.into()),
-							self.update(ErrorMsgModalMessage::Open {
-								error_msg: format!("Could not open preferences in \"{}\" (doesn't exist / permission issue)", filepath.display())
-							}.into())
+							self.show_error_msg(format!("Could not open preferences in \"{}\" (doesn't exist / permission issue)", filepath.display())),
 						])
 					},
-					LoadPreferencesResult::FailedToParse(filepath) => {
-						self.update(ErrorMsgModalMessage::Open {
-							error_msg: format!("Failed to load preferences in \"{}\" (parsing error)", filepath.display())
-						}.into())
-					}
+					LoadPreferencesResult::FailedToParse(filepath) => self.show_error_msg(format!("Failed to load preferences in \"{}\" (parsing error)", filepath.display())),
 				}
 			},
 			UiMessage::DatabaseMessage(database_message) => {
@@ -256,13 +244,8 @@ impl Application for ProjectTrackerApp {
 						}
 					},
 
-					DatabaseMessage::ProjectMessage { message, .. } => {
-						if let ProjectMessage::CreateTask{ .. } = message {
-							self.update(ProjectPageMessage::OpenCreateNewTask.into())
-						}
-						else {
-							Command::none()
-						}
+					DatabaseMessage::CreateTask { .. } => {
+						self.update(ProjectPageMessage::OpenCreateNewTask.into())
 					},
 					_ => Command::none(),
 				};
@@ -329,7 +312,7 @@ impl Application for ProjectTrackerApp {
 						300
 					}
 				),
-				iced_aw::split::Axis::Vertical,
+				Axis::Vertical,
 				|pos| PreferenceMessage::SetSidebarDividorPosition(pos).into()
 			)
 			.style(SplitStyles::custom(SplitStyle)),
@@ -342,28 +325,8 @@ impl Application for ProjectTrackerApp {
 	}
 }
 
-pub enum ContentPage {
-	Project(ProjectPage),
-	Overview(OverviewPage),
-	Settings(SettingsPage),
-}
-
-impl ContentPage {
-	pub fn is_overview_page(&self) -> bool {
-		matches!(self, ContentPage::Overview(_))
-	}
-
-	pub fn is_settings_page(&self) -> bool {
-		matches!(self, ContentPage::Settings(_))
-	}
-}
-
-impl ContentPage {
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
-		match self {
-			ContentPage::Project(project_page) => project_page.view(app),
-			ContentPage::Overview(overview_page) => overview_page.view(app),
-			ContentPage::Settings(settings_page) => settings_page.view(app),
-		}
+impl ProjectTrackerApp {
+	fn show_error_msg(&mut self, error_msg: String) -> Command<UiMessage> {
+		self.update(ErrorMsgModalMessage::open(error_msg))
 	}
 }
