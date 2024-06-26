@@ -1,11 +1,14 @@
 use std::path::PathBuf;
-use iced::{alignment::Horizontal, theme, widget::{button, row, text, Button}, Alignment, Length};
+use iced::{alignment::Horizontal, theme, widget::{button, row, text, tooltip, tooltip::Position, Button}, Alignment, Element, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	core::{DatabaseMessage, PreferenceMessage, ProjectId, ProjectMessage, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT}, theme_mode::ThemeMode
+	core::{DatabaseMessage, PreferenceMessage, ProjectId, ProjectMessage, TaskId},
+	components::ConfirmModalMessage,
+	pages::{ProjectPageMessage, SidebarPageMessage},
+	project_tracker::UiMessage,
+	styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, RoundedSecondaryButtonStyle, RoundedContainerStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SPACING_AMOUNT},
+	theme_mode::ThemeMode
 };
-
-use super::ConfirmModalMessage;
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
 	button(
@@ -14,12 +17,14 @@ pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
 			.horizontal_alignment(iced::alignment::Horizontal::Center)
 			.style(if enabled { GREEN_TEXT_STYLE } else { DISABLED_GREEN_TEXT_STYLE })
 	)
-	.on_press_maybe(if enabled {
-		Some(SidebarPageMessage::OpenCreateNewProject.into())
-	}
-	else {
-		None
-	})
+	.on_press_maybe(
+		if enabled {
+			Some(SidebarPageMessage::OpenCreateNewProject.into())
+		}
+		else {
+			None
+		}
+	)
 	.width(LARGE_TEXT_SIZE * 2.715)
 	.height(LARGE_TEXT_SIZE * 2.715)
 	.style(theme::Button::custom(TransparentButtonStyle))
@@ -34,12 +39,14 @@ pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
 	)
 	.width(LARGE_TEXT_SIZE * 2.715)
 	.height(LARGE_TEXT_SIZE * 2.715)
-	.on_press_maybe(if enabled {
-		Some(ProjectPageMessage::OpenCreateNewTask.into())
-	}
-	else {
-		None
-	})
+	.on_press_maybe(
+		if enabled {
+			Some(ProjectPageMessage::OpenCreateNewTask.into())
+		}
+		else {
+			None
+		}
+	)
 	.style(theme::Button::custom(TransparentButtonStyle))
 }
 
@@ -75,10 +82,13 @@ pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage
 	button(
 		icon_to_text(Bootstrap::Trash)
 	)
-	.on_press(ConfirmModalMessage::Open {
-		title: "Delete Project".to_string(),
-		on_confirmed: Box::new(DatabaseMessage::DeleteProject(project_id).into()),
-	}.into())
+	.on_press(
+		ConfirmModalMessage::Open {
+			title: "Delete Project".to_string(),
+			on_confirmed: Box::new(DatabaseMessage::DeleteProject(project_id).into()),
+		}
+		.into()
+	)
 	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
@@ -149,10 +159,13 @@ pub fn dangerous_button(label: &str, on_press: impl Into<UiMessage>) -> Button<'
 			.font(BOLD_FONT)
 	)
 	.style(theme::Button::custom(DangerousButtonStyle))
-	.on_press(ConfirmModalMessage::Open {
-		title: label.to_string(),
-		on_confirmed: Box::new(on_press.into())
-	}.into())
+	.on_press(
+		ConfirmModalMessage::Open {
+			title: label.to_string(),
+			on_confirmed: Box::new(on_press.into())
+		}
+		.into()
+	)
 }
 
 pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode) -> Button<'static, UiMessage> {
@@ -200,10 +213,38 @@ pub fn settings_button(selected: bool) -> Button<'static, UiMessage> {
 	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
 }
 
-pub fn open_location_button(filepath: Option<PathBuf>) -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::Folder)
+pub fn open_location_button(filepath: Option<PathBuf>) -> Element<'static, UiMessage> {
+	tooltip(
+		button(
+			icon_to_text(Bootstrap::Folder)
+		)
+		.on_press_maybe(filepath.map(UiMessage::OpenFolderLocation))
+		.style(theme::Button::Secondary),
+
+		text("Open folder location")
+			.size(SMALL_TEXT_SIZE),
+
+		Position::Bottom
 	)
-	.on_press_maybe(filepath.map(UiMessage::OpenFolderLocation))
-	.style(theme::Button::Secondary)
+	.gap(10)
+	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+	.into()
+}
+
+pub fn copy_to_clipboard_button(copied_text: String) -> Element<'static, UiMessage> {
+	tooltip(
+		button(
+			icon_to_text(Bootstrap::Clipboard)
+		)
+		.on_press(UiMessage::CopyToClipboard(copied_text))
+		.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+
+		text("Copy to clipboard")
+			.size(SMALL_TEXT_SIZE),
+
+		Position::Bottom
+	)
+	.gap(10)
+	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+	.into()
 }

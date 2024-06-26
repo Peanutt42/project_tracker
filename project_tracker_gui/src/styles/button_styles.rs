@@ -1,4 +1,4 @@
-use iced::{widget::button::{Appearance, StyleSheet}, Background, Border, Color, Theme};
+use iced::{widget::button::{Appearance, StyleSheet}, Background, Border, Color, Theme, Vector};
 use crate::styles::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, LARGE_BORDER_RADIUS};
 
 pub struct ProjectPreviewButtonStyle {
@@ -133,6 +133,36 @@ impl StyleSheet for DeleteDoneTasksButtonStyle {
 			text_color: Color::WHITE,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
+		}
+	}
+}
+
+
+pub struct RoundedSecondaryButtonStyle;
+
+impl StyleSheet for RoundedSecondaryButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			border: Border::with_radius(BORDER_RADIUS),
+			background: Some(Background::Color(style.extended_palette().secondary.base.color)),
+			text_color: style.extended_palette().secondary.base.text,
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(Background::Color(style.extended_palette().background.strong.color)),
+			..self.active(style)
+		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			shadow_offset: Vector::default(),
+			..self.active(style)
 		}
 	}
 }

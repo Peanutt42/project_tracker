@@ -2,7 +2,7 @@ mod completion_bar;
 pub use completion_bar::completion_bar;
 
 mod buttons;
-pub use buttons::{create_new_project_button, create_new_task_button, edit_project_button, edit_task_button, delete_project_button, delete_task_button, delete_all_done_tasks_button, move_project_up_button, move_task_up_button, move_project_down_button, move_task_down_button, show_done_tasks_button, cancel_create_project_button, cancel_create_task_button, overview_button, dangerous_button, theme_mode_button, settings_button, open_location_button};
+pub use buttons::{create_new_project_button, create_new_task_button, edit_project_button, edit_task_button, delete_project_button, delete_task_button, delete_all_done_tasks_button, move_project_up_button, move_task_up_button, move_project_down_button, move_task_down_button, show_done_tasks_button, cancel_create_project_button, cancel_create_task_button, overview_button, dangerous_button, theme_mode_button, settings_button, open_location_button, copy_to_clipboard_button};
 
 mod task_list;
 pub use task_list::{task_list, CREATE_NEW_TASK_NAME_INPUT_ID};
@@ -22,5 +22,5 @@ pub use seperator::{horizontal_seperator, partial_horizontal_seperator};
 mod file_location;
 pub use file_location::file_location;
 
-mod confirm_modal;
-pub use confirm_modal::{ConfirmModal, ConfirmModalMessage};
+mod modals;
+pub use modals::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage};

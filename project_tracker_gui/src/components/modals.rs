@@ -1,6 +1,6 @@
-use iced::{alignment::Horizontal, widget::{button, row, text}, Element, Length, theme};
+use iced::{alignment::Horizontal, theme, widget::{button, row, text}, Element, Length};
 use iced_aw::{card, CardStyles};
-use crate::{project_tracker::UiMessage, styles::{ConfirmModalCardStyle, SPACING_AMOUNT}};
+use crate::{project_tracker::UiMessage, styles::{ConfirmModalCardStyle, DangerousButtonStyle, SPACING_AMOUNT}, components::copy_to_clipboard_button};
 
 #[derive(Clone, Debug)]
 pub enum ConfirmModalMessage {
@@ -67,6 +67,69 @@ impl ConfirmModal {
 					.into()
 				)
 			},
+		}
+	}
+}
+
+
+pub enum ErrorMsgModal {
+	Open {
+		error_msg: String
+	},
+	Closed,
+}
+
+#[derive(Clone, Debug)]
+pub enum ErrorMsgModalMessage {
+	Open {
+		error_msg: String,
+	},
+	Close,
+}
+
+impl From<ErrorMsgModalMessage> for UiMessage {
+	fn from(value: ErrorMsgModalMessage) -> Self {
+		UiMessage::ErrorMsgModalMessage(value)
+	}
+}
+
+impl ErrorMsgModal {
+	pub fn update(&mut self, message: ErrorMsgModalMessage) {
+		match message {
+			ErrorMsgModalMessage::Open { error_msg } => {
+				*self = ErrorMsgModal::Open { error_msg };
+			},
+			ErrorMsgModalMessage::Close => {
+				*self = ErrorMsgModal::Closed;
+			},
+		}
+	}
+
+	pub fn view(&self) -> Option<Element<'static, UiMessage>> {
+		match self {
+			ErrorMsgModal::Open { error_msg } => {
+				Some(
+					card(
+						text(error_msg),
+						row![
+							button(
+								text("Ok")
+									.horizontal_alignment(Horizontal::Center)
+									.width(Length::Fill)
+							)
+							.width(Length::Fill)
+							.style(theme::Button::custom(DangerousButtonStyle))
+							.on_press(ErrorMsgModalMessage::Close.into()),
+
+							copy_to_clipboard_button(error_msg.clone()),
+						]
+					)
+					.max_width(300.0)
+					.style(CardStyles::custom(ConfirmModalCardStyle))
+					.into()
+				)
+			},
+			ErrorMsgModal::Closed => None,
 		}
 	}
 }

@@ -18,11 +18,11 @@ async fn test_database_serialization() {
 
 	let original = database.clone();
 
-	database.save_to(output_filepath.clone()).await;
+	database.save_to(output_filepath.clone()).await.unwrap();
 
 	match Database::load_from(output_filepath.clone()).await {
 		LoadDatabaseResult::Ok(database) => assert!(database.has_same_content_as(&original)),
-		LoadDatabaseResult::FailedToReadFile(_) => panic!("Failed to find serialized file, maybe database.save_to failed?"),
+		LoadDatabaseResult::FailedToOpenFile(_) => panic!("Failed to find serialized file, maybe database.save_to failed?"),
 		LoadDatabaseResult::FailedToParse(_) => panic!("Failed to parse serialized file!"),
 	};
 

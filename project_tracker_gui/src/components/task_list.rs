@@ -24,7 +24,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 		};
 		let can_move_up = i != 0;
 		// once there is a done task, all other tasks after that are also done
-		let can_move_down = tasks.get_at_order(i + 1).map(|task| task.is_todo()).unwrap_or(false);//i < tasks.len() - 1 && if let Some(task) = tasks.get(&tasks.order[i + 1]) { task.is_todo() } else { false };
+		let can_move_down = tasks.get_at_order(i + 1).map(|task| task.is_todo()).unwrap_or(false);
 		task_widget(task, task_id, project_id, editing, hovered, can_move_up, can_move_down)
 	};
 

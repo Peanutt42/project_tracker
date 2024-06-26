@@ -1,12 +1,12 @@
 use std::{path::PathBuf, time::Duration};
-use iced::{event::Status, font, keyboard, window, time, Application, Command, Element, Event, Subscription, Theme};
+use iced::{event::Status, font, keyboard, window, time, clipboard, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, modal, ModalStyles, Split, SplitStyles};
 use crate::{
+	components::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, ProjectMessage},
 	pages::{OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
-	styles::{SplitStyle, ConfirmModalStyle},
+	styles::{ConfirmModalStyle, SplitStyle},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
-	components::{ConfirmModal, ConfirmModalMessage},
 };
 
 pub struct ProjectTrackerApp {
@@ -16,6 +16,7 @@ pub struct ProjectTrackerApp {
 	pub database: Option<Database>,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
+	pub error_msg_modal: ErrorMsgModal,
 	pub is_system_theme_dark: bool,
 }
 
@@ -25,12 +26,14 @@ pub enum UiMessage {
 	CloseWindowRequested(window::Id),
 	EscapePressed,
 	EnterPressed,
+	CopyToClipboard(String),
 	SaveChangedFiles,
 	OpenFolderLocation(PathBuf),
 	FontLoaded(Result<(), font::Error>),
 	SystemTheme { is_dark: bool },
 	ConfirmModalMessage(ConfirmModalMessage),
 	ConfirmModalConfirmed(Box<UiMessage>),
+	ErrorMsgModalMessage(ErrorMsgModalMessage),
 	LoadedDatabase(LoadDatabaseResult),
 	LoadedPreferences(LoadPreferencesResult),
 	DatabaseMessage(DatabaseMessage),
@@ -57,6 +60,7 @@ impl Application for ProjectTrackerApp {
 				database: None,
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
+				error_msg_modal: ErrorMsgModal::Closed,
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Command::batch([
@@ -154,6 +158,7 @@ impl Application for ProjectTrackerApp {
 					ConfirmModal::Closed => Command::none()
 				}
 			},
+			UiMessage::CopyToClipboard(copied_text) => clipboard::write(copied_text),
 			UiMessage::SaveChangedFiles => {
 				let mut commands = Vec::new();
 				if let Some(database) = &mut self.database {
@@ -184,17 +189,31 @@ impl Application for ProjectTrackerApp {
 				self.confirm_modal.update(message);
 				Command::none()
 			},
+			UiMessage::ErrorMsgModalMessage(message) => {
+				self.error_msg_modal.update(message);
+				Command::none()
+			},
 			UiMessage::LoadedDatabase(load_database_result) => {
 				match load_database_result {
 					LoadDatabaseResult::Ok(database) => { self.database = Some(database); Command::none() },
-					LoadDatabaseResult::FailedToReadFile(filepath) => {
-						println!("Could not find previous projects in {}", filepath.display());
-						self.database = Some(Database::new());
-						self.update(DatabaseMessage::Save.into())
+					LoadDatabaseResult::FailedToOpenFile(filepath) => {
+						if self.database.is_none() {
+							self.database = Some(Database::new());
+						}
+						Command::batch([
+							self.update(DatabaseMessage::Save.into()),
+							self.update(
+								ErrorMsgModalMessage::Open {
+									error_msg: format!("Could not open previous projects in \"{}\" (doesn't exist / permission issue)", filepath.display()),
+								}
+								.into()
+							)
+						])
 					},
 					LoadDatabaseResult::FailedToParse(filepath) => {
-						eprintln!("Failed to load previous projects in {}", filepath.display());
-						Command::none()
+						self.update(ErrorMsgModalMessage::Open {
+							error_msg: format!("Failed to load previous projects in \"{}\" (parsing error)", filepath.display()),
+						}.into())
 					}
 				}
 			},
@@ -204,14 +223,19 @@ impl Application for ProjectTrackerApp {
 						self.preferences = Some(preferences);
 						self.update(PreferenceMessage::Save.into())
 					},
-					LoadPreferencesResult::FailedToReadFile(filepath) => {
-						println!("Could not find preferences in {}", filepath.display());
+					LoadPreferencesResult::FailedToOpenFile(filepath) => {
 						self.preferences = Some(Preferences::default());
-						self.update(PreferenceMessage::Save.into())
+						Command::batch([
+							self.update(PreferenceMessage::Save.into()),
+							self.update(ErrorMsgModalMessage::Open {
+								error_msg: format!("Could not open preferences in \"{}\" (doesn't exist / permission issue)", filepath.display())
+							}.into())
+						])
 					},
 					LoadPreferencesResult::FailedToParse(filepath) => {
-						println!("Failed to load preferences in {}", filepath.display());
-						Command::none()
+						self.update(ErrorMsgModalMessage::Open {
+							error_msg: format!("Failed to load preferences in \"{}\" (parsing error)", filepath.display())
+						}.into())
 					}
 				}
 			},
@@ -310,7 +334,8 @@ impl Application for ProjectTrackerApp {
 			)
 			.style(SplitStyles::custom(SplitStyle)),
 
-			self.confirm_modal.view()
+			// error msg modal is more important first
+			self.error_msg_modal.view().or(self.confirm_modal.view())
 		)
 		.style(ModalStyles::custom(ConfirmModalStyle))
 		.into()

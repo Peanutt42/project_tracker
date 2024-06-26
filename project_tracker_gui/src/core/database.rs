@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 use iced::Command;
 use serde::{Serialize, Deserialize};
+use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, ProjectId, Project, ProjectMessage, TaskId};
 
@@ -24,7 +25,7 @@ pub enum DatabaseMessage {
 	Export,
 	Exported,
 	Import,
-	ImportFailed,
+	ImportCanceled,
 
 	CreateProject {
 		project_id: ProjectId,
@@ -55,7 +56,7 @@ impl From<DatabaseMessage> for UiMessage {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LoadDatabaseResult {
 	Ok(Database),
-	FailedToReadFile(PathBuf),
+	FailedToOpenFile(PathBuf),
 	FailedToParse(PathBuf),
 }
 
@@ -84,7 +85,15 @@ impl Database {
 
 	pub fn update(&mut self, message: DatabaseMessage) -> Command<UiMessage> {
 		match message {
-			DatabaseMessage::Save => Command::perform(self.clone().save(), |begin_time| DatabaseMessage::Saved(begin_time).into()),
+			DatabaseMessage::Save => Command::perform(
+				self.clone().save(),
+				|result| {
+					match result {
+						Ok(begin_time) => DatabaseMessage::Saved(begin_time).into(),
+						Err(error_msg) => ErrorMsgModalMessage::Open { error_msg }.into(),
+					}
+				}
+			),
 			DatabaseMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
 			DatabaseMessage::Clear => { *self = Self::new(); self.change_was_made(); Command::none() },
 			DatabaseMessage::Export => Command::perform(self.clone().export_file_dialog(), |_| DatabaseMessage::Exported.into()),
@@ -96,11 +105,11 @@ impl Database {
 						UiMessage::LoadedDatabase(load_database_result)
 					}
 					else {
-						DatabaseMessage::ImportFailed.into()
+						DatabaseMessage::ImportCanceled.into()
 					}
 				}
 			),
-			DatabaseMessage::ImportFailed => Command::none(),
+			DatabaseMessage::ImportCanceled => Command::none(),
 
 			DatabaseMessage::CreateProject { project_id, name } => {
 				self.projects.insert(project_id, Project::new(name));
@@ -144,7 +153,7 @@ impl Database {
 				else {
 					Command::none()
 				}
-			}
+			},
 
 			DatabaseMessage::ProjectMessage { project_id, task_id, message } => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
@@ -180,7 +189,7 @@ impl Database {
 			file_content
 		}
 		else {
-			return LoadDatabaseResult::FailedToReadFile(filepath);
+			return LoadDatabaseResult::FailedToOpenFile(filepath);
 		};
 
 		match serde_json::from_str(&file_content) {
@@ -193,20 +202,23 @@ impl Database {
 		Self::load_from(Self::get_and_ensure_filepath().await).await
 	}
 
-	pub async fn save_to(self, filepath: PathBuf) {
+	pub async fn save_to(self, filepath: PathBuf) -> Result<(), String> {
 		if let Err(e) = tokio::fs::write(filepath.clone(), serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
-			eprintln!("Failed to save to {}: {e}", filepath.display());
+			Err(format!("Failed to save to {}: {e}", filepath.display()))
+		}
+		else {
+			Ok(())
 		}
 	}
 
 	// returns begin time of saving
-	async fn save(self) -> Instant {
+	async fn save(self) -> Result<Instant, String> {
 		let begin_time = Instant::now();
-		self.save_to(Self::get_and_ensure_filepath().await).await;
-		begin_time
+		self.save_to(Self::get_and_ensure_filepath().await).await?;
+		Ok(begin_time)
 	}
 
-	async fn export_file_dialog(self) {
+	async fn export_file_dialog(self) -> Result<(), String> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Export ProjectTracker Database")
 			.set_file_name(Self::FILE_NAME)
@@ -215,8 +227,9 @@ impl Database {
 			.await;
 
 		if let Some(result) = file_dialog_result {
-			self.save_to(result.path().to_path_buf()).await;
+			self.save_to(result.path().to_path_buf()).await?;
 		}
+		Ok(())
 	}
 
 	async fn import_file_dialog() -> Option<LoadDatabaseResult> {

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Command, Element, Length};
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, file_location, theme_mode_button}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
 fn default_sidebar_dividor_position() -> u16 {
 	300
@@ -56,7 +56,7 @@ impl From<PreferenceMessage> for UiMessage {
 #[derive(Clone, Debug)]
 pub enum LoadPreferencesResult {
 	Ok(Preferences),
-	FailedToReadFile(PathBuf),
+	FailedToOpenFile(PathBuf),
 	FailedToParse(PathBuf),
 }
 
@@ -73,10 +73,26 @@ impl Preferences {
 
 	pub fn update(&mut self, message: PreferenceMessage) -> Command<UiMessage> {
 		match message {
-			PreferenceMessage::Save => Command::perform(self.clone().save(), |begin_time| PreferenceMessage::Saved(begin_time).into()),
+			PreferenceMessage::Save => Command::perform(
+				self.clone().save(),
+				|result| {
+					match result {
+						Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
+						Err(error_msg) => ErrorMsgModalMessage::Open { error_msg }.into(),
+					}
+				}
+			),
 			PreferenceMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
 			PreferenceMessage::Reset => { *self = Preferences::default(); self.change_was_made(); Command::none() },
-			PreferenceMessage::Export => Command::perform(self.clone().export_file_dialog(), |_| PreferenceMessage::Exported.into()),
+			PreferenceMessage::Export => Command::perform(
+				self.clone().export_file_dialog(),
+				|result| {
+					match result {
+						Ok(_) => PreferenceMessage::Exported.into(),
+						Err(error_msg) => ErrorMsgModalMessage::Open { error_msg }.into(),
+					}
+				}
+			),
 			PreferenceMessage::Exported => Command::none(),
 			PreferenceMessage::Import => Command::perform(
 				Preferences::import_file_dialog(),
@@ -87,7 +103,8 @@ impl Preferences {
 					else {
 						PreferenceMessage::ImportFailed.into()
 					}
-			}),
+				}
+			),
 			PreferenceMessage::ImportFailed => Command::none(),
 
 			PreferenceMessage::SetThemeMode(theme_mode) => {
@@ -124,7 +141,7 @@ impl Preferences {
 			file_content
 		}
 		else {
-			return LoadPreferencesResult::FailedToReadFile(filepath);
+			return LoadPreferencesResult::FailedToOpenFile(filepath);
 		};
 
 		match serde_json::from_str(&file_content) {
@@ -137,20 +154,23 @@ impl Preferences {
 		Self::load_from(Self::get_and_ensure_filepath().await).await
 	}
 
-	async fn save_to(self, filepath: PathBuf) {
+	async fn save_to(self, filepath: PathBuf) -> Result<(), String> {
 		if let Err(e) = tokio::fs::write(filepath.clone(), serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
-			eprintln!("Failed to save to {}: {e}", filepath.display());
+			Err(format!("Failed to save to {}: {e}", filepath.display()))
+		}
+		else {
+			Ok(())
 		}
 	}
 
 	// returns begin time of saving
-	pub async fn save(self) -> Instant {
+	pub async fn save(self) -> Result<Instant, String> {
 		let begin_time = Instant::now();
-		self.save_to(Self::get_and_ensure_filepath().await).await;
-		begin_time
+		self.save_to(Self::get_and_ensure_filepath().await).await?;
+		Ok(begin_time)
 	}
 
-	pub async fn export_file_dialog(self) {
+	pub async fn export_file_dialog(self) -> Result<(), String> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Export ProjectTracker Preferences")
 			.set_file_name(Self::FILE_NAME)
@@ -159,8 +179,9 @@ impl Preferences {
 			.await;
 
 		if let Some(result) = file_dialog_result {
-			self.save_to(result.path().to_path_buf()).await;
+			self.save_to(result.path().to_path_buf()).await?;
 		}
+		Ok(())
 	}
 
 	pub async fn import_file_dialog() -> Option<LoadPreferencesResult> {
