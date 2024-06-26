@@ -10,56 +10,56 @@ impl StyleSheet for TextInputStyle {
 		let palette = style.extended_palette();
 
 		Appearance {
-            background: palette.background.base.color.into(),
-            border: Border {
-                radius: 2.0.into(),
-                width: 1.0,
-                color: palette.background.strong.color,
-            },
-            icon_color: palette.background.weak.text,
-        }
+			background: palette.background.base.color.into(),
+			border: Border {
+				radius: 2.0.into(),
+				width: 1.0,
+				color: palette.background.strong.color,
+			},
+			icon_color: palette.background.weak.text,
+		}
 	}
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		let palette = style.extended_palette();
 
-        Appearance {
-            background: palette.background.base.color.into(),
-            border: Border {
-                radius: 2.0.into(),
-                width: 1.0,
-                color: palette.background.base.text,
-            },
-            icon_color: palette.background.weak.text,
-        }
+		Appearance {
+			background: palette.background.base.color.into(),
+			border: Border {
+				radius: 2.0.into(),
+				width: 1.0,
+				color: palette.background.base.text,
+			},
+			icon_color: palette.background.weak.text,
+		}
 	}
 
 	fn focused(&self, style: &Self::Style) -> Appearance {
 		let palette = style.extended_palette();
 
-        Appearance {
-            background: palette.background.base.color.into(),
-            border: Border {
-                radius: 2.0.into(),
-                width: 1.0,
-                color: NICE_GREEN,
-            },
-            icon_color: palette.background.weak.text,
-        }
+		Appearance {
+			background: palette.background.base.color.into(),
+			border: Border {
+				radius: 2.0.into(),
+				width: 1.0,
+				color: NICE_GREEN,
+			},
+			icon_color: palette.background.weak.text,
+		}
 	}
 
 	fn disabled(&self, style: &Self::Style) -> Appearance {
 		let palette = style.extended_palette();
 
-        Appearance {
-            background: palette.background.weak.color.into(),
-            border: Border {
-                radius: 2.0.into(),
-                width: 1.0,
-                color: palette.background.strong.color,
-            },
-            icon_color: palette.background.strong.color,
-        }
+		Appearance {
+			background: palette.background.weak.color.into(),
+			border: Border {
+				radius: 2.0.into(),
+				width: 1.0,
+				color: palette.background.strong.color,
+			},
+			icon_color: palette.background.strong.color,
+		}
 	}
 
 	fn placeholder_color(&self, style: &Self::Style) -> Color {

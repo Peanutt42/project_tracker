@@ -152,8 +152,8 @@ impl Preferences {
 
 	pub async fn export_file_dialog(self) {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
-    		.set_title("Export ProjectTracker Preferences")
-    		.set_file_name(Self::FILE_NAME)
+			.set_title("Export ProjectTracker Preferences")
+			.set_file_name(Self::FILE_NAME)
 			.add_filter("Preference (.json)", &["json"])
 			.save_file()
 			.await;

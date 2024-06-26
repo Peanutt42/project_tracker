@@ -91,7 +91,7 @@ impl SidebarPage {
 			Column::from_vec(list)
 				.width(Length::Fill)
 				.spacing(SPACING_AMOUNT)
-    			.padding(Padding{ right: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO })
+				.padding(Padding{ right: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO })
 		)
 		.id(SCROLLABLE_ID.clone())
 		.width(Length::Fill)

@@ -18,7 +18,7 @@ impl StyleSheet for SplitStyle {
 	}
 
 	fn dragged(&self, style: &Self::Style) -> Appearance {
-        let palette = style.extended_palette();
+		let palette = style.extended_palette();
 		Appearance {
 			border_width: 0.0,
 			divider_border_width: 100.0,
@@ -29,7 +29,7 @@ impl StyleSheet for SplitStyle {
 	}
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
-        let palette = style.extended_palette();
+		let palette = style.extended_palette();
 		Appearance {
 			border_width: 0.0,
 			divider_border_width: 1.0,
