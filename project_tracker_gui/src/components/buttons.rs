@@ -256,7 +256,7 @@ pub fn hide_sidebar_button() -> Element<'static, UiMessage> {
 		button(
 			icon_to_text(Bootstrap::ChevronDoubleLeft)
 		)
-		.on_press(UiMessage::SetSidebarVisible(false))
+		.on_press(PreferenceMessage::SetSidebarVisible(false).into())
 		.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
 
 		text("Hide sidebar (Ctrl + H)").size(SMALL_TEXT_SIZE),
@@ -274,7 +274,7 @@ pub fn show_sidebar_button() -> Element<'static, UiMessage> {
 			button(
 				icon_to_text(Bootstrap::ChevronDoubleRight)
 			)
-			.on_press(UiMessage::SetSidebarVisible(true))
+			.on_press(PreferenceMessage::SetSidebarVisible(true).into())
 			.style(theme::Button::custom(RoundedSecondaryButtonStyle))
 		)
 		.padding(Padding{ top: PADDING_AMOUNT, ..Padding::ZERO }),

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Command, Element, Length};
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode, core::ProjectId};
 
 fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }
@@ -17,6 +17,9 @@ pub struct Preferences {
 	#[serde(default = "default_show_sidebar")]
 	pub show_sidebar: bool,
 
+	// this is only the saved version and can be invalid if database is not fully loaded
+	pub selected_project_id: Option<ProjectId>,
+
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
 
@@ -30,6 +33,7 @@ impl Default for Preferences {
 			theme_mode: ThemeMode::default(),
 			sidebar_dividor_position: default_sidebar_dividor_position(),
 			show_sidebar: default_show_sidebar(),
+			selected_project_id: None,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
@@ -48,6 +52,9 @@ pub enum PreferenceMessage {
 
 	SetThemeMode(ThemeMode),
 	SetSidebarDividorPosition(u16),
+	ToggleShowSidebar,
+	SetSidebarVisible(bool),
+	SetSelectedProjectId(Option<ProjectId>),
 }
 
 impl From<PreferenceMessage> for UiMessage {
@@ -120,6 +127,23 @@ impl Preferences {
 				self.change_was_made();
 				Command::none()
 			},
+
+			PreferenceMessage::ToggleShowSidebar => {
+				self.show_sidebar = !self.show_sidebar;
+				self.change_was_made();
+				Command::none()
+			},
+			PreferenceMessage::SetSidebarVisible(visible) => {
+				self.show_sidebar = visible;
+				self.change_was_made();
+				Command::none()
+			},
+
+			PreferenceMessage::SetSelectedProjectId(selected_project_id) => {
+				self.selected_project_id = selected_project_id;
+				self.change_was_made();
+				Command::none()
+			}
 		}
 	}
 

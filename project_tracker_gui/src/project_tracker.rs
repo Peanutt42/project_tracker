@@ -10,9 +10,9 @@ use crate::{
 };
 
 pub struct ProjectTrackerApp {
+	pub selected_project_id: Option<ProjectId>,
 	pub sidebar_page: SidebarPage,
 	pub content_page: ContentPage,
-	pub selected_project_id: Option<ProjectId>,
 	pub database: Option<Database>,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
@@ -43,8 +43,6 @@ pub enum UiMessage {
 	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
-	ToggleShowSidebar,
-	SetSidebarVisible(bool),
 }
 
 impl Application for ProjectTrackerApp {
@@ -56,9 +54,9 @@ impl Application for ProjectTrackerApp {
 	fn new(_flags: ()) -> (Self, Command<UiMessage>) {
 		(
 			Self {
+				selected_project_id: None,
 				sidebar_page: SidebarPage::new(),
 				content_page: ContentPage::Overview(OverviewPage::new()),
-				selected_project_id: None,
 				database: None,
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
@@ -68,8 +66,8 @@ impl Application for ProjectTrackerApp {
 			Command::batch([
 				font::load(include_bytes!("../../assets/FiraSans-Regular.ttf")).map(UiMessage::FontLoaded),
 				font::load(BOOTSTRAP_FONT_BYTES).map(UiMessage::FontLoaded),
-				Command::perform(Database::load(), UiMessage::LoadedDatabase),
 				Command::perform(Preferences::load(), UiMessage::LoadedPreferences),
+				Command::perform(Database::load(), UiMessage::LoadedDatabase),
 			])
 		)
 	}
@@ -104,7 +102,7 @@ impl Application for ProjectTrackerApp {
 						}
 					)
 				},
-				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::ToggleShowSidebar),
+				keyboard::Key::Character("h") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
 				_ => None,
@@ -197,7 +195,17 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::LoadedDatabase(load_database_result) => {
 				match load_database_result {
-					LoadDatabaseResult::Ok(database) => { self.database = Some(database); Command::none() },
+					LoadDatabaseResult::Ok(database) => {
+						self.database = Some(database);
+						if let Some(preferences) = &self.preferences {
+							if self.selected_project_id.is_none() {
+								if let Some(selected_project_id) = preferences.selected_project_id {
+									return self.update(UiMessage::SelectProject(selected_project_id));
+								}
+							}
+						}
+						Command::none()
+					},
 					LoadDatabaseResult::FailedToOpenFile(filepath) => {
 						if self.database.is_none() {
 							self.database = Some(Database::new());
@@ -237,9 +245,7 @@ impl Application for ProjectTrackerApp {
 							Some(selected_project_id) if selected_project_id == *project_id => {
 								self.update(UiMessage::OpenOverview)
 							},
-							Some(_) | None => {
-								Command::none()
-							},
+							_ => Command::none(),
 						}
 					},
 
@@ -269,13 +275,11 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::OpenOverview => {
 				self.content_page = ContentPage::Overview(OverviewPage::new());
-				self.selected_project_id = None;
-				Command::none()
+				self.update(PreferenceMessage::SetSelectedProjectId(None).into())
 			},
 			UiMessage::OpenSettings => {
 				self.content_page = ContentPage::Settings(SettingsPage::new());
-				self.selected_project_id = None;
-				Command::none()
+				self.update(PreferenceMessage::SetSelectedProjectId(None).into())
 			},
 			UiMessage::SelectProject(project_id) => {
 				self.selected_project_id = Some(project_id);
@@ -284,7 +288,7 @@ impl Application for ProjectTrackerApp {
 					Some(project_being_edited_id) => if project_being_edited_id == project_id { Some(project_being_edited_id) } else { None },
 					None => None,
 				};
-				Command::none()
+				self.update(PreferenceMessage::SetSelectedProjectId(Some(project_id)).into())
 			},
 			UiMessage::ProjectPageMessage(message) => {
 				if let ContentPage::Project(project_page) = &mut self.content_page {
@@ -295,18 +299,6 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
-			UiMessage::ToggleShowSidebar => {
-				if let Some(preferences) = &mut self.preferences {
-					preferences.show_sidebar = !preferences.show_sidebar;
-				}
-				Command::none()
-			},
-			UiMessage::SetSidebarVisible(visible) => {
-				if let Some(preferences) = &mut self.preferences {
-					preferences.show_sidebar = visible;
-				}
-				Command::none()
-			}
 		}
 	}
 
