@@ -1,11 +1,11 @@
 use std::{path::PathBuf, time::Duration};
-use iced::{clipboard, event::Status, widget::row, font, keyboard, time, window, Application, Command, Element, Event, Subscription, Theme};
+use iced::{clipboard, event::Status, font, keyboard, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, ModalStyles, Split, SplitStyles};
 use crate::{
-	components::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, show_sidebar_button},
+	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId},
 	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
-	styles::{ConfirmModalStyle, SplitStyle},
+	styles::{ConfirmModalStyle, SplitStyle, PADDING_AMOUNT},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
 
@@ -332,7 +332,7 @@ impl Application for ProjectTrackerApp {
 		}
 		else {
 			row![
-				show_sidebar_button(),
+				container(toggle_sidebar_button()).padding(Padding { left: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
 				self.content_page.view(self),
 			]
 			.into()

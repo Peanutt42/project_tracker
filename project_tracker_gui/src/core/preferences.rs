@@ -53,7 +53,6 @@ pub enum PreferenceMessage {
 	SetThemeMode(ThemeMode),
 	SetSidebarDividorPosition(u16),
 	ToggleShowSidebar,
-	SetSidebarVisible(bool),
 	SetSelectedProjectId(Option<ProjectId>),
 }
 
@@ -130,11 +129,6 @@ impl Preferences {
 
 			PreferenceMessage::ToggleShowSidebar => {
 				self.show_sidebar = !self.show_sidebar;
-				self.change_was_made();
-				Command::none()
-			},
-			PreferenceMessage::SetSidebarVisible(visible) => {
-				self.show_sidebar = visible;
 				self.change_was_made();
 				Command::none()
 			},

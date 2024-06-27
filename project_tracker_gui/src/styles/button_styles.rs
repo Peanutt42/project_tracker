@@ -165,30 +165,6 @@ impl StyleSheet for RoundedSecondaryButtonStyle {
 	}
 }
 
-
-pub struct TransparentButtonStyle;
-
-impl StyleSheet for TransparentButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(Color::TRANSPARENT.into()),
-			text_color: style.extended_palette().secondary.base.text,
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(style.extended_palette().background.strong.color.into()),
-			border: Border::with_radius(BORDER_RADIUS),
-			..self.active(style)
-		}
-	}
-}
-
-
 pub struct ProjectContextButtonStyle;
 
 impl StyleSheet for ProjectContextButtonStyle {

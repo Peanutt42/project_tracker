@@ -1,67 +1,50 @@
 use std::path::PathBuf;
-use iced::{alignment::Horizontal, theme, widget::{button, row, text, container, tooltip, tooltip::Position, Button}, Alignment, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{button, row, text, tooltip, tooltip::Position, Button}, Alignment, Element, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	components::ConfirmModalMessage, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, TransparentButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::ConfirmModalMessage, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
-pub fn create_new_project_button(enabled: bool) -> Element<'static, UiMessage> {
-	let button =
-		button(
+pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
+	button(
+		row![
 			icon_to_text(Bootstrap::PlusSquareFill)
-				.size(LARGE_TEXT_SIZE * 1.7)
-				.horizontal_alignment(iced::alignment::Horizontal::Center)
-				.style(if enabled { GREEN_TEXT_STYLE } else { DISABLED_GREEN_TEXT_STYLE })
-		)
-		.on_press_maybe(
-			if enabled {
-				Some(SidebarPageMessage::OpenCreateNewProject.into())
-			}
-			else {
-				None
-			}
-		)
-		.width(LARGE_TEXT_SIZE * 2.715)
-		.height(LARGE_TEXT_SIZE * 2.715)
-		.style(theme::Button::custom(TransparentButtonStyle));
-
-	tooltip(
-		button,
-		text("Create new project (Ctrl + Shift + N)").size(SMALL_TEXT_SIZE),
-		Position::Top
+				.style(if enabled { GREEN_TEXT_STYLE } else { DISABLED_GREEN_TEXT_STYLE }),
+			text("New project")
+		]
+		.align_items(Alignment::Center)
+		.spacing(SMALL_SPACING_AMOUNT)
 	)
-	.gap(10)
-	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
-	.into()
+	.on_press_maybe(
+		if enabled {
+			Some(SidebarPageMessage::OpenCreateNewProject.into())
+		}
+		else {
+			None
+		}
+	)
+	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
 }
 
-pub fn create_new_task_button(enabled: bool) -> Element<'static, UiMessage> {
-	let button = button(
+pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
+	button(
+		row![
 			icon_to_text(Bootstrap::PlusCircleFill)
-				.size(LARGE_TEXT_SIZE * 1.7)
-				.horizontal_alignment(iced::alignment::Horizontal::Center)
-				.style(if enabled { GREEN_TEXT_STYLE } else { DISABLED_GREEN_TEXT_STYLE })
-		)
-		.width(LARGE_TEXT_SIZE * 2.715)
-		.height(LARGE_TEXT_SIZE * 2.715)
-		.on_press_maybe(
-			if enabled {
-				Some(ProjectPageMessage::OpenCreateNewTask.into())
-			}
-			else {
-				None
-			}
-		)
-		.style(theme::Button::custom(TransparentButtonStyle));
-
-	tooltip(
-		button,
-		text("Create new task (Ctrl + N)").size(SMALL_TEXT_SIZE),
-		Position::Top
+				.style(if enabled { GREEN_TEXT_STYLE } else { DISABLED_GREEN_TEXT_STYLE }),
+			text("New task")
+		]
+		.align_items(Alignment::Center)
+		.spacing(SMALL_SPACING_AMOUNT)
 	)
-	.gap(10)
-	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
-	.into()
+	.on_press_maybe(
+		if enabled {
+			Some(ProjectPageMessage::OpenCreateNewTask.into())
+		}
+		else {
+			None
+		}
+	)
+	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
 }
 
 pub fn cancel_create_project_button() -> Button<'static, UiMessage> {
@@ -251,35 +234,15 @@ pub fn copy_to_clipboard_button(copied_text: String) -> Element<'static, UiMessa
 	.into()
 }
 
-pub fn hide_sidebar_button() -> Element<'static, UiMessage> {
+pub fn toggle_sidebar_button() -> Element<'static, UiMessage> {
 	tooltip(
 		button(
-			icon_to_text(Bootstrap::ChevronDoubleLeft)
+			icon_to_text(Bootstrap::LayoutSidebar)
 		)
-		.on_press(PreferenceMessage::SetSidebarVisible(false).into())
+		.on_press(PreferenceMessage::ToggleShowSidebar.into())
 		.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
 
-		text("Hide sidebar (Ctrl + H)").size(SMALL_TEXT_SIZE),
-
-		Position::Bottom
-	)
-	.gap(10)
-	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
-	.into()
-}
-
-pub fn show_sidebar_button() -> Element<'static, UiMessage> {
-	tooltip(
-		container(
-			button(
-				icon_to_text(Bootstrap::ChevronDoubleRight)
-			)
-			.on_press(PreferenceMessage::SetSidebarVisible(true).into())
-			.style(theme::Button::custom(RoundedSecondaryButtonStyle))
-		)
-		.padding(Padding{ top: PADDING_AMOUNT, ..Padding::ZERO }),
-
-		text("Show sidebar (Ctrl + H)").size(SMALL_TEXT_SIZE),
+		text("Toggle sidebar (Ctrl + H)").size(SMALL_TEXT_SIZE),
 
 		Position::Bottom
 	)

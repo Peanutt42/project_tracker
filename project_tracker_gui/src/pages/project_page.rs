@@ -1,6 +1,5 @@
-use iced::{alignment::Alignment, widget::{column, row, text, text_input}, Command, Element, Length, Padding};
-use iced_aw::{floating_element, floating_element::Anchor};
-use crate::{components::{completion_bar, create_new_task_button, partial_horizontal_seperator, task_list, EDIT_TASK_NAME_INPUT_ID, CREATE_NEW_TASK_NAME_INPUT_ID}, core::{Project, ProjectId, TaskId}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
+use iced::{alignment::{Alignment, Horizontal}, widget::{container, column, row, text, text_input}, Command, Element, Length, Padding};
+use crate::{components::{completion_bar, create_new_task_button, partial_horizontal_seperator, task_list, EDIT_TASK_NAME_INPUT_ID, CREATE_NEW_TASK_NAME_INPUT_ID}, core::{Project, ProjectId, TaskId}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
 #[derive(Clone, Debug)]
 pub enum ProjectPageMessage {
@@ -84,8 +83,16 @@ impl ProjectPage {
 
 				column![
 					column![
-						text(&project.name).size(TITLE_TEXT_SIZE),
+						row![
+							text(&project.name).size(TITLE_TEXT_SIZE),
+							container(create_new_task_button(self.create_new_task_name.is_none()))
+								.width(Length::Fill)
+								.align_x(Horizontal::Right),
+						]
+						.align_items(Alignment::Center),
+
 						completion_bar(completion_percentage),
+
 						row![
 							text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
 								.width(Length::Fill),
@@ -98,12 +105,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					floating_element(
-						task_list(&project.tasks, self.project_id, self.hovered_task, self.task_being_edited_id, self.show_done_tasks, &self.create_new_task_name),
-						create_new_task_button(self.create_new_task_name.is_none())
-					)
-					.anchor(Anchor::SouthEast)
-					.offset(LARGE_PADDING_AMOUNT),
+					task_list(&project.tasks, self.project_id, self.hovered_task, self.task_being_edited_id, self.show_done_tasks, &self.create_new_task_name),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)
