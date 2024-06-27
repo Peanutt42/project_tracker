@@ -4,9 +4,8 @@ use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, t
 use serde::{Serialize, Deserialize};
 use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
-fn default_sidebar_dividor_position() -> u16 {
-	300
-}
+fn default_sidebar_dividor_position() -> u16 { 300 }
+fn default_show_sidebar() -> bool { true }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
@@ -14,6 +13,9 @@ pub struct Preferences {
 
 	#[serde(default = "default_sidebar_dividor_position")]
 	pub sidebar_dividor_position: u16,
+
+	#[serde(default = "default_show_sidebar")]
+	pub show_sidebar: bool,
 
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
@@ -27,6 +29,7 @@ impl Default for Preferences {
 		Self {
 			theme_mode: ThemeMode::default(),
 			sidebar_dividor_position: default_sidebar_dividor_position(),
+			show_sidebar: default_show_sidebar(),
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}

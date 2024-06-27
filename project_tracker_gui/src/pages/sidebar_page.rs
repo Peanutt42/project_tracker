@@ -1,7 +1,7 @@
-use iced::{alignment::Horizontal, theme, widget::{column, container, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Command, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Alignment, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::DatabaseMessage, project_tracker::UiMessage};
-use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button};
+use crate::{core::DatabaseMessage, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
+use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button, hide_sidebar_button};
 use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::core::{OrderedHashMap, ProjectId, generate_project_id, Project};
@@ -152,7 +152,13 @@ impl SidebarPage {
 		column![
 			container(
 				column![
-					overview_button(app.content_page.is_overview_page()),
+					row![
+						overview_button(app.content_page.is_overview_page()),
+						hide_sidebar_button(),
+					]
+					.align_items(Alignment::Center)
+					.spacing(SMALL_SPACING_AMOUNT),
+
 					partial_horizontal_seperator(),
 				]
 				.spacing(SPACING_AMOUNT)

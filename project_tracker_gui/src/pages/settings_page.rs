@@ -1,5 +1,5 @@
-use iced::{theme, widget::{column, row, scrollable, text}, Element, Alignment};
-use crate::components::{dangerous_button, file_location, horizontal_seperator, loading_screen};
+use iced::{theme, widget::{container, column, row, scrollable, text}, Element, Alignment};
+use crate::{components::{dangerous_button, file_location, horizontal_seperator, loading_screen}, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage};
 use crate::styles::{scrollable_vertical_direction, ScrollableStyle, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -55,9 +55,35 @@ impl SettingsPage {
 
 					column![
 						text("Shortcuts").size(LARGE_TEXT_SIZE),
-						text("New Project: Ctrl + Shift + N"),
-						text("New Task: Ctrl + N"),
+
+						row![
+							text("New Project:"),
+							container(
+								container(text("Ctrl + Shift + N")).padding(SMALL_HORIZONTAL_PADDING)
+							)
+							.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+						]
+						.spacing(SMALL_SPACING_AMOUNT),
+
+						row![
+							text("New Task:"),
+							container(
+								container(text("Ctrl + N")).padding(SMALL_HORIZONTAL_PADDING)
+							)
+							.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+						]
+						.spacing(SMALL_SPACING_AMOUNT),
+
+						row![
+							text("Toggle Sidebar:"),
+							container(
+								container(text("Ctrl + H")).padding(SMALL_HORIZONTAL_PADDING)
+							)
+							.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+						]
+						.spacing(SMALL_SPACING_AMOUNT),
 					]
+					.spacing(SMALL_SPACING_AMOUNT)
 				]
 				.padding(LARGE_PADDING_AMOUNT)
 				.spacing(LARGE_SPACING_AMOUNT)

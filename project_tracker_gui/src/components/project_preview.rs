@@ -101,6 +101,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, edit
 					.align_items(Alignment::Center)
 			]
 			.align_items(Alignment::Center)
+			.spacing(SMALL_SPACING_AMOUNT)
 			.width(Length::Fill)
 			.into()
 		}
@@ -111,6 +112,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, edit
 					edit_project_button(project_id, hovered),
 				]
 				.align_items(Alignment::Center)
+				.spacing(SMALL_SPACING_AMOUNT)
 				.width(Length::Fill),
 
 				Some(project_id),
@@ -123,6 +125,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, edit
 			cancel_create_project_button()
 		]
 		.align_items(Alignment::Center)
+		.spacing(SMALL_SPACING_AMOUNT)
 		.width(Length::Fill)
    		.into()
 	}

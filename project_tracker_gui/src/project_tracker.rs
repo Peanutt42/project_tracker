@@ -1,8 +1,8 @@
 use std::{path::PathBuf, time::Duration};
-use iced::{event::Status, font, keyboard, window, time, clipboard, Application, Command, Element, Event, Subscription, Theme};
+use iced::{clipboard, event::Status, widget::row, font, keyboard, time, window, Application, Command, Element, Event, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, ModalStyles, Split, SplitStyles};
 use crate::{
-	components::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage},
+	components::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, show_sidebar_button},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId},
 	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
 	styles::{ConfirmModalStyle, SplitStyle},
@@ -43,6 +43,8 @@ pub enum UiMessage {
 	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
+	ToggleShowSidebar,
+	SetSidebarVisible(bool),
 }
 
 impl Application for ProjectTrackerApp {
@@ -102,12 +104,9 @@ impl Application for ProjectTrackerApp {
 						}
 					)
 				},
-				keyboard::Key::Named(keyboard::key::Named::Escape) => {
-					Some(UiMessage::EscapePressed)
-				},
-				keyboard::Key::Named(keyboard::key::Named::Enter) => {
-					Some(UiMessage::EnterPressed)
-				},
+				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::ToggleShowSidebar),
+				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
+				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
 				_ => None,
 			}),
 
@@ -296,27 +295,59 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
+			UiMessage::ToggleShowSidebar => {
+				if let Some(preferences) = &mut self.preferences {
+					preferences.show_sidebar = !preferences.show_sidebar;
+				}
+				Command::none()
+			},
+			UiMessage::SetSidebarVisible(visible) => {
+				if let Some(preferences) = &mut self.preferences {
+					preferences.show_sidebar = visible;
+				}
+				Command::none()
+			}
 		}
 	}
 
 	fn view(&self) -> Element<UiMessage> {
-		modal(
+		let show_sidebar =
+			if let Some(preferences) = &self.preferences {
+				preferences.show_sidebar
+			}
+			else {
+				true
+			};
+
+		let underlay: Element<UiMessage> = if show_sidebar {
+			let sidebar_dividor_position =
+				if let Some(preferences) = &self.preferences {
+					preferences.sidebar_dividor_position
+				}
+				else {
+					300
+				};
+
 			Split::new(
 				self.sidebar_page.view(self),
 				self.content_page.view(self),
-				Some(
-					if let Some(preferences) = &self.preferences {
-						preferences.sidebar_dividor_position
-					}
-					else {
-						300
-					}
-				),
+				Some(sidebar_dividor_position),
 				Axis::Vertical,
 				|pos| PreferenceMessage::SetSidebarDividorPosition(pos).into()
 			)
-			.style(SplitStyles::custom(SplitStyle)),
+			.style(SplitStyles::custom(SplitStyle))
+			.into()
+		}
+		else {
+			row![
+				show_sidebar_button(),
+				self.content_page.view(self),
+			]
+			.into()
+		};
 
+		modal(
+			underlay,
 			// error msg modal is more important first
 			self.error_msg_modal.view().or(self.confirm_modal.view())
 		)
