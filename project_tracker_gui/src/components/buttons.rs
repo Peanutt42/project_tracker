@@ -59,14 +59,6 @@ pub fn cancel_create_task_button() -> Button<'static, UiMessage> {
 		.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
-pub fn edit_project_button(project_id: ProjectId, visible: bool) -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::Pencil)
-	)
-	.on_press(SidebarPageMessage::EditProject(project_id).into())
-	.style(if visible { theme::Button::custom(ProjectContextButtonStyle) } else { theme::Button::custom(InvisibleButtonStyle) })
-}
-
 pub fn edit_task_button(task_id: TaskId, visible: bool) -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::Pencil)
@@ -100,11 +92,16 @@ pub fn delete_all_done_tasks_button(project_id: ProjectId) -> Button<'static, Ui
 	.style(theme::Button::custom(DeleteDoneTasksButtonStyle))
 }
 
-pub fn move_project_up_button(project_id: ProjectId) -> Button<'static, UiMessage> {
+pub fn move_project_up_button(project_id: ProjectId, enabled: bool) -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::ArrowUp),
 	)
-	.on_press(DatabaseMessage::MoveProjectUp(project_id).into())
+	.on_press_maybe(if enabled {
+		Some(DatabaseMessage::MoveProjectUp(project_id).into())
+	}
+	else {
+		None
+	})
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
@@ -116,11 +113,16 @@ pub fn move_task_up_button(project_id: ProjectId, task_id: TaskId) -> Button<'st
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
-pub fn move_project_down_button(project_id: ProjectId) -> Button<'static, UiMessage> {
+pub fn move_project_down_button(project_id: ProjectId, enabled: bool) -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::ArrowDown),
 	)
-	.on_press(DatabaseMessage::MoveProjectDown(project_id).into())
+	.on_press_maybe(if enabled {
+		Some(DatabaseMessage::MoveProjectDown(project_id).into())
+	}
+	else {
+		None
+	})
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 

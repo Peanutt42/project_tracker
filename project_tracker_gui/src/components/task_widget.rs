@@ -15,7 +15,7 @@ pub fn task_widget(task: &Task, task_id: TaskId, project_id: ProjectId, editing:
 			.size(MIDDLE_TEXT_SIZE)
 			.width(Length::Fill)
 			.on_input(move |new_task_name| DatabaseMessage::ChangeTaskName{ project_id, task_id, new_task_name }.into())
-			.on_submit(ProjectPageMessage::StopEditing.into())
+			.on_submit(ProjectPageMessage::StopEditingTask.into())
 			.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
 			.into()
 	}

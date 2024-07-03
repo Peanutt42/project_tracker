@@ -1,5 +1,13 @@
-use iced::{alignment::{Alignment, Horizontal}, widget::{container, column, row, text, text_input}, Command, Element, Length, Padding};
-use crate::{components::{completion_bar, create_new_task_button, partial_horizontal_seperator, task_list, EDIT_TASK_NAME_INPUT_ID, CREATE_NEW_TASK_NAME_INPUT_ID}, core::{Project, ProjectId, TaskId}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, text, text_input}, Command, Element, Length, Padding};
+use once_cell::sync::Lazy;
+use crate::{
+	components::{completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, partial_horizontal_seperator, task_list, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID},
+	core::{DatabaseMessage, Project, ProjectId, TaskId},
+	project_tracker::{ProjectTrackerApp, UiMessage},
+	styles::{ProjectNameButtonStyle, TextInputStyle, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}
+};
+
+static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[derive(Clone, Debug)]
 pub enum ProjectPageMessage {
@@ -9,8 +17,11 @@ pub enum ProjectPageMessage {
 
 	ShowDoneTasks(bool),
 
+	EditProjectName,
+	StopEditingProjectName,
+
 	EditTask(TaskId),
-	StopEditing,
+	StopEditingTask,
 
 	HoveringTask(TaskId),
 	StoppedHoveringTask,
@@ -25,6 +36,7 @@ impl From<ProjectPageMessage> for UiMessage {
 #[derive(Clone, Debug)]
 pub struct ProjectPage {
 	pub project_id: ProjectId,
+	edit_project_name: bool,
 	pub create_new_task_name: Option<String>,
 	task_being_edited_id: Option<TaskId>,
 	hovered_task: Option<TaskId>,
@@ -35,6 +47,7 @@ impl ProjectPage {
 	pub fn new(project_id: ProjectId) -> Self {
 		Self {
 			project_id,
+			edit_project_name: false,
 			create_new_task_name: None,
 			task_being_edited_id: None,
 			hovered_task: None,
@@ -50,7 +63,7 @@ impl ProjectPage {
 				self.create_new_task_name = Some(String::new());
 				Command::batch([
 					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
-					self.update(ProjectPageMessage::StopEditing),
+					self.update(ProjectPageMessage::StopEditingTask),
 				])
 			},
 			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task_name = None; Command::none() },
@@ -61,6 +74,10 @@ impl ProjectPage {
 				Command::none()
 			},
 			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; Command::none() },
+
+			ProjectPageMessage::EditProjectName => { self.edit_project_name = true; text_input::focus(PROJECT_NAME_TEXT_INPUT_ID.clone()) },
+			ProjectPageMessage::StopEditingProjectName => { self.edit_project_name = false; Command::none() },
+
 			ProjectPageMessage::EditTask(task_id) => {
 				self.task_being_edited_id = Some(task_id);
 				Command::batch([
@@ -68,7 +85,7 @@ impl ProjectPage {
 					self.update(ProjectPageMessage::CloseCreateNewTask),
 				])
 			},
-			ProjectPageMessage::StopEditing => { self.task_being_edited_id = None; Command::none() },
+			ProjectPageMessage::StopEditingTask => { self.task_being_edited_id = None; Command::none() },
 			ProjectPageMessage::HoveringTask(task_id) => { self.hovered_task = Some(task_id); Command::none() },
 			ProjectPageMessage::StoppedHoveringTask => { self.hovered_task = None; Command::none() },
 		}
@@ -81,9 +98,43 @@ impl ProjectPage {
 				let tasks_len = project.tasks.len();
 				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);
 
+				let project_name : Element<UiMessage> = if self.edit_project_name {
+					text_input("New project name", &project.name)
+						.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
+						.size(TITLE_TEXT_SIZE)
+						.on_input(|new_name| DatabaseMessage::ChangeProjectName{ project_id: self.project_id, new_name }.into())
+						.on_submit(ProjectPageMessage::StopEditingProjectName.into())
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
+						.into()
+				}
+				else {
+					button(
+						text(&project.name).size(TITLE_TEXT_SIZE)
+					)
+					.on_press(ProjectPageMessage::EditProjectName.into())
+					.style(theme::Button::custom(ProjectNameButtonStyle))
+					.into()
+				};
+
+				let order = database.projects.get_order(&self.project_id);
+				let can_move_up = if let Some(order) = order { order != 0 } else { false };
+				let can_move_down = if let Some(order) = order { order != database.projects.len() - 1 } else { false };
+
 				column![
 					column![
-						text(&project.name).size(TITLE_TEXT_SIZE),
+						row![
+							project_name,
+							container(
+								row![
+									move_project_up_button(self.project_id, can_move_up),
+									move_project_down_button(self.project_id, can_move_down),
+									delete_project_button(self.project_id),
+								]
+								.spacing(SMALL_SPACING_AMOUNT)
+							)
+							.align_x(Horizontal::Right)
+							.width(Length::Fill)
+						],
 
 						completion_bar(completion_percentage),
 

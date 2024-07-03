@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{button, row, text}, Element, Length};
 use iced_aw::{card, CardStyles};
-use crate::{project_tracker::UiMessage, styles::{ConfirmModalCardStyle, DangerousButtonStyle, SPACING_AMOUNT}, components::copy_to_clipboard_button};
+use crate::{components::copy_to_clipboard_button, project_tracker::UiMessage, styles::{ConfirmModalCardStyle, DangerousButtonStyle, RoundedSecondaryButtonStyle, SPACING_AMOUNT}};
 
 #[derive(Clone, Debug)]
 pub enum ConfirmModalMessage {
@@ -59,6 +59,7 @@ impl ConfirmModal {
 									.horizontal_alignment(Horizontal::Center)
 							)
 							.width(Length::Fill)
+							.style(theme::Button::custom(DangerousButtonStyle))
 							.on_press(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone()))),
 
 							button(
@@ -66,7 +67,7 @@ impl ConfirmModal {
 									.horizontal_alignment(Horizontal::Center)
 							)
 							.width(Length::Fill)
-							.style(theme::Button::Secondary)
+							.style(theme::Button::custom(RoundedSecondaryButtonStyle))
 							.on_press(ConfirmModalMessage::Close.into()),
 						]
 						.spacing(SPACING_AMOUNT)

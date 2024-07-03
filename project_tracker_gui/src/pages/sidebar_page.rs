@@ -17,9 +17,6 @@ pub enum SidebarPageMessage {
 
 	EditProject(ProjectId),
 	StopEditingProject,
-
-	HoveringProject(ProjectId),
-	StoppedHoveringProject,
 }
 
 impl From<SidebarPageMessage> for UiMessage {
@@ -32,7 +29,6 @@ impl From<SidebarPageMessage> for UiMessage {
 pub struct SidebarPage {
 	create_new_project_name: Option<String>,
 	pub project_being_edited: Option<ProjectId>,
-	hovered_project_id: Option<ProjectId>,
 }
 
 impl SidebarPage {
@@ -40,28 +36,17 @@ impl SidebarPage {
 		Self {
 			create_new_project_name: None,
 			project_being_edited: None,
-			hovered_project_id: None,
 		}
 	}
 
-	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, hovered_project_id: Option<ProjectId>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
-		let mut list: Vec<Element<UiMessage>> = projects.iter().enumerate()
-			.map(|(i, (project_id, project))| {
+	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
+		let mut list: Vec<Element<UiMessage>> = projects.iter()
+			.map(|(project_id, project)| {
 				let selected = match app.selected_project_id {
 					Some(selected_project_id) => project_id == selected_project_id,
 					None => false,
 				};
-				let hovered = match hovered_project_id {
-					Some(hovered_project_id) => project_id == hovered_project_id,
-					None => false,
-				};
-				let can_move_up = i != 0;
-				let can_move_down = i != projects.len() - 1;
-				let editing = match self.project_being_edited {
-					Some(project_being_edited_id) => project_being_edited_id == project_id,
-					None => false,
-				};
-				project_preview(project, project_id, hovered, editing, can_move_up, can_move_down, selected)
+				project_preview(project, project_id, selected)
 			})
 			.collect();
 
@@ -81,7 +66,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			list.push(custom_project_preview(None, false, false, false, false, 0.0, 0, 0, project_name_text_input_element, true));
+			list.push(custom_project_preview(None, 0.0, 0, 0, project_name_text_input_element, true));
 		}
 
 		// some space at the bottom so that the + button doesn't block any view to the last project
@@ -125,15 +110,6 @@ impl SidebarPage {
 				self.project_being_edited = None;
 				Command::none()
 			},
-
-			SidebarPageMessage::HoveringProject(project_id) => {
-				self.hovered_project_id = Some(project_id);
-				Command::none()
-			},
-			SidebarPageMessage::StoppedHoveringProject => {
-				self.hovered_project_id = None;
-				Command::none()
-			},
 		}
 	}
 
@@ -141,7 +117,7 @@ impl SidebarPage {
 		let scrollbar_padding = Padding{ right: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO };
 
 		let list: Element<UiMessage> = if let Some(database) = &app.database {
-				self.project_preview_list(&database.projects, self.hovered_project_id, app)
+				self.project_preview_list(&database.projects, app)
 			}
 			else {
 				container(loading_screen())
