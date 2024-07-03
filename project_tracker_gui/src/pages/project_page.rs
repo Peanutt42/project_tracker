@@ -83,19 +83,17 @@ impl ProjectPage {
 
 				column![
 					column![
-						row![
-							text(&project.name).size(TITLE_TEXT_SIZE),
-							container(create_new_task_button(self.create_new_task_name.is_none()))
-								.width(Length::Fill)
-								.align_x(Horizontal::Right),
-						]
-						.align_items(Alignment::Center),
+						text(&project.name).size(TITLE_TEXT_SIZE),
 
 						completion_bar(completion_percentage),
 
 						row![
 							text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
 								.width(Length::Fill),
+
+							container(create_new_task_button(self.create_new_task_name.is_none()))
+								.width(Length::Fill)
+								.align_x(Horizontal::Right),
 						]
 						.width(Length::Fill)
 						.align_items(Alignment::Center),

@@ -38,7 +38,7 @@ pub enum UiMessage {
 	LoadedPreferences(LoadPreferencesResult),
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
-	SelectProject(ProjectId),
+	SelectProject(Option<ProjectId>),
 	OpenOverview,
 	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
@@ -200,7 +200,7 @@ impl Application for ProjectTrackerApp {
 						if let Some(preferences) = &self.preferences {
 							if self.selected_project_id.is_none() {
 								if let Some(selected_project_id) = preferences.selected_project_id {
-									return self.update(UiMessage::SelectProject(selected_project_id));
+									return self.update(UiMessage::SelectProject(Some(selected_project_id)));
 								}
 							}
 						}
@@ -237,7 +237,7 @@ impl Application for ProjectTrackerApp {
 			UiMessage::DatabaseMessage(database_message) => {
 				let command = match &database_message {
 					DatabaseMessage::CreateProject { project_id, .. } => Command::batch([
-						self.update(UiMessage::SelectProject(*project_id)),
+						self.update(UiMessage::SelectProject(Some(*project_id))),
 						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
 					]),
 					DatabaseMessage::DeleteProject(project_id) => {
@@ -275,20 +275,22 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::OpenOverview => {
 				self.content_page = ContentPage::Overview(OverviewPage::new());
-				self.update(PreferenceMessage::SetSelectedProjectId(None).into())
+				self.update(UiMessage::SelectProject(None))
 			},
 			UiMessage::OpenSettings => {
 				self.content_page = ContentPage::Settings(SettingsPage::new());
-				self.update(PreferenceMessage::SetSelectedProjectId(None).into())
+				self.update(UiMessage::SelectProject(None))
 			},
 			UiMessage::SelectProject(project_id) => {
-				self.selected_project_id = Some(project_id);
-				self.content_page = ContentPage::Project(ProjectPage::new(project_id));
-				self.sidebar_page.project_being_edited = match self.sidebar_page.project_being_edited {
-					Some(project_being_edited_id) => if project_being_edited_id == project_id { Some(project_being_edited_id) } else { None },
-					None => None,
-				};
-				self.update(PreferenceMessage::SetSelectedProjectId(Some(project_id)).into())
+				self.selected_project_id = project_id;
+				if let Some(project_id) = project_id {
+					self.content_page = ContentPage::Project(ProjectPage::new(project_id));
+					self.sidebar_page.project_being_edited = match self.sidebar_page.project_being_edited {
+						Some(project_being_edited_id) => if project_being_edited_id == project_id { Some(project_being_edited_id) } else { None },
+						None => None,
+					};
+				}
+				self.update(PreferenceMessage::SetSelectedProjectId(project_id).into())
 			},
 			UiMessage::ProjectPageMessage(message) => {
 				if let ContentPage::Project(project_page) = &mut self.content_page {

@@ -74,7 +74,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, hovered: bool, edit
 		container(
 				button(inner)
 					.width(Length::Fill)
-					.on_press_maybe(project_id.map(UiMessage::SelectProject))
+					.on_press(UiMessage::SelectProject(project_id))
 					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
 		)
 		.width(Length::Fill);

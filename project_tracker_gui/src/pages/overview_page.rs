@@ -51,7 +51,7 @@ impl OverviewPage {
 					])
 					.width(Length::Fill)
 					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected: false }))
-					.on_press(UiMessage::SelectProject(project_id))
+					.on_press(UiMessage::SelectProject(Some(project_id)))
 					.into()
 				})
 				.collect()
