@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{button, row, text, tooltip, tooltip::Position, Button}, Alignment, Element, Length};
 use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
 use crate::{
-	components::ConfirmModalMessage, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::ConfirmModalMessage, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -59,14 +59,6 @@ pub fn cancel_create_task_button() -> Button<'static, UiMessage> {
 		.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
-pub fn edit_task_button(task_id: TaskId, visible: bool) -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::Pencil)
-	)
-	.on_press(ProjectPageMessage::EditTask(task_id).into())
-	.style(if visible { theme::Button::custom(ProjectContextButtonStyle) } else { theme::Button::custom(InvisibleButtonStyle) })
-}
-
 pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::Trash)
@@ -105,11 +97,16 @@ pub fn move_project_up_button(project_id: ProjectId, enabled: bool) -> Button<'s
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
-pub fn move_task_up_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, UiMessage> {
+pub fn move_task_up_button(project_id: ProjectId, task_id: TaskId, enabled: bool) -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::ArrowUp),
 	)
-	.on_press(DatabaseMessage::MoveTaskUp { project_id, task_id }.into())
+	.on_press_maybe(if enabled {
+		Some(DatabaseMessage::MoveTaskUp { project_id, task_id }.into())
+	}
+	else {
+		None
+	})
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
@@ -126,11 +123,16 @@ pub fn move_project_down_button(project_id: ProjectId, enabled: bool) -> Button<
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
-pub fn move_task_down_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, UiMessage> {
+pub fn move_task_down_button(project_id: ProjectId, task_id: TaskId, enabled: bool) -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::ArrowDown),
 	)
-	.on_press(DatabaseMessage::MoveTaskDown { project_id, task_id }.into())
+	.on_press_maybe(if enabled {
+		Some(DatabaseMessage::MoveTaskDown { project_id, task_id }.into())
+	}
+	else {
+		None
+	})
 	.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 

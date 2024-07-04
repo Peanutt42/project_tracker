@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{button, row, text}, Element, Length};
 use iced_aw::{card, CardStyles};
-use crate::{components::copy_to_clipboard_button, project_tracker::UiMessage, styles::{ConfirmModalCardStyle, DangerousButtonStyle, RoundedSecondaryButtonStyle, SPACING_AMOUNT}};
+use crate::{components::copy_to_clipboard_button, project_tracker::UiMessage, styles::{ModalCardStyle, DangerousButtonStyle, RoundedSecondaryButtonStyle, SPACING_AMOUNT}};
 
 #[derive(Clone, Debug)]
 pub enum ConfirmModalMessage {
@@ -73,7 +73,7 @@ impl ConfirmModal {
 						.spacing(SPACING_AMOUNT)
 					)
 					.max_width(300.0)
-					.style(CardStyles::custom(ConfirmModalCardStyle))
+					.style(CardStyles::custom(ModalCardStyle))
 					.into()
 				)
 			},
@@ -139,7 +139,7 @@ impl ErrorMsgModal {
 						]
 					)
 					.max_width(300.0)
-					.style(CardStyles::custom(ConfirmModalCardStyle))
+					.style(CardStyles::custom(ModalCardStyle))
 					.into()
 				)
 			},

@@ -2,9 +2,9 @@ use iced::{Color, Theme};
 use iced_aw::{card, modal};
 use iced_aw::style;
 
-pub struct ConfirmModalStyle;
+pub struct ModalStyle;
 
-impl modal::StyleSheet for ConfirmModalStyle {
+impl modal::StyleSheet for ModalStyle {
 	type Style = Theme;
 
 	fn active(&self, _style: &Self::Style) -> style::modal::Appearance {
@@ -14,9 +14,9 @@ impl modal::StyleSheet for ConfirmModalStyle {
 	}
 }
 
-pub struct ConfirmModalCardStyle;
+pub struct ModalCardStyle;
 
-impl card::StyleSheet for ConfirmModalCardStyle {
+impl card::StyleSheet for ModalCardStyle {
 	type Style = Theme;
 
 	fn active(&self, style: &Self::Style) -> style::card::Appearance {
@@ -25,6 +25,7 @@ impl card::StyleSheet for ConfirmModalCardStyle {
 			background: style.extended_palette().background.base.color.into(),
 			head_background: style.extended_palette().background.base.color.into(),
 			head_text_color: style.extended_palette().background.base.text,
+			close_color: style.extended_palette().background.base.text,
 			..Default::default()
 		}
 	}

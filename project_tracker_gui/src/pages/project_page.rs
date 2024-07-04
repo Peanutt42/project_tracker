@@ -4,7 +4,7 @@ use crate::{
 	components::{completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, partial_horizontal_seperator, task_list, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID},
 	core::{DatabaseMessage, Project, ProjectId, TaskId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{ProjectNameButtonStyle, TextInputStyle, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}
+	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -22,9 +22,6 @@ pub enum ProjectPageMessage {
 
 	EditTask(TaskId),
 	StopEditingTask,
-
-	HoveringTask(TaskId),
-	StoppedHoveringTask,
 }
 
 impl From<ProjectPageMessage> for UiMessage {
@@ -39,7 +36,6 @@ pub struct ProjectPage {
 	edit_project_name: bool,
 	pub create_new_task_name: Option<String>,
 	task_being_edited_id: Option<TaskId>,
-	hovered_task: Option<TaskId>,
 	show_done_tasks: bool,
 }
 
@@ -50,7 +46,6 @@ impl ProjectPage {
 			edit_project_name: false,
 			create_new_task_name: None,
 			task_being_edited_id: None,
-			hovered_task: None,
 			show_done_tasks: false,
 		}
 	}
@@ -86,8 +81,6 @@ impl ProjectPage {
 				])
 			},
 			ProjectPageMessage::StopEditingTask => { self.task_being_edited_id = None; Command::none() },
-			ProjectPageMessage::HoveringTask(task_id) => { self.hovered_task = Some(task_id); Command::none() },
-			ProjectPageMessage::StoppedHoveringTask => { self.hovered_task = None; Command::none() },
 		}
 	}
 
@@ -112,7 +105,7 @@ impl ProjectPage {
 						text(&project.name).size(TITLE_TEXT_SIZE)
 					)
 					.on_press(ProjectPageMessage::EditProjectName.into())
-					.style(theme::Button::custom(ProjectNameButtonStyle))
+					.style(theme::Button::custom(HiddenSecondaryButtonStyle))
 					.into()
 				};
 
@@ -154,7 +147,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(&project.tasks, self.project_id, self.hovered_task, self.task_being_edited_id, self.show_done_tasks, &self.create_new_task_name),
+					task_list(&project.tasks, self.project_id, self.task_being_edited_id, self.show_done_tasks, &self.create_new_task_name),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)

@@ -8,24 +8,20 @@ use crate::pages::ProjectPageMessage;
 
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, hovered_task_id: Option<TaskId>, project_being_edited_id: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, task_being_edited: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks'
 
 	let task_view = |i: usize, task_id: TaskId, task: &'a Task| {
-		let editing = match project_being_edited_id {
-			Some(project_being_edited_id) => task_id == project_being_edited_id,
-			None => false,
-		};
-		let hovered = match hovered_task_id {
-			Some(hovered_task_id) => task_id == hovered_task_id,
-			None => false,
-		};
 		let can_move_up = i != 0;
 		// once there is a done task, all other tasks after that are also done
 		let can_move_down = tasks.get_at_order(i + 1).map(|task| task.is_todo()).unwrap_or(false);
-		task_widget(task, task_id, project_id, editing, hovered, can_move_up, can_move_down)
+		let editing = match task_being_edited {
+			Some(task_being_edited) => task_id == task_being_edited,
+			None => false,
+		};
+		task_widget(task, task_id, project_id, editing, can_move_up, can_move_down)
 	};
 
 	for (i, (task_id, task)) in tasks.iter().enumerate() {
@@ -60,7 +56,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			.align_items(Alignment::Center)
 			.into();
 
-		todo_task_elements.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, false, false, false, false))
+		todo_task_elements.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, false, false, false))
 	}
 
 	let show_tasks_button: Element<UiMessage> =

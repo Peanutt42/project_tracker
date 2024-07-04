@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, TaskButtonStyle, InvisibleButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, RoundedSecondaryButtonStyle, ProjectContextButtonStyle, ThemeModeButtonStyle, ProjectNameButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, RoundedSecondaryButtonStyle, ProjectContextButtonStyle, ThemeModeButtonStyle};
 
 mod container_styles;
 pub use container_styles::RoundedContainerStyle;
@@ -22,8 +22,8 @@ pub use text_input::TextInputStyle;
 mod scrollable;
 pub use scrollable::{ScrollableStyle, scrollable_vertical_direction, SCROLLBAR_WIDTH};
 
-mod confirm_modal_style;
-pub use confirm_modal_style::{ConfirmModalStyle, ConfirmModalCardStyle};
+mod modal_style;
+pub use modal_style::{ModalStyle, ModalCardStyle};
 
 mod constants;
 pub use constants::{

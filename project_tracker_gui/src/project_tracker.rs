@@ -5,7 +5,7 @@ use crate::{
 	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId},
 	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
-	styles::{ConfirmModalStyle, SplitStyle, PADDING_AMOUNT},
+	styles::{ModalStyle, SplitStyle, PADDING_AMOUNT},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
 
@@ -22,7 +22,6 @@ pub struct ProjectTrackerApp {
 
 #[derive(Clone, Debug)]
 pub enum UiMessage {
-	Nothing,
 	CloseWindowRequested(window::Id),
 	EscapePressed,
 	EnterPressed,
@@ -132,7 +131,6 @@ impl Application for ProjectTrackerApp {
 
 	fn update(&mut self, message: UiMessage) -> Command<UiMessage> {
 		match message {
-			UiMessage::Nothing => Command::none(),
 			UiMessage::CloseWindowRequested(id) => {
 				Command::batch([
 					self.update(DatabaseMessage::Save.into()),
@@ -253,6 +251,7 @@ impl Application for ProjectTrackerApp {
 					DatabaseMessage::CreateTask { .. } => {
 						self.update(ProjectPageMessage::OpenCreateNewTask.into())
 					},
+					// TODO: close task page and go back to prev: DatabaseMessage::DeleteTask { .. } => {},
 					_ => Command::none(),
 				};
 
@@ -344,9 +343,11 @@ impl Application for ProjectTrackerApp {
 		modal(
 			underlay,
 			// error msg modal is more important first
-			self.error_msg_modal.view().or(self.confirm_modal.view())
+			self.error_msg_modal.view()
+				.or(self.confirm_modal.view())
 		)
-		.style(ModalStyles::custom(ConfirmModalStyle))
+		.style(ModalStyles::custom(ModalStyle))
+		.on_esc(UiMessage::EscapePressed)
 		.into()
 	}
 }

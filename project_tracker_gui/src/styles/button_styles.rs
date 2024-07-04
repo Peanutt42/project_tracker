@@ -43,9 +43,9 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 	}
 }
 
-pub struct TaskButtonStyle;
+pub struct HiddenSecondaryButtonStyle;
 
-impl StyleSheet for TaskButtonStyle {
+impl StyleSheet for HiddenSecondaryButtonStyle {
 	type Style = Theme;
 
 	fn active(&self, style: &Self::Style) -> Appearance {
@@ -219,42 +219,6 @@ impl StyleSheet for DeleteButtonStyle {
 			background: Some(Color::from_rgb(0.45, 0.0, 0.0).into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-}
-
-pub struct InvisibleButtonStyle;
-
-impl StyleSheet for InvisibleButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, _style: &Self::Style) -> Appearance {
-		Appearance {
-			background: None,
-			text_color: Color::TRANSPARENT,
-			..Default::default()
-		}
-	}
-}
-
-pub struct ProjectNameButtonStyle;
-
-impl StyleSheet for ProjectNameButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: None,
-			text_color: style.extended_palette().secondary.base.text,
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()),
-			text_color: style.extended_palette().secondary.base.text,
 			..Default::default()
 		}
 	}
