@@ -6,6 +6,7 @@ use crate::components::{show_done_tasks_button, task_widget, custom_task_widget,
 use crate::styles::{SMALL_SPACING_AMOUNT, SPACING_AMOUNT, HORIZONTAL_PADDING, MIDDLE_TEXT_SIZE, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
 use crate::pages::ProjectPageMessage;
 
+pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, task_being_edited: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
@@ -99,6 +100,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 		]
 		.spacing(SPACING_AMOUNT)
 	)
+	.id(TASK_LIST_ID.clone())
 	.width(Length::Fill)
 	.height(Length::Fill)
 	.style(theme::Scrollable::custom(ScrollableStyle))

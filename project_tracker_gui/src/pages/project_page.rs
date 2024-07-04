@@ -1,10 +1,10 @@
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, text, text_input}, Command, Element, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable::{self, RelativeOffset}, text, text_input}, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, partial_horizontal_seperator, task_list, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID},
+	components::{completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, partial_horizontal_seperator, task_list, TASK_LIST_ID, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID},
 	core::{DatabaseMessage, Project, ProjectId, TaskId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}
+	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -58,6 +58,7 @@ impl ProjectPage {
 				self.create_new_task_name = Some(String::new());
 				Command::batch([
 					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
+					scrollable::snap_to(TASK_LIST_ID.clone(), RelativeOffset::END),
 					self.update(ProjectPageMessage::StopEditingTask),
 				])
 			},
