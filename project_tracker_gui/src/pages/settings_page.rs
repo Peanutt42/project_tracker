@@ -24,6 +24,17 @@ impl SettingsPage {
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
 		if let Some(preferences) = &app.preferences {
+			let shortcut = |name, shortcut| {
+				row![
+					text(name),
+					container(
+						container(text(shortcut)).padding(SMALL_HORIZONTAL_PADDING)
+					)
+					.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+				]
+				.spacing(SMALL_SPACING_AMOUNT)
+			};
+
 			scrollable(
 				column![
 					column![
@@ -55,33 +66,10 @@ impl SettingsPage {
 
 					column![
 						text("Shortcuts").size(LARGE_TEXT_SIZE),
-
-						row![
-							text("New Project:"),
-							container(
-								container(text("Ctrl + Shift + N")).padding(SMALL_HORIZONTAL_PADDING)
-							)
-							.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
-						]
-						.spacing(SMALL_SPACING_AMOUNT),
-
-						row![
-							text("New Task:"),
-							container(
-								container(text("Ctrl + N")).padding(SMALL_HORIZONTAL_PADDING)
-							)
-							.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
-						]
-						.spacing(SMALL_SPACING_AMOUNT),
-
-						row![
-							text("Toggle Sidebar:"),
-							container(
-								container(text("Ctrl + H")).padding(SMALL_HORIZONTAL_PADDING)
-							)
-							.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
-						]
-						.spacing(SMALL_SPACING_AMOUNT),
+						shortcut("Open Settings:", "Ctrl + ,"),
+						shortcut("New Project:", "Ctrl + Shift + N"),
+						shortcut("New Task:", "Ctrl + N"),
+						shortcut("Toggle Sidebar:", "Ctrl + H"),
 					]
 					.spacing(SMALL_SPACING_AMOUNT)
 				]
