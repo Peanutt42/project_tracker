@@ -36,6 +36,10 @@ impl<K, V> OrderedHashMap<K, V>
 		}
 	}
 
+	pub fn get_key_at_order(&self, order: usize) -> Option<&K> {
+		self.order.get(order)
+	}
+
 	pub fn move_up(&mut self, key: &K) {
 		if let Some(index) = self.get_order(key) {
 			if index != 0 {

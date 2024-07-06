@@ -39,6 +39,8 @@ pub enum UiMessage {
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
 	SelectProject(Option<ProjectId>),
+	SelectUpperProject,
+	SelectLowerProject,
 	OpenOverview,
 	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
@@ -106,13 +108,28 @@ impl Application for ProjectTrackerApp {
 				},
 				keyboard::Key::Character("h") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
 				keyboard::Key::Character("p") if modifiers.command() => Some(PaletteModalMessage::ToggleOpened.into()),
+				keyboard::Key::Character("r") if modifiers.command() => Some(ProjectPageMessage::EditProjectName.into()),
 				keyboard::Key::Character(",") if modifiers.command() => Some(UiMessage::OpenSettings),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
 				keyboard::Key::Named(keyboard::key::Named::ArrowUp) => Some(PaletteModalMessage::SelectionUp.into()),
 				keyboard::Key::Named(keyboard::key::Named::ArrowDown) => Some(PaletteModalMessage::SelectionDown.into()),
-				keyboard::Key::Named(keyboard::key::Named::Tab) if modifiers.shift() => Some(PaletteModalMessage::SelectionUp.into()),
-				keyboard::Key::Named(keyboard::key::Named::Tab) => Some(PaletteModalMessage::SelectionDown.into()),
+				keyboard::Key::Named(keyboard::key::Named::Tab) => Some({
+					if modifiers.command() {
+						if modifiers.shift() {
+							UiMessage::SelectUpperProject
+						}
+						else {
+							UiMessage::SelectLowerProject
+						}
+					}
+					else if modifiers.shift() {
+						PaletteModalMessage::SelectionUp.into()
+					}
+					else {
+						PaletteModalMessage::SelectionDown.into()
+					}
+				}),
 				_ => None,
 			}),
 
@@ -301,6 +318,32 @@ impl Application for ProjectTrackerApp {
 					};
 				}
 				self.update(PreferenceMessage::SetSelectedProjectId(project_id).into())
+			},
+			UiMessage::SelectLowerProject => {
+				if let Some(selected_project_id) = self.selected_project_id {
+					if let Some(database) = &self.database {
+						if let Some(order) = database.projects.get_order(&selected_project_id) {
+							if let Some(lower_project_id) = database.projects.get_key_at_order(order + 1) {
+								return self.update(UiMessage::SelectProject(Some(*lower_project_id)));
+							}
+						}
+					}
+				}
+				Command::none()
+			},
+			UiMessage::SelectUpperProject => {
+				if let Some(selected_project_id) = self.selected_project_id {
+					if let Some(database) = &self.database {
+						if let Some(order) = database.projects.get_order(&selected_project_id) {
+							if order > 0 {
+								if let Some(upper_project_id) = database.projects.get_key_at_order(order - 1) {
+									return self.update(UiMessage::SelectProject(Some(*upper_project_id)));
+								}
+							}
+						}
+					}
+				}
+				Command::none()
 			},
 			UiMessage::ProjectPageMessage(message) => {
 				if let ContentPage::Project(project_page) = &mut self.content_page {
