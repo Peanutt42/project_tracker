@@ -70,6 +70,7 @@ impl SettingsPage {
 						shortcut("New Project:", "Ctrl + Shift + N"),
 						shortcut("New Task:", "Ctrl + N"),
 						shortcut("Toggle Sidebar:", "Ctrl + H"),
+						shortcut("Toggle Palette:", "Ctrl + P"),
 					]
 					.spacing(SMALL_SPACING_AMOUNT)
 				]

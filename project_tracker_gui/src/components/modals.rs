@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{button, row, text}, Element, Length};
-use iced_aw::{card, CardStyles};
-use crate::{components::copy_to_clipboard_button, project_tracker::UiMessage, styles::{ModalCardStyle, DangerousButtonStyle, RoundedSecondaryButtonStyle, SPACING_AMOUNT}};
+use iced_aw::{card, CardStyles, ModalStyles};
+use crate::{components::copy_to_clipboard_button, project_tracker::UiMessage, styles::{DangerousButtonStyle, ModalCardStyle, ModalStyle, RoundedSecondaryButtonStyle, SPACING_AMOUNT}};
 
 #[derive(Clone, Debug)]
 pub enum ConfirmModalMessage {
@@ -46,11 +46,11 @@ impl ConfirmModal {
 		}
 	}
 
-	pub fn view(&self) -> Option<Element<'static, UiMessage>> {
+	pub fn view(&self) -> Option<(Element<'static, UiMessage>, ModalStyles)> {
 		match self {
 			ConfirmModal::Closed => None,
 			ConfirmModal::Opened { title, on_confirmed } => {
-				Some(
+				Some((
 					card(
 						text(title),
 						row![
@@ -74,8 +74,10 @@ impl ConfirmModal {
 					)
 					.max_width(300.0)
 					.style(CardStyles::custom(ModalCardStyle))
-					.into()
-				)
+					.into(),
+
+					ModalStyles::custom(ModalStyle)
+				))
 			},
 		}
 	}
@@ -119,10 +121,10 @@ impl ErrorMsgModal {
 		}
 	}
 
-	pub fn view(&self) -> Option<Element<'static, UiMessage>> {
+	pub fn view(&self) -> Option<(Element<'static, UiMessage>, ModalStyles)> {
 		match self {
 			ErrorMsgModal::Open { error_msg } => {
-				Some(
+				Some((
 					card(
 						text(error_msg),
 						row![
@@ -140,8 +142,10 @@ impl ErrorMsgModal {
 					)
 					.max_width(300.0)
 					.style(CardStyles::custom(ModalCardStyle))
-					.into()
-				)
+					.into(),
+
+					ModalStyles::custom(ModalStyle)
+				))
 			},
 			ErrorMsgModal::Closed => None,
 		}

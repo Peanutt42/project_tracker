@@ -266,3 +266,40 @@ impl StyleSheet for ThemeModeButtonStyle {
 		}
 	}
 }
+
+
+pub struct PaletteItemButtonStyle {
+	pub selected: bool,
+}
+
+impl StyleSheet for PaletteItemButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: if self.selected {
+				Some(style.extended_palette().background.weak.color.into())
+			}
+			else {
+				None
+			},
+			text_color: style.extended_palette().background.base.text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(
+				if self.selected {
+					style.extended_palette().background.weak.color.into()
+				}
+				else {
+					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
+				}
+			),
+			..self.active(style)
+		}
+	}
+}

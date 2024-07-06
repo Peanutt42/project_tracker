@@ -1,8 +1,8 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, RoundedSecondaryButtonStyle, ProjectContextButtonStyle, ThemeModeButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, RoundedSecondaryButtonStyle, ProjectContextButtonStyle, ThemeModeButtonStyle, PaletteItemButtonStyle};
 
 mod container_styles;
-pub use container_styles::RoundedContainerStyle;
+pub use container_styles::{RoundedContainerStyle, PaletteContainerStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
@@ -23,7 +23,7 @@ mod scrollable;
 pub use scrollable::{ScrollableStyle, scrollable_vertical_direction, SCROLLBAR_WIDTH};
 
 mod modal_style;
-pub use modal_style::{ModalStyle, ModalCardStyle};
+pub use modal_style::{ModalStyle, PaletteModalStyle, ModalCardStyle};
 
 mod constants;
 pub use constants::{

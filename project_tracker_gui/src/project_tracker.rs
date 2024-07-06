@@ -1,11 +1,11 @@
 use std::{path::PathBuf, time::Duration};
 use iced::{clipboard, event::Status, font, keyboard, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
-use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, ModalStyles, Split, SplitStyles};
+use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
-	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage},
+	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, PaletteModal, PaletteModalMessage, PaletteItem},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId},
 	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
-	styles::{ModalStyle, SplitStyle, PADDING_AMOUNT},
+	styles::{SplitStyle, PADDING_AMOUNT},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
 
@@ -17,6 +17,7 @@ pub struct ProjectTrackerApp {
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
 	pub error_msg_modal: ErrorMsgModal,
+	pub palette_modal: PaletteModal,
 	pub is_system_theme_dark: bool,
 }
 
@@ -42,6 +43,7 @@ pub enum UiMessage {
 	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
+	PaletteModalMessage(PaletteModalMessage),
 }
 
 impl Application for ProjectTrackerApp {
@@ -60,6 +62,7 @@ impl Application for ProjectTrackerApp {
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
 				error_msg_modal: ErrorMsgModal::Closed,
+				palette_modal: PaletteModal::Closed,
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Command::batch([
@@ -102,9 +105,14 @@ impl Application for ProjectTrackerApp {
 					)
 				},
 				keyboard::Key::Character("h") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
+				keyboard::Key::Character("p") if modifiers.command() => Some(PaletteModalMessage::ToggleOpened.into()),
 				keyboard::Key::Character(",") if modifiers.command() => Some(UiMessage::OpenSettings),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
+				keyboard::Key::Named(keyboard::key::Named::ArrowUp) => Some(PaletteModalMessage::SelectionUp.into()),
+				keyboard::Key::Named(keyboard::key::Named::ArrowDown) => Some(PaletteModalMessage::SelectionDown.into()),
+				keyboard::Key::Named(keyboard::key::Named::Tab) if modifiers.shift() => Some(PaletteModalMessage::SelectionUp.into()),
+				keyboard::Key::Named(keyboard::key::Named::Tab) => Some(PaletteModalMessage::SelectionDown.into()),
 				_ => None,
 			}),
 
@@ -147,6 +155,7 @@ impl Application for ProjectTrackerApp {
 				self.update(ProjectPageMessage::StopEditingTask.into()),
 				self.update(ConfirmModalMessage::Close.into()),
 				self.update(ErrorMsgModalMessage::Close.into()),
+				self.update(PaletteModalMessage::Close.into()),
 			]),
 			UiMessage::EnterPressed => {
 				self.error_msg_modal = ErrorMsgModal::Closed;
@@ -302,6 +311,27 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
+			UiMessage::PaletteModalMessage(message) => {
+				let palette_item = match message.clone() {
+					PaletteModalMessage::OpenSelectedItem => self.palette_modal.get_selected_item(&self.database),
+					PaletteModalMessage::OpenItem(item) => Some(item),
+					_ => None,
+				};
+
+				let mut commands = Vec::new();
+
+				if let Some(palette_item) = palette_item {
+					let command = match palette_item {
+						PaletteItem::Overview => self.update(UiMessage::OpenOverview),
+						PaletteItem::Settings => self.update(UiMessage::OpenSettings),
+						PaletteItem::Project{ id, .. } => self.update(UiMessage::SelectProject(Some(id))),
+					};
+					commands.push(command);
+				}
+
+				commands.push(self.palette_modal.update(message, &self.database));
+				Command::batch(commands)
+			},
 		}
 	}
 
@@ -341,15 +371,28 @@ impl Application for ProjectTrackerApp {
 			.into()
 		};
 
-		modal(
-			underlay,
-			// error msg modal is more important first
-			self.error_msg_modal.view()
-				.or(self.confirm_modal.view())
-		)
-		.style(ModalStyles::custom(ModalStyle))
-		.on_esc(UiMessage::EscapePressed)
-		.into()
+		if let Some((modal_element, modal_style)) = self.error_msg_modal.view()
+			.or(self.confirm_modal.view())
+			.or(self.palette_modal.view(&self.database))
+		{
+			modal(
+				underlay,
+				Some(modal_element)
+			)
+			.style(modal_style)
+			.on_esc(UiMessage::EscapePressed)
+			.into()
+		}
+		else {
+			modal(
+				underlay,
+				None as Option<Element<UiMessage>>
+			)
+			.on_esc(UiMessage::EscapePressed)
+			.into()
+		}
+
+
 	}
 }
 

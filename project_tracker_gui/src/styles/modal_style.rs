@@ -14,6 +14,18 @@ impl modal::StyleSheet for ModalStyle {
 	}
 }
 
+pub struct PaletteModalStyle;
+
+impl modal::StyleSheet for PaletteModalStyle {
+	type Style = Theme;
+
+	fn active(&self, _style: &Self::Style) -> style::modal::Appearance {
+		style::modal::Appearance {
+			background: Color::TRANSPARENT.into(),
+		}
+	}
+}
+
 pub struct ModalCardStyle;
 
 impl card::StyleSheet for ModalCardStyle {

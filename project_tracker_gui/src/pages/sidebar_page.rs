@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column, Space}, Alignment, Command, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{core::DatabaseMessage, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
 use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button, toggle_sidebar_button};
@@ -68,9 +68,6 @@ impl SidebarPage {
 
 			list.push(custom_project_preview(None, 0.0, 0, 0, project_name_text_input_element, true));
 		}
-
-		// some space at the bottom so that the + button doesn't block any view to the last project
-		list.push(Space::with_height(50.0).into());
 
 		scrollable(
 			Column::from_vec(list)
