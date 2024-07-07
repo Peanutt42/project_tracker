@@ -39,19 +39,14 @@ impl SidebarPage {
 		}
 	}
 
-	pub fn snap_to_project(&mut self, project_id: ProjectId, database: &Database) -> Command<UiMessage> {
-		if let Some(order) = database.projects.get_order(&project_id) {
-			scrollable::snap_to(
-				SCROLLABLE_ID.clone(),
-				RelativeOffset {
-					x: 0.0,
-					y: order as f32 / (database.projects.len() as f32 - 1.0),
-				}
-			)
-		}
-		else {
-			Command::none()
-		}
+	pub fn snap_to_project(&mut self, project_order: usize, database: &Database) -> Command<UiMessage> {
+		scrollable::snap_to(
+			SCROLLABLE_ID.clone(),
+			RelativeOffset {
+				x: 0.0,
+				y: project_order as f32 / (database.projects.len() as f32 - 1.0),
+			}
+		)
 	}
 
 	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {

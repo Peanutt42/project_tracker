@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::Duration};
 use iced::{clipboard, event::Status, font, keyboard, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
-	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, PaletteModal, PaletteModalMessage, PaletteItem},
+	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId},
 	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
 	styles::{SplitStyle, PADDING_AMOUNT},
@@ -17,7 +17,7 @@ pub struct ProjectTrackerApp {
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
 	pub error_msg_modal: ErrorMsgModal,
-	pub palette_modal: PaletteModal,
+	pub switch_project_modal: SwitchProjectModal,
 	pub is_system_theme_dark: bool,
 }
 
@@ -26,6 +26,7 @@ pub enum UiMessage {
 	CloseWindowRequested(window::Id),
 	EscapePressed,
 	EnterPressed,
+	ControlReleased,
 	CopyToClipboard(String),
 	SaveChangedFiles,
 	OpenFolderLocation(PathBuf),
@@ -45,7 +46,7 @@ pub enum UiMessage {
 	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
-	PaletteModalMessage(PaletteModalMessage),
+	SwitchProjectModalMessage(SwitchProjectModalMessage),
 }
 
 impl Application for ProjectTrackerApp {
@@ -64,7 +65,7 @@ impl Application for ProjectTrackerApp {
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
 				error_msg_modal: ErrorMsgModal::Closed,
-				palette_modal: PaletteModal::Closed,
+				switch_project_modal: SwitchProjectModal::Closed,
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Command::batch([
@@ -107,29 +108,23 @@ impl Application for ProjectTrackerApp {
 					)
 				},
 				keyboard::Key::Character("h") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
-				keyboard::Key::Character("p") if modifiers.command() => Some(PaletteModalMessage::ToggleOpened.into()),
 				keyboard::Key::Character("r") if modifiers.command() => Some(ProjectPageMessage::EditProjectName.into()),
 				keyboard::Key::Character(",") if modifiers.command() => Some(UiMessage::OpenSettings),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
-				keyboard::Key::Named(keyboard::key::Named::ArrowUp) => Some(PaletteModalMessage::SelectionUp.into()),
-				keyboard::Key::Named(keyboard::key::Named::ArrowDown) => Some(PaletteModalMessage::SelectionDown.into()),
-				keyboard::Key::Named(keyboard::key::Named::Tab) => Some({
-					if modifiers.command() {
-						if modifiers.shift() {
-							UiMessage::SwitchToUpperProject
-						}
-						else {
-							UiMessage::SwitchToLowerProject
-						}
-					}
-					else if modifiers.shift() {
-						PaletteModalMessage::SelectionUp.into()
+				keyboard::Key::Named(keyboard::key::Named::Tab) if modifiers.command() => Some(
+					if modifiers.shift() {
+						UiMessage::SwitchToUpperProject
 					}
 					else {
-						PaletteModalMessage::SelectionDown.into()
+						UiMessage::SwitchToLowerProject
 					}
-				}),
+				),
+				_ => None,
+			}),
+
+			keyboard::on_key_release(|key, _modifiers| match key.as_ref() {
+				keyboard::Key::Named(keyboard::key::Named::Control) => Some(UiMessage::ControlReleased),
 				_ => None,
 			}),
 
@@ -172,7 +167,7 @@ impl Application for ProjectTrackerApp {
 				self.update(ProjectPageMessage::StopEditingTask.into()),
 				self.update(ConfirmModalMessage::Close.into()),
 				self.update(ErrorMsgModalMessage::Close.into()),
-				self.update(PaletteModalMessage::Close.into()),
+				self.update(SwitchProjectModalMessage::Close.into()),
 			]),
 			UiMessage::EnterPressed => {
 				self.error_msg_modal = ErrorMsgModal::Closed;
@@ -184,6 +179,7 @@ impl Application for ProjectTrackerApp {
 					ConfirmModal::Closed => Command::none()
 				}
 			},
+			UiMessage::ControlReleased => self.update(SwitchProjectModalMessage::Close.into()),
 			UiMessage::CopyToClipboard(copied_text) => clipboard::write(copied_text),
 			UiMessage::SaveChangedFiles => {
 				let mut commands = Vec::new();
@@ -323,11 +319,22 @@ impl Application for ProjectTrackerApp {
 				if let Some(selected_project_id) = self.selected_project_id {
 					if let Some(database) = &self.database {
 						if let Some(order) = database.projects.get_order(&selected_project_id) {
-							if let Some(lower_project_id) = database.projects.get_key_at_order(order + 1) {
-								let sidebar_snap_command = self.sidebar_page.snap_to_project(*lower_project_id, database);
+							let lower_order = order + 1;
+							if lower_order < database.projects.len() {
+								if let Some(lower_project_id) = database.projects.get_key_at_order(lower_order) {
+									let lower_project_id = *lower_project_id;
+									let sidebar_snap_command = self.sidebar_page.snap_to_project(lower_order, database);
+									return Command::batch([
+										self.update(UiMessage::SelectProject(Some(lower_project_id))),
+										sidebar_snap_command,
+										self.update(SwitchProjectModalMessage::Open.into()),
+									]);
+								}
+							}
+							else {
 								return Command::batch([
-									self.update(UiMessage::SelectProject(Some(*lower_project_id))),
-									sidebar_snap_command,
+									self.sidebar_page.snap_to_project(order, database),
+									self.update(SwitchProjectModalMessage::Open.into()),
 								]);
 							}
 						}
@@ -340,13 +347,22 @@ impl Application for ProjectTrackerApp {
 					if let Some(database) = &self.database {
 						if let Some(order) = database.projects.get_order(&selected_project_id) {
 							if order > 0 {
-								if let Some(upper_project_id) = database.projects.get_key_at_order(order - 1) {
-									let sidebar_snap_command = self.sidebar_page.snap_to_project(*upper_project_id, database);
+								let upper_order = order - 1;
+								if let Some(upper_project_id) = database.projects.get_key_at_order(upper_order) {
+									let upper_project_id = *upper_project_id;
+									let sidebar_snap_command = self.sidebar_page.snap_to_project(upper_order, database);
 									return Command::batch([
-										self.update(UiMessage::SelectProject(Some(*upper_project_id))),
+										self.update(UiMessage::SelectProject(Some(upper_project_id))),
 										sidebar_snap_command,
+										self.update(SwitchProjectModalMessage::Open.into()),
 									]);
 								}
+							}
+							else {
+								return Command::batch([
+									self.sidebar_page.snap_to_project(order, database),
+									self.update(SwitchProjectModalMessage::Open.into()),
+								]);
 							}
 						}
 					}
@@ -354,35 +370,13 @@ impl Application for ProjectTrackerApp {
 				Command::none()
 			},
 			UiMessage::ProjectPageMessage(message) => {
-				if let ContentPage::Project(project_page) = &mut self.content_page {
-					project_page.update(message.clone())
-				}
-				else {
-					Command::none()
+				match &mut self.content_page {
+					ContentPage::Project(project_page) => project_page.update(message),
+					_ => Command::none()
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
-			UiMessage::PaletteModalMessage(message) => {
-				let palette_item = match message.clone() {
-					PaletteModalMessage::OpenSelectedItem => self.palette_modal.get_selected_item(&self.database),
-					PaletteModalMessage::OpenItem(item) => Some(item),
-					_ => None,
-				};
-
-				let mut commands = Vec::new();
-
-				if let Some(palette_item) = palette_item {
-					let command = match palette_item {
-						PaletteItem::Overview => self.update(UiMessage::OpenOverview),
-						PaletteItem::Settings => self.update(UiMessage::OpenSettings),
-						PaletteItem::Project{ id, .. } => self.update(UiMessage::SelectProject(Some(id))),
-					};
-					commands.push(command);
-				}
-
-				commands.push(self.palette_modal.update(message, &self.database));
-				Command::batch(commands)
-			},
+			UiMessage::SwitchProjectModalMessage(message) => self.switch_project_modal.update(message, &self.database, self.selected_project_id),
 		}
 	}
 
@@ -422,9 +416,23 @@ impl Application for ProjectTrackerApp {
 			.into()
 		};
 
+		let switch_project_modal_view = || {
+			if let Some(preferences) = &self.preferences {
+				if preferences.show_sidebar {
+					None
+				}
+				else {
+					self.switch_project_modal.view(&self.database, self.selected_project_id)
+				}
+			}
+			else {
+				None
+			}
+		};
+
 		if let Some((modal_element, modal_style)) = self.error_msg_modal.view()
 			.or(self.confirm_modal.view())
-			.or(self.palette_modal.view(&self.database))
+			.or(switch_project_modal_view())
 		{
 			modal(
 				underlay,

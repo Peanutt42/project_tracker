@@ -25,5 +25,5 @@ pub use file_location::file_location;
 mod modals;
 pub use modals::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage};
 
-mod palette_modal;
-pub use palette_modal::{PaletteModal, PaletteModalMessage, PaletteItem};
+mod switch_project_modal;
+pub use switch_project_modal::{SwitchProjectModal, SwitchProjectModalMessage};

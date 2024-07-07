@@ -73,7 +73,6 @@ impl SettingsPage {
 						shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
 						shortcut("New Task:", "Ctrl + N"),
 						shortcut("Toggle Sidebar:", "Ctrl + H"),
-						shortcut("Toggle Palette:", "Ctrl + P"),
 					]
 					.spacing(SMALL_SPACING_AMOUNT)
 				]
