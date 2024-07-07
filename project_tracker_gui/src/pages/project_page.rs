@@ -122,7 +122,7 @@ impl ProjectPage {
 								row![
 									move_project_up_button(self.project_id, can_move_up),
 									move_project_down_button(self.project_id, can_move_down),
-									delete_project_button(self.project_id),
+									delete_project_button(self.project_id, &project.name),
 								]
 								.spacing(SMALL_SPACING_AMOUNT)
 							)
@@ -148,7 +148,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(&project.tasks, self.project_id, self.task_being_edited_id, self.show_done_tasks, &self.create_new_task_name),
+					task_list(&project.tasks, self.project_id, &project.name, self.task_being_edited_id, self.show_done_tasks, &self.create_new_task_name),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)

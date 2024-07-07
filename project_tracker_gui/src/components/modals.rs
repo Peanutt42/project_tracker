@@ -5,14 +5,14 @@ use crate::{components::copy_to_clipboard_button, project_tracker::UiMessage, st
 #[derive(Clone, Debug)]
 pub enum ConfirmModalMessage {
 	Open {
-		title: &'static str,
+		title: String,
 		on_confirmed: Box<UiMessage>,
 	},
 	Close,
 }
 
 impl ConfirmModalMessage {
-	pub fn open(title: &'static str, on_confirmed: impl Into<UiMessage>) -> UiMessage {
+	pub fn open(title: String, on_confirmed: impl Into<UiMessage>) -> UiMessage {
 		Self::Open {
 			title,
 			on_confirmed: Box::new(on_confirmed.into()),
@@ -28,7 +28,7 @@ impl From<ConfirmModalMessage> for UiMessage {
 
 pub enum ConfirmModal {
 	Opened {
-		title: &'static str,
+		title: String,
 		on_confirmed: UiMessage,
 	},
 	Closed,

@@ -59,11 +59,11 @@ pub fn cancel_create_task_button() -> Button<'static, UiMessage> {
 		.style(theme::Button::custom(ProjectContextButtonStyle))
 }
 
-pub fn delete_project_button(project_id: ProjectId) -> Button<'static, UiMessage> {
+pub fn delete_project_button(project_id: ProjectId, project_name: &str) -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::Trash)
 	)
-	.on_press(ConfirmModalMessage::open("Delete this Project?", DatabaseMessage::DeleteProject(project_id)))
+	.on_press(ConfirmModalMessage::open(format!("Delete Project '{project_name}'?"), DatabaseMessage::DeleteProject(project_id)))
 	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
@@ -75,12 +75,12 @@ pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'sta
 	.style(theme::Button::custom(DeleteButtonStyle))
 }
 
-pub fn delete_all_done_tasks_button(project_id: ProjectId) -> Button<'static, UiMessage> {
+pub fn delete_all_done_tasks_button(project_id: ProjectId, project_name: &str) -> Button<'static, UiMessage> {
 	button(row![
 		icon_to_text(Bootstrap::Trash),
 		text("Delete done tasks")
 	])
-	.on_press(ConfirmModalMessage::open("Delete all done tasks of this project?", DatabaseMessage::DeleteDoneTasks(project_id)))
+	.on_press(ConfirmModalMessage::open(format!("Delete all done tasks of project '{project_name}'?"), DatabaseMessage::DeleteDoneTasks(project_id)))
 	.style(theme::Button::custom(DeleteDoneTasksButtonStyle))
 }
 
@@ -154,7 +154,7 @@ pub fn dangerous_button(label: &'static str, on_press: impl Into<UiMessage>) -> 
 			.font(BOLD_FONT)
 	)
 	.style(theme::Button::custom(DangerousButtonStyle))
-	.on_press(ConfirmModalMessage::open(label, on_press))
+	.on_press(ConfirmModalMessage::open(label.to_string(), on_press))
 }
 
 pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode) -> Button<'static, UiMessage> {

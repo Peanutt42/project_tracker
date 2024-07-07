@@ -372,10 +372,14 @@ impl Application for ProjectTrackerApp {
 				Command::none()
 			},
 			UiMessage::DeleteSelectedProject => {
-				match self.selected_project_id {
-					Some(selected_project_id) => self.update(ConfirmModalMessage::open("Delete this Project?", DatabaseMessage::DeleteProject(selected_project_id))),
-					None => Command::none(),
+				if let Some(selected_project_id) = self.selected_project_id {
+					if let Some(database) = &self.database {
+						if let Some(project) = database.projects.get(&selected_project_id) {
+							return self.update(ConfirmModalMessage::open(format!("Delete Project '{}'?", project.name), DatabaseMessage::DeleteProject(selected_project_id)));
+						}
+					}
 				}
+				Command::none()
 			}
 			UiMessage::ProjectPageMessage(message) => {
 				match &mut self.content_page {

@@ -9,7 +9,7 @@ use crate::pages::ProjectPageMessage;
 pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, task_being_edited: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, project_name: &str, task_being_edited: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks'
@@ -75,7 +75,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 					}
 					else {
 						Some(
-							container(delete_all_done_tasks_button(project_id))
+							container(delete_all_done_tasks_button(project_id, project_name))
 								.width(Length::Fill)
 								.align_x(Horizontal::Right)
 						)
