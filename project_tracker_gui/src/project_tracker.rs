@@ -39,8 +39,8 @@ pub enum UiMessage {
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
 	SelectProject(Option<ProjectId>),
-	SelectUpperProject,
-	SelectLowerProject,
+	SwitchToUpperProject,
+	SwitchToLowerProject,
 	OpenOverview,
 	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
@@ -117,10 +117,10 @@ impl Application for ProjectTrackerApp {
 				keyboard::Key::Named(keyboard::key::Named::Tab) => Some({
 					if modifiers.command() {
 						if modifiers.shift() {
-							UiMessage::SelectUpperProject
+							UiMessage::SwitchToUpperProject
 						}
 						else {
-							UiMessage::SelectLowerProject
+							UiMessage::SwitchToLowerProject
 						}
 					}
 					else if modifiers.shift() {
@@ -319,25 +319,33 @@ impl Application for ProjectTrackerApp {
 				}
 				self.update(PreferenceMessage::SetSelectedProjectId(project_id).into())
 			},
-			UiMessage::SelectLowerProject => {
+			UiMessage::SwitchToLowerProject => {
 				if let Some(selected_project_id) = self.selected_project_id {
 					if let Some(database) = &self.database {
 						if let Some(order) = database.projects.get_order(&selected_project_id) {
 							if let Some(lower_project_id) = database.projects.get_key_at_order(order + 1) {
-								return self.update(UiMessage::SelectProject(Some(*lower_project_id)));
+								let sidebar_snap_command = self.sidebar_page.snap_to_project(*lower_project_id, database);
+								return Command::batch([
+									self.update(UiMessage::SelectProject(Some(*lower_project_id))),
+									sidebar_snap_command,
+								]);
 							}
 						}
 					}
 				}
 				Command::none()
 			},
-			UiMessage::SelectUpperProject => {
+			UiMessage::SwitchToUpperProject => {
 				if let Some(selected_project_id) = self.selected_project_id {
 					if let Some(database) = &self.database {
 						if let Some(order) = database.projects.get_order(&selected_project_id) {
 							if order > 0 {
 								if let Some(upper_project_id) = database.projects.get_key_at_order(order - 1) {
-									return self.update(UiMessage::SelectProject(Some(*upper_project_id)));
+									let sidebar_snap_command = self.sidebar_page.snap_to_project(*upper_project_id, database);
+									return Command::batch([
+										self.update(UiMessage::SelectProject(Some(*upper_project_id))),
+										sidebar_snap_command,
+									]);
 								}
 							}
 						}

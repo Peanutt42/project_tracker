@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::DatabaseMessage, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
+use crate::{core::{Database, DatabaseMessage}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
 use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
@@ -36,6 +36,21 @@ impl SidebarPage {
 		Self {
 			create_new_project_name: None,
 			project_being_edited: None,
+		}
+	}
+
+	pub fn snap_to_project(&mut self, project_id: ProjectId, database: &Database) -> Command<UiMessage> {
+		if let Some(order) = database.projects.get_order(&project_id) {
+			scrollable::snap_to(
+				SCROLLABLE_ID.clone(),
+				RelativeOffset {
+					x: 0.0,
+					y: order as f32 / (database.projects.len() as f32 - 1.0),
+				}
+			)
+		}
+		else {
+			Command::none()
 		}
 	}
 
