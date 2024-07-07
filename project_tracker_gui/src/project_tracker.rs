@@ -42,6 +42,7 @@ pub enum UiMessage {
 	SelectProject(Option<ProjectId>),
 	SwitchToUpperProject,
 	SwitchToLowerProject,
+	DeleteSelectedProject,
 	OpenOverview,
 	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
@@ -112,6 +113,7 @@ impl Application for ProjectTrackerApp {
 				keyboard::Key::Character(",") if modifiers.command() => Some(UiMessage::OpenSettings),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
+				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => Some(UiMessage::DeleteSelectedProject),
 				keyboard::Key::Named(keyboard::key::Named::Tab) if modifiers.command() => Some(
 					if modifiers.shift() {
 						UiMessage::SwitchToUpperProject
@@ -369,6 +371,12 @@ impl Application for ProjectTrackerApp {
 				}
 				Command::none()
 			},
+			UiMessage::DeleteSelectedProject => {
+				match self.selected_project_id {
+					Some(selected_project_id) => self.update(ConfirmModalMessage::open("Delete this Project?", DatabaseMessage::DeleteProject(selected_project_id))),
+					None => Command::none(),
+				}
+			}
 			UiMessage::ProjectPageMessage(message) => {
 				match &mut self.content_page {
 					ContentPage::Project(project_page) => project_page.update(message),

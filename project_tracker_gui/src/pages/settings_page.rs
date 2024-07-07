@@ -69,6 +69,7 @@ impl SettingsPage {
 						shortcut("Open Settings:", "Ctrl + ,"),
 						shortcut("New Project:", "Ctrl + Shift + N"),
 						shortcut("Rename Project:", "Ctrl + R"),
+						shortcut("Delete Project:", "Ctrl + Del"),
 						shortcut("Switch to lower Project:", "Ctrl + Tab"),
 						shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
 						shortcut("New Task:", "Ctrl + N"),
