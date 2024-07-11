@@ -40,8 +40,9 @@ pub enum UiMessage {
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
 	SelectProject(Option<ProjectId>),
-	SwitchToUpperProject,
-	SwitchToLowerProject,
+	SwitchToUpperProject, // switches to upper project when using shortcuts
+	SwitchToLowerProject, // switches to lower project when using shortcuts
+	SwitchToProject{ order: usize }, // switches to project when using shortcuts
 	DeleteSelectedProject,
 	OpenOverview,
 	OpenSettings,
@@ -329,23 +330,13 @@ impl Application for ProjectTrackerApp {
 					if let Some(database) = &self.database {
 						if let Some(order) = database.projects.get_order(&selected_project_id) {
 							let lower_order = order + 1;
-							if lower_order < database.projects.len() {
-								if let Some(lower_project_id) = database.projects.get_key_at_order(lower_order) {
-									let lower_project_id = *lower_project_id;
-									let sidebar_snap_command = self.sidebar_page.snap_to_project(lower_order, database);
-									return Command::batch([
-										self.update(UiMessage::SelectProject(Some(lower_project_id))),
-										sidebar_snap_command,
-										self.update(SwitchProjectModalMessage::Open.into()),
-									]);
-								}
+							let order_to_switch_to = if lower_order < database.projects.len() {
+								lower_order
 							}
 							else {
-								return Command::batch([
-									self.sidebar_page.snap_to_project(order, database),
-									self.update(SwitchProjectModalMessage::Open.into()),
-								]);
-							}
+								0
+							};
+							return self.update(UiMessage::SwitchToProject { order: order_to_switch_to });
 						}
 					}
 				}
@@ -355,26 +346,32 @@ impl Application for ProjectTrackerApp {
 				if let Some(selected_project_id) = self.selected_project_id {
 					if let Some(database) = &self.database {
 						if let Some(order) = database.projects.get_order(&selected_project_id) {
-							if order > 0 {
-								let upper_order = order - 1;
-								if let Some(upper_project_id) = database.projects.get_key_at_order(upper_order) {
-									let upper_project_id = *upper_project_id;
-									let sidebar_snap_command = self.sidebar_page.snap_to_project(upper_order, database);
-									return Command::batch([
-										self.update(UiMessage::SelectProject(Some(upper_project_id))),
-										sidebar_snap_command,
-										self.update(SwitchProjectModalMessage::Open.into()),
-									]);
-								}
+							let order_to_switch_to = if order > 0 {
+								order - 1
 							}
 							else {
-								return Command::batch([
-									self.sidebar_page.snap_to_project(order, database),
-									self.update(SwitchProjectModalMessage::Open.into()),
-								]);
-							}
+								database.projects.len() - 1 // switches to the last project
+							};
+							return self.update(UiMessage::SwitchToProject { order: order_to_switch_to });
 						}
 					}
+				}
+				Command::none()
+			},
+			UiMessage::SwitchToProject { order } => {
+				if let Some(database) = &self.database {
+					let switched_project_id = database.projects.get_key_at_order(order);
+					let sidebar_snap_command = self.sidebar_page.snap_to_project(order, database);
+					return Command::batch([
+						if let Some(project_id) = switched_project_id {
+							self.update(UiMessage::SelectProject(Some(*project_id)))
+						}
+						else {
+							Command::none()
+						},
+						sidebar_snap_command,
+						self.update(SwitchProjectModalMessage::Open.into()),
+					]);
 				}
 				Command::none()
 			},
