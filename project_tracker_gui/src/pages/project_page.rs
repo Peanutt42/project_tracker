@@ -1,7 +1,7 @@
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable::{self, RelativeOffset}, text, text_input}, Command, Element, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable::{self, RelativeOffset}, text, text_input}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, partial_horizontal_seperator, task_list, TASK_LIST_ID, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID},
+	components::{completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, color_palette, color_palette_item_button, partial_horizontal_seperator, task_list, TASK_LIST_ID, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID},
 	core::{DatabaseMessage, Project, ProjectId, TaskId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
@@ -16,6 +16,9 @@ pub enum ProjectPageMessage {
 	ChangeCreateNewTaskName(String),
 
 	ShowDoneTasks(bool),
+
+	ShowColorPicker,
+	HideColorPicker,
 
 	EditProjectName,
 	StopEditingProjectName,
@@ -37,6 +40,7 @@ pub struct ProjectPage {
 	pub create_new_task_name: Option<String>,
 	task_being_edited_id: Option<TaskId>,
 	show_done_tasks: bool,
+	show_color_picker: bool,
 }
 
 impl ProjectPage {
@@ -47,6 +51,7 @@ impl ProjectPage {
 			create_new_task_name: None,
 			task_being_edited_id: None,
 			show_done_tasks: false,
+			show_color_picker: false,
 		}
 	}
 }
@@ -71,6 +76,9 @@ impl ProjectPage {
 			},
 			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; Command::none() },
 
+			ProjectPageMessage::ShowColorPicker => { self.show_color_picker = true; Command::none() },
+			ProjectPageMessage::HideColorPicker => { self.show_color_picker = false; Command::none() },
+
 			ProjectPageMessage::EditProjectName => { self.edit_project_name = true; text_input::focus(PROJECT_NAME_TEXT_INPUT_ID.clone()) },
 			ProjectPageMessage::StopEditingProjectName => { self.edit_project_name = false; Command::none() },
 
@@ -85,7 +93,7 @@ impl ProjectPage {
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
 		if let Some(database) = &app.database {
 			if let Some(project) = database.projects.get(&self.project_id) {
 				let tasks_done = project.get_tasks_done();
@@ -110,6 +118,18 @@ impl ProjectPage {
 					.into()
 				};
 
+				let project_id = self.project_id;
+
+				let show_color_picker_button = color_palette_item_button(
+					project.color.into(),
+					false,
+					if self.show_color_picker {
+						None
+					}
+					else {
+						Some(ProjectPageMessage::ShowColorPicker.into())
+					});
+
 				let order = database.projects.get_order(&self.project_id);
 				let can_move_up = if let Some(order) = order { order != 0 } else { false };
 				let can_move_down = if let Some(order) = order { order != database.projects.len() - 1 } else { false };
@@ -117,7 +137,20 @@ impl ProjectPage {
 				column![
 					column![
 						row![
-							project_name,
+							column![
+								row![
+									show_color_picker_button,
+									project_name
+								]
+								.align_items(Alignment::Center)
+							]
+							.push_maybe(if self.show_color_picker {
+								Some(color_palette(project.color.into(), move |c: Color| DatabaseMessage::ChangeProjectColor{ project_id, new_color: c.into() }.into()))
+							}
+							else {
+								None
+							}),
+
 							container(
 								row![
 									move_project_up_button(self.project_id, can_move_up),

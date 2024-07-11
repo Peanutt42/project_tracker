@@ -4,9 +4,7 @@ use iced::Command;
 use serde::{Serialize, Deserialize};
 use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, ProjectId, Project, TaskId};
-
-use super::TaskState;
+use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, TaskState};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Database {
@@ -36,6 +34,10 @@ pub enum DatabaseMessage {
 	ChangeProjectName {
 		project_id: ProjectId,
 		new_name: String,
+	},
+	ChangeProjectColor {
+		project_id: ProjectId,
+		new_color: SerializableColor,
 	},
 	MoveProjectUp(ProjectId),
 	MoveProjectDown(ProjectId),
@@ -143,6 +145,13 @@ impl Database {
 			DatabaseMessage::ChangeProjectName { project_id, new_name } => {
 				if let Some(project) = self.projects.get_mut(&project_id) {
 					project.name = new_name;
+					self.change_was_made();
+				}
+				Command::none()
+			},
+			DatabaseMessage::ChangeProjectColor { project_id, new_color } => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					project.color = new_color;
 					self.change_was_made();
 				}
 				Command::none()

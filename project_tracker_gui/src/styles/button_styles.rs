@@ -50,7 +50,7 @@ impl StyleSheet for HiddenSecondaryButtonStyle {
 
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(style.extended_palette().background.base.color.into()),
+			background: None,
 			text_color: style.palette().text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -301,5 +301,44 @@ impl StyleSheet for PaletteItemButtonStyle {
 			),
 			..self.active(style)
 		}
+	}
+}
+
+
+pub struct ColorPaletteButtonStyle {
+	pub selected: bool,
+}
+
+impl StyleSheet for ColorPaletteButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: if self.selected {
+				Some(style.extended_palette().background.weak.color.into())
+		 	}
+			else {
+				None
+			},
+			text_color: style.palette().text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(if self.selected {
+				style.extended_palette().background.weak.color.into()
+			}
+			else {
+				mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
+			}),
+			..self.active(style)
+		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		self.hovered(style)
 	}
 }

@@ -167,6 +167,7 @@ impl Application for ProjectTrackerApp {
 				self.update(ProjectPageMessage::CloseCreateNewTask.into()),
 				self.update(ProjectPageMessage::StopEditingProjectName.into()),
 				self.update(ProjectPageMessage::StopEditingTask.into()),
+				self.update(ProjectPageMessage::HideColorPicker.into()),
 				self.update(ConfirmModalMessage::Close.into()),
 				self.update(ErrorMsgModalMessage::Close.into()),
 				self.update(SwitchProjectModalMessage::Close.into()),
@@ -272,11 +273,17 @@ impl Application for ProjectTrackerApp {
 							_ => Command::none(),
 						}
 					},
-
 					DatabaseMessage::CreateTask { .. } => {
 						self.update(ProjectPageMessage::OpenCreateNewTask.into())
 					},
-					// TODO: close task page and go back to prev: DatabaseMessage::DeleteTask { .. } => {},
+					DatabaseMessage::ChangeProjectColor { .. } => {
+						if let ContentPage::Project(project_page) = &mut self.content_page {
+							project_page.update(ProjectPageMessage::HideColorPicker)
+						}
+						else {
+							Command::none()
+						}
+					},
 					_ => Command::none(),
 				};
 

@@ -1,7 +1,7 @@
-use iced::{theme, widget::{button, container, scrollable, scrollable::RelativeOffset, text, Column}, Command, Element, Length, Padding};
+use iced::{theme, widget::{button, container, scrollable, scrollable::RelativeOffset, text, Column, row}, Command, Element, Length, Padding};
 use iced_aw::ModalStyles;
 use once_cell::sync::Lazy;
-use crate::{core::{Database, ProjectId}, project_tracker::UiMessage, styles::{scrollable_vertical_direction, PaletteContainerStyle, PaletteItemButtonStyle, PaletteModalStyle, ScrollableStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT}};
+use crate::{components::project_color_block, core::{Database, ProjectId}, project_tracker::UiMessage, styles::{scrollable_vertical_direction, PaletteContainerStyle, PaletteItemButtonStyle, PaletteModalStyle, ScrollableStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, TINY_SPACING_AMOUNT}};
 
 static SCROLLABLE_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 
@@ -58,7 +58,11 @@ impl SwitchProjectModal {
 						.enumerate()
 						.map(|(i, (project_id, project))| {
 							button(
-								text(&project.name)
+								row![
+									project_color_block(project.color.into(), 20.0),
+									text(&project.name),
+								]
+								.spacing(TINY_SPACING_AMOUNT)
 							)
 							.style(theme::Button::custom(PaletteItemButtonStyle{ selected: selection_index == i }))
 							.on_press(UiMessage::SelectProject(Some(project_id)))
@@ -80,7 +84,7 @@ impl SwitchProjectModal {
 								.style(theme::Scrollable::custom(ScrollableStyle))
 							)
 							.max_height(300.0)
-							.padding(Padding::new(PADDING_AMOUNT))
+							.padding(Padding{ left: PADDING_AMOUNT, right: 0.0, top: PADDING_AMOUNT, bottom: PADDING_AMOUNT })
 							.style(theme::Container::Custom(Box::new(PaletteContainerStyle)))
 						)
 						.width(Length::Fill)

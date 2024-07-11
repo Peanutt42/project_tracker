@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use iced::Color;
 use crate::core::{OrderedHashMap, Task, TaskId, TaskState};
 
 pub type ProjectId = usize;
@@ -10,6 +11,7 @@ pub fn generate_project_id() -> ProjectId {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Project {
 	pub name: String,
+	pub color: SerializableColor,
 	pub tasks: OrderedHashMap<TaskId, Task>,
 }
 
@@ -17,6 +19,7 @@ impl Project {
 	pub fn new(name: String) -> Self {
 		Self {
 			name,
+			color: SerializableColor::default(),
 			tasks: OrderedHashMap::new(),
 		}
 	}
@@ -71,5 +74,26 @@ impl Project {
 
 	pub fn get_completion_percentage(&self) -> f32 {
 		Self::calculate_completion_percentage(self.get_tasks_done(), self.tasks.len())
+	}
+}
+
+
+
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SerializableColor([u8; 3]);
+
+impl From<SerializableColor> for Color {
+	fn from(value: SerializableColor) -> Self {
+		Color::from_rgb8(value.0[0], value.0[1], value.0[2])
+	}
+}
+
+impl From<Color> for SerializableColor {
+	fn from(value: Color) -> Self {
+		Self ([
+			(value.r * 255.0) as u8,
+			(value.g * 255.0) as u8,
+			(value.b * 255.0) as u8
+		])
 	}
 }

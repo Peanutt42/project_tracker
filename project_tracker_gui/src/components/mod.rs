@@ -14,7 +14,7 @@ mod loading_screen;
 pub use loading_screen::loading_screen;
 
 mod project_preview;
-pub use project_preview::{project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID};
+pub use project_preview::{project_preview, custom_project_preview, project_color_block, EDIT_PROJECT_NAME_TEXT_INPUT_ID};
 
 mod seperator;
 pub use seperator::{horizontal_seperator, partial_horizontal_seperator};
@@ -27,3 +27,6 @@ pub use modals::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModal
 
 mod switch_project_modal;
 pub use switch_project_modal::{SwitchProjectModal, SwitchProjectModalMessage};
+
+mod color_palette;
+pub use color_palette::{color_palette, color_palette_item_button};
