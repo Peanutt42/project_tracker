@@ -3,7 +3,7 @@ use once_cell::sync::Lazy;
 use crate::core::{DatabaseMessage, ProjectId, Task, TaskId, TaskState};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
-use crate::styles::{TextInputStyle, MIDDLE_TEXT_SIZE, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
+use crate::styles::{TextInputStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
 use crate::components::{move_task_up_button, move_task_down_button, delete_task_button};
 
 pub static EDIT_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -12,7 +12,6 @@ pub fn task_widget(task: &Task, task_id: TaskId, project_id: ProjectId, editing:
 	let inner_text_element = if editing {
 		text_input("Task name", &task.name)
 			.id(EDIT_TASK_NAME_INPUT_ID.clone())
-			.size(MIDDLE_TEXT_SIZE)
 			.width(Length::Fill)
 			.on_input(move |new_task_name| DatabaseMessage::ChangeTaskName{ project_id, task_id, new_task_name }.into())
 			.on_submit(ProjectPageMessage::StopEditingTask.into())
@@ -29,7 +28,8 @@ pub fn task_widget(task: &Task, task_id: TaskId, project_id: ProjectId, editing:
 					theme::Text::Default
 				}
 			)
-			.width(Length::Shrink).into()
+			.width(Length::Shrink)
+			.into()
 	};
 
 	custom_task_widget(inner_text_element, task.state, Some(task_id), project_id, editing, can_move_up, can_move_down)
