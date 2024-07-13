@@ -141,7 +141,7 @@ impl Preferences {
 		}
 	}
 
-	fn get_filepath() -> PathBuf {
+	pub fn get_filepath() -> PathBuf {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
 			.expect("Failed to get saved state filepath");
 

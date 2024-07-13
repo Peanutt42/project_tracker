@@ -232,16 +232,27 @@ impl Application for ProjectTrackerApp {
 						}
 						Command::none()
 					},
-					LoadDatabaseResult::FailedToOpenFile(filepath) => {
+					LoadDatabaseResult::FailedToOpenFile(_) => {
+						if self.database.is_none() {
+							self.database = Some(Database::new());
+							self.update(DatabaseMessage::Save.into())
+						}
+						else {
+							Command::none()
+						}
+					},
+					LoadDatabaseResult::FailedToParse(filepath) => {
+						// saves the corrupted database, just so we don't lose the progress and can correct it afterwards
+						let saved_corrupted_filepath = Database::get_filepath().parent().unwrap().join("corrupted - database.json");
+						let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
 						if self.database.is_none() {
 							self.database = Some(Database::new());
 						}
 						Command::batch([
 							self.update(DatabaseMessage::Save.into()),
-							self.show_error_msg(format!("Could not open previous projects in \"{}\" (doesn't exist / permission issue)", filepath.display())),
+							self.show_error_msg(format!("Failed to load previous projects in \"{}\" (parsing error)\nOld corrupted database saved into \"{}\"", filepath.display(), saved_corrupted_filepath.display()))
 						])
 					},
-					LoadDatabaseResult::FailedToParse(filepath) => self.show_error_msg(format!("Failed to load previous projects in \"{}\" (parsing error)", filepath.display())),
 				}
 			},
 			UiMessage::LoadedPreferences(load_preferences_result) => {
@@ -250,14 +261,27 @@ impl Application for ProjectTrackerApp {
 						self.preferences = Some(preferences);
 						self.update(PreferenceMessage::Save.into())
 					},
-					LoadPreferencesResult::FailedToOpenFile(filepath) => {
-						self.preferences = Some(Preferences::default());
+					LoadPreferencesResult::FailedToOpenFile(_) => {
+						if self.preferences.is_none() {
+							self.preferences = Some(Preferences::default());
+							self.update(PreferenceMessage::Save.into())
+						}
+						else {
+							Command::none()
+						}
+					},
+					LoadPreferencesResult::FailedToParse(filepath) => {
+						// saves the corrupted preferences, just so we don't lose the progress and can correct it afterwards
+						let saved_corrupted_filepath = Preferences::get_filepath().parent().unwrap().join("corrupted - preferences.json");
+						let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
+						if self.preferences.is_none() {
+							self.preferences = Some(Preferences::default());
+						}
 						Command::batch([
 							self.update(PreferenceMessage::Save.into()),
-							self.show_error_msg(format!("Could not open preferences in \"{}\" (doesn't exist / permission issue)", filepath.display())),
+							self.show_error_msg(format!("Failed to load preferences in \"{}\" (parsing error)\nOld corrupted preferences saved into \"{}\"", filepath.display(), saved_corrupted_filepath.display()))
 						])
 					},
-					LoadPreferencesResult::FailedToParse(filepath) => self.show_error_msg(format!("Failed to load preferences in \"{}\" (parsing error)", filepath.display())),
 				}
 			},
 			UiMessage::DatabaseMessage(database_message) => {
