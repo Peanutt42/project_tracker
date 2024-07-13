@@ -274,16 +274,27 @@ impl Application for ProjectTrackerApp {
 							_ => Command::none(),
 						}
 					},
-					DatabaseMessage::CreateTask { .. } => {
-						self.update(ProjectPageMessage::OpenCreateNewTask.into())
-					},
-					DatabaseMessage::ChangeProjectColor { .. } => {
+					DatabaseMessage::ChangeProjectName { .. } => {
 						if let ContentPage::Project(project_page) = &mut self.content_page {
-							project_page.update(ProjectPageMessage::HideColorPicker)
+							project_page.update(ProjectPageMessage::StopEditingProjectName, &self.database)
 						}
 						else {
 							Command::none()
 						}
+					},
+					DatabaseMessage::ChangeProjectColor { .. } => {
+						if let ContentPage::Project(project_page) = &mut self.content_page {
+							project_page.update(ProjectPageMessage::HideColorPicker, &self.database)
+						}
+						else {
+							Command::none()
+						}
+					},
+					DatabaseMessage::CreateTask { .. } => {
+						self.update(ProjectPageMessage::OpenCreateNewTask.into())
+					},
+					DatabaseMessage::ChangeTaskName { .. } => {
+						self.update(ProjectPageMessage::StopEditingTask.into())
 					},
 					_ => Command::none(),
 				};
@@ -387,7 +398,7 @@ impl Application for ProjectTrackerApp {
 			}
 			UiMessage::ProjectPageMessage(message) => {
 				match &mut self.content_page {
-					ContentPage::Project(project_page) => project_page.update(message),
+					ContentPage::Project(project_page) => project_page.update(message, &self.database),
 					_ => Command::none()
 				}
 			},

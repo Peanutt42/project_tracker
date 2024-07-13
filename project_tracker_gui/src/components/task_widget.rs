@@ -8,13 +8,13 @@ use crate::components::{move_task_up_button, move_task_down_button, delete_task_
 
 pub static EDIT_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-pub fn task_widget(task: &Task, task_id: TaskId, project_id: ProjectId, editing: bool, can_move_up: bool, can_move_down: bool) -> Element<UiMessage> {
-	let inner_text_element = if editing {
-		text_input("Task name", &task.name)
+pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, edited_name: Option<&'a String>, can_move_up: bool, can_move_down: bool) -> Element<'a, UiMessage> {
+	let inner_text_element = if let Some(edited_name) = edited_name {
+		text_input("Task name", edited_name)
 			.id(EDIT_TASK_NAME_INPUT_ID.clone())
 			.width(Length::Fill)
-			.on_input(move |new_task_name| DatabaseMessage::ChangeTaskName{ project_id, task_id, new_task_name }.into())
-			.on_submit(ProjectPageMessage::StopEditingTask.into())
+			.on_input(move |new_task_name| ProjectPageMessage::ChangeEditedTaskName(new_task_name).into())
+			.on_submit(DatabaseMessage::ChangeTaskName{ project_id, task_id, new_task_name: edited_name.clone() }.into())
 			.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
 			.into()
 	}
@@ -32,7 +32,7 @@ pub fn task_widget(task: &Task, task_id: TaskId, project_id: ProjectId, editing:
 			.into()
 	};
 
-	custom_task_widget(inner_text_element, task.state, Some(task_id), project_id, editing, can_move_up, can_move_down)
+	custom_task_widget(inner_text_element, task.state, Some(task_id), project_id, edited_name.is_some(), can_move_up, can_move_down)
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -1,8 +1,8 @@
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable::{self, RelativeOffset}, text, text_input}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, color_palette, color_palette_item_button, partial_horizontal_seperator, task_list, TASK_LIST_ID, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID},
-	core::{DatabaseMessage, Project, ProjectId, TaskId},
+	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, partial_horizontal_seperator, task_list, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
+	core::{Database, DatabaseMessage, Project, ProjectId, TaskId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
@@ -22,9 +22,11 @@ pub enum ProjectPageMessage {
 
 	EditProjectName,
 	StopEditingProjectName,
+	ChangeEditedProjectName(String),
 
 	EditTask(TaskId),
 	StopEditingTask,
+	ChangeEditedTaskName(String),
 }
 
 impl From<ProjectPageMessage> for UiMessage {
@@ -36,9 +38,9 @@ impl From<ProjectPageMessage> for UiMessage {
 #[derive(Clone, Debug)]
 pub struct ProjectPage {
 	pub project_id: ProjectId,
-	edit_project_name: bool,
+	edited_project_name: Option<String>,
 	pub create_new_task_name: Option<String>,
-	task_being_edited_id: Option<TaskId>,
+	edited_task: Option<(TaskId, String)>, // task_id, new_name
 	show_done_tasks: bool,
 	show_color_picker: bool,
 }
@@ -47,9 +49,9 @@ impl ProjectPage {
 	pub fn new(project_id: ProjectId) -> Self {
 		Self {
 			project_id,
-			edit_project_name: false,
+			edited_project_name: None,
 			create_new_task_name: None,
-			task_being_edited_id: None,
+			edited_task: None,
 			show_done_tasks: false,
 			show_color_picker: false,
 		}
@@ -57,14 +59,14 @@ impl ProjectPage {
 }
 
 impl ProjectPage {
-	pub fn update(&mut self, message: ProjectPageMessage) -> Command<UiMessage> {
+	pub fn update(&mut self, message: ProjectPageMessage, database: &Option<Database>) -> Command<UiMessage> {
 		match message {
 			ProjectPageMessage::OpenCreateNewTask => {
 				self.create_new_task_name = Some(String::new());
 				Command::batch([
 					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
 					scrollable::snap_to(TASK_LIST_ID.clone(), RelativeOffset::END),
-					self.update(ProjectPageMessage::StopEditingTask),
+					self.update(ProjectPageMessage::StopEditingTask, database),
 				])
 			},
 			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task_name = None; Command::none() },
@@ -79,17 +81,42 @@ impl ProjectPage {
 			ProjectPageMessage::ShowColorPicker => { self.show_color_picker = true; Command::none() },
 			ProjectPageMessage::HideColorPicker => { self.show_color_picker = false; Command::none() },
 
-			ProjectPageMessage::EditProjectName => { self.edit_project_name = true; text_input::focus(PROJECT_NAME_TEXT_INPUT_ID.clone()) },
-			ProjectPageMessage::StopEditingProjectName => { self.edit_project_name = false; Command::none() },
+			ProjectPageMessage::EditProjectName => {
+				let project_name = database.as_ref()
+					.and_then(|db|
+						db.projects
+							.get(&self.project_id)
+							.map(|project| project.name.clone())
+					)
+					.unwrap_or_default();
+				self.edited_project_name = Some(project_name);
+				text_input::focus(PROJECT_NAME_TEXT_INPUT_ID.clone())
+			},
+			ProjectPageMessage::ChangeEditedProjectName(edited_name) => { self.edited_project_name = Some(edited_name); Command::none() },
+			ProjectPageMessage::StopEditingProjectName => { self.edited_project_name = None; Command::none() },
 
 			ProjectPageMessage::EditTask(task_id) => {
-				self.task_being_edited_id = Some(task_id);
+				let task_name = database.as_ref().and_then(|db| {
+					db.projects.get(&self.project_id)
+						.and_then(|project|
+							project.tasks
+								.get(&task_id)
+								.map(|task| task.name.clone())
+						)
+				}).unwrap_or_default();
+				self.edited_task = Some((task_id, task_name));
 				Command::batch([
 					text_input::focus(EDIT_TASK_NAME_INPUT_ID.clone()),
-					self.update(ProjectPageMessage::CloseCreateNewTask),
+					self.update(ProjectPageMessage::CloseCreateNewTask, database),
 				])
 			},
-			ProjectPageMessage::StopEditingTask => { self.task_being_edited_id = None; Command::none() },
+			ProjectPageMessage::StopEditingTask => { self.edited_task = None; Command::none() },
+			ProjectPageMessage::ChangeEditedTaskName(edited_name) => {
+				if let Some((_edited_task_id, edited_task_name)) = &mut self.edited_task {
+					*edited_task_name = edited_name;
+				}
+				Command::none()
+			},
 		}
 	}
 
@@ -100,12 +127,12 @@ impl ProjectPage {
 				let tasks_len = project.tasks.len();
 				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);
 
-				let project_name : Element<UiMessage> = if self.edit_project_name {
-					text_input("New project name", &project.name)
+				let project_name : Element<UiMessage> = if let Some(edited_project_name) = &self.edited_project_name {
+					text_input("New project name", edited_project_name)
 						.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
 						.size(TITLE_TEXT_SIZE)
-						.on_input(|new_name| DatabaseMessage::ChangeProjectName{ project_id: self.project_id, new_name }.into())
-						.on_submit(ProjectPageMessage::StopEditingProjectName.into())
+						.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
+						.on_submit(DatabaseMessage::ChangeProjectName { project_id: self.project_id, new_name: edited_project_name.clone() }.into())
 						.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
 						.into()
 				}
@@ -181,7 +208,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(&project.tasks, self.project_id, &project.name, self.task_being_edited_id, self.show_done_tasks, &self.create_new_task_name),
+					task_list(&project.tasks, self.project_id, &project.name, &self.edited_task, self.show_done_tasks, &self.create_new_task_name),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)
