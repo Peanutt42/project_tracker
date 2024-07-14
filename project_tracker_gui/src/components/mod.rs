@@ -17,7 +17,7 @@ mod project_preview;
 pub use project_preview::{project_preview, custom_project_preview, project_color_block, EDIT_PROJECT_NAME_TEXT_INPUT_ID};
 
 mod seperator;
-pub use seperator::{horizontal_seperator, partial_horizontal_seperator};
+pub use seperator::{horizontal_seperator, colored_horizontal_seperator, partial_horizontal_seperator};
 
 mod file_location;
 pub use file_location::file_location;
