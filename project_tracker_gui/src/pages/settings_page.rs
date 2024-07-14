@@ -67,13 +67,14 @@ impl SettingsPage {
 					column![
 						text("Shortcuts").size(LARGE_TEXT_SIZE),
 						shortcut("Open Settings:", "Ctrl + ,"),
+						shortcut("Open Overview:", "Ctrl + H"),
 						shortcut("New Project:", "Ctrl + Shift + N"),
 						shortcut("Rename Project:", "Ctrl + R"),
 						shortcut("Delete Project:", "Ctrl + Del"),
 						shortcut("Switch to lower Project:", "Ctrl + Tab"),
 						shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
 						shortcut("New Task:", "Ctrl + N"),
-						shortcut("Toggle Sidebar:", "Ctrl + H"),
+						shortcut("Toggle Sidebar:", "Ctrl + B"),
 					]
 					.spacing(SMALL_SPACING_AMOUNT)
 				]

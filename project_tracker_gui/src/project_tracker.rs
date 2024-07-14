@@ -109,7 +109,8 @@ impl Application for ProjectTrackerApp {
 						}
 					)
 				},
-				keyboard::Key::Character("h") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
+				keyboard::Key::Character("b") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
+				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::OpenOverview),
 				keyboard::Key::Character("r") if modifiers.command() => Some(ProjectPageMessage::EditProjectName.into()),
 				keyboard::Key::Character(",") if modifiers.command() => Some(UiMessage::OpenSettings),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
@@ -361,8 +362,8 @@ impl Application for ProjectTrackerApp {
 				self.update(PreferenceMessage::SetSelectedProjectId(project_id).into())
 			},
 			UiMessage::SwitchToLowerProject => {
-				if let Some(selected_project_id) = self.selected_project_id {
-					if let Some(database) = &self.database {
+				if let Some(database) = &self.database {
+					if let Some(selected_project_id) = self.selected_project_id {
 						if let Some(order) = database.projects.get_order(&selected_project_id) {
 							let lower_order = order + 1;
 							let order_to_switch_to = if lower_order < database.projects.len() {
@@ -374,6 +375,7 @@ impl Application for ProjectTrackerApp {
 							return self.update(UiMessage::SwitchToProject { order: order_to_switch_to });
 						}
 					}
+					return self.update(UiMessage::SwitchToProject { order: database.projects.len() - 1 });
 				}
 				Command::none()
 			},
@@ -391,7 +393,7 @@ impl Application for ProjectTrackerApp {
 						}
 					}
 				}
-				Command::none()
+				self.update(UiMessage::SwitchToProject { order: 0 })
 			},
 			UiMessage::SwitchToProject { order } => {
 				if let Some(database) = &self.database {
