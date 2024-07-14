@@ -3,7 +3,7 @@ use iced::{clipboard, event::Status, font, keyboard, time, widget::{container, r
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
 	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
-	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId},
+	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage},
 	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
 	styles::{SplitStyle, PADDING_AMOUNT},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
@@ -225,13 +225,22 @@ impl Application for ProjectTrackerApp {
 					LoadDatabaseResult::Ok(database) => {
 						self.database = Some(database);
 						if let Some(preferences) = &self.preferences {
-							if self.selected_project_id.is_none() {
-								if let Some(selected_project_id) = preferences.selected_project_id {
-									return self.update(UiMessage::SelectProject(Some(selected_project_id)));
-								}
+							match preferences.selected_content_page {
+								SerializedContentPage::Overview => self.update(UiMessage::OpenOverview),
+								SerializedContentPage::Settings => self.update(UiMessage::OpenSettings),
+								SerializedContentPage::Project(project_id) => {
+									if self.selected_project_id.is_none() {
+										self.update(UiMessage::SelectProject(Some(project_id)))
+									}
+									else {
+										Command::none()
+									}
+								},
 							}
 						}
-						Command::none()
+						else {
+							Command::none()
+						}
 					},
 					LoadDatabaseResult::FailedToOpenFile(_) => {
 						if self.database.is_none() {
@@ -344,11 +353,17 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::OpenOverview => {
 				self.content_page = ContentPage::Overview(OverviewPage::new());
-				self.update(UiMessage::SelectProject(None))
+				Command::batch([
+					self.update(UiMessage::SelectProject(None)),
+					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Overview).into())
+				])
 			},
 			UiMessage::OpenSettings => {
 				self.content_page = ContentPage::Settings(SettingsPage::new());
-				self.update(UiMessage::SelectProject(None))
+				Command::batch([
+					self.update(UiMessage::SelectProject(None)),
+					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Settings).into())
+				])
 			},
 			UiMessage::SelectProject(project_id) => {
 				self.selected_project_id = project_id;
@@ -358,8 +373,11 @@ impl Application for ProjectTrackerApp {
 						Some(project_being_edited_id) => if project_being_edited_id == project_id { Some(project_being_edited_id) } else { None },
 						None => None,
 					};
+					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into())
 				}
-				self.update(PreferenceMessage::SetSelectedProjectId(project_id).into())
+				else {
+					Command::none()
+				}
 			},
 			UiMessage::SwitchToLowerProject => {
 				if let Some(database) = &self.database {

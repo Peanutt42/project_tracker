@@ -17,8 +17,7 @@ pub struct Preferences {
 	#[serde(default = "default_show_sidebar")]
 	pub show_sidebar: bool,
 
-	// this is only the saved version and can be invalid if database is not fully loaded
-	pub selected_project_id: Option<ProjectId>,
+	pub selected_content_page: SerializedContentPage,
 
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
@@ -33,11 +32,19 @@ impl Default for Preferences {
 			theme_mode: ThemeMode::default(),
 			sidebar_dividor_position: default_sidebar_dividor_position(),
 			show_sidebar: default_show_sidebar(),
-			selected_project_id: None,
+			selected_content_page: SerializedContentPage::default(),
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
 	}
+}
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+pub enum SerializedContentPage {
+	#[default]
+	Overview,
+	Project(ProjectId),
+	Settings,
 }
 
 #[derive(Clone, Debug, Copy)]
@@ -53,7 +60,7 @@ pub enum PreferenceMessage {
 	SetThemeMode(ThemeMode),
 	SetSidebarDividorPosition(u16),
 	ToggleShowSidebar,
-	SetSelectedProjectId(Option<ProjectId>),
+	SetContentPage(SerializedContentPage),
 }
 
 impl From<PreferenceMessage> for UiMessage {
@@ -133,8 +140,8 @@ impl Preferences {
 				Command::none()
 			},
 
-			PreferenceMessage::SetSelectedProjectId(selected_project_id) => {
-				self.selected_project_id = selected_project_id;
+			PreferenceMessage::SetContentPage(content_page) => {
+				self.selected_content_page = content_page;
 				self.change_was_made();
 				Command::none()
 			}
