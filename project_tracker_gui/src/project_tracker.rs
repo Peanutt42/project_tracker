@@ -250,7 +250,7 @@ impl Application for ProjectTrackerApp {
 						}
 						Command::batch([
 							self.update(DatabaseMessage::Save.into()),
-							self.show_error_msg(format!("Failed to load previous projects in \"{}\" (parsing error)\nOld corrupted database saved into \"{}\"", filepath.display(), saved_corrupted_filepath.display()))
+							self.show_error_msg(format!("Parsing Error:\nFailed to load previous projects in\n\"{}\"\n\nOld corrupted database saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
 						])
 					},
 				}
@@ -279,7 +279,7 @@ impl Application for ProjectTrackerApp {
 						}
 						Command::batch([
 							self.update(PreferenceMessage::Save.into()),
-							self.show_error_msg(format!("Failed to load preferences in \"{}\" (parsing error)\nOld corrupted preferences saved into \"{}\"", filepath.display(), saved_corrupted_filepath.display()))
+							self.show_error_msg(format!("Parsing Error:\nFailed to load preferences in\n\"{}\"\n\nOld corrupted preferences saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
 						])
 					},
 				}

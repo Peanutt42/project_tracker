@@ -140,7 +140,7 @@ impl ErrorMsgModal {
 							copy_to_clipboard_button(error_msg.clone()),
 						]
 					)
-					.max_width(300.0)
+					.max_width(500.0)
 					.style(CardStyles::custom(ModalCardStyle))
 					.into(),
 
