@@ -246,7 +246,7 @@ pub fn toggle_sidebar_button() -> Element<'static, UiMessage> {
 		.on_press(PreferenceMessage::ToggleShowSidebar.into())
 		.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
 
-		text("Toggle sidebar (Ctrl + H)").size(SMALL_TEXT_SIZE),
+		text("Toggle sidebar (Ctrl + B)").size(SMALL_TEXT_SIZE),
 
 		Position::Bottom
 	)
