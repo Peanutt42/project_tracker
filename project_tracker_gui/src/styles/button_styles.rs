@@ -1,8 +1,9 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
-use crate::styles::{mix_color, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, LARGE_BORDER_RADIUS};
+use crate::styles::{mix_color, is_color_dark, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, LARGE_BORDER_RADIUS};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
+	pub color: Option<Color>,
 }
 
 impl StyleSheet for ProjectPreviewButtonStyle {
@@ -12,13 +13,33 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 		Appearance {
 			background: Some(
 				if self.selected {
-					style.extended_palette().background.weak.color.into()
+					if let Some(color) = self.color {
+						color.into()
+					}
+					else {
+						style.extended_palette().background.weak.color.into()
+					}
 				}
 				else {
 					style.extended_palette().background.base.color.into()
 				}
 			),
-			text_color: style.palette().text,
+			text_color: if self.selected {
+				if let Some(color) = self.color {
+					if is_color_dark(color) {
+						Color::from_rgb(0.9, 0.9, 0.9)
+					}
+					else {
+						Color::from_rgb(0.1, 0.1, 0.1)
+					}
+				}
+				else {
+					style.extended_palette().background.base.text
+				}
+			}
+			else {
+				style.extended_palette().background.base.text
+			},
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}
@@ -28,7 +49,12 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 		Appearance {
 			background: Some(
 				if self.selected {
-					style.extended_palette().background.weak.color.into()
+					if let Some(color) = self.color {
+						color.into()
+					}
+					else {
+						style.extended_palette().background.weak.color.into()
+					}
 				}
 				else {
 					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
@@ -198,7 +224,7 @@ impl StyleSheet for DeleteButtonStyle {
 
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Color::from_rgb(1.0, 0.0, 0.0).into()),
+			background: Some(style.extended_palette().secondary.base.color.into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -207,7 +233,7 @@ impl StyleSheet for DeleteButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Color::from_rgb(0.55, 0.0, 0.0).into()),
+			background: Some(style.extended_palette().danger.base.color.into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -216,7 +242,7 @@ impl StyleSheet for DeleteButtonStyle {
 
 	fn pressed(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Color::from_rgb(0.45, 0.0, 0.0).into()),
+			background: Some(mix_color(style.extended_palette().background.base.color, style.extended_palette().danger.weak.color).into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()

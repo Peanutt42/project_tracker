@@ -3,7 +3,7 @@ use once_cell::sync::Lazy;
 use crate::{core::{generate_task_id, TaskState}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
 use crate::core::{OrderedHashMap, Task, TaskId, ProjectId, DatabaseMessage};
 use crate::components::{show_done_tasks_button, task_widget, custom_task_widget, cancel_create_task_button, delete_all_done_tasks_button};
-use crate::styles::{SMALL_SPACING_AMOUNT, SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
+use crate::styles::{SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
 use crate::pages::ProjectPageMessage;
 
 pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
@@ -88,13 +88,13 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 	scrollable(
 		column![
 			Column::with_children(todo_task_elements)
-				.spacing(SMALL_SPACING_AMOUNT)
+				.spacing(SPACING_AMOUNT)
 				.padding(HORIZONTAL_PADDING),
 
 			show_tasks_button,
 
 			Column::with_children(done_task_elements)
-				.spacing(SMALL_SPACING_AMOUNT)
+				.spacing(SPACING_AMOUNT)
 				.padding(HORIZONTAL_PADDING),
 		]
 		.spacing(SPACING_AMOUNT)

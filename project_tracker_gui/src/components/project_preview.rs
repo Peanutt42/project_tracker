@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text, text_input}, Alignment, Border, Color, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text, text_input, Space}, Alignment, Border, Color, Element, Length, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use once_cell::sync::Lazy;
 use crate::{project_tracker::UiMessage, styles::SMALL_PADDING_AMOUNT};
@@ -8,9 +8,11 @@ use crate::core::{Project, ProjectId};
 
 pub static EDIT_PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
+const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
+
 pub fn project_color_block(color: Color, height: f32) -> Element<'static, UiMessage> {
 	Quad {
-		width: Length::Fixed(5.0),
+		width: Length::Fixed(PROJECT_COLOR_BLOCK_WIDTH),
 		height: Length::Fixed(height),
 		inner_bounds: InnerBounds::Ratio(1.0, 1.0),
 		quad_color: color.into(),
@@ -36,8 +38,15 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool)
 
 #[allow(clippy::too_many_arguments)]
 pub fn custom_project_preview(project_id: Option<ProjectId>, project_color: Color, project_completion_percentage: f32, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool) -> Element<UiMessage> {
+	let project_color_block: Element<UiMessage> = if selected {
+			Space::with_width(PROJECT_COLOR_BLOCK_WIDTH).into()
+		}
+		else {
+			project_color_block(project_color, 35.0)
+		};
+
 	let inner = row![
-		project_color_block(project_color, 35.0),
+		project_color_block,
 
 		column![
 			row![
@@ -63,10 +72,10 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_color: Colo
 
 	let underlay =
 		container(
-				button(inner)
-					.width(Length::Fill)
-					.on_press(UiMessage::SelectProject(project_id))
-					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
+			button(inner)
+				.width(Length::Fill)
+				.on_press(UiMessage::SelectProject(project_id))
+				.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected, color: Some(project_color) }))
 		)
 		.width(Length::Fill);
 

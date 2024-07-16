@@ -180,7 +180,7 @@ pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
 	)
 	.width(Length::Fill)
 	.on_press(UiMessage::OpenOverview)
-	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
+	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected, color: None }))
 }
 
 pub fn settings_button(selected: bool) -> Button<'static, UiMessage> {
@@ -199,7 +199,7 @@ pub fn settings_button(selected: bool) -> Button<'static, UiMessage> {
 	)
 	.width(Length::Fill)
 	.on_press(UiMessage::OpenSettings)
-	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
+	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected, color: None }))
 }
 
 pub fn open_location_button(filepath: Option<PathBuf>) -> Element<'static, UiMessage> {
