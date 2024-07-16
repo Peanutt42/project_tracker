@@ -26,12 +26,21 @@ pub mod colors {
 	pub const GREY: Color = Color::from_rgb(0.5, 0.5, 0.5);
 	pub const DARK_GREY: Color = Color::from_rgb(0.25, 0.25, 0.25);
 
-	pub fn mix_color(a: Color, b: Color) -> Color {
+	pub fn color_average(a: Color, b: Color) -> Color {
 		Color {
 			r: (a.r + b.r) / 2.0,
 			g: (a.g + b.g) / 2.0,
 			b: (a.b + b.b) / 2.0,
 			a: (a.a + b.a) / 2.0,
+		}
+	}
+
+	pub fn mix_color(a: Color, b: Color, factor: f32) -> Color {
+		Color {
+			r: a.r + (b.r - a.r) * factor,
+			g: a.g + (b.g - a.g) * factor,
+			b: a.b + (b.b - a.b) * factor,
+			a: a.a + (b.a - a.a) * factor,
 		}
 	}
 

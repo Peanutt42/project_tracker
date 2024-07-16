@@ -22,12 +22,9 @@ impl StyleSheet for PaletteContainerStyle {
 
 	fn appearance(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			// 75% base color, 25% weak color
+			// 25% weak color, 75% base color
 			background: Some(
-				mix_color(
-					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color),
-					style.extended_palette().background.base.color
-				).into()
+				mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color, 0.25).into()
 			),
 			border: Border::with_radius(LARGE_BORDER_RADIUS),
 			shadow: Shadow {

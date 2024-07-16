@@ -1,5 +1,7 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
-use crate::styles::{mix_color, is_color_dark, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, LARGE_BORDER_RADIUS};
+use crate::styles::{is_color_dark, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, LARGE_BORDER_RADIUS};
+
+use super::color_average;
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -57,7 +59,7 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 					}
 				}
 				else {
-					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
+					color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
 				}
 			),
 			..self.active(style)
@@ -85,7 +87,7 @@ impl StyleSheet for HiddenSecondaryButtonStyle {
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()),
+			background: Some(color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()),
 			..self.active(style)
 		}
 	}
@@ -242,7 +244,7 @@ impl StyleSheet for DeleteButtonStyle {
 
 	fn pressed(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(mix_color(style.extended_palette().background.base.color, style.extended_palette().danger.weak.color).into()),
+			background: Some(color_average(style.extended_palette().background.base.color, style.extended_palette().danger.weak.color).into()),
 			text_color: style.extended_palette().secondary.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -322,7 +324,7 @@ impl StyleSheet for PaletteItemButtonStyle {
 					style.extended_palette().background.weak.color.into()
 				}
 				else {
-					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
+					color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
 				}
 			),
 			..self.active(style)
@@ -358,7 +360,7 @@ impl StyleSheet for ColorPaletteButtonStyle {
 				style.extended_palette().background.weak.color.into()
 			}
 			else {
-				mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
+				color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
 			}),
 			..self.active(style)
 		}
