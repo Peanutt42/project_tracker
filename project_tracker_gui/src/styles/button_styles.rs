@@ -1,7 +1,7 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
-use crate::styles::{is_color_dark, NICE_GREEN, LIGHT_DARK_GREEN, BORDER_RADIUS, LARGE_BORDER_RADIUS};
+use crate::{components::PROJECT_COLOR_BLOCK_WIDTH, styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN}};
 
-use super::color_average;
+use super::{color_average, mix_color};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -15,34 +15,18 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 		Appearance {
 			background: Some(
 				if self.selected {
-					if let Some(color) = self.color {
-						color.into()
-					}
-					else {
-						style.extended_palette().background.weak.color.into()
-					}
+					style.extended_palette().background.weak.color.into()
 				}
 				else {
-					style.extended_palette().background.base.color.into()
+					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color, 0.75).into()
 				}
 			),
-			text_color: if self.selected {
-				if let Some(color) = self.color {
-					if is_color_dark(color) {
-						Color::from_rgb(0.9, 0.9, 0.9)
-					}
-					else {
-						Color::from_rgb(0.1, 0.1, 0.1)
-					}
-				}
-				else {
-					style.extended_palette().background.base.text
-				}
-			}
-			else {
-				style.extended_palette().background.base.text
+			text_color: style.extended_palette().background.base.text,
+			border: Border {
+				radius: BORDER_RADIUS.into(),
+				color: self.color.unwrap_or(Color::TRANSPARENT),
+				width: if self.selected && self.color.is_some() { PROJECT_COLOR_BLOCK_WIDTH } else { 0.0 },
 			},
-			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}
 	}
@@ -51,12 +35,7 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 		Appearance {
 			background: Some(
 				if self.selected {
-					if let Some(color) = self.color {
-						color.into()
-					}
-					else {
-						style.extended_palette().background.weak.color.into()
-					}
+					style.extended_palette().background.weak.color.into()
 				}
 				else {
 					color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()

@@ -27,7 +27,7 @@ pub use modal_style::{ModalStyle, PaletteModalStyle, ModalCardStyle};
 
 mod constants;
 pub use constants::{
-	colors::{color_average, mix_color, is_color_dark, NICE_GREEN, LIGHT_DARK_GREEN, LIGHT_GREY, GREY, DARK_GREY},
+	colors::{color_average, mix_color, NICE_GREEN, LIGHT_DARK_GREEN, GREY, DARK_GREY},
 	padding::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, LARGE_PADDING_AMOUNT},
 	size::{SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TITLE_TEXT_SIZE},
 	spacing::{TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, LARGE_SPACING_AMOUNT},

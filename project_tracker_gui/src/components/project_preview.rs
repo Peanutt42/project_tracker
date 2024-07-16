@@ -1,14 +1,15 @@
-use iced::{alignment::Horizontal, theme, widget::{button, column, container, row, text, text_input, Space}, Alignment, Border, Color, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{button, container, row, text, text_input, Space}, Alignment, Border, Color, Element, Length, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use once_cell::sync::Lazy;
-use crate::{project_tracker::UiMessage, styles::SMALL_PADDING_AMOUNT};
-use crate::components::{completion_bar, cancel_create_project_button};
-use crate::styles::{ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, LIGHT_GREY, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT};
+use crate::project_tracker::UiMessage;
+use crate::styles::{ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_PADDING_AMOUNT};
 use crate::core::{Project, ProjectId};
+use crate::components::cancel_create_project_button;
 
 pub static EDIT_PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
+pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
+const DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT: f32 = 35.0;
 
 pub fn project_color_block(color: Color, height: f32) -> Element<'static, UiMessage> {
 	Quad {
@@ -28,7 +29,6 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool)
 	custom_project_preview(
 		Some(project_id),
 		project.color.into(),
-		project.get_completion_percentage(),
 		project.get_tasks_done(),
 		project.tasks.len(),
 		inner_text_element,
@@ -37,34 +37,29 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_project_preview(project_id: Option<ProjectId>, project_color: Color, project_completion_percentage: f32, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool) -> Element<UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool) -> Element<UiMessage> {
 	let project_color_block: Element<UiMessage> = if selected {
-			Space::with_width(PROJECT_COLOR_BLOCK_WIDTH).into()
+			Space::new(PROJECT_COLOR_BLOCK_WIDTH, DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT)
+				.into()
 		}
 		else {
-			project_color_block(project_color, 35.0)
+			project_color_block(project_color, DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT)
 		};
 
 	let inner = row![
 		project_color_block,
 
-		column![
-			row![
-				inner_text_element,
-				container(
-					text(format!("({}/{})", tasks_done, task_len))
-						.style(theme::Text::Color(LIGHT_GREY))
-						.size(SMALL_TEXT_SIZE)
-				)
-				.width(if project_id.is_some() { Length::Fill } else { Length::Shrink })
-				.align_x(Horizontal::Right),
-			]
-			.width(Length::Fill)
-			.spacing(SMALL_SPACING_AMOUNT),
-
-			completion_bar(project_completion_percentage)
+		row![
+			inner_text_element,
+			container(
+				text(format!("({}/{})", tasks_done, task_len))
+					.size(SMALL_TEXT_SIZE)
+			)
+			.width(if project_id.is_some() { Length::Fill } else { Length::Shrink })
+			.align_x(Horizontal::Right),
 		]
-		.spacing(TINY_SPACING_AMOUNT)
+		.width(Length::Fill)
+		.spacing(SMALL_SPACING_AMOUNT)
 	]
 	.align_items(Alignment::Center)
 	.spacing(TINY_SPACING_AMOUNT)

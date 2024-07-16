@@ -76,7 +76,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			list.push(custom_project_preview(None, Color::BLACK, 0.0, 0, 0, project_name_text_input_element, true));
+			list.push(custom_project_preview(None, Color::WHITE, 0, 0, project_name_text_input_element, true));
 		}
 
 		scrollable(
@@ -143,10 +143,6 @@ impl SidebarPage {
 					.spacing(SMALL_SPACING_AMOUNT),
 
 					partial_horizontal_seperator(),
-
-					container(create_new_project_button(self.create_new_project_name.is_none()))
-						.width(Length::Fill)
-						.align_x(Horizontal::Right),
 				]
 				.spacing(SPACING_AMOUNT)
 			)
@@ -156,7 +152,12 @@ impl SidebarPage {
 
 			container(
 				column![
+					container(create_new_project_button(self.create_new_project_name.is_none()))
+						.width(Length::Fill)
+						.align_x(Horizontal::Right),
+
 					partial_horizontal_seperator(),
+
 					settings_button(app.content_page.is_settings_page()),
 				]
 				.spacing(SPACING_AMOUNT)
