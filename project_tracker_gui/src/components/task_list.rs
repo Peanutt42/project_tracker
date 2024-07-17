@@ -2,7 +2,7 @@ use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container
 use once_cell::sync::Lazy;
 use crate::{core::{generate_task_id, TaskState}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
 use crate::core::{OrderedHashMap, Task, TaskId, ProjectId, DatabaseMessage};
-use crate::components::{show_done_tasks_button, task_widget, custom_task_widget, cancel_create_task_button, delete_all_done_tasks_button};
+use crate::components::{show_done_tasks_button, unfocusable, task_widget, custom_task_widget, cancel_create_task_button, delete_all_done_tasks_button};
 use crate::styles::{SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
 use crate::pages::ProjectPageMessage;
 
@@ -40,16 +40,20 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 	if let Some(create_new_task_name) = &create_new_task_name {
 		let inner_text_element =
 			row![
-				text_input("New task name", create_new_task_name)
-					.id(CREATE_NEW_TASK_NAME_INPUT_ID.clone())
-					.line_height(LineHeight::Relative(1.2))
-					.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
-					.on_submit(DatabaseMessage::CreateTask {
-						project_id,
-						task_id: generate_task_id(),
-						task_name: create_new_task_name.clone(),
-					}.into())
-					.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+				unfocusable(
+					text_input("New task name", create_new_task_name)
+						.id(CREATE_NEW_TASK_NAME_INPUT_ID.clone())
+						.line_height(LineHeight::Relative(1.2))
+						.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
+						.on_submit(DatabaseMessage::CreateTask {
+							project_id,
+							task_id: generate_task_id(),
+							task_name: create_new_task_name.clone(),
+						}.into())
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+
+					ProjectPageMessage::CloseCreateNewTask.into()
+				),
 
 				cancel_create_task_button(),
 			]

@@ -30,3 +30,6 @@ pub use switch_project_modal::{SwitchProjectModal, SwitchProjectModalMessage};
 
 mod color_palette;
 pub use color_palette::{color_palette, color_palette_item_button};
+
+mod unfocusable;
+pub use unfocusable::unfocusable;

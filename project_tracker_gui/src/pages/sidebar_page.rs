@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Command, Color, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::{Database, DatabaseMessage}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
+use crate::{components::unfocusable, core::{Database, DatabaseMessage}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
 use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
@@ -62,15 +62,19 @@ impl SidebarPage {
 
 		if let Some(create_new_project_name) = &self.create_new_project_name {
 			let project_name_text_input_element = container(
-				text_input("New project name", create_new_project_name)
-					.id(TEXT_INPUT_ID.clone())
-					.size(LARGE_TEXT_SIZE)
-					.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
-					.on_submit(DatabaseMessage::CreateProject{
-						project_id: generate_project_id(),
-						name: create_new_project_name.clone()
-					}.into())
-					.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
+				unfocusable(
+					text_input("New project name", create_new_project_name)
+						.id(TEXT_INPUT_ID.clone())
+						.size(LARGE_TEXT_SIZE)
+						.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
+						.on_submit(DatabaseMessage::CreateProject{
+							project_id: generate_project_id(),
+							name: create_new_project_name.clone()
+						}.into())
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+
+					SidebarPageMessage::CloseCreateNewProject.into()
+				)
 			)
 			.width(Length::Fill)
 			.align_x(Horizontal::Center)
