@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use std::path::Path;
 use iced::{widget::{row, text}, Alignment, Element};
 use crate::{project_tracker::UiMessage, styles::SPACING_AMOUNT};
 use crate::components::open_location_button;
 
-pub fn file_location(filepath: PathBuf) -> Element<'static, UiMessage> {
+pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
 	row![
 		text(
 			format!("{}", filepath.display())
