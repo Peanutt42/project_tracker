@@ -256,7 +256,7 @@ impl Preferences {
 
 			row![
 				text("Preference file location: "),
-				file_location(Self::get_filepath())
+				file_location(&Self::get_filepath())
 			]
 			.align_items(Alignment::Center)
 		]

@@ -56,7 +56,7 @@ impl SettingsPage {
 
 						row![
 							text("Database file location: "),
-							file_location(Database::get_filepath()),
+							file_location(&Database::get_filepath()),
 						]
 						.align_items(Alignment::Center),
 					]
