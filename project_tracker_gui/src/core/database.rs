@@ -29,9 +29,6 @@ pub enum DatabaseMessage {
 	ImportDialog,
 	ImportDialogCanceled,
 	Sync(PathBuf),
-	SyncUploaded,
-	SyncDownloaded,
-	SyncCanceled,
 
 	CreateProject {
 		project_id: ProjectId,
@@ -94,7 +91,7 @@ pub enum LoadDatabaseResult {
 
 #[derive(Clone, Debug)]
 enum SyncDatabaseResult {
-	None,
+	InvalidSynchronizationFilepath,
 	Upload,
 	Download
 }
@@ -153,12 +150,11 @@ impl Database {
 			DatabaseMessage::ImportDialogCanceled => Command::none(),
 			DatabaseMessage::Sync(filepath) => Command::perform(Self::sync(filepath.clone()), |result| {
 				match result {
-					SyncDatabaseResult::None => DatabaseMessage::SyncCanceled.into(),
+					SyncDatabaseResult::InvalidSynchronizationFilepath => ErrorMsgModalMessage::open(format!("Failed to open synchronization file in\n\"{}\"", filepath.display())),
 					SyncDatabaseResult::Upload => DatabaseMessage::Export(filepath).into(),
 					SyncDatabaseResult::Download => DatabaseMessage::Import(filepath).into(),
 				}
 			}),
-			DatabaseMessage::SyncUploaded | DatabaseMessage::SyncDownloaded | DatabaseMessage::SyncCanceled => Command::none(),
 
 			DatabaseMessage::CreateProject { project_id, name } => {
 				self.projects.insert(project_id, Project::new(name));
@@ -308,13 +304,13 @@ impl Database {
 
 		let synchronization_filepath_metadata = match synchronization_filepath.metadata() {
 			Ok(metadata) =>  metadata,
-			Err(_) => return SyncDatabaseResult::None,
+			Err(_) => return SyncDatabaseResult::InvalidSynchronizationFilepath,
 		};
 
 		let local_filepath = Self::get_filepath();
 		let local_filepath_metadata = match local_filepath.metadata() {
 			Ok(metadata) => metadata,
-			Err(_) => return SyncDatabaseResult::None,
+			Err(_) => return SyncDatabaseResult::Download,
 		};
 
 		if FileTime::from_last_modification_time(&local_filepath_metadata) > FileTime::from_last_modification_time(&synchronization_filepath_metadata) {
