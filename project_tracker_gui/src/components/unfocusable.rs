@@ -1,4 +1,4 @@
-use iced::{advanced::Widget, Element, Renderer, Theme};
+use iced::{advanced::Widget, Element, Event, keyboard::{self, key::Named, Key}, Renderer, Theme};
 
 pub struct Unfocusable<'a, Message: 'a + Clone> {
 	content: Element<'a, Message>,
@@ -67,13 +67,13 @@ impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'
 		shell: &mut iced::advanced::Shell<'_, Message>,
 		viewport: &iced::Rectangle,
 	) -> iced::advanced::graphics::core::event::Status {
-		if let iced::Event::Keyboard(iced::keyboard::Event::KeyPressed { key, .. }) = &event {
-			if let iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape) = key {
+		match &event {
+			Event::Keyboard(keyboard::Event::KeyPressed { key: Key::Named(Named::Escape), .. }) => {
 				shell.publish(self.on_esc.clone());
-				return iced::advanced::graphics::core::event::Status::Captured;
-			}
+				iced::advanced::graphics::core::event::Status::Captured
+			},
+			_ => self.content.as_widget_mut().on_event(state, event, layout, cursor, renderer, clipboard, shell, viewport)
 		}
-		self.content.as_widget_mut().on_event(state, event, layout, cursor, renderer, clipboard, shell, viewport)
 	}
 
 	fn mouse_interaction(

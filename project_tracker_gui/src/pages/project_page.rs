@@ -1,7 +1,7 @@
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable::{self, RelativeOffset}, text, text_input}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, partial_horizontal_seperator, task_list, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
+	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, partial_horizontal_seperator, task_list, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
 	core::{Database, DatabaseMessage, Project, ProjectId, TaskId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
@@ -128,13 +128,17 @@ impl ProjectPage {
 				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);
 
 				let project_name : Element<UiMessage> = if let Some(edited_project_name) = &self.edited_project_name {
-					text_input("New project name", edited_project_name)
-						.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
-						.size(TITLE_TEXT_SIZE)
-						.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
-						.on_submit(DatabaseMessage::ChangeProjectName { project_id: self.project_id, new_name: edited_project_name.clone() }.into())
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
-						.into()
+					unfocusable(
+						text_input("New project name", edited_project_name)
+							.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
+							.size(TITLE_TEXT_SIZE)
+							.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
+							.on_submit(DatabaseMessage::ChangeProjectName { project_id: self.project_id, new_name: edited_project_name.clone() }.into())
+							.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+
+						ProjectPageMessage::StopEditingProjectName.into()
+					)
+					.into()
 				}
 				else {
 					button(
@@ -176,7 +180,8 @@ impl ProjectPage {
 							}
 							else {
 								None
-							}),
+							})
+							.width(Length::Fill),
 
 							container(
 								row![
@@ -187,8 +192,8 @@ impl ProjectPage {
 								.spacing(SMALL_SPACING_AMOUNT)
 							)
 							.align_x(Horizontal::Right)
-							.width(Length::Fill)
-						],
+						]
+						.spacing(SPACING_AMOUNT),
 
 						completion_bar(completion_percentage),
 
