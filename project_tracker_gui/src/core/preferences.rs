@@ -19,6 +19,8 @@ pub struct Preferences {
 
 	pub selected_content_page: SerializedContentPage,
 
+	pub synchronization_filepath: Option<PathBuf>,
+
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
 
@@ -33,6 +35,7 @@ impl Default for Preferences {
 			sidebar_dividor_position: default_sidebar_dividor_position(),
 			show_sidebar: default_show_sidebar(),
 			selected_content_page: SerializedContentPage::default(),
+			synchronization_filepath: None,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
@@ -230,6 +233,12 @@ impl Preferences {
 	pub fn view(&self) -> Element<UiMessage> {
 		column![
 			row![
+				text("Preference file location: "),
+				file_location(&Self::get_filepath())
+			]
+			.align_items(Alignment::Center),
+
+			row![
 				text("Theme Mode:").horizontal_alignment(Horizontal::Center).vertical_alignment(Vertical::Center),
 				container(
 					row![
@@ -253,12 +262,6 @@ impl Preferences {
 				dangerous_button("Export Preferences", PreferenceMessage::Export),
 			]
 			.spacing(SPACING_AMOUNT),
-
-			row![
-				text("Preference file location: "),
-				file_location(&Self::get_filepath())
-			]
-			.align_items(Alignment::Center)
 		]
 		.spacing(SPACING_AMOUNT)
 		.into()

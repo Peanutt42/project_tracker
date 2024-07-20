@@ -22,10 +22,16 @@ pub enum DatabaseMessage {
 	Save,
 	Saved(Instant), // begin_time since saving
 	Clear,
-	Export,
+	Export(PathBuf),
+	ExportDialog,
 	Exported,
-	Import,
-	ImportCanceled,
+	Import(PathBuf),
+	ImportDialog,
+	ImportDialogCanceled,
+	Sync(PathBuf),
+	SyncUploaded,
+	SyncDownloaded,
+	SyncCanceled,
 
 	CreateProject {
 		project_id: ProjectId,
@@ -86,6 +92,13 @@ pub enum LoadDatabaseResult {
 	FailedToParse(PathBuf),
 }
 
+#[derive(Clone, Debug)]
+enum SyncDatabaseResult {
+	None,
+	Upload,
+	Download
+}
+
 impl Database {
 	const FILE_NAME: &'static str = "database.json";
 
@@ -122,20 +135,30 @@ impl Database {
 			),
 			DatabaseMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
 			DatabaseMessage::Clear => { *self = Self::new(); self.change_was_made(); Command::none() },
-			DatabaseMessage::Export => Command::perform(self.clone().export_file_dialog(), |_| DatabaseMessage::Exported.into()),
+			DatabaseMessage::Export(filepath) => Command::perform(self.clone().save_to(filepath), |_| DatabaseMessage::Exported.into()),
+			DatabaseMessage::ExportDialog => Command::perform(self.clone().export_file_dialog(), |_| DatabaseMessage::Exported.into()),
 			DatabaseMessage::Exported => Command::none(),
-			DatabaseMessage::Import => Command::perform(
+			DatabaseMessage::Import(filepath) => Command::perform(Self::load_from(filepath), UiMessage::LoadedDatabase),
+			DatabaseMessage::ImportDialog => Command::perform(
 				Self::import_file_dialog(),
-				|result| {
-					if let Some(load_database_result) = result {
-						UiMessage::LoadedDatabase(load_database_result)
+				|filepath| {
+					if let Some(filepath) = filepath {
+						DatabaseMessage::Import(filepath).into()
 					}
 					else {
-						DatabaseMessage::ImportCanceled.into()
+						DatabaseMessage::ImportDialogCanceled.into()
 					}
 				}
 			),
-			DatabaseMessage::ImportCanceled => Command::none(),
+			DatabaseMessage::ImportDialogCanceled => Command::none(),
+			DatabaseMessage::Sync(filepath) => Command::perform(Self::sync(filepath.clone()), |result| {
+				match result {
+					SyncDatabaseResult::None => DatabaseMessage::SyncCanceled.into(),
+					SyncDatabaseResult::Upload => DatabaseMessage::Export(filepath).into(),
+					SyncDatabaseResult::Download => DatabaseMessage::Import(filepath).into(),
+				}
+			}),
+			DatabaseMessage::SyncUploaded | DatabaseMessage::SyncDownloaded | DatabaseMessage::SyncCanceled => Command::none(),
 
 			DatabaseMessage::CreateProject { project_id, name } => {
 				self.projects.insert(project_id, Project::new(name));
@@ -280,7 +303,30 @@ impl Database {
 		Ok(begin_time)
 	}
 
-	async fn export_file_dialog(self) -> Result<(), String> {
+	async fn sync(synchronization_filepath: PathBuf) -> SyncDatabaseResult {
+		use filetime::FileTime;
+
+		let synchronization_filepath_metadata = match synchronization_filepath.metadata() {
+			Ok(metadata) =>  metadata,
+			Err(_) => return SyncDatabaseResult::None,
+		};
+
+		let local_filepath = Self::get_filepath();
+		let local_filepath_metadata = match local_filepath.metadata() {
+			Ok(metadata) => metadata,
+			Err(_) => return SyncDatabaseResult::None,
+		};
+
+		if FileTime::from_last_modification_time(&local_filepath_metadata) > FileTime::from_last_modification_time(&synchronization_filepath_metadata) {
+			SyncDatabaseResult::Upload
+		}
+		else {
+			SyncDatabaseResult::Download
+		}
+	}
+
+
+	async fn export_file_dialog(self) -> Option<PathBuf> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Export ProjectTracker Database")
 			.set_file_name(Self::FILE_NAME)
@@ -288,25 +334,17 @@ impl Database {
 			.save_file()
 			.await;
 
-		if let Some(result) = file_dialog_result {
-			self.save_to(result.path().to_path_buf()).await?;
-		}
-		Ok(())
+		file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
 	}
 
-	async fn import_file_dialog() -> Option<LoadDatabaseResult> {
+	async fn import_file_dialog() -> Option<PathBuf> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Import ProjectTracker Database")
 			.add_filter("Database (.json)", &["json"])
 			.pick_file()
 			.await;
 
-		if let Some(result) = file_dialog_result {
-			Some(Self::load_from(result.path().to_path_buf()).await)
-		}
-		else {
-			None
-		}
+		file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
 	}
 }
 

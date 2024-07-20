@@ -1,4 +1,5 @@
-use iced::{theme, widget::{container, column, row, scrollable, text}, Element, Alignment};
+use std::path::PathBuf;
+use iced::{theme, widget::{button, container, column, row, scrollable, text}, Element, Alignment};
 use crate::{components::{dangerous_button, file_location, horizontal_seperator, loading_screen}, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage};
 use crate::styles::{scrollable_vertical_direction, ScrollableStyle, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
@@ -47,18 +48,31 @@ impl SettingsPage {
 
 					column![
 						text("Database").size(LARGE_TEXT_SIZE),
-						row![
-							dangerous_button("Clear Database", DatabaseMessage::Clear),
-							dangerous_button("Import Database", DatabaseMessage::Import),
-							dangerous_button("Export Database", DatabaseMessage::Export),
-						]
-						.spacing(SPACING_AMOUNT),
 
 						row![
 							text("Database file location: "),
 							file_location(&Database::get_filepath()),
 						]
 						.align_items(Alignment::Center),
+
+						row![
+							text("Database synchronization file location: "),
+							file_location(preferences.synchronization_filepath.as_ref().unwrap_or(&PathBuf::from("not specified"))),
+						]
+						.align_items(Alignment::Center),
+
+						button(text("Sync Database")).on_press_maybe(
+							preferences.synchronization_filepath
+								.as_ref()
+								.map(|filepath| DatabaseMessage::Sync(filepath.clone()).into())
+						),
+
+						row![
+							dangerous_button("Clear Database", DatabaseMessage::Clear),
+							dangerous_button("Import Database", DatabaseMessage::ImportDialog),
+							dangerous_button("Export Database", DatabaseMessage::ExportDialog),
+						]
+						.spacing(SPACING_AMOUNT),
 					]
 					.spacing(SPACING_AMOUNT),
 
