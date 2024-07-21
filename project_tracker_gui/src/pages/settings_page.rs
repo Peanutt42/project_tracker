@@ -1,10 +1,21 @@
-use std::path::PathBuf;
-use iced::{theme, widget::{container, column, row, scrollable, text}, Element, Alignment};
-use crate::{components::{dangerous_button, file_location, horizontal_seperator, loading_screen, sync_database_button}, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
+use iced::{theme, widget::{button, column, container, row, scrollable, text}, Alignment, Command, Element};
+use iced_aw::Bootstrap;
+use crate::{components::{dangerous_button, file_location, horizontal_seperator, loading_screen, sync_database_button}, core::PreferenceMessage, styles::{RoundedContainerStyle, RoundedSecondaryButtonStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage};
 use crate::styles::{scrollable_vertical_direction, ScrollableStyle, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 
+#[derive(Debug, Clone)]
+pub enum SettingsPageMessage {
+	BrowseSynchronizationFilepath,
+	BrowseSynchronizationFilepathCanceled,
+}
+
+impl From<SettingsPageMessage> for UiMessage {
+	fn from(value: SettingsPageMessage) -> Self {
+		UiMessage::SettingsPageMessage(value)
+	}
+}
 
 pub struct SettingsPage {
 
@@ -20,6 +31,21 @@ impl SettingsPage {
 	pub fn new() -> Self {
 		Self {
 
+		}
+	}
+
+	pub fn update(&mut self, message: SettingsPageMessage) -> Command<UiMessage> {
+		match message {
+			SettingsPageMessage::BrowseSynchronizationFilepath => Command::perform(
+				Database::import_file_dialog(),
+				|filepath| {
+					match filepath {
+						Some(filepath) => PreferenceMessage::SetSynchronizationFilepath(Some(filepath)).into(),
+						None => SettingsPageMessage::BrowseSynchronizationFilepathCanceled.into(),
+					}
+				}
+			),
+			SettingsPageMessage::BrowseSynchronizationFilepathCanceled => Command::none(),
 		}
 	}
 
@@ -50,23 +76,55 @@ impl SettingsPage {
 						text("Database").size(LARGE_TEXT_SIZE),
 
 						row![
-							text("Database file location: "),
+							text("File location: "),
 							file_location(&Database::get_filepath()),
 						]
 						.align_items(Alignment::Center),
 
 						row![
-							text("Database synchronization file location: "),
-							file_location(preferences.synchronization_filepath.as_ref().unwrap_or(&PathBuf::from("not specified"))),
+							text("Synchronization file location: "),
+							container(
+								text(
+									if let Some(filepath) = &preferences.synchronization_filepath {
+										format!("{}", filepath.display())
+									}
+									else {
+										"not specified".to_string()
+									}
+								)
+							)
+							.style(theme::Container::Box),
+							button(text("Clear"))
+								.on_press(PreferenceMessage::SetSynchronizationFilepath(None).into())
+								.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+							button(text("Browse"))
+								.on_press(SettingsPageMessage::BrowseSynchronizationFilepath.into())
+								.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
 						]
+						.spacing(SPACING_AMOUNT)
 						.align_items(Alignment::Center),
 
 						sync_database_button(app.database.as_ref().map(|db| db.syncing).unwrap_or(false), preferences.synchronization_filepath.clone()),
 
 						row![
-							dangerous_button("Clear Database", DatabaseMessage::Clear),
-							dangerous_button("Import Database", DatabaseMessage::ImportDialog),
-							dangerous_button("Export Database", DatabaseMessage::ExportDialog),
+							dangerous_button(
+								Bootstrap::Trash,
+								"Clear",
+								Some("Clear Database".to_string()),
+								DatabaseMessage::Clear
+							),
+							dangerous_button(
+								Bootstrap::Download,
+								"Import",
+								None,
+								DatabaseMessage::ImportDialog
+							),
+							dangerous_button(
+								Bootstrap::Upload,
+								"Export",
+								None,
+								DatabaseMessage::ExportDialog
+							),
 						]
 						.spacing(SPACING_AMOUNT),
 					]

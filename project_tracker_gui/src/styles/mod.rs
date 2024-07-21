@@ -35,7 +35,7 @@ pub use constants::{
 };
 
 mod fonts;
-pub use fonts::{strikethrough_text, BOLD_FONT};
+pub use fonts::strikethrough_text;
 
 mod theme;
 pub use theme::ProjectTrackerTheme;

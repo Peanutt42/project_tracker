@@ -4,7 +4,7 @@ use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, Spli
 use crate::{
 	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage},
-	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SidebarPage, SidebarPageMessage},
+	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SettingsPageMessage, SidebarPage, SidebarPageMessage},
 	styles::{SplitStyle, PADDING_AMOUNT},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
@@ -48,6 +48,7 @@ pub enum UiMessage {
 	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
+	SettingsPageMessage(SettingsPageMessage),
 	SwitchProjectModalMessage(SwitchProjectModalMessage),
 }
 
@@ -450,6 +451,12 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
+			UiMessage::SettingsPageMessage(message) => {
+				match &mut self.content_page {
+					ContentPage::Settings(settings_page) => settings_page.update(message),
+					_ => Command::none()
+				}
+			},
 			UiMessage::SwitchProjectModalMessage(message) => self.switch_project_modal.update(message, &self.database, self.selected_project_id),
 		}
 	}

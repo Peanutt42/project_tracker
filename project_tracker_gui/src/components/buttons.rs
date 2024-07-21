@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::ConfirmModalMessage, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::ConfirmModalMessage, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -148,13 +148,22 @@ pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'stati
 	.style(theme::Button::Secondary)
 }
 
-pub fn dangerous_button(label: &'static str, on_press: impl Into<UiMessage>) -> Button<'static, UiMessage> {
+pub fn dangerous_button(icon: Bootstrap, text: &'static str, confirm_label: Option<String>, on_press: impl Into<UiMessage>) -> Button<'static, UiMessage> {
 	button(
-		text(label)
-			.font(BOLD_FONT)
+		row![
+			icon_to_text(icon),
+			iced::widget::text(text)
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_items(Alignment::Center)
 	)
 	.style(theme::Button::custom(DangerousButtonStyle))
-	.on_press(ConfirmModalMessage::open(label.to_string(), on_press))
+	.on_press(if let Some(label) = confirm_label {
+		ConfirmModalMessage::open(label, on_press)
+	}
+	else {
+		on_press.into()
+	})
 }
 
 pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode) -> Button<'static, UiMessage> {
@@ -275,11 +284,12 @@ pub fn sync_database_button(synchronizing: bool, synchronization_filepath: Optio
 			)
 			.center_y(),
 
-			text("Synchronize Database")
+			text("Synchronize")
 		]
-		.spacing(SPACING_AMOUNT)
+		.spacing(SMALL_SPACING_AMOUNT)
 		.align_items(Alignment::Center)
 	)
 	.on_press_maybe(synchronization_filepath.map(|filepath| DatabaseMessage::Sync(filepath).into()))
+	.style(theme::Button::custom(DangerousButtonStyle))
 	.into()
 }

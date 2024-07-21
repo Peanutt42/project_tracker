@@ -8,7 +8,7 @@ mod overview_page;
 pub use overview_page::OverviewPage;
 
 mod settings_page;
-pub use settings_page::SettingsPage;
+pub use settings_page::{SettingsPage, SettingsPageMessage};
 
 use iced::Element;
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};

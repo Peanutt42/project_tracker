@@ -358,7 +358,7 @@ impl Database {
 		file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
 	}
 
-	async fn import_file_dialog() -> Option<PathBuf> {
+	pub async fn import_file_dialog() -> Option<PathBuf> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Import ProjectTracker Database")
 			.add_filter("Database (.json)", &["json"])

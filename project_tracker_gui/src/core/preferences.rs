@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 use std::time::Instant;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Command, Element, Length};
+use iced_aw::Bootstrap;
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode, core::ProjectId};
+use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage}, core::ProjectId, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
 fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }
@@ -50,7 +51,7 @@ pub enum SerializedContentPage {
 	Settings,
 }
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug)]
 pub enum PreferenceMessage {
 	Save,
 	Saved(Instant), // begin_time of saving
@@ -64,6 +65,7 @@ pub enum PreferenceMessage {
 	SetSidebarDividorPosition(u16),
 	ToggleShowSidebar,
 	SetContentPage(SerializedContentPage),
+	SetSynchronizationFilepath(Option<PathBuf>),
 }
 
 impl From<PreferenceMessage> for UiMessage {
@@ -145,6 +147,12 @@ impl Preferences {
 
 			PreferenceMessage::SetContentPage(content_page) => {
 				self.selected_content_page = content_page;
+				self.change_was_made();
+				Command::none()
+			},
+
+			PreferenceMessage::SetSynchronizationFilepath(filepath) => {
+				self.synchronization_filepath = filepath;
 				self.change_was_made();
 				Command::none()
 			}
@@ -233,7 +241,7 @@ impl Preferences {
 	pub fn view(&self) -> Element<UiMessage> {
 		column![
 			row![
-				text("Preference file location: "),
+				text("File location: "),
 				file_location(&Self::get_filepath())
 			]
 			.align_items(Alignment::Center),
@@ -255,11 +263,26 @@ impl Preferences {
 			.align_items(Alignment::Center),
 
 			row![
-				dangerous_button("Reset Preferences", PreferenceMessage::Reset),
+				dangerous_button(
+					Bootstrap::Trash,
+					"Reset",
+					Some("Reset Preferences".to_string()),
+					PreferenceMessage::Reset
+				),
 
-				dangerous_button("Import Preferences", PreferenceMessage::Import),
+				dangerous_button(
+					Bootstrap::Download,
+					"Import",
+					None,
+					PreferenceMessage::Import
+				),
 
-				dangerous_button("Export Preferences", PreferenceMessage::Export),
+				dangerous_button(
+					Bootstrap::Upload,
+					"Export",
+					None,
+					PreferenceMessage::Export
+				),
 			]
 			.spacing(SPACING_AMOUNT),
 		]
