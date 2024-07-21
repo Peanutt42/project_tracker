@@ -1,6 +1,6 @@
 use std::path::PathBuf;
-use iced::{alignment::Horizontal, theme, widget::{button, row, text, tooltip, tooltip::Position, Button}, Alignment, Element, Length};
-use iced_aw::core::icons::bootstrap::{icon_to_text, Bootstrap};
+use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
+use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
 	components::ConfirmModalMessage, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, BOLD_FONT, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
@@ -252,5 +252,34 @@ pub fn toggle_sidebar_button() -> Element<'static, UiMessage> {
 	)
 	.gap(10)
 	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+	.into()
+}
+
+pub fn sync_database_button(synchronizing: bool, synchronization_filepath: Option<PathBuf>) -> Element<'static, UiMessage> {
+	button(
+		row![
+			container(
+				if synchronizing {
+					Element::new(
+						Spinner::new()
+							.width(Length::Fixed(16.0))
+							.height(Length::Fixed(16.0))
+							.circle_radius(2.0)
+					)
+				}
+				else {
+					icon_to_text(Bootstrap::ArrowClockwise)
+						.vertical_alignment(Vertical::Center)
+						.into()
+				}
+			)
+			.center_y(),
+
+			text("Synchronize Database")
+		]
+		.spacing(SPACING_AMOUNT)
+		.align_items(Alignment::Center)
+	)
+	.on_press_maybe(synchronization_filepath.map(|filepath| DatabaseMessage::Sync(filepath).into()))
 	.into()
 }

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
-use iced::{theme, widget::{button, container, column, row, scrollable, text}, Element, Alignment};
-use crate::{components::{dangerous_button, file_location, horizontal_seperator, loading_screen}, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
+use iced::{theme, widget::{container, column, row, scrollable, text}, Element, Alignment};
+use crate::{components::{dangerous_button, file_location, horizontal_seperator, loading_screen, sync_database_button}, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage};
 use crate::styles::{scrollable_vertical_direction, ScrollableStyle, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -61,11 +61,7 @@ impl SettingsPage {
 						]
 						.align_items(Alignment::Center),
 
-						button(text("Sync Database")).on_press_maybe(
-							preferences.synchronization_filepath
-								.as_ref()
-								.map(|filepath| DatabaseMessage::Sync(filepath.clone()).into())
-						),
+						sync_database_button(app.database.as_ref().map(|db| db.syncing).unwrap_or(false), preferences.synchronization_filepath.clone()),
 
 						row![
 							dangerous_button("Clear Database", DatabaseMessage::Clear),

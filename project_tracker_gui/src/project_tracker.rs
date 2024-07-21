@@ -330,6 +330,9 @@ impl Application for ProjectTrackerApp {
 					DatabaseMessage::ChangeTaskName { .. } => {
 						self.update(ProjectPageMessage::StopEditingTask.into())
 					},
+					DatabaseMessage::SyncFailed(error_msg) => {
+						self.show_error_msg(error_msg.clone())
+					},
 					_ => Command::none(),
 				};
 
