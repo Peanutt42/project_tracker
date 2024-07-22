@@ -28,6 +28,9 @@ pub use modals::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModal
 mod switch_project_modal;
 pub use switch_project_modal::{SwitchProjectModal, SwitchProjectModalMessage};
 
+mod settings_modal;
+pub use settings_modal::{SettingsModal, SettingsModalMessage};
+
 mod color_palette;
 pub use color_palette::{color_palette, color_palette_item_button};
 

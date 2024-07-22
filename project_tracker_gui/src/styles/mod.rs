@@ -34,8 +34,8 @@ pub use constants::{
 	border_radius::{BORDER_RADIUS, LARGE_BORDER_RADIUS},
 };
 
-mod fonts;
-pub use fonts::strikethrough_text;
+mod text;
+pub use text::{strikethrough_text, capped_text};
 
 mod theme;
 pub use theme::ProjectTrackerTheme;

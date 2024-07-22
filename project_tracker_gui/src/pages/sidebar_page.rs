@@ -155,16 +155,14 @@ impl SidebarPage {
 			list,
 
 			container(
-				column![
+				row![
+					settings_button(),
+
 					container(create_new_project_button(self.create_new_project_name.is_none()))
 						.width(Length::Fill)
 						.align_x(Horizontal::Right),
-
-					partial_horizontal_seperator(),
-
-					settings_button(app.content_page.is_settings_page()),
 				]
-				.spacing(SPACING_AMOUNT)
+				.align_items(Alignment::Center)
 			)
 			.padding(scrollbar_padding),
 		]

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::ConfirmModalMessage, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{ConfirmModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -192,23 +192,15 @@ pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
 	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected, color: None }))
 }
 
-pub fn settings_button(selected: bool) -> Button<'static, UiMessage> {
+pub fn settings_button() -> Button<'static, UiMessage> {
 	button(
-		row![
-			icon_to_text(Bootstrap::Gear)
-				.size(LARGE_TEXT_SIZE),
-
-			text("Settings")
-				.size(LARGE_TEXT_SIZE)
-				.width(Length::Fill)
-		]
-		.align_items(Alignment::Center)
-		.spacing(SPACING_AMOUNT)
-		.width(Length::Fill)
+		icon_to_text(Bootstrap::Gear)
+		    .horizontal_alignment(Horizontal::Center)
+			.size(LARGE_TEXT_SIZE)
 	)
-	.width(Length::Fill)
-	.on_press(UiMessage::OpenSettings)
-	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected, color: None }))
+	.width(Length::Fixed(35.0))
+	.on_press(SettingsModalMessage::Open.into())
+	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
 }
 
 pub fn open_location_button(filepath: Option<PathBuf>) -> Element<'static, UiMessage> {

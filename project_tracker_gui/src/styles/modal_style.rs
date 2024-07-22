@@ -35,6 +35,7 @@ impl card::StyleSheet for ModalCardStyle {
 		card::Appearance {
 			border_width: 0.0,
 			background: style.extended_palette().background.base.color.into(),
+			body_text_color: style.extended_palette().background.base.text,
 			head_background: style.extended_palette().background.base.color.into(),
 			head_text_color: style.extended_palette().background.base.text,
 			close_color: style.extended_palette().background.base.text,

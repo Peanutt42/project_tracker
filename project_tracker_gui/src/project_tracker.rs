@@ -2,9 +2,9 @@ use std::{path::PathBuf, time::Duration};
 use iced::{clipboard, event::Status, font, keyboard, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
-	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
+	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, SettingsModal, SettingsModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage},
-	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SettingsPage, SettingsPageMessage, SidebarPage, SidebarPageMessage},
+	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageMessage},
 	styles::{SplitStyle, PADDING_AMOUNT},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
@@ -18,6 +18,7 @@ pub struct ProjectTrackerApp {
 	pub confirm_modal: ConfirmModal,
 	pub error_msg_modal: ErrorMsgModal,
 	pub switch_project_modal: SwitchProjectModal,
+	pub settings_modal: SettingsModal,
 	pub is_system_theme_dark: bool,
 }
 
@@ -45,11 +46,10 @@ pub enum UiMessage {
 	SwitchToProject{ order: usize }, // switches to project when using shortcuts
 	DeleteSelectedProject,
 	OpenOverview,
-	OpenSettings,
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
-	SettingsPageMessage(SettingsPageMessage),
 	SwitchProjectModalMessage(SwitchProjectModalMessage),
+	SettingsModalMessage(SettingsModalMessage),
 }
 
 impl Application for ProjectTrackerApp {
@@ -69,6 +69,7 @@ impl Application for ProjectTrackerApp {
 				confirm_modal: ConfirmModal::Closed,
 				error_msg_modal: ErrorMsgModal::Closed,
 				switch_project_modal: SwitchProjectModal::Closed,
+				settings_modal: SettingsModal::Closed,
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Command::batch([
@@ -113,7 +114,7 @@ impl Application for ProjectTrackerApp {
 				keyboard::Key::Character("b") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
 				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::OpenOverview),
 				keyboard::Key::Character("r") if modifiers.command() => Some(ProjectPageMessage::EditProjectName.into()),
-				keyboard::Key::Character(",") if modifiers.command() => Some(UiMessage::OpenSettings),
+				keyboard::Key::Character(",") if modifiers.command() => Some(SettingsModalMessage::Open.into()),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
 				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => Some(UiMessage::DeleteSelectedProject),
@@ -228,7 +229,6 @@ impl Application for ProjectTrackerApp {
 						if let Some(preferences) = &self.preferences {
 							match preferences.selected_content_page {
 								SerializedContentPage::Overview => self.update(UiMessage::OpenOverview),
-								SerializedContentPage::Settings => self.update(UiMessage::OpenSettings),
 								SerializedContentPage::Project(project_id) => {
 									if self.selected_project_id.is_none() {
 										self.update(UiMessage::SelectProject(Some(project_id)))
@@ -362,13 +362,6 @@ impl Application for ProjectTrackerApp {
 					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Overview).into())
 				])
 			},
-			UiMessage::OpenSettings => {
-				self.content_page = ContentPage::Settings(SettingsPage::new());
-				Command::batch([
-					self.update(UiMessage::SelectProject(None)),
-					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Settings).into())
-				])
-			},
 			UiMessage::SelectProject(project_id) => {
 				self.selected_project_id = project_id;
 				if let Some(project_id) = project_id {
@@ -378,9 +371,13 @@ impl Application for ProjectTrackerApp {
 						None => None,
 					};
 					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into())
+					/*Command::batch([
+						self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into()),
+						//self.settings_modal.update(SettingsModalMessage::Close)
+					])*/
 				}
 				else {
-					Command::none()
+					Command::none()//self.settings_modal.update(SettingsModalMessage::Close)
 				}
 			},
 			UiMessage::SwitchToLowerProject => {
@@ -451,11 +448,15 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
-			UiMessage::SettingsPageMessage(message) => {
-				match &mut self.content_page {
-					ContentPage::Settings(settings_page) => settings_page.update(message),
-					_ => Command::none()
-				}
+			UiMessage::SettingsModalMessage(message) => {
+				let command = match &message {
+					SettingsModalMessage::Open => self.update(UiMessage::SelectProject(None)),
+					_ => Command::none(),
+				};
+				Command::batch([
+					self.settings_modal.update(message),
+					command
+				])
 			},
 			UiMessage::SwitchProjectModalMessage(message) => self.switch_project_modal.update(message, &self.database, self.selected_project_id),
 		}
@@ -513,6 +514,7 @@ impl Application for ProjectTrackerApp {
 
 		if let Some((modal_element, modal_style)) = self.error_msg_modal.view()
 			.or(self.confirm_modal.view())
+			.or(self.settings_modal.view(self))
 			.or(switch_project_modal_view())
 		{
 			modal(

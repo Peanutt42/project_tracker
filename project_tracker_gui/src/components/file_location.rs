@@ -1,13 +1,13 @@
 use std::path::Path;
 use iced::{theme, widget::{container, row, text}, Alignment, Element};
-use crate::{project_tracker::UiMessage, styles::SPACING_AMOUNT};
+use crate::{project_tracker::UiMessage, styles::{capped_text, SPACING_AMOUNT}};
 use crate::components::open_location_button;
 
 pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
 	row![
 		container(
 			text(
-				format!("{}", filepath.display())
+				capped_text(&filepath.to_string_lossy(), 60)
 			)
 		)
 		.style(theme::Container::Box),

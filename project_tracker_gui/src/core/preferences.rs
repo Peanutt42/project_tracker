@@ -48,7 +48,6 @@ pub enum SerializedContentPage {
 	#[default]
 	Overview,
 	Project(ProjectId),
-	Settings,
 }
 
 #[derive(Clone, Debug)]
