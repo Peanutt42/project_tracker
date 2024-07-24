@@ -230,11 +230,9 @@ impl Application for ProjectTrackerApp {
 							match preferences.selected_content_page {
 								SerializedContentPage::Overview => self.update(UiMessage::OpenOverview),
 								SerializedContentPage::Project(project_id) => {
-									if self.selected_project_id.is_none() {
-										self.update(UiMessage::SelectProject(Some(project_id)))
-									}
-									else {
-										Command::none()
+									match self.selected_project_id {
+										Some(selected_project_id) => self.update(UiMessage::SelectProject(Some(selected_project_id))),
+										None => self.update(UiMessage::SelectProject(Some(project_id))),
 									}
 								},
 							}
@@ -355,15 +353,22 @@ impl Application for ProjectTrackerApp {
 					Command::none()
 				}
 			},
-			UiMessage::OpenOverview => {
-				self.content_page = ContentPage::Overview(OverviewPage::new());
-				Command::batch([
-					self.update(UiMessage::SelectProject(None)),
-					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Overview).into())
-				])
-			},
+			UiMessage::OpenOverview => self.update(UiMessage::SelectProject(None)),
 			UiMessage::SelectProject(project_id) => {
 				self.selected_project_id = project_id;
+				let project_id = if let Some(database) = &self.database {
+					project_id.and_then(|project_id| {
+						if database.projects.contains_key(&project_id) {
+							Some(project_id)
+						}
+						else {
+							None
+						}
+					})
+				}
+				else {
+					project_id
+				};
 				if let Some(project_id) = project_id {
 					self.content_page = ContentPage::Project(ProjectPage::new(project_id));
 					self.sidebar_page.project_being_edited = match self.sidebar_page.project_being_edited {
@@ -371,13 +376,10 @@ impl Application for ProjectTrackerApp {
 						None => None,
 					};
 					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into())
-					/*Command::batch([
-						self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into()),
-						//self.settings_modal.update(SettingsModalMessage::Close)
-					])*/
 				}
 				else {
-					Command::none()//self.settings_modal.update(SettingsModalMessage::Close)
+					self.content_page = ContentPage::Overview(OverviewPage::new());
+					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Overview).into())
 				}
 			},
 			UiMessage::SwitchToLowerProject => {
@@ -448,16 +450,7 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
-			UiMessage::SettingsModalMessage(message) => {
-				let command = match &message {
-					SettingsModalMessage::Open => self.update(UiMessage::SelectProject(None)),
-					_ => Command::none(),
-				};
-				Command::batch([
-					self.settings_modal.update(message),
-					command
-				])
-			},
+			UiMessage::SettingsModalMessage(message) => self.settings_modal.update(message),
 			UiMessage::SwitchProjectModalMessage(message) => self.switch_project_modal.update(message, &self.database, self.selected_project_id),
 		}
 	}

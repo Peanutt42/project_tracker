@@ -68,6 +68,10 @@ impl<K, V> OrderedHashMap<K, V>
 		}
 	}
 
+	pub fn contains_key(&self, key: &K) -> bool {
+		self.hash_map.contains_key(key)
+	}
+
 	pub fn get(&self, key: &K) -> Option<&V> {
 		self.hash_map.get(key)
 	}
