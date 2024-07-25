@@ -4,19 +4,23 @@ use crate::core::{DatabaseMessage, ProjectId, Task, TaskId, TaskState};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextInputStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
-use crate::components::{move_task_up_button, move_task_down_button, delete_task_button};
+use crate::components::{move_task_up_button, move_task_down_button, delete_task_button, unfocusable};
 
 pub static EDIT_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, edited_name: Option<&'a String>, can_move_up: bool, can_move_down: bool) -> Element<'a, UiMessage> {
 	let inner_text_element = if let Some(edited_name) = edited_name {
-		text_input("Task name", edited_name)
-			.id(EDIT_TASK_NAME_INPUT_ID.clone())
-			.width(Length::Fill)
-			.on_input(move |new_task_name| ProjectPageMessage::ChangeEditedTaskName(new_task_name).into())
-			.on_submit(DatabaseMessage::ChangeTaskName{ project_id, task_id, new_task_name: edited_name.clone() }.into())
-			.style(theme::TextInput::Custom(Box::new(TextInputStyle)))
-			.into()
+		unfocusable(
+			text_input("Task name", edited_name)
+				.id(EDIT_TASK_NAME_INPUT_ID.clone())
+				.width(Length::Fill)
+				.on_input(move |new_task_name| ProjectPageMessage::ChangeEditedTaskName(new_task_name).into())
+				.on_submit(DatabaseMessage::ChangeTaskName{ project_id, task_id, new_task_name: edited_name.clone() }.into())
+				.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+
+			ProjectPageMessage::StopEditingTask.into()
+		)
+		.into()
 	}
 	else {
 		text(if task.is_done() { strikethrough_text(&task.name) } else { task.name.clone() })
