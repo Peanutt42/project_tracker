@@ -1,6 +1,7 @@
-use iced::{Alignment, Element, Length, Padding, widget::{row, Row, text, text_input, button, checkbox}, theme};
+use iced::{theme, widget::{checkbox, container, row, text, text_input, Row}, Alignment, Element, Length, Padding};
+use iced_drop::droppable;
 use once_cell::sync::Lazy;
-use crate::core::{DatabaseMessage, ProjectId, Task, TaskId, TaskState};
+use crate::{core::{DatabaseMessage, ProjectId, Task, TaskId, TaskState}, pages::SidebarPageMessage};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextInputStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
@@ -66,32 +67,38 @@ pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: Ta
 				.into()
 		}
 		else {
-			button(
-				row![
-					checkbox("", task_state.is_done())
-						.on_toggle(move |checked| {
-							DatabaseMessage::ChangeTaskState {
-								project_id,
-								task_id,
-								new_task_state:
-									if checked {
-										TaskState::Done
-									}
-									else {
-										TaskState::Todo
-									},
-							}.into()
-						})
-						.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle))),
+			droppable(
+				container(
+					row![
+						checkbox("", task_state.is_done())
+							.on_toggle(move |checked| {
+								DatabaseMessage::ChangeTaskState {
+									project_id,
+									task_id,
+									new_task_state:
+										if checked {
+											TaskState::Done
+										}
+										else {
+											TaskState::Todo
+										},
+								}.into()
+							})
+							.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle))),
 
-					inner_text_element,
-				]
-				.width(Length::Fill)
-				.align_items(Alignment::Start)
+						inner_text_element,
+					]
+					.width(Length::Fill)
+					.align_items(Alignment::Start)
+				)
+				.padding(Padding::new(SMALL_PADDING_AMOUNT))
 			)
+			.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
+			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, point, rect }.into())
+			.on_click(ProjectPageMessage::PressTask(task_id).into())
+			.on_cancel(SidebarPageMessage::CancelDragTask.into())
+			.drag_hide(true)
 			.style(theme::Button::custom(HiddenSecondaryButtonStyle))
-			.padding(Padding::new(SMALL_PADDING_AMOUNT))
-			.on_press(ProjectPageMessage::EditTask(task_id).into())
 			.into()
 		}
 	}

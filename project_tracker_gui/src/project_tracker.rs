@@ -1,5 +1,5 @@
 use std::{path::PathBuf, time::Duration};
-use iced::{clipboard, event::Status, font, keyboard, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
+use iced::{clipboard, event::Status, font, keyboard, mouse, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
 	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, SettingsModal, SettingsModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
@@ -137,17 +137,15 @@ impl Application for ProjectTrackerApp {
 			iced::event::listen_with(move |event, status| {
 				match status {
 					Status::Ignored => {
-						if let Event::Window(id, window::Event::CloseRequested) = event {
-							Some(id)
-						}
-						else {
-							None
+						match event {
+							Event::Window(id, window::Event::CloseRequested) => Some(UiMessage::CloseWindowRequested(id)),
+							Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(ProjectPageMessage::LeftClickReleased.into()),
+							_ => None,
 						}
 					},
 					Status::Captured => None,
 				}
-			})
-			.map(UiMessage::CloseWindowRequested),
+			}),
 
 			time::every(Duration::from_secs(1))
 				.map(|_| UiMessage::SaveChangedFiles),
@@ -297,7 +295,7 @@ impl Application for ProjectTrackerApp {
 				let command = match &database_message {
 					DatabaseMessage::CreateProject { project_id, .. } => Command::batch([
 						self.update(UiMessage::SelectProject(Some(*project_id))),
-						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject),
+						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject, &mut self.database),
 					]),
 					DatabaseMessage::DeleteProject(project_id) => {
 						match self.selected_project_id {
@@ -449,7 +447,21 @@ impl Application for ProjectTrackerApp {
 					_ => Command::none()
 				}
 			},
-			UiMessage::SidebarPageMessage(message) => self.sidebar_page.update(message),
+			UiMessage::SidebarPageMessage(message) => {
+				let command = match &message {
+					SidebarPageMessage::DragTask { .. } => {
+						match &mut self.content_page {
+							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask, &self.database),
+							_ => Command::none()
+						}
+					},
+					_ => Command::none(),
+				};
+				Command::batch([
+					self.sidebar_page.update(message, &mut self.database),
+					command
+				])
+			},
 			UiMessage::SettingsModalMessage(message) => self.settings_modal.update(message),
 			UiMessage::SwitchProjectModalMessage(message) => self.switch_project_modal.update(message, &self.database, self.selected_project_id),
 		}

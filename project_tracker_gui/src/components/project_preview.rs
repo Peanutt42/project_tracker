@@ -1,8 +1,8 @@
 use iced::{alignment::Horizontal, theme, widget::{button, container, row, text, text_input, Space}, Alignment, Border, Color, Element, Length, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use once_cell::sync::Lazy;
-use crate::project_tracker::UiMessage;
-use crate::styles::{ProjectPreviewButtonStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_PADDING_AMOUNT};
+use crate::{project_tracker::UiMessage, styles::DROP_HIGHLIGHT_WIDTH};
+use crate::styles::{ProjectPreviewButtonStyle, DropZoneContainerStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_PADDING_AMOUNT};
 use crate::core::{Project, ProjectId};
 use crate::components::cancel_create_project_button;
 
@@ -23,7 +23,7 @@ pub fn project_color_block(color: Color, height: f32) -> Element<'static, UiMess
 	.into()
 }
 
-pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool) -> Element<UiMessage> {
+pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool, task_hovering: bool) -> Element<UiMessage> {
 	let inner_text_element = text(&project.name).size(LARGE_TEXT_SIZE).into();
 
 	custom_project_preview(
@@ -32,12 +32,13 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool)
 		project.get_tasks_done(),
 		project.tasks.len(),
 		inner_text_element,
-		selected
+		selected,
+		task_hovering
 	)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_project_preview(project_id: Option<ProjectId>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool) -> Element<UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, task_hovering: bool) -> Element<UiMessage> {
 	let project_color_block: Element<UiMessage> = if selected {
 			Space::new(PROJECT_COLOR_BLOCK_WIDTH, DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT)
 				.into()
@@ -72,7 +73,12 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_color: Colo
 				.on_press(UiMessage::SelectProject(project_id))
 				.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected, color: Some(project_color) }))
 		)
-		.width(Length::Fill);
+		.id(
+			project_id.map(|id| id.into()).unwrap_or(container::Id::unique())
+		)
+		.width(Length::Fill)
+		.padding(Padding::new(DROP_HIGHLIGHT_WIDTH))
+		.style(theme::Container::Custom(Box::new(DropZoneContainerStyle{ hovered: task_hovering })));
 
 	if project_id.is_some() {
 		underlay.into()

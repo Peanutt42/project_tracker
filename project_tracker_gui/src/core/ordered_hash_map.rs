@@ -61,11 +61,12 @@ impl<K, V> OrderedHashMap<K, V>
 		self.order.push(key);
 	}
 
-	pub fn remove(&mut self, key: &K) {
-		self.hash_map.remove(key);
+	pub fn remove(&mut self, key: &K) -> Option<V> {
+		let value = self.hash_map.remove(key);
 		if let Some(index) = self.get_order(key) {
 			self.order.remove(index);
 		}
+		value
 	}
 
 	pub fn contains_key(&self, key: &K) -> bool {
@@ -105,6 +106,10 @@ impl<K, V> OrderedHashMap<K, V>
 
 	pub fn iter(&self) -> OrderedHashMapIter<K, V> {
 		OrderedHashMapIter { order_iter: self.order.iter(), hash_map: &self.hash_map }
+	}
+
+	pub fn keys(&self) -> Iter<K> {
+		self.order.iter()
 	}
 
 	pub fn values(&self) -> Values<K, V> {

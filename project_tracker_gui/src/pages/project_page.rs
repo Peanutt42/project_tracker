@@ -27,6 +27,10 @@ pub enum ProjectPageMessage {
 	EditTask(TaskId),
 	StopEditingTask,
 	ChangeEditedTaskName(String),
+
+	DragTask,
+	PressTask(TaskId),
+	LeftClickReleased,
 }
 
 impl From<ProjectPageMessage> for UiMessage {
@@ -43,6 +47,8 @@ pub struct ProjectPage {
 	edited_task: Option<(TaskId, String)>, // task_id, new_name
 	show_done_tasks: bool,
 	show_color_picker: bool,
+	pressed_task: Option<TaskId>,
+	task_was_dragged: bool,
 }
 
 impl ProjectPage {
@@ -54,6 +60,8 @@ impl ProjectPage {
 			edited_task: None,
 			show_done_tasks: false,
 			show_color_picker: false,
+			pressed_task: None,
+			task_was_dragged: false,
 		}
 	}
 }
@@ -116,6 +124,31 @@ impl ProjectPage {
 					*edited_task_name = edited_name;
 				}
 				Command::none()
+			},
+
+			ProjectPageMessage::DragTask => {
+				self.task_was_dragged = true;
+				Command::none()
+			},
+			ProjectPageMessage::PressTask(task_id) => {
+				self.pressed_task = Some(task_id);
+				Command::none()
+			},
+			ProjectPageMessage::LeftClickReleased => {
+				let command = if let Some(pressed_task) = &self.pressed_task {
+					if !self.task_was_dragged {
+						self.update(ProjectPageMessage::EditTask(*pressed_task), database)
+					}
+					else {
+						Command::none()
+					}
+				}
+				else {
+					Command::none()
+				};
+				self.pressed_task = None;
+				self.task_was_dragged = false;
+				command
 			},
 		}
 	}

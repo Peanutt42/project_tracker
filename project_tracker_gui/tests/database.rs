@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use project_tracker_gui::core::{generate_project_id, generate_task_id, Database, LoadDatabaseResult, Project};
+use project_tracker_gui::core::{generate_task_id, Database, LoadDatabaseResult, Project, ProjectId};
 
 #[tokio::test]
 async fn test_database_serialization() {
@@ -13,7 +13,7 @@ async fn test_database_serialization() {
 			project.add_task(generate_task_id(), format!("Task Nr. {j}"));
 		}
 
-		database.projects.insert(generate_project_id(), project);
+		database.projects.insert(ProjectId::generate(), project);
 	}
 
 	let original = database.clone();

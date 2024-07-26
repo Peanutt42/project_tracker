@@ -1,11 +1,20 @@
 use serde::{Serialize, Deserialize};
-use iced::Color;
+use iced::{widget::container::Id, Color};
 use crate::core::{OrderedHashMap, Task, TaskId, TaskState};
 
-pub type ProjectId = usize;
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
+pub struct ProjectId(pub usize);
 
-pub fn generate_project_id() -> ProjectId {
-	rand::random()
+impl ProjectId {
+	pub fn generate() -> Self {
+		Self(rand::random())
+	}
+}
+
+impl From<ProjectId> for Id {
+	fn from(value: ProjectId) -> Self {
+		Id::new(format!("{}", value.0))
+	}
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]

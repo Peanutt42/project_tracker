@@ -56,6 +56,12 @@ pub enum DatabaseMessage {
 	DeleteProject(ProjectId),
 	DeleteDoneTasks(ProjectId),
 
+	MoveTask {
+		task_id: TaskId,
+		src_project_id: ProjectId,
+		destination_project_id: ProjectId,
+	},
+
 	CreateTask {
 		project_id: ProjectId,
 		task_id: TaskId,
@@ -227,6 +233,22 @@ impl Database {
 					}
 					self.change_was_made();
 				}
+				Command::none()
+			},
+
+			DatabaseMessage::MoveTask { task_id, src_project_id, destination_project_id } => {
+				let removed_task = if let Some(src_project) = self.projects.get_mut(&src_project_id) {
+					src_project.tasks.remove(&task_id)
+				}
+				else {
+					None
+				};
+				if let Some(task) = removed_task {
+					if let Some(destination_project) = self.projects.get_mut(&destination_project_id) {
+						destination_project.tasks.insert(task_id, task);
+					}
+				}
+				self.change_was_made();
 				Command::none()
 			},
 

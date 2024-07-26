@@ -1,10 +1,11 @@
-use iced::{alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Command, Color, Element, Length, Padding};
+use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
+use iced_drop::zones_on_point;
 use once_cell::sync::Lazy;
-use crate::{components::unfocusable, core::{Database, DatabaseMessage}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
-use crate::components::{create_new_project_button, loading_screen, overview_button, partial_horizontal_seperator, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button, toggle_sidebar_button};
+use crate::{components::{horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
+use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
-use crate::core::{OrderedHashMap, ProjectId, generate_project_id, Project};
+use crate::core::{OrderedHashMap, ProjectId, Project};
 
 static SCROLLABLE_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -17,6 +18,30 @@ pub enum SidebarPageMessage {
 
 	EditProject(ProjectId),
 	StopEditingProject,
+
+	DropTask {
+		project_id: ProjectId,
+		task_id: TaskId,
+		point: Point,
+		rect: Rectangle,
+	},
+	HandleTaskDropZonesFound {
+		project_id: ProjectId,
+		task_id: TaskId,
+		zones: Vec<(Id, Rectangle)>
+	},
+	DragTask {
+		project_id: ProjectId,
+		task_id: TaskId,
+		point: Point,
+		rect: Rectangle,
+	},
+	CancelDragTask,
+	HandleTaskDropZonesHovered {
+		project_id: ProjectId,
+		task_id: TaskId,
+		zones: Vec<(Id, Rectangle)>
+	},
 }
 
 impl From<SidebarPageMessage> for UiMessage {
@@ -29,6 +54,7 @@ impl From<SidebarPageMessage> for UiMessage {
 pub struct SidebarPage {
 	create_new_project_name: Option<String>,
 	pub project_being_edited: Option<ProjectId>,
+	project_being_task_hovered: Option<ProjectId>,
 }
 
 impl SidebarPage {
@@ -36,6 +62,7 @@ impl SidebarPage {
 		Self {
 			create_new_project_name: None,
 			project_being_edited: None,
+			project_being_task_hovered: None,
 		}
 	}
 
@@ -56,7 +83,11 @@ impl SidebarPage {
 					Some(selected_project_id) => project_id == selected_project_id,
 					None => false,
 				};
-				project_preview(project, project_id, selected)
+				let task_hovering = match self.project_being_task_hovered {
+					Some(hovered_project_id) => project_id == hovered_project_id,
+					None => false
+				};
+				project_preview(project, project_id, selected, task_hovering)
 			})
 			.collect();
 
@@ -68,7 +99,7 @@ impl SidebarPage {
 						.size(LARGE_TEXT_SIZE)
 						.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
 						.on_submit(DatabaseMessage::CreateProject{
-							project_id: generate_project_id(),
+							project_id: ProjectId::generate(),
 							name: create_new_project_name.clone()
 						}.into())
 						.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
@@ -80,7 +111,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			list.push(custom_project_preview(None, Color::WHITE, 0, 0, project_name_text_input_element, true));
+			list.push(custom_project_preview(None, Color::WHITE, 0, 0, project_name_text_input_element, true, false));
 		}
 
 		scrollable(
@@ -97,12 +128,12 @@ impl SidebarPage {
 		.into()
 	}
 
-	pub fn update(&mut self, message: SidebarPageMessage) -> Command<UiMessage> {
+	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>) -> Command<UiMessage> {
 		match message {
 			SidebarPageMessage::OpenCreateNewProject => {
 				self.create_new_project_name = Some(String::new());
 				Command::batch([
-					self.update(SidebarPageMessage::StopEditingProject),
+					self.update(SidebarPageMessage::StopEditingProject, database),
 					text_input::focus(TEXT_INPUT_ID.clone()),
 					scrollable::snap_to(SCROLLABLE_ID.clone(), RelativeOffset::END),
 				])
@@ -113,12 +144,76 @@ impl SidebarPage {
 			SidebarPageMessage::EditProject(project_id) => {
 				self.project_being_edited = Some(project_id);
 				Command::batch([
-					self.update(SidebarPageMessage::CloseCreateNewProject),
+					self.update(SidebarPageMessage::CloseCreateNewProject, database),
 					text_input::focus(EDIT_PROJECT_NAME_TEXT_INPUT_ID.clone())
 				])
 			},
 			SidebarPageMessage::StopEditingProject => {
 				self.project_being_edited = None;
+				Command::none()
+			},
+
+			SidebarPageMessage::DropTask { project_id, task_id, point, .. } => {
+				self.project_being_task_hovered = None;
+
+				zones_on_point(
+					move |zones| SidebarPageMessage::HandleTaskDropZonesFound{ project_id, task_id, zones }.into(),
+					point,
+					None,
+					None
+				)
+			},
+			SidebarPageMessage::CancelDragTask => {
+				self.project_being_task_hovered = None;
+				Command::none()
+			},
+			SidebarPageMessage::HandleTaskDropZonesFound{ project_id, task_id, zones } => {
+				if let Some(database) = database {
+					let src_project_id = project_id;
+					for destination_project_id in database.projects.keys() {
+						let destination_project_id = *destination_project_id;
+						if destination_project_id == src_project_id {
+							continue;
+						}
+
+						let project_container_id: container::Id = destination_project_id.into();
+						let project_widget_id = project_container_id.into();
+						for (id, _bounds) in zones.iter() {
+							if *id == project_widget_id {
+								return database.update(DatabaseMessage::MoveTask { task_id, src_project_id, destination_project_id });
+							}
+						}
+					}
+				}
+				Command::none()
+			},
+			SidebarPageMessage::DragTask { project_id, task_id, point, .. } => {
+				zones_on_point(
+					move |zones| SidebarPageMessage::HandleTaskDropZonesHovered { project_id, task_id, zones }.into(),
+					point,
+					None,
+					None
+				)
+			},
+			SidebarPageMessage::HandleTaskDropZonesHovered { project_id, zones, .. } => {
+				self.project_being_task_hovered = None;
+				if let Some(projects) = database.as_ref().map(|db| &db.projects) {
+					let source_project_id = project_id;
+					for (destination_project_id, _project) in projects.iter() {
+						if destination_project_id == source_project_id {
+							continue;
+						}
+
+						let project_container_id: container::Id = destination_project_id.into();
+						let project_widget_id = project_container_id.into();
+						for (id, _bounds) in zones.iter() {
+							if *id == project_widget_id {
+								self.project_being_task_hovered = Some(destination_project_id);
+								break;
+							}
+						}
+					}
+				}
 				Command::none()
 			},
 		}
@@ -146,7 +241,7 @@ impl SidebarPage {
 					.align_items(Alignment::Center)
 					.spacing(SMALL_SPACING_AMOUNT),
 
-					partial_horizontal_seperator(),
+					horizontal_seperator(),
 				]
 				.spacing(SPACING_AMOUNT)
 			)

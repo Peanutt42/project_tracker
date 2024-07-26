@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["project_tracker_gui"]
+members = ["project_tracker_gui", "iced_drop"]
 
 [dependencies]
 project_tracker_gui = { path = "project_tracker_gui" }
