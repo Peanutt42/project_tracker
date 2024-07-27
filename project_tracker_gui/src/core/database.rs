@@ -53,6 +53,10 @@ pub enum DatabaseMessage {
 	},
 	MoveProjectUp(ProjectId),
 	MoveProjectDown(ProjectId),
+	SwapProjectOrder {
+		project_a_id: ProjectId,
+		project_b_id: ProjectId,
+	},
 	DeleteProject(ProjectId),
 	DeleteDoneTasks(ProjectId),
 
@@ -214,6 +218,11 @@ impl Database {
 			},
 			DatabaseMessage::MoveProjectDown(project_id) => {
 				self.projects.move_down(&project_id);
+				self.change_was_made();
+				Command::none()
+			},
+			DatabaseMessage::SwapProjectOrder { project_a_id, project_b_id } => {
+				self.projects.swap_order(&project_a_id, &project_b_id);
 				self.change_was_made();
 				Command::none()
 			},

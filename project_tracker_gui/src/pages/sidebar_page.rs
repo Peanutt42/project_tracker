@@ -187,18 +187,7 @@ impl SidebarPage {
 			},
 			SidebarPageMessage::DragTask { project_id, task_id, rect, .. } => {
 				let src_project_id = project_id;
-				let options = database.as_ref().map(|database| {
-					database.projects.iter().filter_map(|(project_id, project)| {
-						if project_id == src_project_id {
-							None
-						}
-						else {
-							Some(project.preview_container_id.clone().into())
-						}
-					})
-					.collect()
-				});
-
+				let options = Self::project_options(database, src_project_id);
 				find_zones(
 					move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
 					move |zone_bounds| zone_bounds.intersects(&rect),
@@ -207,15 +196,44 @@ impl SidebarPage {
 				)
 			},
 
-			SidebarPageMessage::DropProject { project_id, point, rect } => {
-				self.dragged_project = None;
+			SidebarPageMessage::DropProject { .. } => {
+				if let Some(dragged_project) = self.dragged_project {
+					self.dragged_project = None;
+					if let Some(hovered_project) = self.project_being_project_hovered {
+						self.project_being_project_hovered = None;
+						if let Some(database) = database {
+							return database.update(DatabaseMessage::SwapProjectOrder{
+								project_a_id: dragged_project,
+				 				project_b_id: hovered_project,
+							});
+						}
+					}
+				}
 				Command::none()
 			},
-			SidebarPageMessage::DragProject { project_id, point, rect } => {
+			SidebarPageMessage::DragProject { project_id, rect, .. } => {
 				self.dragged_project = Some(project_id);
-				Command::none()
+				let options = Self::project_options(database, project_id);
+				find_zones(
+					move |zones| SidebarPageMessage::HandleProjectZones { project_id, zones }.into(),
+				 	move |zone_bounds| zone_bounds.intersects(&rect),
+					options,
+					None
+				)
 			},
-			SidebarPageMessage::HandleProjectZones { project_id, zones } => {
+			SidebarPageMessage::HandleProjectZones { zones, .. } => {
+				self.project_being_project_hovered = None;
+				if let Some(projects) = database.as_ref().map(|db| &db.projects) {
+					for (dst_project_id, dst_project) in projects.iter() {
+						let dst_project_widget_id = dst_project.preview_container_id.clone().into();
+						for (id, _bounds) in zones.iter() {
+							if *id == dst_project_widget_id {
+								self.project_being_project_hovered = Some(dst_project_id);
+								break;
+							}
+						}
+					}
+				}
 				Command::none()
 			},
 			SidebarPageMessage::ClickProject(project_id) => {
@@ -282,6 +300,20 @@ impl SidebarPage {
 		.spacing(SPACING_AMOUNT)
 		.padding(Padding{ left: PADDING_AMOUNT, right: 0.0, top: PADDING_AMOUNT, bottom: PADDING_AMOUNT })
 		.into()
+	}
+
+	fn project_options(database: &Option<Database>, exception: ProjectId) -> Option<Vec<Id>> {
+		database.as_ref().map(|database| {
+			database.projects.iter().filter_map(|(project_id, project)| {
+				if project_id == exception {
+					None
+				}
+				else {
+					Some(project.preview_container_id.clone().into())
+				}
+			})
+			.collect()
+		})
 	}
 }
 

@@ -56,6 +56,14 @@ impl<K, V> OrderedHashMap<K, V>
 		}
 	}
 
+	pub fn swap_order(&mut self, key_a: &K, key_b: &K) {
+		if let Some(order_a) = self.get_order(key_a) {
+			if let Some(order_b) = self.get_order(key_b) {
+				self.order.swap(order_a, order_b);
+			}
+		}
+	}
+
 	pub fn insert(&mut self, key: K, value: V) {
 		self.hash_map.insert(key, value);
 		self.order.push(key);
