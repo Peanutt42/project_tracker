@@ -2,7 +2,7 @@ use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, 
 use iced_drop::find_zones;
 use once_cell::sync::Lazy;
 use crate::{components::{horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
-use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button, toggle_sidebar_button};
+use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::core::{OrderedHashMap, ProjectId, Project};
@@ -15,9 +15,6 @@ pub enum SidebarPageMessage {
 	OpenCreateNewProject,
 	CloseCreateNewProject,
 	ChangeCreateNewProjectName(String),
-
-	EditProject(ProjectId),
-	StopEditingProject,
 
 	DropTask {
 		project_id: ProjectId,
@@ -37,6 +34,24 @@ pub enum SidebarPageMessage {
 		rect: Rectangle,
 	},
 	CancelDragTask,
+
+	DropProject {
+		project_id: ProjectId,
+		point: Point,
+		rect: Rectangle,
+	},
+	HandleProjectZones {
+		project_id: ProjectId,
+		zones: Vec<(Id, Rectangle)>,
+	},
+	DragProject {
+		project_id: ProjectId,
+		point: Point,
+		rect: Rectangle,
+	},
+	ClickProject(ProjectId),
+	CancelDragProject,
+	LeftClickReleased,
 }
 
 impl From<SidebarPageMessage> for UiMessage {
@@ -48,16 +63,20 @@ impl From<SidebarPageMessage> for UiMessage {
 #[derive(Clone)]
 pub struct SidebarPage {
 	create_new_project_name: Option<String>,
-	pub project_being_edited: Option<ProjectId>,
 	project_being_task_hovered: Option<ProjectId>,
+	project_being_project_hovered: Option<ProjectId>,
+	pub dragged_project: Option<ProjectId>,
+	pub pressed_project: Option<ProjectId>,
 }
 
 impl SidebarPage {
 	pub fn new() -> Self {
 		Self {
 			create_new_project_name: None,
-			project_being_edited: None,
 			project_being_task_hovered: None,
+			project_being_project_hovered: None,
+			dragged_project: None,
+			pressed_project: None,
 		}
 	}
 
@@ -82,7 +101,11 @@ impl SidebarPage {
 					Some(hovered_project_id) => project_id == hovered_project_id,
 					None => false
 				};
-				project_preview(project, project_id, selected, task_hovering)
+				let dragging = match self.dragged_project {
+					Some(dragged_project_id) => dragged_project_id == project_id,
+					None => false,
+				};
+				project_preview(project, project_id, selected, task_hovering, dragging)
 			})
 			.collect();
 
@@ -106,7 +129,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			list.push(custom_project_preview(None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false));
+			list.push(custom_project_preview(None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false, false));
 		}
 
 		scrollable(
@@ -128,25 +151,12 @@ impl SidebarPage {
 			SidebarPageMessage::OpenCreateNewProject => {
 				self.create_new_project_name = Some(String::new());
 				Command::batch([
-					self.update(SidebarPageMessage::StopEditingProject, database),
 					text_input::focus(TEXT_INPUT_ID.clone()),
 					scrollable::snap_to(SCROLLABLE_ID.clone(), RelativeOffset::END),
 				])
 			},
 			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; Command::none() },
 			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Command::none() },
-
-			SidebarPageMessage::EditProject(project_id) => {
-				self.project_being_edited = Some(project_id);
-				Command::batch([
-					self.update(SidebarPageMessage::CloseCreateNewProject, database),
-					text_input::focus(EDIT_PROJECT_NAME_TEXT_INPUT_ID.clone())
-				])
-			},
-			SidebarPageMessage::StopEditingProject => {
-				self.project_being_edited = None;
-				Command::none()
-			},
 
 			SidebarPageMessage::DropTask { project_id, task_id, .. } => {
 				let command = self.project_being_task_hovered.and_then(|dst_project_id| {
@@ -195,6 +205,32 @@ impl SidebarPage {
 					options,
 					None
 				)
+			},
+
+			SidebarPageMessage::DropProject { project_id, point, rect } => {
+				self.dragged_project = None;
+				Command::none()
+			},
+			SidebarPageMessage::DragProject { project_id, point, rect } => {
+				self.dragged_project = Some(project_id);
+				Command::none()
+			},
+			SidebarPageMessage::HandleProjectZones { project_id, zones } => {
+				Command::none()
+			},
+			SidebarPageMessage::ClickProject(project_id) => {
+				self.pressed_project = Some(project_id);
+				Command::none()
+			},
+			SidebarPageMessage::CancelDragProject => {
+				self.dragged_project = None;
+				self.pressed_project = None;
+				Command::none()
+			},
+			SidebarPageMessage::LeftClickReleased => {
+				self.dragged_project = None;
+				self.pressed_project = None;
+				Command::none()
 			},
 		}
 	}

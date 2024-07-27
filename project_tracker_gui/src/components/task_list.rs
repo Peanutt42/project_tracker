@@ -9,7 +9,7 @@ use crate::pages::ProjectPageMessage;
 pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, project_name: &str, edited_task: &'a Option<(TaskId, String)>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, project_name: &str, edited_task: &'a Option<(TaskId, String)>, dragged_task: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks'
@@ -22,7 +22,11 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			Some((edited_task_id, edited_task_name)) if task_id == *edited_task_id => Some(edited_task_name),
 			_ => None,
 		};
-		task_widget(task, task_id, project_id, edited_name, can_move_up, can_move_down)
+		let dragging = match dragged_task {
+			Some(dragged_task_id) => dragged_task_id == task_id,
+			_ => false,
+		};
+		task_widget(task, task_id, project_id, edited_name, dragging, can_move_up, can_move_down)
 	};
 
 	for (i, (task_id, task)) in tasks.iter().enumerate() {
@@ -60,7 +64,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			.align_items(Alignment::Center)
 			.into();
 
-		todo_task_elements.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, false, false, false))
+		todo_task_elements.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, false, false, false, false))
 	}
 
 	let show_tasks_button: Element<UiMessage> =

@@ -1,6 +1,8 @@
 use iced::{color, widget::container::{Appearance, StyleSheet}, Border, Color, Shadow, Theme, Vector};
 use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, mix_color};
 
+use super::color_average;
+
 pub struct RoundedContainerStyle;
 
 impl StyleSheet for RoundedContainerStyle {
@@ -59,6 +61,48 @@ impl StyleSheet for DropZoneContainerStyle {
 				offset: Vector::default(),
 				blur_radius: if self.hovered { 20.0 } else { 0.0 },
 			},
+			..Default::default()
+		}
+	}
+}
+
+pub struct ProjectPreviewBackgroundContainerStyle {
+	pub dragging: bool,
+}
+
+impl StyleSheet for ProjectPreviewBackgroundContainerStyle {
+	type Style = Theme;
+
+	fn appearance(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: if self.dragging {
+				Some(style.extended_palette().background.weak.color.into())
+			}
+			else {
+				None
+			},
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+}
+
+pub struct TaskBackgroundContainerStyle {
+	pub dragging: bool,
+}
+
+impl StyleSheet for TaskBackgroundContainerStyle {
+	type Style = Theme;
+
+	fn appearance(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: if self.dragging {
+				Some(color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into())
+			}
+			else {
+				None
+			},
+			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}
 	}

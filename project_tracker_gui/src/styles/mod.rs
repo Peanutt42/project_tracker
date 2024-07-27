@@ -2,7 +2,7 @@ mod button_styles;
 pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, RoundedSecondaryButtonStyle, ProjectContextButtonStyle, ThemeModeButtonStyle, PaletteItemButtonStyle, ColorPaletteButtonStyle};
 
 mod container_styles;
-pub use container_styles::{RoundedContainerStyle, PaletteContainerStyle, DropZoneContainerStyle, DROP_HIGHLIGHT_WIDTH};
+pub use container_styles::{RoundedContainerStyle, PaletteContainerStyle, ProjectPreviewBackgroundContainerStyle, TaskBackgroundContainerStyle, DropZoneContainerStyle, DROP_HIGHLIGHT_WIDTH};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;

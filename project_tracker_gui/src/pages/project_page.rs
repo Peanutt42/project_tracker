@@ -28,7 +28,7 @@ pub enum ProjectPageMessage {
 	StopEditingTask,
 	ChangeEditedTaskName(String),
 
-	DragTask,
+	DragTask(TaskId),
 	PressTask(TaskId),
 	LeftClickReleased,
 }
@@ -48,7 +48,7 @@ pub struct ProjectPage {
 	show_done_tasks: bool,
 	show_color_picker: bool,
 	pressed_task: Option<TaskId>,
-	task_was_dragged: bool,
+	dragged_task: Option<TaskId>,
 }
 
 impl ProjectPage {
@@ -61,7 +61,7 @@ impl ProjectPage {
 			show_done_tasks: false,
 			show_color_picker: false,
 			pressed_task: None,
-			task_was_dragged: false,
+			dragged_task: None,
 		}
 	}
 }
@@ -126,8 +126,8 @@ impl ProjectPage {
 				Command::none()
 			},
 
-			ProjectPageMessage::DragTask => {
-				self.task_was_dragged = true;
+			ProjectPageMessage::DragTask(task_id) => {
+				self.dragged_task = Some(task_id);
 				Command::none()
 			},
 			ProjectPageMessage::PressTask(task_id) => {
@@ -136,7 +136,7 @@ impl ProjectPage {
 			},
 			ProjectPageMessage::LeftClickReleased => {
 				let command = if let Some(pressed_task) = &self.pressed_task {
-					if !self.task_was_dragged {
+					if self.dragged_task.is_none() {
 						self.update(ProjectPageMessage::EditTask(*pressed_task), database)
 					}
 					else {
@@ -147,7 +147,7 @@ impl ProjectPage {
 					Command::none()
 				};
 				self.pressed_task = None;
-				self.task_was_dragged = false;
+				self.dragged_task = None;
 				command
 			},
 		}
@@ -246,7 +246,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(&project.tasks, self.project_id, &project.name, &self.edited_task, self.show_done_tasks, &self.create_new_task_name),
+					task_list(&project.tasks, self.project_id, &project.name, &self.edited_task, self.dragged_task, self.show_done_tasks, &self.create_new_task_name),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)

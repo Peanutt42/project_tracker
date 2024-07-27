@@ -28,6 +28,7 @@ pub enum UiMessage {
 	EscapePressed,
 	EnterPressed,
 	ControlReleased,
+	LeftClickReleased,
 	CopyToClipboard(String),
 	SaveChangedFiles,
 	OpenFolderLocation(PathBuf),
@@ -139,7 +140,7 @@ impl Application for ProjectTrackerApp {
 					Status::Ignored => {
 						match event {
 							Event::Window(id, window::Event::CloseRequested) => Some(UiMessage::CloseWindowRequested(id)),
-							Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(ProjectPageMessage::LeftClickReleased.into()),
+							Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(UiMessage::LeftClickReleased),
 							_ => None,
 						}
 					},
@@ -165,7 +166,6 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::EscapePressed => Command::batch([
 				self.update(SidebarPageMessage::CloseCreateNewProject.into()),
-				self.update(SidebarPageMessage::StopEditingProject.into()),
 				self.update(ProjectPageMessage::CloseCreateNewTask.into()),
 				self.update(ProjectPageMessage::StopEditingProjectName.into()),
 				self.update(ProjectPageMessage::StopEditingTask.into()),
@@ -185,6 +185,10 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::ControlReleased => self.update(SwitchProjectModalMessage::Close.into()),
+			UiMessage::LeftClickReleased => Command::batch([
+				self.update(SidebarPageMessage::LeftClickReleased.into()),
+				self.update(ProjectPageMessage::LeftClickReleased.into())
+			]),
 			UiMessage::CopyToClipboard(copied_text) => clipboard::write(copied_text),
 			UiMessage::SaveChangedFiles => {
 				let mut commands = Vec::new();
@@ -369,10 +373,6 @@ impl Application for ProjectTrackerApp {
 				};
 				if let Some(project_id) = project_id {
 					self.content_page = ContentPage::Project(ProjectPage::new(project_id));
-					self.sidebar_page.project_being_edited = match self.sidebar_page.project_being_edited {
-						Some(project_being_edited_id) => if project_being_edited_id == project_id { Some(project_being_edited_id) } else { None },
-						None => None,
-					};
 					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into())
 				}
 				else {
@@ -449,10 +449,23 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::SidebarPageMessage(message) => {
 				let command = match &message {
-					SidebarPageMessage::DragTask { .. } => {
+					SidebarPageMessage::DragTask { task_id, .. } => {
 						match &mut self.content_page {
-							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask, &self.database),
+							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask(*task_id), &self.database),
 							_ => Command::none()
+						}
+					},
+					SidebarPageMessage::LeftClickReleased => {
+						if let Some(pressed_project) = &self.sidebar_page.pressed_project {
+							if self.sidebar_page.dragged_project.is_none() {
+								self.update(UiMessage::SelectProject(Some(*pressed_project)))
+							}
+							else {
+								Command::none()
+							}
+						}
+						else {
+							Command::none()
 						}
 					},
 					_ => Command::none(),

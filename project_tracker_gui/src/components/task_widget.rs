@@ -1,7 +1,7 @@
 use iced::{theme, widget::{checkbox, container, row, text, text_input, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, ProjectId, Task, TaskId, TaskState}, pages::SidebarPageMessage};
+use crate::{core::{DatabaseMessage, ProjectId, Task, TaskId, TaskState}, pages::SidebarPageMessage, styles::TaskBackgroundContainerStyle};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextInputStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
@@ -9,7 +9,7 @@ use crate::components::{move_task_up_button, move_task_down_button, delete_task_
 
 pub static EDIT_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, edited_name: Option<&'a String>, can_move_up: bool, can_move_down: bool) -> Element<'a, UiMessage> {
+pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, edited_name: Option<&'a String>, dragging: bool, can_move_up: bool, can_move_down: bool) -> Element<'a, UiMessage> {
 	let inner_text_element = if let Some(edited_name) = edited_name {
 		unfocusable(
 			text_input("Task name", edited_name)
@@ -37,11 +37,11 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, e
 			.into()
 	};
 
-	custom_task_widget(inner_text_element, task.state, Some(task_id), project_id, edited_name.is_some(), can_move_up, can_move_down)
+	custom_task_widget(inner_text_element, task.state, Some(task_id), project_id, edited_name.is_some(), dragging, can_move_up, can_move_down)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: TaskState, task_id: Option<TaskId>, project_id: ProjectId, editing: bool, can_move_up: bool, can_move_down: bool) -> Element<UiMessage> {
+pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: TaskState, task_id: Option<TaskId>, project_id: ProjectId, editing: bool, dragging: bool, can_move_up: bool, can_move_down: bool) -> Element<UiMessage> {
 	if let Some(task_id) = task_id {
 		if editing {
 			let move_project_element: Option<Element<UiMessage>> = {
@@ -92,6 +92,7 @@ pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: Ta
 					.align_items(Alignment::Start)
 				)
 				.padding(Padding::new(SMALL_PADDING_AMOUNT))
+				.style(theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging })))
 			)
 			.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
 			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, point, rect }.into())

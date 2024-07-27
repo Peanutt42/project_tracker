@@ -1,11 +1,8 @@
-use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
-use crate::{components::PROJECT_COLOR_BLOCK_WIDTH, styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN}};
-
-use super::{color_average, mix_color};
+use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
+use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN, color_average, mix_color};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
-	pub color: Option<Color>,
 }
 
 impl StyleSheet for ProjectPreviewButtonStyle {
@@ -24,8 +21,8 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 			text_color: style.extended_palette().background.base.text,
 			border: Border {
 				radius: BORDER_RADIUS.into(),
-				color: self.color.unwrap_or(Color::TRANSPARENT),
-				width: if self.selected && self.color.is_some() { PROJECT_COLOR_BLOCK_WIDTH } else { 0.0 },
+				color: color!(0x3584e4),
+				width: if self.selected { 2.0 } else { 0.0 },
 			},
 			..Default::default()
 		}

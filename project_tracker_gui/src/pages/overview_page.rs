@@ -49,7 +49,7 @@ impl OverviewPage {
 							.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO }),
 					])
 					.width(Length::Fill)
-					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected: false, color: None }))
+					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected: false }))
 					.on_press(UiMessage::SelectProject(Some(project_id)))
 					.into()
 				})

@@ -14,7 +14,7 @@ mod loading_screen;
 pub use loading_screen::loading_screen;
 
 mod project_preview;
-pub use project_preview::{project_preview, custom_project_preview, project_color_block, EDIT_PROJECT_NAME_TEXT_INPUT_ID, PROJECT_COLOR_BLOCK_WIDTH};
+pub use project_preview::{project_preview, custom_project_preview, project_color_block, PROJECT_COLOR_BLOCK_WIDTH};
 
 mod seperator;
 pub use seperator::{horizontal_seperator, colored_horizontal_seperator, partial_horizontal_seperator};
