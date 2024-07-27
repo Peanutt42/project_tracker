@@ -106,7 +106,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			list.push(custom_project_preview(None, Color::WHITE, 0, 0, project_name_text_input_element, true, false));
+			list.push(custom_project_preview(None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false));
 		}
 
 		scrollable(
@@ -160,20 +160,14 @@ impl SidebarPage {
 				self.project_being_task_hovered = None;
 				Command::none()
 			},
-			SidebarPageMessage::HandleTaskZones{ project_id, zones, .. } => {
+			SidebarPageMessage::HandleTaskZones{ zones, .. } => {
 				self.project_being_task_hovered = None;
 				if let Some(projects) = database.as_ref().map(|db| &db.projects) {
-					let source_project_id = project_id;
-					for (destination_project_id, _project) in projects.iter() {
-						if destination_project_id == source_project_id {
-							continue;
-						}
-
-						let project_container_id: container::Id = destination_project_id.into();
-						let project_widget_id = project_container_id.into();
+					for (dst_project_id, dst_project) in projects.iter() {
+						let dst_project_widget_id = dst_project.preview_container_id.clone().into();
 						for (id, _bounds) in zones.iter() {
-							if *id == project_widget_id {
-								self.project_being_task_hovered = Some(destination_project_id);
+							if *id == dst_project_widget_id {
+								self.project_being_task_hovered = Some(dst_project_id);
 								break;
 							}
 						}
@@ -182,10 +176,23 @@ impl SidebarPage {
 				Command::none()
 			},
 			SidebarPageMessage::DragTask { project_id, task_id, rect, .. } => {
+				let src_project_id = project_id;
+				let options = database.as_ref().map(|database| {
+					database.projects.iter().filter_map(|(project_id, project)| {
+						if project_id == src_project_id {
+							None
+						}
+						else {
+							Some(project.preview_container_id.clone().into())
+						}
+					})
+					.collect()
+				});
+
 				find_zones(
 					move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
 					move |zone_bounds| zone_bounds.intersects(&rect),
-					None,
+					options,
 					None
 				)
 			},

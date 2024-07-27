@@ -11,17 +11,14 @@ impl ProjectId {
 	}
 }
 
-impl From<ProjectId> for Id {
-	fn from(value: ProjectId) -> Self {
-		Id::new(format!("{}", value.0))
-	}
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Project {
 	pub name: String,
 	pub color: SerializableColor,
 	pub tasks: OrderedHashMap<TaskId, Task>,
+
+	#[serde(skip, default = "Id::unique")]
+	pub preview_container_id: Id,
 }
 
 impl Project {
@@ -30,6 +27,7 @@ impl Project {
 			name,
 			color: SerializableColor::default(),
 			tasks: OrderedHashMap::new(),
+			preview_container_id: Id::unique(),
 		}
 	}
 

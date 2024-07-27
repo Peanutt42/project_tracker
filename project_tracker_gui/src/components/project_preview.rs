@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, theme, widget::{button, container, row, text, text_input, Space}, Alignment, Border, Color, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{button, container, container::Id, row, text, text_input, Space}, Alignment, Border, Color, Element, Length, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use once_cell::sync::Lazy;
 use crate::{project_tracker::UiMessage, styles::DROP_HIGHLIGHT_WIDTH};
@@ -28,6 +28,7 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool,
 
 	custom_project_preview(
 		Some(project_id),
+		Some(project.preview_container_id.clone()),
 		project.color.into(),
 		project.get_tasks_done(),
 		project.tasks.len(),
@@ -38,7 +39,7 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool,
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_project_preview(project_id: Option<ProjectId>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, task_hovering: bool) -> Element<UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, container_id: Option<Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, task_hovering: bool) -> Element<UiMessage> {
 	let project_color_block: Element<UiMessage> = if selected {
 			Space::new(PROJECT_COLOR_BLOCK_WIDTH, DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT)
 				.into()
@@ -74,7 +75,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_color: Colo
 				.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected, color: Some(project_color) }))
 		)
 		.id(
-			project_id.map(|id| id.into()).unwrap_or(container::Id::unique())
+			container_id.unwrap_or(container::Id::unique())
 		)
 		.width(Length::Fill)
 		.padding(Padding::new(DROP_HIGHLIGHT_WIDTH))
