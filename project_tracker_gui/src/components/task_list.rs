@@ -1,7 +1,7 @@
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::{generate_task_id, TaskState}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
-use crate::core::{OrderedHashMap, Task, TaskId, ProjectId, DatabaseMessage};
+use crate::{project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
+use crate::core::{OrderedHashMap, Task, TaskState, TaskId, generate_task_id, ProjectId, DatabaseMessage};
 use crate::components::{show_done_tasks_button, unfocusable, task_widget, custom_task_widget, cancel_create_task_button, delete_all_done_tasks_button};
 use crate::styles::{SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
 use crate::pages::ProjectPageMessage;

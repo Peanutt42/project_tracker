@@ -1,5 +1,5 @@
 use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
-use iced_drop::zones_on_point;
+use iced_drop::find_zones;
 use once_cell::sync::Lazy;
 use crate::{components::{horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
 use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, EDIT_PROJECT_NAME_TEXT_INPUT_ID, settings_button, toggle_sidebar_button};
@@ -25,7 +25,7 @@ pub enum SidebarPageMessage {
 		point: Point,
 		rect: Rectangle,
 	},
-	HandleTaskDropZonesFound {
+	HandleTaskZones {
 		project_id: ProjectId,
 		task_id: TaskId,
 		zones: Vec<(Id, Rectangle)>
@@ -37,11 +37,6 @@ pub enum SidebarPageMessage {
 		rect: Rectangle,
 	},
 	CancelDragTask,
-	HandleTaskDropZonesHovered {
-		project_id: ProjectId,
-		task_id: TaskId,
-		zones: Vec<(Id, Rectangle)>
-	},
 }
 
 impl From<SidebarPageMessage> for UiMessage {
@@ -153,49 +148,19 @@ impl SidebarPage {
 				Command::none()
 			},
 
-			SidebarPageMessage::DropTask { project_id, task_id, point, .. } => {
+			SidebarPageMessage::DropTask { project_id, task_id, .. } => {
+				let command = self.project_being_task_hovered.and_then(|dst_project_id| {
+					let src_project_id = project_id;
+					database.as_mut().map(|db| db.update(DatabaseMessage::MoveTask { task_id, src_project_id, dst_project_id }))
+				});
 				self.project_being_task_hovered = None;
-
-				zones_on_point(
-					move |zones| SidebarPageMessage::HandleTaskDropZonesFound{ project_id, task_id, zones }.into(),
-					point,
-					None,
-					None
-				)
+				command.unwrap_or(Command::none())
 			},
 			SidebarPageMessage::CancelDragTask => {
 				self.project_being_task_hovered = None;
 				Command::none()
 			},
-			SidebarPageMessage::HandleTaskDropZonesFound{ project_id, task_id, zones } => {
-				if let Some(database) = database {
-					let src_project_id = project_id;
-					for destination_project_id in database.projects.keys() {
-						let destination_project_id = *destination_project_id;
-						if destination_project_id == src_project_id {
-							continue;
-						}
-
-						let project_container_id: container::Id = destination_project_id.into();
-						let project_widget_id = project_container_id.into();
-						for (id, _bounds) in zones.iter() {
-							if *id == project_widget_id {
-								return database.update(DatabaseMessage::MoveTask { task_id, src_project_id, destination_project_id });
-							}
-						}
-					}
-				}
-				Command::none()
-			},
-			SidebarPageMessage::DragTask { project_id, task_id, point, .. } => {
-				zones_on_point(
-					move |zones| SidebarPageMessage::HandleTaskDropZonesHovered { project_id, task_id, zones }.into(),
-					point,
-					None,
-					None
-				)
-			},
-			SidebarPageMessage::HandleTaskDropZonesHovered { project_id, zones, .. } => {
+			SidebarPageMessage::HandleTaskZones{ project_id, zones, .. } => {
 				self.project_being_task_hovered = None;
 				if let Some(projects) = database.as_ref().map(|db| &db.projects) {
 					let source_project_id = project_id;
@@ -215,6 +180,14 @@ impl SidebarPage {
 					}
 				}
 				Command::none()
+			},
+			SidebarPageMessage::DragTask { project_id, task_id, rect, .. } => {
+				find_zones(
+					move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
+					move |zone_bounds| zone_bounds.intersects(&rect),
+					None,
+					None
+				)
 			},
 		}
 	}
