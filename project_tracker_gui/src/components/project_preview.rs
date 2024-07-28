@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, theme, widget::{button, container, container::Id, row, text, text_input, Space}, Alignment, Border, Color, Element, Length, Padding};
+use iced::{advanced, alignment::Horizontal, theme, widget::{container, container::Id, row, text}, Alignment, Border, Color, Element, Length, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use iced_drop::droppable;
 use crate::{pages::SidebarPageMessage, project_tracker::UiMessage, styles::DROP_HIGHLIGHT_WIDTH};
@@ -21,24 +21,25 @@ pub fn project_color_block(color: Color, height: f32) -> Element<'static, UiMess
 	.into()
 }
 
-pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool, task_hovering: bool, dragging: bool) -> Element<UiMessage> {
+pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool, dropzone_highlight: bool, dragging: bool) -> Element<UiMessage> {
 	let inner_text_element = text(&project.name).size(LARGE_TEXT_SIZE).into();
 
 	custom_project_preview(
 		Some(project_id),
-		Some(project.preview_container_id.clone()),
+		Some(project.preview_dropzone_id.clone()),
+		Some(project.preview_droppable_id.clone()),
 		project.color.into(),
 		project.get_tasks_done(),
 		project.tasks.len(),
 		inner_text_element,
 		selected,
-		task_hovering,
+		dropzone_highlight,
 		dragging
 	)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_project_preview(project_id: Option<ProjectId>, container_id: Option<Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, task_hovering: bool, dragging: bool) -> Element<UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option<Id>, droppable_id: Option<advanced::widget::Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, dropzone_highlight: bool, dragging: bool) -> Element<UiMessage> {
 	let inner = container(
 		row![
 			project_color_block(project_color, DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT),
@@ -66,16 +67,17 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, container_id: Optio
 			inner
 		)
 		.id(
-			container_id.unwrap_or(container::Id::unique())
+			dropzone_id.unwrap_or(container::Id::unique())
 		)
 		.width(Length::Fill)
 		.padding(Padding::new(DROP_HIGHLIGHT_WIDTH))
-		.style(theme::Container::Custom(Box::new(DropZoneContainerStyle{ hovered: task_hovering })));
+		.style(theme::Container::Custom(Box::new(DropZoneContainerStyle{ highlight: dropzone_highlight })));
 
 	if let Some(project_id) = project_id {
 		droppable(
 			underlay
 		)
+		.id(droppable_id.unwrap_or(advanced::widget::Id::unique()))
 		.on_drop(move |point, rect| SidebarPageMessage::DropProject { project_id, point, rect }.into())
 		.on_drag(move |point, rect| SidebarPageMessage::DragProject { project_id, point, rect }.into())
 		.on_click(SidebarPageMessage::ClickProject(project_id).into())

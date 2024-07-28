@@ -42,7 +42,7 @@ impl StyleSheet for PaletteContainerStyle {
 pub const DROP_HIGHLIGHT_WIDTH: f32 = 2.0;
 
 pub struct DropZoneContainerStyle {
-	pub hovered: bool
+	pub highlight: bool
 }
 
 impl StyleSheet for DropZoneContainerStyle {
@@ -53,13 +53,13 @@ impl StyleSheet for DropZoneContainerStyle {
 			background: None,
 			border: Border {
 				color: color!(0x3584e4), // highlight color
-				width: if self.hovered { DROP_HIGHLIGHT_WIDTH } else { 0.0 },
+				width: if self.highlight { DROP_HIGHLIGHT_WIDTH } else { 0.0 },
 				radius: BORDER_RADIUS.into()
 			},
 			shadow: Shadow {
 				color: Color::BLACK,
 				offset: Vector::default(),
-				blur_radius: if self.hovered { 20.0 } else { 0.0 },
+				blur_radius: if self.highlight { 20.0 } else { 0.0 },
 			},
 			..Default::default()
 		}

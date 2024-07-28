@@ -456,8 +456,8 @@ impl Application for ProjectTrackerApp {
 						}
 					},
 					SidebarPageMessage::LeftClickReleased => {
-						if let Some(pressed_project) = &self.sidebar_page.pressed_project {
-							if self.sidebar_page.dragged_project.is_none() {
+						if let Some(pressed_project) = &self.sidebar_page.pressed_project_id {
+							if self.sidebar_page.dragged_project_id.is_none() {
 								self.update(UiMessage::SelectProject(Some(*pressed_project)))
 							}
 							else {

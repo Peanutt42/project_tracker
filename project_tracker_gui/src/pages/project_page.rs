@@ -1,10 +1,10 @@
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable::{self, RelativeOffset}, text, text_input}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, move_project_down_button, move_project_up_button, partial_horizontal_seperator, task_list, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
+	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, partial_horizontal_seperator, task_list, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
 	core::{Database, DatabaseMessage, Project, ProjectId, TaskId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -194,10 +194,6 @@ impl ProjectPage {
 						Some(ProjectPageMessage::ShowColorPicker.into())
 					});
 
-				let order = database.projects.get_order(&self.project_id);
-				let can_move_up = if let Some(order) = order { order != 0 } else { false };
-				let can_move_down = if let Some(order) = order { order != database.projects.len() - 1 } else { false };
-
 				column![
 					column![
 						row![
@@ -217,12 +213,7 @@ impl ProjectPage {
 							.width(Length::Fill),
 
 							container(
-								row![
-									move_project_up_button(self.project_id, can_move_up),
-									move_project_down_button(self.project_id, can_move_down),
-									delete_project_button(self.project_id, &project.name),
-								]
-								.spacing(SMALL_SPACING_AMOUNT)
+								delete_project_button(self.project_id, &project.name)
 							)
 							.align_x(Horizontal::Right)
 						]
