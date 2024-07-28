@@ -63,6 +63,7 @@ impl From<SidebarPageMessage> for UiMessage {
 #[derive(Clone)]
 pub struct SidebarPage {
 	create_new_project_name: Option<String>,
+	pub task_being_task_hovered: Option<TaskId>,
 	project_being_task_hovered: Option<ProjectId>,
 	project_being_project_hovered: Option<ProjectId>,
 	pub dragged_project_id: Option<ProjectId>,
@@ -73,6 +74,7 @@ impl SidebarPage {
 	pub fn new() -> Self {
 		Self {
 			create_new_project_name: None,
+			task_being_task_hovered: None,
 			project_being_task_hovered: None,
 			project_being_project_hovered: None,
 			dragged_project_id: None,
@@ -134,7 +136,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			list.push(custom_project_preview(None, None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false, false));
+			list.push(custom_project_preview(None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false, false));
 		}
 
 		scrollable(
@@ -167,22 +169,39 @@ impl SidebarPage {
 				let command = self.project_being_task_hovered.and_then(|dst_project_id| {
 					let src_project_id = project_id;
 					database.as_mut().map(|db| db.update(DatabaseMessage::MoveTask { task_id, src_project_id, dst_project_id }))
-				});
+				}).or(self.task_being_task_hovered.and_then(|dst_task_id| {
+					let src_task_id = task_id;
+					database.as_mut().map(|db| db.update(DatabaseMessage::SwapTasks { project_id, task_a_id: src_task_id, task_b_id: dst_task_id }))
+				}));
 				self.project_being_task_hovered = None;
+				self.task_being_task_hovered = None;
 				command.unwrap_or(Command::none())
 			},
 			SidebarPageMessage::CancelDragTask => {
 				self.project_being_task_hovered = None;
+				self.task_being_task_hovered = None;
 				Command::none()
 			},
 			SidebarPageMessage::HandleTaskZones{ zones, .. } => {
 				self.project_being_task_hovered = None;
+				self.task_being_task_hovered = None;
+				let is_hovered = |target_id| {
+					for (id, _bounds) in zones.iter() {
+						if *id == target_id {
+							return true;
+						}
+					}
+					false
+				};
 				if let Some(projects) = database.as_ref().map(|db| &db.projects) {
 					for (dst_project_id, dst_project) in projects.iter() {
-						let dst_project_widget_id = dst_project.preview_dropzone_id.clone().into();
-						for (id, _bounds) in zones.iter() {
-							if *id == dst_project_widget_id {
-								self.project_being_task_hovered = Some(dst_project_id);
+						if is_hovered(dst_project.preview_dropzone_id.clone().into()) {
+							self.project_being_task_hovered = Some(dst_project_id);
+							break;
+						}
+						for (task_id, task) in dst_project.tasks.iter() {
+							if is_hovered(task.dropzone_id.clone().into()) {
+								self.task_being_task_hovered = Some(task_id);
 								break;
 							}
 						}
@@ -191,8 +210,7 @@ impl SidebarPage {
 				Command::none()
 			},
 			SidebarPageMessage::DragTask { project_id, task_id, rect, .. } => {
-				let src_project_id = project_id;
-				let options = Self::project_dropzone_options(database, src_project_id);
+				let options = Self::project_and_task_dropzone_options(database, project_id, task_id);
 				find_zones(
 					move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
 					move |zone_bounds| zone_bounds.intersects(&rect),
@@ -320,6 +338,27 @@ impl SidebarPage {
 			})
 			.collect()
 		})
+	}
+
+	fn project_and_task_dropzone_options(database: &Option<Database>, project_exception: ProjectId, task_exception: TaskId) -> Option<Vec<Id>> {
+		if let Some(database) = database {
+			let mut options = Vec::new();
+			for (project_id, project) in database.projects.iter() {
+				if project_id != project_exception {
+					options.push(project.preview_dropzone_id.clone().into());
+				}
+				for (task_id, task) in project.tasks.iter() {
+					if task_id == task_exception {
+						continue;
+					}
+					options.push(task.dropzone_id.clone().into());
+				}
+			}
+			Some(options)
+		}
+		else {
+			None
+		}
 	}
 }
 

@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use iced::{advanced, widget::container::Id, Color};
+use iced::{widget::container::Id, Color};
 use crate::core::{OrderedHashMap, Task, TaskId, TaskState};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
@@ -19,8 +19,6 @@ pub struct Project {
 
 	#[serde(skip, default = "Id::unique")]
 	pub preview_dropzone_id: Id,
-	#[serde(skip, default = "advanced::widget::Id::unique")]
-	pub preview_droppable_id: advanced::widget::Id,
 }
 
 impl Project {
@@ -30,7 +28,6 @@ impl Project {
 			color: SerializableColor::default(),
 			tasks: OrderedHashMap::new(),
 			preview_dropzone_id: Id::unique(),
-			preview_droppable_id: advanced::widget::Id::unique(),
 		}
 	}
 

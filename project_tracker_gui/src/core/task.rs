@@ -1,3 +1,4 @@
+use iced::widget::container::Id;
 use serde::{Serialize, Deserialize};
 use crate::core::TaskState;
 
@@ -11,6 +12,9 @@ pub fn generate_task_id() -> TaskId {
 pub struct Task {
 	pub name: String,
 	pub state: TaskState,
+
+	#[serde(skip, default = "Id::unique")]
+	pub dropzone_id: Id,
 }
 
 impl Task {
@@ -18,6 +22,7 @@ impl Task {
 		Self {
 			name,
 			state,
+			dropzone_id: Id::unique(),
 		}
 	}
 

@@ -237,7 +237,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(&project.tasks, self.project_id, &project.name, &self.edited_task, self.dragged_task, self.show_done_tasks, &self.create_new_task_name),
+					task_list(&project.tasks, self.project_id, &project.name, &self.edited_task, self.dragged_task, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.create_new_task_name),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)

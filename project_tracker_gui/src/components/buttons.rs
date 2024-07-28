@@ -84,32 +84,6 @@ pub fn delete_all_done_tasks_button(project_id: ProjectId, project_name: &str) -
 	.style(theme::Button::custom(DeleteDoneTasksButtonStyle))
 }
 
-pub fn move_task_up_button(project_id: ProjectId, task_id: TaskId, enabled: bool) -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::ArrowUp),
-	)
-	.on_press_maybe(if enabled {
-		Some(DatabaseMessage::MoveTaskUp { project_id, task_id }.into())
-	}
-	else {
-		None
-	})
-	.style(theme::Button::custom(ProjectContextButtonStyle))
-}
-
-pub fn move_task_down_button(project_id: ProjectId, task_id: TaskId, enabled: bool) -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::ArrowDown),
-	)
-	.on_press_maybe(if enabled {
-		Some(DatabaseMessage::MoveTaskDown { project_id, task_id }.into())
-	}
-	else {
-		None
-	})
-	.style(theme::Button::custom(ProjectContextButtonStyle))
-}
-
 pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'static, UiMessage> {
 	button(
 		row![

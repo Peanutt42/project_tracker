@@ -1,4 +1,4 @@
-use iced::{advanced, alignment::Horizontal, theme, widget::{container, container::Id, row, text}, Alignment, Border, Color, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{container, container::Id, row, text}, Alignment, Border, Color, Element, Length, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use iced_drop::droppable;
 use crate::{pages::SidebarPageMessage, project_tracker::UiMessage, styles::DROP_HIGHLIGHT_WIDTH};
@@ -27,7 +27,6 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool,
 	custom_project_preview(
 		Some(project_id),
 		Some(project.preview_dropzone_id.clone()),
-		Some(project.preview_droppable_id.clone()),
 		project.color.into(),
 		project.get_tasks_done(),
 		project.tasks.len(),
@@ -39,7 +38,7 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool,
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option<Id>, droppable_id: Option<advanced::widget::Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, dropzone_highlight: bool, dragging: bool) -> Element<UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option<Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, dropzone_highlight: bool, dragging: bool) -> Element<UiMessage> {
 	let inner = container(
 		row![
 			project_color_block(project_color, DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT),
@@ -77,7 +76,6 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option
 		droppable(
 			underlay
 		)
-		.id(droppable_id.unwrap_or(advanced::widget::Id::unique()))
 		.on_drop(move |point, rect| SidebarPageMessage::DropProject { project_id, point, rect }.into())
 		.on_drag(move |point, rect| SidebarPageMessage::DragProject { project_id, point, rect }.into())
 		.on_click(SidebarPageMessage::ClickProject(project_id).into())

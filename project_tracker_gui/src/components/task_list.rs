@@ -9,15 +9,13 @@ use crate::pages::ProjectPageMessage;
 pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, project_name: &str, edited_task: &'a Option<(TaskId, String)>, dragged_task: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
+#[allow(clippy::too_many_arguments)]
+pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, project_name: &str, edited_task: &'a Option<(TaskId, String)>, dragged_task: Option<TaskId>, task_being_task_hovered: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks'
 
-	let task_view = |i: usize, task_id: TaskId, task: &'a Task| {
-		let can_move_up = i != 0;
-		// once there is a done task, all other tasks after that are also done
-		let can_move_down = tasks.get_at_order(i + 1).map(|task| task.is_todo()).unwrap_or(false);
+	let task_view = |task_id: TaskId, task: &'a Task| {
 		let edited_name = match edited_task {
 			Some((edited_task_id, edited_task_name)) if task_id == *edited_task_id => Some(edited_task_name),
 			_ => None,
@@ -26,17 +24,21 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			Some(dragged_task_id) => dragged_task_id == task_id,
 			_ => false,
 		};
-		task_widget(task, task_id, project_id, edited_name, dragging, can_move_up, can_move_down)
+		let highlight = match task_being_task_hovered {
+			Some(hovered_task_id) => hovered_task_id == task_id,
+			None => false,
+		};
+		task_widget(task, task_id, project_id, edited_name, dragging, highlight)
 	};
 
-	for (i, (task_id, task)) in tasks.iter().enumerate() {
+	for (task_id, task) in tasks.iter() {
 		if task.is_todo() {
-			todo_task_elements.push(task_view(i, task_id, task));
+			todo_task_elements.push(task_view(task_id, task));
 		}
 		else {
 			done_task_count += 1;
 			if show_done_tasks {
-				done_task_elements.push(task_view(i, task_id, task));
+				done_task_elements.push(task_view(task_id, task));
 			}
 		}
 	}
@@ -64,7 +66,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			.align_items(Alignment::Center)
 			.into();
 
-		todo_task_elements.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, false, false, false, false))
+		todo_task_elements.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, None, false, false, false))
 	}
 
 	let show_tasks_button: Element<UiMessage> =

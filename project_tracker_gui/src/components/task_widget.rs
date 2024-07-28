@@ -1,15 +1,16 @@
-use iced::{theme, widget::{checkbox, container, row, text, text_input, Row}, Alignment, Element, Length, Padding};
+use iced::{theme, widget::{checkbox, container, container::Id, row, text, text_input}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, ProjectId, Task, TaskId, TaskState}, pages::SidebarPageMessage, styles::TaskBackgroundContainerStyle};
+use crate::{core::{DatabaseMessage, ProjectId, Task, TaskId, TaskState}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextInputStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
-use crate::components::{move_task_up_button, move_task_down_button, delete_task_button, unfocusable};
+use crate::components::{delete_task_button, unfocusable};
 
 pub static EDIT_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
-pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, edited_name: Option<&'a String>, dragging: bool, can_move_up: bool, can_move_down: bool) -> Element<'a, UiMessage> {
+#[allow(clippy::too_many_arguments)]
+pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, edited_name: Option<&'a String>, dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
 	let inner_text_element = if let Some(edited_name) = edited_name {
 		unfocusable(
 			text_input("Task name", edited_name)
@@ -37,34 +38,19 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, e
 			.into()
 	};
 
-	custom_task_widget(inner_text_element, task.state, Some(task_id), project_id, edited_name.is_some(), dragging, can_move_up, can_move_down)
+	custom_task_widget(inner_text_element, task.state, Some(task_id), project_id, Some(task.dropzone_id.clone()), edited_name.is_some(), dragging, highlight)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: TaskState, task_id: Option<TaskId>, project_id: ProjectId, editing: bool, dragging: bool, can_move_up: bool, can_move_down: bool) -> Element<UiMessage> {
+pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: TaskState, task_id: Option<TaskId>, project_id: ProjectId, dropzone_id: Option<Id>, editing: bool, dragging: bool, highlight: bool) -> Element<UiMessage> {
 	if let Some(task_id) = task_id {
 		if editing {
-			let move_project_element: Option<Element<UiMessage>> = {
-				if task_state.is_todo() {
-					Some(
-						row![
-							move_task_up_button(project_id, task_id, can_move_up),
-							move_task_down_button(project_id, task_id, can_move_down)
-						]
-						.into()
-					)
-				}
-				else {
-					None
-				}
-			};
-
-			Row::new()
-				.push_maybe(move_project_element)
-				.push(inner_text_element)
-				.push(delete_task_button(project_id, task_id))
-				.align_items(Alignment::Center)
-				.into()
+			row![
+				inner_text_element,
+				delete_task_button(project_id, task_id),
+			]
+			.align_items(Alignment::Center)
+			.into()
 		}
 		else {
 			droppable(
@@ -91,8 +77,19 @@ pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: Ta
 					.width(Length::Fill)
 					.align_items(Alignment::Start)
 				)
+				.id(if task_state.is_todo() {
+					dropzone_id.unwrap_or(Id::unique())
+				}
+				else {
+					Id::unique()
+				})
 				.padding(Padding::new(SMALL_PADDING_AMOUNT))
-				.style(theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging })))
+				.style(if highlight {
+						theme::Container::Custom(Box::new(DropZoneContainerStyle{ highlight }))
+					}
+					else {
+						theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging }))
+					})
 			)
 			.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
 			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, point, rect }.into())

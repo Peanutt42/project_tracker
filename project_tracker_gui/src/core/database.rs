@@ -89,6 +89,11 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 	},
+	SwapTasks {
+		project_id: ProjectId,
+		task_a_id: TaskId,
+		task_b_id: TaskId,
+	},
 	DeleteTask {
 		project_id: ProjectId,
 		task_id: TaskId,
@@ -219,6 +224,13 @@ impl Database {
 			DatabaseMessage::MoveProjectDown(project_id) => {
 				self.projects.move_down(&project_id);
 				self.change_was_made();
+				Command::none()
+			},
+			DatabaseMessage::SwapTasks { project_id, task_a_id, task_b_id } => {
+				if let Some(project) = self.projects.get_mut(&project_id) {
+					project.tasks.swap_order(&task_a_id, &task_b_id);
+					self.change_was_made();
+				}
 				Command::none()
 			},
 			DatabaseMessage::SwapProjectOrder { project_a_id, project_b_id } => {
