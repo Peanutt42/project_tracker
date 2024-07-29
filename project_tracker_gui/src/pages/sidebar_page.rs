@@ -214,11 +214,11 @@ impl SidebarPage {
 				}
 				Command::none()
 			},
-			SidebarPageMessage::DragTask { project_id, task_id, rect, .. } => {
+			SidebarPageMessage::DragTask { project_id, task_id, point, .. } => {
 				let options = Self::project_and_task_dropzone_options(database, project_id, task_id);
 				find_zones(
 					move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
-					move |zone_bounds| zone_bounds.intersects(&rect),
+					move |zone_bounds| zone_bounds.contains(point),
 					options,
 					None
 				)
@@ -240,12 +240,12 @@ impl SidebarPage {
 				self.project_being_project_hovered = None;
 				Command::none()
 			},
-			SidebarPageMessage::DragProject { project_id, rect, .. } => {
+			SidebarPageMessage::DragProject { project_id, point, .. } => {
 				self.dragged_project_id = Some(project_id);
 				let options = Self::project_dropzone_options(database, project_id);
 				find_zones(
 					move |zones| SidebarPageMessage::HandleProjectZones { project_id, zones }.into(),
-				 	move |zone_bounds| zone_bounds.intersects(&rect),
+				 	move |zone_bounds| zone_bounds.contains(point),
 					options,
 					None
 				)
