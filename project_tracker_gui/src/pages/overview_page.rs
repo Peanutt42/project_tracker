@@ -32,7 +32,7 @@ impl OverviewPage {
 						.filter(|(_, task)| task.is_todo())
 						.map(|(_, task)| {
 							row![
-								text("-"),
+								text("\u{2022}"), // bullet-point:'•'
 								text(&task.name)
 							]
 							.spacing(SMALL_SPACING_AMOUNT)
