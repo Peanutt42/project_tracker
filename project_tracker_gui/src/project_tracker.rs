@@ -296,55 +296,46 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::DatabaseMessage(database_message) => {
-				let command = match &database_message {
-					DatabaseMessage::CreateProject { project_id, .. } => Command::batch([
-						self.update(UiMessage::SelectProject(Some(*project_id))),
-						self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject, &mut self.database),
-					]),
-					DatabaseMessage::DeleteProject(project_id) => {
-						match self.selected_project_id {
-							Some(selected_project_id) if selected_project_id == *project_id => {
-								self.update(UiMessage::OpenOverview)
-							},
-							_ => Command::none(),
-						}
-					},
-					DatabaseMessage::ChangeProjectName { .. } => {
-						if let ContentPage::Project(project_page) = &mut self.content_page {
-							project_page.update(ProjectPageMessage::StopEditingProjectName, &self.database)
-						}
-						else {
-							Command::none()
-						}
-					},
-					DatabaseMessage::ChangeProjectColor { .. } => {
-						if let ContentPage::Project(project_page) = &mut self.content_page {
-							project_page.update(ProjectPageMessage::HideColorPicker, &self.database)
-						}
-						else {
-							Command::none()
-						}
-					},
-					DatabaseMessage::CreateTask { .. } => {
-						self.update(ProjectPageMessage::OpenCreateNewTask.into())
-					},
-					DatabaseMessage::ChangeTaskName { .. } => {
-						self.update(ProjectPageMessage::StopEditingTask.into())
-					},
-					DatabaseMessage::SyncFailed(error_msg) => {
-						self.show_error_msg(error_msg.clone())
-					},
-					_ => Command::none(),
-				};
-
 				if let Some(database) = &mut self.database {
+					let database_command = database.update(database_message.clone());
+					let command = match database_message {
+						DatabaseMessage::CreateProject { project_id, .. } => Command::batch([
+							self.update(UiMessage::SelectProject(Some(project_id))),
+							self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject, &mut self.database),
+						]),
+						DatabaseMessage::DeleteProject(project_id) => {
+							match self.selected_project_id {
+								Some(selected_project_id) if selected_project_id == project_id => {
+									self.update(UiMessage::OpenOverview)
+								},
+								_ => Command::none(),
+							}
+						},
+						DatabaseMessage::ChangeProjectName { .. } => {
+							self.update(ProjectPageMessage::StopEditingProjectName.into())
+						},
+						DatabaseMessage::ChangeProjectColor { .. } => {
+							self.update(ProjectPageMessage::HideColorPicker.into())
+						},
+						DatabaseMessage::CreateTask { .. } => {
+							self.update(ProjectPageMessage::OpenCreateNewTask.into())
+						},
+						DatabaseMessage::ChangeTaskName { .. } => {
+							self.update(ProjectPageMessage::StopEditingTask.into())
+						},
+						DatabaseMessage::SyncFailed(error_msg) => {
+							self.show_error_msg(error_msg.clone())
+						},
+						_ => Command::none(),
+					};
+
 					Command::batch([
 						command,
-						database.update(database_message),
+						database_command,
 					])
 				}
 				else {
-					command
+					Command::none()
 				}
 			},
 			UiMessage::PreferenceMessage(preference_message) => {
