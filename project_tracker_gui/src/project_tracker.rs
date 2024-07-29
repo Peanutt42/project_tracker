@@ -88,7 +88,7 @@ impl Application for ProjectTrackerApp {
 
 	fn theme(&self) -> Theme {
 		if let Some(preferences) = &self.preferences {
-			match preferences.theme_mode {
+			match preferences.theme_mode() {
 				ThemeMode::System => get_theme(self.is_system_theme_dark),
 				ThemeMode::Dark => get_theme(true),
 				ThemeMode::Light => get_theme(false),
@@ -229,12 +229,12 @@ impl Application for ProjectTrackerApp {
 					LoadDatabaseResult::Ok(database) => {
 						self.database = Some(database);
 						if let Some(preferences) = &self.preferences {
-							match preferences.selected_content_page {
+							match preferences.selected_content_page() {
 								SerializedContentPage::Overview => self.update(UiMessage::OpenOverview),
 								SerializedContentPage::Project(project_id) => {
 									match self.selected_project_id {
 										Some(selected_project_id) => self.update(UiMessage::SelectProject(Some(selected_project_id))),
-										None => self.update(UiMessage::SelectProject(Some(project_id))),
+										None => self.update(UiMessage::SelectProject(Some(*project_id))),
 									}
 								},
 							}
@@ -474,7 +474,7 @@ impl Application for ProjectTrackerApp {
 	fn view(&self) -> Element<UiMessage> {
 		let show_sidebar =
 			if let Some(preferences) = &self.preferences {
-				preferences.show_sidebar
+				preferences.show_sidebar()
 			}
 			else {
 				true
@@ -483,7 +483,7 @@ impl Application for ProjectTrackerApp {
 		let underlay: Element<UiMessage> = if show_sidebar {
 			let sidebar_dividor_position =
 				if let Some(preferences) = &self.preferences {
-					preferences.sidebar_dividor_position
+					preferences.sidebar_dividor_position()
 				}
 				else {
 					300
@@ -509,7 +509,7 @@ impl Application for ProjectTrackerApp {
 
 		let switch_project_modal_view = || {
 			if let Some(preferences) = &self.preferences {
-				if preferences.show_sidebar {
+				if preferences.show_sidebar() {
 					None
 				}
 				else {

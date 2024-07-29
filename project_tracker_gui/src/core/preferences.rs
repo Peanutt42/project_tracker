@@ -10,17 +10,17 @@ fn default_show_sidebar() -> bool { true }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
-	pub theme_mode: ThemeMode,
+	theme_mode: ThemeMode,
 
 	#[serde(default = "default_sidebar_dividor_position")]
-	pub sidebar_dividor_position: u16,
+	sidebar_dividor_position: u16,
 
 	#[serde(default = "default_show_sidebar")]
-	pub show_sidebar: bool,
+	show_sidebar: bool,
 
-	pub selected_content_page: SerializedContentPage,
+	selected_content_page: SerializedContentPage,
 
-	pub synchronization_filepath: Option<PathBuf>,
+	synchronization_filepath: Option<PathBuf>,
 
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
@@ -83,7 +83,18 @@ pub enum LoadPreferencesResult {
 impl Preferences {
 	const FILE_NAME: &'static str = "preferences.json";
 
-	fn change_was_made(&mut self) {
+	pub fn synchronization_filepath(&self) -> &Option<PathBuf> { &self.synchronization_filepath }
+	pub fn theme_mode(&self) -> &ThemeMode { &self.theme_mode }
+	pub fn selected_content_page(&self) -> &SerializedContentPage { &self.selected_content_page }
+	pub fn show_sidebar(&self) -> bool { self.show_sidebar }
+	pub fn sidebar_dividor_position(&self) -> u16 { self.sidebar_dividor_position }
+
+	pub fn modify(&mut self, f: impl FnOnce(&mut Preferences)) {
+		f(self);
+		self.modified();
+	}
+
+	fn modified(&mut self) {
 		self.last_changed_time = Instant::now();
 	}
 
@@ -103,7 +114,7 @@ impl Preferences {
 				}
 			),
 			PreferenceMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
-			PreferenceMessage::Reset => { *self = Preferences::default(); self.change_was_made(); Command::none() },
+			PreferenceMessage::Reset => { *self = Preferences::default(); self.modified(); Command::none() },
 			PreferenceMessage::Export => Command::perform(
 				self.clone().export_file_dialog(),
 				|result| {
@@ -128,31 +139,26 @@ impl Preferences {
 			PreferenceMessage::ImportFailed => Command::none(),
 
 			PreferenceMessage::SetThemeMode(theme_mode) => {
-				self.theme_mode = theme_mode;
-				self.change_was_made();
+				self.modify(|pref| pref.theme_mode = theme_mode);
 				Command::none()
 			},
 			PreferenceMessage::SetSidebarDividorPosition(dividor_position) => {
-				self.sidebar_dividor_position = dividor_position;
-				self.change_was_made();
+				self.modify(|pref| pref.sidebar_dividor_position = dividor_position);
 				Command::none()
 			},
 
 			PreferenceMessage::ToggleShowSidebar => {
-				self.show_sidebar = !self.show_sidebar;
-				self.change_was_made();
+				self.modify(|pref| pref.show_sidebar = !pref.show_sidebar);
 				Command::none()
 			},
 
 			PreferenceMessage::SetContentPage(content_page) => {
-				self.selected_content_page = content_page;
-				self.change_was_made();
+				self.modify(|pref| pref.selected_content_page = content_page);
 				Command::none()
 			},
 
 			PreferenceMessage::SetSynchronizationFilepath(filepath) => {
-				self.synchronization_filepath = filepath;
-				self.change_was_made();
+				self.modify(|pref| pref.synchronization_filepath = filepath);
 				Command::none()
 			}
 		}

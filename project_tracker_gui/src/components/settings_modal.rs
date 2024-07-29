@@ -98,7 +98,7 @@ impl SettingsModal {
 										text("Synchronization file location: "),
 										container(
 											text(
-												if let Some(filepath) = &preferences.synchronization_filepath {
+												if let Some(filepath) = preferences.synchronization_filepath() {
 													capped_text(&filepath.to_string_lossy(), 60)
 												}
 												else {
@@ -117,7 +117,7 @@ impl SettingsModal {
 									.spacing(SPACING_AMOUNT)
 									.align_items(Alignment::Center),
 
-									sync_database_button(app.database.as_ref().map(|db| db.is_syncing()).unwrap_or(false), preferences.synchronization_filepath.clone()),
+									sync_database_button(app.database.as_ref().map(|db| db.is_syncing()).unwrap_or(false), preferences.synchronization_filepath().clone()),
 
 									row![
 										dangerous_button(
