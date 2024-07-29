@@ -13,7 +13,7 @@ async fn test_database_serialization() {
 			project.add_task(generate_task_id(), format!("Task Nr. {j}"));
 		}
 
-		database.projects.insert(ProjectId::generate(), project);
+		database.modify(|projects| projects.insert(ProjectId::generate(), project));
 	}
 
 	let original = database.clone();

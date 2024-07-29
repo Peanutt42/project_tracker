@@ -92,7 +92,7 @@ impl ProjectPage {
 			ProjectPageMessage::EditProjectName => {
 				let project_name = database.as_ref()
 					.and_then(|db|
-						db.projects
+						db.projects()
 							.get(&self.project_id)
 							.map(|project| project.name.clone())
 					)
@@ -105,7 +105,7 @@ impl ProjectPage {
 
 			ProjectPageMessage::EditTask(task_id) => {
 				let task_name = database.as_ref().and_then(|db| {
-					db.projects.get(&self.project_id)
+					db.projects().get(&self.project_id)
 						.and_then(|project|
 							project.tasks
 								.get(&task_id)
@@ -155,7 +155,7 @@ impl ProjectPage {
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
 		if let Some(database) = &app.database {
-			if let Some(project) = database.projects.get(&self.project_id) {
+			if let Some(project) = database.projects().get(&self.project_id) {
 				let tasks_done = project.get_tasks_done();
 				let tasks_len = project.tasks.len();
 				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);

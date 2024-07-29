@@ -71,7 +71,7 @@ impl OverviewPage {
 
 				horizontal_seperator(),
 
-				Self::todo_tasks_list(&database.projects),
+				Self::todo_tasks_list(database.projects()),
 			]
 			.width(Length::Fill)
 			.spacing(SPACING_AMOUNT)

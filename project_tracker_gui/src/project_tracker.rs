@@ -360,7 +360,7 @@ impl Application for ProjectTrackerApp {
 				self.selected_project_id = project_id;
 				let project_id = if let Some(database) = &self.database {
 					project_id.and_then(|project_id| {
-						if database.projects.contains_key(&project_id) {
+						if database.projects().contains_key(&project_id) {
 							Some(project_id)
 						}
 						else {
@@ -383,9 +383,9 @@ impl Application for ProjectTrackerApp {
 			UiMessage::SwitchToLowerProject => {
 				if let Some(database) = &self.database {
 					if let Some(selected_project_id) = self.selected_project_id {
-						if let Some(order) = database.projects.get_order(&selected_project_id) {
+						if let Some(order) = database.projects().get_order(&selected_project_id) {
 							let lower_order = order + 1;
-							let order_to_switch_to = if lower_order < database.projects.len() {
+							let order_to_switch_to = if lower_order < database.projects().len() {
 								lower_order
 							}
 							else {
@@ -394,19 +394,19 @@ impl Application for ProjectTrackerApp {
 							return self.update(UiMessage::SwitchToProject { order: order_to_switch_to });
 						}
 					}
-					return self.update(UiMessage::SwitchToProject { order: database.projects.len() - 1 });
+					return self.update(UiMessage::SwitchToProject { order: database.projects().len() - 1 });
 				}
 				Command::none()
 			},
 			UiMessage::SwitchToUpperProject => {
 				if let Some(selected_project_id) = self.selected_project_id {
 					if let Some(database) = &self.database {
-						if let Some(order) = database.projects.get_order(&selected_project_id) {
+						if let Some(order) = database.projects().get_order(&selected_project_id) {
 							let order_to_switch_to = if order > 0 {
 								order - 1
 							}
 							else {
-								database.projects.len() - 1 // switches to the last project
+								database.projects().len() - 1 // switches to the last project
 							};
 							return self.update(UiMessage::SwitchToProject { order: order_to_switch_to });
 						}
@@ -416,7 +416,7 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::SwitchToProject { order } => {
 				if let Some(database) = &self.database {
-					let switched_project_id = database.projects.get_key_at_order(order);
+					let switched_project_id = database.projects().get_key_at_order(order);
 					let sidebar_snap_command = self.sidebar_page.snap_to_project(order, database);
 					return Command::batch([
 						if let Some(project_id) = switched_project_id {
@@ -434,7 +434,7 @@ impl Application for ProjectTrackerApp {
 			UiMessage::DeleteSelectedProject => {
 				if let Some(selected_project_id) = self.selected_project_id {
 					if let Some(database) = &self.database {
-						if let Some(project) = database.projects.get(&selected_project_id) {
+						if let Some(project) = database.projects().get(&selected_project_id) {
 							return self.update(ConfirmModalMessage::open(format!("Delete Project '{}'?", project.name), DatabaseMessage::DeleteProject(selected_project_id)));
 						}
 					}

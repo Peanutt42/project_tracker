@@ -32,8 +32,8 @@ impl SwitchProjectModal {
 				*self = SwitchProjectModal::Opened;
 				if let Some(database) = &database {
 					if let Some(selected_project_id) = selected_project_id {
-						if let Some(selected_project_order) = database.projects.get_order(&selected_project_id) {
-							return self.snap_to_selection(selected_project_order, database.projects.len());
+						if let Some(selected_project_order) = database.projects().get_order(&selected_project_id) {
+							return self.snap_to_selection(selected_project_order, database.projects().len());
 						}
 					}
 				}
@@ -49,11 +49,11 @@ impl SwitchProjectModal {
 				database.as_ref().map(|database| {
 					let selection_index = selected_project_id
 						.map(|selected_project_id| {
-							database.projects.get_order(&selected_project_id).unwrap_or(0)
+							database.projects().get_order(&selected_project_id).unwrap_or(0)
 						})
 						.unwrap_or(0);
 
-					let item_views = database.projects
+					let item_views = database.projects()
 				        .iter()
 						.enumerate()
 						.map(|(i, (project_id, project))| {

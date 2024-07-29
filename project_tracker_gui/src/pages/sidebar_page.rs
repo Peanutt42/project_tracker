@@ -87,7 +87,7 @@ impl SidebarPage {
 			SCROLLABLE_ID.clone(),
 			RelativeOffset {
 				x: 0.0,
-				y: project_order as f32 / (database.projects.len() as f32 - 1.0),
+				y: project_order as f32 / (database.projects().len() as f32 - 1.0),
 			}
 		)
 	}
@@ -198,7 +198,7 @@ impl SidebarPage {
 					}
 					false
 				};
-				if let Some(projects) = database.as_ref().map(|db| &db.projects) {
+				if let Some(projects) = database.as_ref().map(|db| db.projects()) {
 					for (dst_project_id, dst_project) in projects.iter() {
 						if is_hovered(dst_project.preview_dropzone_id.clone().into()) {
 							self.project_being_task_hovered = Some(dst_project_id);
@@ -253,7 +253,7 @@ impl SidebarPage {
 			SidebarPageMessage::HandleProjectZones { zones, .. } => {
 				self.project_being_project_hovered = None;
 				if self.dragged_project_id.is_some() {
-					if let Some(projects) = database.as_ref().map(|db| &db.projects) {
+					if let Some(projects) = database.as_ref().map(|db| db.projects()) {
 						for (dst_project_id, dst_project) in projects.iter() {
 							let dst_project_widget_id = dst_project.preview_dropzone_id.clone().into();
 							for (id, _bounds) in zones.iter() {
@@ -290,7 +290,7 @@ impl SidebarPage {
 		let scrollbar_padding = Padding{ right: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO };
 
 		let list: Element<UiMessage> = if let Some(database) = &app.database {
-				self.project_preview_list(&database.projects, app)
+				self.project_preview_list(database.projects(), app)
 			}
 			else {
 				container(loading_screen())
@@ -337,7 +337,7 @@ impl SidebarPage {
 
 	fn project_dropzone_options(database: &Option<Database>, exception: ProjectId) -> Option<Vec<Id>> {
 		database.as_ref().map(|database| {
-			database.projects.iter().filter_map(|(project_id, project)| {
+			database.projects().iter().filter_map(|(project_id, project)| {
 				if project_id == exception {
 					None
 				}
@@ -352,7 +352,7 @@ impl SidebarPage {
 	fn project_and_task_dropzone_options(database: &Option<Database>, project_exception: ProjectId, task_exception: TaskId) -> Option<Vec<Id>> {
 		if let Some(database) = database {
 			let mut options = Vec::new();
-			for (project_id, project) in database.projects.iter() {
+			for (project_id, project) in database.projects().iter() {
 				if project_id != project_exception {
 					options.push(project.preview_dropzone_id.clone().into());
 				}
