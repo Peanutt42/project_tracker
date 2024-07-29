@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::Duration};
 use iced::{clipboard, event::Status, font, keyboard, mouse, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
-	components::{toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, SettingsModal, SettingsModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
+	components::{toggle_sidebar_button, invisible_toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, SettingsModal, SettingsModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage},
 	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageMessage},
 	styles::{SplitStyle, PADDING_AMOUNT},
@@ -500,6 +500,7 @@ impl Application for ProjectTrackerApp {
 			row![
 				container(toggle_sidebar_button()).padding(Padding { left: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
 				self.content_page.view(self),
+				container(invisible_toggle_sidebar_button()).padding(Padding { right: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
 			]
 			.into()
 		};

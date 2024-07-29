@@ -1,7 +1,7 @@
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable::{self, RelativeOffset}, text, text_input}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, partial_horizontal_seperator, task_list, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
+	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, task_list, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
 	core::{Database, DatabaseMessage, Project, ProjectId, TaskId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
@@ -217,9 +217,8 @@ impl ProjectPage {
 							)
 							.align_x(Horizontal::Right)
 						]
+						.align_items(Alignment::Center)
 						.spacing(SPACING_AMOUNT),
-
-						completion_bar(completion_percentage),
 
 						row![
 							text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
@@ -232,7 +231,7 @@ impl ProjectPage {
 						.width(Length::Fill)
 						.align_items(Alignment::Center),
 
-						partial_horizontal_seperator(),
+						completion_bar(completion_percentage),
 					]
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),

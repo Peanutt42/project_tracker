@@ -2,7 +2,7 @@ mod completion_bar;
 pub use completion_bar::completion_bar;
 
 mod buttons;
-pub use buttons::{create_new_project_button, create_new_task_button, delete_project_button, delete_task_button, delete_all_done_tasks_button, show_done_tasks_button, cancel_create_project_button, cancel_create_task_button, overview_button, dangerous_button, theme_mode_button, settings_button, open_location_button, copy_to_clipboard_button, toggle_sidebar_button, sync_database_button};
+pub use buttons::{create_new_project_button, create_new_task_button, delete_project_button, delete_task_button, delete_all_done_tasks_button, show_done_tasks_button, cancel_create_project_button, cancel_create_task_button, overview_button, dangerous_button, theme_mode_button, settings_button, open_location_button, copy_to_clipboard_button, toggle_sidebar_button, invisible_toggle_sidebar_button, sync_database_button};
 
 mod task_list;
 pub use task_list::{task_list, TASK_LIST_ID, CREATE_NEW_TASK_NAME_INPUT_ID};
@@ -17,7 +17,7 @@ mod project_preview;
 pub use project_preview::{project_preview, custom_project_preview, project_color_block};
 
 mod seperator;
-pub use seperator::{horizontal_seperator, colored_horizontal_seperator, partial_horizontal_seperator};
+pub use seperator::{horizontal_seperator, colored_horizontal_seperator};
 
 mod file_location;
 pub use file_location::file_location;

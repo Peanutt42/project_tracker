@@ -346,3 +346,17 @@ impl StyleSheet for ColorPaletteButtonStyle {
 		self.hovered(style)
 	}
 }
+
+pub struct InvisibleButtonStyle;
+
+impl StyleSheet for InvisibleButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, _style: &Self::Style) -> Appearance {
+		Appearance {
+			background: None,
+			text_color: Color::TRANSPARENT,
+			..Default::default()
+		}
+	}
+}
