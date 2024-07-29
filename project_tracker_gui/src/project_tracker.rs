@@ -165,10 +165,6 @@ impl Application for ProjectTrackerApp {
 				])
 			},
 			UiMessage::EscapePressed => Command::batch([
-				self.update(SidebarPageMessage::CloseCreateNewProject.into()),
-				self.update(ProjectPageMessage::CloseCreateNewTask.into()),
-				self.update(ProjectPageMessage::StopEditingProjectName.into()),
-				self.update(ProjectPageMessage::StopEditingTask.into()),
 				self.update(ProjectPageMessage::HideColorPicker.into()),
 				self.update(ConfirmModalMessage::Close.into()),
 				self.update(ErrorMsgModalMessage::Close.into()),
