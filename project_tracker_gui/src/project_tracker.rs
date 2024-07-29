@@ -173,6 +173,7 @@ impl Application for ProjectTrackerApp {
 				self.update(ConfirmModalMessage::Close.into()),
 				self.update(ErrorMsgModalMessage::Close.into()),
 				self.update(SwitchProjectModalMessage::Close.into()),
+				self.update(SettingsModalMessage::Close.into()),
 			]),
 			UiMessage::EnterPressed => {
 				self.error_msg_modal = ErrorMsgModal::Closed;
