@@ -166,13 +166,18 @@ impl SidebarPage {
 			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Command::none() },
 
 			SidebarPageMessage::DropTask { project_id, task_id, .. } => {
-				let command = self.project_being_task_hovered.and_then(|dst_project_id| {
-					let src_project_id = project_id;
-					database.as_mut().map(|db| db.update(DatabaseMessage::MoveTask { task_id, src_project_id, dst_project_id }))
-				}).or(self.task_being_task_hovered.and_then(|dst_task_id| {
-					let src_task_id = task_id;
-					database.as_mut().map(|db| db.update(DatabaseMessage::SwapTasks { project_id, task_a_id: src_task_id, task_b_id: dst_task_id }))
-				}));
+				let command = self.project_being_task_hovered
+					.and_then(|dst_project_id| {
+						let src_project_id = project_id;
+						database.as_mut().map(|db| db.update(DatabaseMessage::MoveTask { task_id, src_project_id, dst_project_id }))
+					})
+					.or(
+						self.task_being_task_hovered
+							.and_then(|dst_task_id| {
+								let src_task_id = task_id;
+								database.as_mut().map(|db| db.update(DatabaseMessage::SwapTasks { project_id, task_a_id: src_task_id, task_b_id: dst_task_id }))
+							})
+					);
 				self.project_being_task_hovered = None;
 				self.task_being_task_hovered = None;
 				command.unwrap_or(Command::none())
@@ -221,7 +226,7 @@ impl SidebarPage {
 
 			SidebarPageMessage::DropProject { .. } => {
 				if let Some(dragged_project_id) = self.dragged_project_id {
-					self.dragged_project_id = None;
+					// self.dragged_project_id = None; gets called after LeftClickReleased
 					if let Some(hovered_project_id) = self.project_being_project_hovered {
 						self.project_being_project_hovered = None;
 						if let Some(database) = database {
@@ -232,6 +237,7 @@ impl SidebarPage {
 						}
 					}
 				}
+				self.project_being_project_hovered = None;
 				Command::none()
 			},
 			SidebarPageMessage::DragProject { project_id, rect, .. } => {
@@ -246,13 +252,15 @@ impl SidebarPage {
 			},
 			SidebarPageMessage::HandleProjectZones { zones, .. } => {
 				self.project_being_project_hovered = None;
-				if let Some(projects) = database.as_ref().map(|db| &db.projects) {
-					for (dst_project_id, dst_project) in projects.iter() {
-						let dst_project_widget_id = dst_project.preview_dropzone_id.clone().into();
-						for (id, _bounds) in zones.iter() {
-							if *id == dst_project_widget_id {
-								self.project_being_project_hovered = Some(dst_project_id);
-								break;
+				if self.dragged_project_id.is_some() {
+					if let Some(projects) = database.as_ref().map(|db| &db.projects) {
+						for (dst_project_id, dst_project) in projects.iter() {
+							let dst_project_widget_id = dst_project.preview_dropzone_id.clone().into();
+							for (id, _bounds) in zones.iter() {
+								if *id == dst_project_widget_id {
+									self.project_being_project_hovered = Some(dst_project_id);
+									break;
+								}
 							}
 						}
 					}
@@ -272,6 +280,7 @@ impl SidebarPage {
 			SidebarPageMessage::LeftClickReleased => {
 				self.dragged_project_id = None;
 				self.pressed_project_id = None;
+				self.project_being_project_hovered = None;
 				Command::none()
 			},
 		}
