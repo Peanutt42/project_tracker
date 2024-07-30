@@ -92,7 +92,7 @@ pub fn custom_task_widget(inner_text_element: Element<UiMessage>, task_state: Ta
 					})
 			)
 			.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
-			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, point, rect }.into())
+			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, task_state, point, rect }.into())
 			.on_click(ProjectPageMessage::PressTask(task_id).into())
 			.on_cancel(SidebarPageMessage::CancelDragTask.into())
 			.drag_hide(true)

@@ -1,7 +1,7 @@
 use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
 use iced_drop::find_zones;
 use once_cell::sync::Lazy;
-use crate::{components::{horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
+use crate::{components::{horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId, TaskState}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
 use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
@@ -30,6 +30,7 @@ pub enum SidebarPageMessage {
 	DragTask {
 		project_id: ProjectId,
 		task_id: TaskId,
+		task_state: TaskState,
 		point: Point,
 		rect: Rectangle,
 	},
@@ -214,8 +215,8 @@ impl SidebarPage {
 				}
 				Command::none()
 			},
-			SidebarPageMessage::DragTask { project_id, task_id, point, .. } => {
-				let options = Self::project_and_task_dropzone_options(database, project_id, task_id);
+			SidebarPageMessage::DragTask { project_id, task_id, task_state, point, .. } => {
+				let options = Self::project_and_task_dropzone_options(database, project_id, task_id, task_state.is_todo());
 				find_zones(
 					move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
 					move |zone_bounds| zone_bounds.contains(point),
@@ -349,18 +350,20 @@ impl SidebarPage {
 		})
 	}
 
-	fn project_and_task_dropzone_options(database: &Option<Database>, project_exception: ProjectId, task_exception: TaskId) -> Option<Vec<Id>> {
+	fn project_and_task_dropzone_options(database: &Option<Database>, project_exception: ProjectId, task_exception: TaskId, is_task_todo: bool) -> Option<Vec<Id>> {
 		if let Some(database) = database {
 			let mut options = Vec::new();
 			for (project_id, project) in database.projects().iter() {
 				if project_id != project_exception {
 					options.push(project.preview_dropzone_id.clone().into());
 				}
-				for (task_id, task) in project.tasks.iter() {
-					if task_id == task_exception {
-						continue;
+				if is_task_todo {
+					for (task_id, task) in project.tasks.iter() {
+						if task_id == task_exception {
+							continue;
+						}
+						options.push(task.dropzone_id.clone().into());
 					}
-					options.push(task.dropzone_id.clone().into());
 				}
 			}
 			Some(options)
