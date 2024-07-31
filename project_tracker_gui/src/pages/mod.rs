@@ -11,7 +11,7 @@ use iced::Element;
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 
 pub enum ContentPage {
-	Project(ProjectPage),
+	Project(Box<ProjectPage>),
 	Overview(OverviewPage),
 }
 

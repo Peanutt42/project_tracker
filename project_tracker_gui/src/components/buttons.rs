@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::{ConfirmModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, ThemeModeButtonStyle, InvisibleButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{ConfirmModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -240,4 +240,34 @@ pub fn sync_database_button(synchronizing: bool, synchronization_filepath: Optio
 	.on_press_maybe(synchronization_filepath.map(|filepath| DatabaseMessage::Sync(filepath).into()))
 	.style(theme::Button::custom(DangerousButtonStyle))
 	.into()
+}
+
+pub fn task_tag_button(task_tag: &TaskTag, toggled: bool) -> Button<'static, UiMessage> {
+	button(
+		text(&task_tag.name)
+	)
+	.style(theme::Button::custom(TaskTagButtonStyle{
+		color: task_tag.color.into(),
+		toggled,
+	}))
+}
+
+pub fn create_new_label_button() -> Button<'static, UiMessage> {
+	button(
+		row![
+			icon_to_text(Bootstrap::BookmarkPlusFill)
+				.style(GREEN_TEXT_STYLE),
+			text("Create new")
+		]
+		.align_items(Alignment::Center)
+		.spacing(SMALL_SPACING_AMOUNT)
+	)
+	.on_press(ProjectPageMessage::OpenCreateNewTaskTag.into())
+	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+}
+
+pub fn cancel_create_new_task_tag_button() -> Button<'static, UiMessage> {
+	button(icon_to_text(Bootstrap::XLg))
+		.on_press(ProjectPageMessage::CloseCreateNewTaskTag.into())
+		.style(theme::Button::custom(ProjectContextButtonStyle))
 }

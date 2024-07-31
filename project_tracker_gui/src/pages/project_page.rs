@@ -1,13 +1,16 @@
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable::{self, RelativeOffset}, text, text_input}, Color, Command, Element, Length, Padding};
+use std::collections::HashSet;
+
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_input, Row}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, task_list, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
-	core::{Database, DatabaseMessage, Project, ProjectId, TaskId},
+	components::{cancel_create_new_task_tag_button, color_palette, color_palette_item_button, completion_bar, create_new_label_button, create_new_task_button, delete_project_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
+	core::{Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTag, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+static TASK_TAG_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[derive(Clone, Debug)]
 pub enum ProjectPageMessage {
@@ -16,6 +19,13 @@ pub enum ProjectPageMessage {
 	ChangeCreateNewTaskName(String),
 
 	ShowDoneTasks(bool),
+
+	ToggleFilterTaskTag(TaskTagId),
+	OpenCreateNewTaskTag,
+	CloseCreateNewTaskTag,
+	ChangeCreateNewTaskTagName(String),
+	ChangeCreateNewTaskTagColor(Color),
+	CreateNewTaskTag,
 
 	ShowColorPicker,
 	HideColorPicker,
@@ -27,6 +37,7 @@ pub enum ProjectPageMessage {
 	EditTask(TaskId),
 	StopEditingTask,
 	ChangeEditedTaskName(String),
+	ToggleTaskTag(TaskTagId),
 
 	DragTask(TaskId),
 	PressTask(TaskId),
@@ -47,6 +58,8 @@ pub struct ProjectPage {
 	edited_task: Option<(TaskId, String)>, // task_id, new_name
 	show_done_tasks: bool,
 	show_color_picker: bool,
+	filter_task_tags: HashSet<TaskTagId>,
+	create_new_task_tag: Option<TaskTag>,
 	pressed_task: Option<TaskId>,
 	dragged_task: Option<TaskId>,
 }
@@ -60,6 +73,8 @@ impl ProjectPage {
 			edited_task: None,
 			show_done_tasks: false,
 			show_color_picker: false,
+			filter_task_tags: HashSet::new(),
+			create_new_task_tag: None,
 			pressed_task: None,
 			dragged_task: None,
 		}
@@ -67,7 +82,7 @@ impl ProjectPage {
 }
 
 impl ProjectPage {
-	pub fn update(&mut self, message: ProjectPageMessage, database: &Option<Database>) -> Command<UiMessage> {
+	pub fn update(&mut self, message: ProjectPageMessage, database: &mut Option<Database>) -> Command<UiMessage> {
 		match message {
 			ProjectPageMessage::OpenCreateNewTask => {
 				self.create_new_task_name = Some(String::new());
@@ -85,6 +100,48 @@ impl ProjectPage {
 				Command::none()
 			},
 			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; Command::none() },
+
+			ProjectPageMessage::ToggleFilterTaskTag(task_tag_id) => {
+				if self.filter_task_tags.contains(&task_tag_id) {
+					self.filter_task_tags.remove(&task_tag_id);
+				}
+				else {
+					self.filter_task_tags.insert(task_tag_id);
+				}
+				Command::none()
+			},
+			ProjectPageMessage::OpenCreateNewTaskTag => {
+				self.create_new_task_tag = Some(TaskTag::new(String::new(), Color::WHITE.into()));
+				text_input::focus(TASK_TAG_NAME_TEXT_INPUT_ID.clone())
+			},
+			ProjectPageMessage::CloseCreateNewTaskTag => {
+				self.create_new_task_tag = None;
+				Command::none()
+			},
+			ProjectPageMessage::ChangeCreateNewTaskTagName(new_name) => {
+				if let Some(tag) = &mut self.create_new_task_tag {
+					tag.name = new_name;
+				}
+				Command::none()
+			},
+			ProjectPageMessage::ChangeCreateNewTaskTagColor(new_color) => {
+				if let Some(tag) = &mut self.create_new_task_tag {
+					tag.color = new_color.into();
+				}
+				Command::none()
+			},
+			ProjectPageMessage::CreateNewTaskTag => {
+				if let Some(create_new_task_tag) = &self.create_new_task_tag {
+					if let Some(database) = database {
+						database.modify(|projects| {
+							if let Some(project) = projects.get_mut(&self.project_id) {
+								project.task_tags.insert(TaskTagId::generate(), create_new_task_tag.clone());
+							}
+						});
+					}
+				}
+				self.update(ProjectPageMessage::CloseCreateNewTaskTag, database)
+			},
 
 			ProjectPageMessage::ShowColorPicker => { self.show_color_picker = true; Command::none() },
 			ProjectPageMessage::HideColorPicker => { self.show_color_picker = false; Command::none() },
@@ -122,6 +179,18 @@ impl ProjectPage {
 			ProjectPageMessage::ChangeEditedTaskName(edited_name) => {
 				if let Some((_edited_task_id, edited_task_name)) = &mut self.edited_task {
 					*edited_task_name = edited_name;
+				}
+				Command::none()
+			},
+			ProjectPageMessage::ToggleTaskTag(task_tag_id) => {
+				if let Some((edited_task_id, _edited_task_name)) = &mut self.edited_task {
+					if let Some(database) = database {
+						return database.update(DatabaseMessage::ToggleTaskTag {
+							project_id: self.project_id,
+							task_id: *edited_task_id,
+							task_tag_id
+						});
+					}
 				}
 				Command::none()
 			},
@@ -194,6 +263,32 @@ impl ProjectPage {
 						Some(ProjectPageMessage::ShowColorPicker.into())
 					});
 
+				let mut task_tags_list: Vec<Element<UiMessage>> = Vec::new();
+				for (tag_id, tag) in project.task_tags.iter() {
+					task_tags_list.push(
+						task_tag_button(tag, self.filter_task_tags.contains(tag_id))
+							.on_press(ProjectPageMessage::ToggleFilterTaskTag(*tag_id).into())
+							.into()
+					);
+				}
+				task_tags_list.push(
+					if let Some(tag) = &self.create_new_task_tag {
+						row![
+							text_input("Tag name", &tag.name)
+								.id(TASK_TAG_NAME_TEXT_INPUT_ID.clone())
+								.on_input(|new_name| ProjectPageMessage::ChangeCreateNewTaskTagName(new_name).into())
+								.on_submit(ProjectPageMessage::CreateNewTaskTag.into())
+								.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+
+							cancel_create_new_task_tag_button()
+						]
+        				.into()
+					}
+					else {
+						create_new_label_button().into()
+					}
+				);
+
 				column![
 					column![
 						row![
@@ -231,12 +326,21 @@ impl ProjectPage {
 						.width(Length::Fill)
 						.align_items(Alignment::Center),
 
+						row![
+							text("Tags:"),
+
+							Row::with_children(task_tags_list)
+								.spacing(SPACING_AMOUNT),
+						]
+						.spacing(SPACING_AMOUNT)
+						.align_items(Alignment::Center),
+
 						completion_bar(completion_percentage),
 					]
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(&project.tasks, self.project_id, &project.name, &self.edited_task, self.dragged_task, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.create_new_task_name),
+					task_list(project_id, project, &self.edited_task, self.dragged_task, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.filter_task_tags, &self.create_new_task_name),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)

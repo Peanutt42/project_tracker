@@ -1,8 +1,9 @@
+use std::collections::HashSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
-use crate::core::{OrderedHashMap, Task, TaskState, TaskId, generate_task_id, ProjectId, DatabaseMessage};
-use crate::components::{show_done_tasks_button, unfocusable, task_widget, custom_task_widget, cancel_create_task_button, delete_all_done_tasks_button};
+use crate::{core::{Project, TaskTagId}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
+use crate::core::{Task, TaskId, generate_task_id, ProjectId, DatabaseMessage};
+use crate::components::{show_done_tasks_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button};
 use crate::styles::{SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
 use crate::pages::ProjectPageMessage;
 
@@ -10,10 +11,10 @@ pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: ProjectId, project_name: &str, edited_task: &'a Option<(TaskId, String)>, dragged_task: Option<TaskId>, task_being_task_hovered: Option<TaskId>, show_done_tasks: bool, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, edited_task: &'a Option<(TaskId, String)>, dragged_task: Option<TaskId>, task_being_task_hovered: Option<TaskId>, show_done_tasks: bool, filter_task_tags: &'a HashSet<TaskTagId>, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
-	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks'
+	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks' (matching the filter)
 
 	let task_view = |task_id: TaskId, task: &'a Task| {
 		let edited_name = match edited_task {
@@ -28,23 +29,25 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			Some(hovered_task_id) => hovered_task_id == task_id,
 			None => false,
 		};
-		task_widget(task, task_id, project_id, edited_name, dragging, highlight)
+		task_widget(task, task_id, project_id, &project.task_tags, edited_name, dragging, highlight)
 	};
 
-	for (task_id, task) in tasks.iter() {
-		if task.is_todo() {
-			todo_task_elements.push(task_view(task_id, task));
-		}
-		else {
-			done_task_count += 1;
-			if show_done_tasks {
-				done_task_elements.push(task_view(task_id, task));
+	for (task_id, task) in project.tasks.iter() {
+		if task.matches_filter(filter_task_tags) {
+			if task.is_todo() {
+				todo_task_elements.push(task_view(task_id, task));
+			}
+			else {
+				done_task_count += 1;
+				if show_done_tasks {
+					done_task_elements.push(task_view(task_id, task));
+				}
 			}
 		}
 	}
 
 	if let Some(create_new_task_name) = &create_new_task_name {
-		let inner_text_element =
+		let create_new_task_element =
 			row![
 				unfocusable(
 					text_input("New task name", create_new_task_name)
@@ -66,7 +69,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 			.align_items(Alignment::Center)
 			.into();
 
-		todo_task_elements.push(custom_task_widget(inner_text_element, TaskState::Todo, None, project_id, None, false, false, false))
+		todo_task_elements.push(create_new_task_element)
 	}
 
 	let show_tasks_button: Element<UiMessage> =
@@ -84,7 +87,7 @@ pub fn task_list<'a>(tasks: &'a OrderedHashMap<TaskId, Task>, project_id: Projec
 					}
 					else {
 						Some(
-							container(delete_all_done_tasks_button(project_id, project_name))
+							container(delete_all_done_tasks_button(project_id, &project.name))
 								.width(Length::Fill)
 								.align_x(Horizontal::Right)
 						)

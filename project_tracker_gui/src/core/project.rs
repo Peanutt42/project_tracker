@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use serde::{Serialize, Deserialize};
 use iced::{widget::container::Id, Color};
-use crate::core::{OrderedHashMap, Task, TaskId, TaskState};
+use crate::core::{OrderedHashMap, Task, TaskId, TaskState, TaskTag, TaskTagId};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
 pub struct ProjectId(pub usize);
@@ -15,6 +17,7 @@ impl ProjectId {
 pub struct Project {
 	pub name: String,
 	pub color: SerializableColor,
+	pub task_tags: HashMap<TaskTagId, TaskTag>,
 	pub tasks: OrderedHashMap<TaskId, Task>,
 
 	#[serde(skip, default = "Id::unique")]
@@ -26,6 +29,7 @@ impl Project {
 		Self {
 			name,
 			color: SerializableColor::default(),
+			task_tags: HashMap::new(),
 			tasks: OrderedHashMap::new(),
 			preview_dropzone_id: Id::unique(),
 		}
@@ -63,6 +67,17 @@ impl Project {
 		}
 	}
 
+	pub fn toggle_task_tag(&mut self, task_id: TaskId, task_tag_id: TaskTagId) {
+		if let Some(task) = self.tasks.get_mut(&task_id) {
+			if task.tags.contains(&task_tag_id) {
+				task.tags.remove(&task_tag_id);
+			}
+			else {
+				task.tags.insert(task_tag_id);
+			}
+		}
+	}
+
 	pub fn get_tasks_done(&self) -> usize {
 		self.tasks
 			.values()
@@ -86,7 +101,7 @@ impl Project {
 
 
 
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct SerializableColor([u8; 3]);
 
 impl From<SerializableColor> for Color {

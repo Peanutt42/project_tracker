@@ -360,7 +360,7 @@ impl Application for ProjectTrackerApp {
 					project_id
 				};
 				if let Some(project_id) = project_id {
-					self.content_page = ContentPage::Project(ProjectPage::new(project_id));
+					self.content_page = ContentPage::Project(Box::new(ProjectPage::new(project_id)));
 					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into())
 				}
 				else {
@@ -431,7 +431,7 @@ impl Application for ProjectTrackerApp {
 			}
 			UiMessage::ProjectPageMessage(message) => {
 				match &mut self.content_page {
-					ContentPage::Project(project_page) => project_page.update(message, &self.database),
+					ContentPage::Project(project_page) => project_page.update(message, &mut self.database),
 					_ => Command::none()
 				}
 			},
@@ -439,7 +439,7 @@ impl Application for ProjectTrackerApp {
 				let command = match &message {
 					SidebarPageMessage::DragTask { task_id, .. } => {
 						match &mut self.content_page {
-							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask(*task_id), &self.database),
+							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask(*task_id), &mut self.database),
 							_ => Command::none()
 						}
 					},

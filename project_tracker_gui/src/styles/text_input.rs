@@ -1,6 +1,8 @@
 use iced::{widget::text_input::{Appearance, StyleSheet}, Color, Border, Theme};
 use crate::styles::NICE_GREEN;
 
+use super::BORDER_RADIUS;
+
 pub struct TextInputStyle;
 
 impl StyleSheet for TextInputStyle {
@@ -12,7 +14,7 @@ impl StyleSheet for TextInputStyle {
 		Appearance {
 			background: palette.background.base.color.into(),
 			border: Border {
-				radius: 2.0.into(),
+				radius: BORDER_RADIUS.into(),
 				width: 1.0,
 				color: palette.background.strong.color,
 			},
@@ -26,7 +28,7 @@ impl StyleSheet for TextInputStyle {
 		Appearance {
 			background: palette.background.base.color.into(),
 			border: Border {
-				radius: 2.0.into(),
+				radius: BORDER_RADIUS.into(),
 				width: 1.0,
 				color: palette.background.base.text,
 			},
@@ -40,7 +42,7 @@ impl StyleSheet for TextInputStyle {
 		Appearance {
 			background: palette.background.base.color.into(),
 			border: Border {
-				radius: 2.0.into(),
+				radius: BORDER_RADIUS.into(),
 				width: 1.0,
 				color: NICE_GREEN,
 			},
@@ -54,7 +56,7 @@ impl StyleSheet for TextInputStyle {
 		Appearance {
 			background: palette.background.weak.color.into(),
 			border: Border {
-				radius: 2.0.into(),
+				radius: BORDER_RADIUS.into(),
 				width: 1.0,
 				color: palette.background.strong.color,
 			},

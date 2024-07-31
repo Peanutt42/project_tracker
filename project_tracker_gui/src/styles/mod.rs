@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, RoundedSecondaryButtonStyle, ProjectContextButtonStyle, ThemeModeButtonStyle, PaletteItemButtonStyle, ColorPaletteButtonStyle, InvisibleButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, RoundedSecondaryButtonStyle, ProjectContextButtonStyle, ThemeModeButtonStyle, PaletteItemButtonStyle, ColorPaletteButtonStyle, InvisibleButtonStyle, TaskTagButtonStyle};
 
 mod container_styles;
 pub use container_styles::{RoundedContainerStyle, PaletteContainerStyle, ProjectPreviewBackgroundContainerStyle, TaskBackgroundContainerStyle, DropZoneContainerStyle, DROP_HIGHLIGHT_WIDTH};

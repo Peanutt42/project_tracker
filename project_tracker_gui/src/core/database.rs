@@ -6,6 +6,8 @@ use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, TaskState};
 
+use super::TaskTagId;
+
 fn default_false() -> bool { false }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -80,6 +82,11 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		new_task_state: TaskState,
+	},
+	ToggleTaskTag {
+		project_id: ProjectId,
+		task_id: TaskId,
+		task_tag_id: TaskTagId,
 	},
 	MoveTaskUp {
 		project_id: ProjectId,
@@ -306,6 +313,14 @@ impl Database {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
 						project.set_task_state(task_id, new_task_state);
+					}
+				});
+				Command::none()
+			},
+			DatabaseMessage::ToggleTaskTag { project_id, task_id, task_tag_id } => {
+				self.modify(|projects| {
+					if let Some(project) = projects.get_mut(&project_id) {
+						project.toggle_task_tag(task_id, task_tag_id);
 					}
 				});
 				Command::none()

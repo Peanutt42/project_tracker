@@ -15,3 +15,6 @@ pub use task::{Task, TaskId, generate_task_id};
 
 mod task_state;
 pub use task_state::TaskState;
+
+mod task_tag;
+pub use task_tag::{TaskTag, TaskTagId};
