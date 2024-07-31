@@ -236,7 +236,7 @@ impl ProjectPage {
 							.size(TITLE_TEXT_SIZE)
 							.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
 							.on_submit(DatabaseMessage::ChangeProjectName { project_id: self.project_id, new_name: edited_project_name.clone() }.into())
-							.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+							.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
 
 						ProjectPageMessage::StopEditingProjectName.into()
 					)
@@ -278,7 +278,7 @@ impl ProjectPage {
 								.id(TASK_TAG_NAME_TEXT_INPUT_ID.clone())
 								.on_input(|new_name| ProjectPageMessage::ChangeCreateNewTaskTagName(new_name).into())
 								.on_submit(ProjectPageMessage::CreateNewTaskTag.into())
-								.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+								.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
 
 							cancel_create_new_task_tag_button()
 						]

@@ -59,7 +59,7 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, edited_task: &
 							task_id: generate_task_id(),
 							task_name: create_new_task_name.clone(),
 						}.into())
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
 
 					ProjectPageMessage::CloseCreateNewTask.into()
 				),

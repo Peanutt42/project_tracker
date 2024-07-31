@@ -1,9 +1,11 @@
-use iced::{widget::text_input::{Appearance, StyleSheet}, Color, Border, Theme};
-use crate::styles::NICE_GREEN;
+use iced::{widget::text_input::{Appearance, StyleSheet}, Border, Color, Theme};
 
 use super::BORDER_RADIUS;
 
-pub struct TextInputStyle;
+pub struct TextInputStyle {
+	pub round_left: bool,
+	pub round_right: bool,
+}
 
 impl StyleSheet for TextInputStyle {
 	type Style = Theme;
@@ -14,7 +16,12 @@ impl StyleSheet for TextInputStyle {
 		Appearance {
 			background: palette.background.base.color.into(),
 			border: Border {
-				radius: BORDER_RADIUS.into(),
+				radius: [
+					if self.round_left { BORDER_RADIUS } else { 0.0 },
+					if self.round_right { BORDER_RADIUS } else { 0.0 },
+					if self.round_right { BORDER_RADIUS } else { 0.0 },
+					if self.round_left { BORDER_RADIUS } else { 0.0 },
+				].into(),
 				width: 1.0,
 				color: palette.background.strong.color,
 			},
@@ -27,12 +34,8 @@ impl StyleSheet for TextInputStyle {
 
 		Appearance {
 			background: palette.background.base.color.into(),
-			border: Border {
-				radius: BORDER_RADIUS.into(),
-				width: 1.0,
-				color: palette.background.base.text,
-			},
 			icon_color: palette.background.weak.text,
+			..self.active(style)
 		}
 	}
 
@@ -41,12 +44,8 @@ impl StyleSheet for TextInputStyle {
 
 		Appearance {
 			background: palette.background.base.color.into(),
-			border: Border {
-				radius: BORDER_RADIUS.into(),
-				width: 1.0,
-				color: NICE_GREEN,
-			},
 			icon_color: palette.background.weak.text,
+			..self.active(style)
 		}
 	}
 
@@ -55,12 +54,8 @@ impl StyleSheet for TextInputStyle {
 
 		Appearance {
 			background: palette.background.weak.color.into(),
-			border: Border {
-				radius: BORDER_RADIUS.into(),
-				width: 1.0,
-				color: palette.background.strong.color,
-			},
 			icon_color: palette.background.strong.color,
+			..self.active(style)
 		}
 	}
 

@@ -171,9 +171,12 @@ impl StyleSheet for RoundedSecondaryButtonStyle {
 	}
 }
 
-pub struct ProjectContextButtonStyle;
+pub struct CancelButtonStyle {
+	pub round_left: bool,
+	pub round_right: bool,
+}
 
-impl StyleSheet for ProjectContextButtonStyle {
+impl StyleSheet for CancelButtonStyle {
 	type Style = Theme;
 
 	fn active(&self, style: &Self::Style) -> Appearance {
@@ -182,7 +185,12 @@ impl StyleSheet for ProjectContextButtonStyle {
 		Appearance {
 			background: Some(pair.color.into()),
 			text_color: pair.text,
-			border: Border::with_radius(LARGE_BORDER_RADIUS),
+			border: Border::with_radius([
+				if self.round_left { LARGE_BORDER_RADIUS } else { 0.0 },
+				if self.round_right { LARGE_BORDER_RADIUS } else { 0.0 },
+				if self.round_right { LARGE_BORDER_RADIUS } else { 0.0 },
+				if self.round_left { LARGE_BORDER_RADIUS } else { 0.0 }
+			]),
 			..Default::default()
 		}
 	}
@@ -191,8 +199,7 @@ impl StyleSheet for ProjectContextButtonStyle {
 		Appearance {
 			background: Some(style.extended_palette().background.strong.color.into()),
 			text_color: style.extended_palette().secondary.base.text,
-			border: Border::with_radius(LARGE_BORDER_RADIUS),
-			..Default::default()
+			..self.active(style)
 		}
 	}
 }

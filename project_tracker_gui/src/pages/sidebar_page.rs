@@ -128,7 +128,7 @@ impl SidebarPage {
 							project_id: ProjectId::generate(),
 							name: create_new_project_name.clone()
 						}.into())
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle))),
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: true }))),
 
 					SidebarPageMessage::CloseCreateNewProject.into()
 				)

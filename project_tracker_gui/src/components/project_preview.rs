@@ -45,13 +45,22 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option
 
 			row![
 				inner_text_element,
-				container(
-					text(format!("({}/{})", tasks_done, task_len))
-						.size(SMALL_TEXT_SIZE)
-				)
-				.width(if project_id.is_some() { Length::Fill } else { Length::Shrink })
-				.align_x(Horizontal::Right),
 			]
+			.push_maybe(
+				if project_id.is_some() {
+					Some(
+						container(
+							text(format!("({}/{})", tasks_done, task_len))
+								.size(SMALL_TEXT_SIZE)
+						)
+						.width(if project_id.is_some() { Length::Fill } else { Length::Shrink })
+						.align_x(Horizontal::Right)
+					)
+				}
+				else {
+					None
+				}
+			)
 			.width(Length::Fill)
 			.spacing(SMALL_SPACING_AMOUNT)
 		]
@@ -90,7 +99,6 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option
 			cancel_create_project_button()
 		]
 		.align_items(Alignment::Center)
-		.spacing(SMALL_SPACING_AMOUNT)
 		.width(Length::Fill)
    		.into()
 	}

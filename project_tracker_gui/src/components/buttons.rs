@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::{ConfirmModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectContextButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{ConfirmModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, CancelButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -50,13 +50,13 @@ pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
 pub fn cancel_create_project_button() -> Button<'static, UiMessage> {
 	button(icon_to_text(Bootstrap::XLg))
 		.on_press(SidebarPageMessage::CloseCreateNewProject.into())
-		.style(theme::Button::custom(ProjectContextButtonStyle))
+		.style(theme::Button::custom(CancelButtonStyle{ round_left: true, round_right: true }))
 }
 
 pub fn cancel_create_task_button() -> Button<'static, UiMessage> {
 	button(icon_to_text(Bootstrap::XLg))
 		.on_press(ProjectPageMessage::CloseCreateNewTask.into())
-		.style(theme::Button::custom(ProjectContextButtonStyle))
+		.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
 }
 
 pub fn delete_project_button(project_id: ProjectId, project_name: &str) -> Button<'static, UiMessage> {
@@ -269,5 +269,5 @@ pub fn create_new_label_button() -> Button<'static, UiMessage> {
 pub fn cancel_create_new_task_tag_button() -> Button<'static, UiMessage> {
 	button(icon_to_text(Bootstrap::XLg))
 		.on_press(ProjectPageMessage::CloseCreateNewTaskTag.into())
-		.style(theme::Button::custom(ProjectContextButtonStyle))
+		.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
 }
