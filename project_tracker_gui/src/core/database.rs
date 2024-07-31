@@ -1,10 +1,11 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
 use iced::Command;
 use serde::{Serialize, Deserialize};
 use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, TaskState};
+use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskState};
 
 use super::TaskTagId;
 
@@ -278,15 +279,37 @@ impl Database {
 
 			DatabaseMessage::MoveTask { task_id, src_project_id, dst_project_id } => {
 				self.modify(|projects| {
-					let removed_task = if let Some(src_project) = projects.get_mut(&src_project_id) {
-						src_project.tasks.remove(&task_id)
-					}
-					else {
-						None
-					};
+					let removed_task: Option<Task> = projects
+						.get_mut(&src_project_id)
+						.map(|src_project| src_project.tasks.remove(&task_id))
+						.unwrap_or(None);
+
 					if let Some(task) = removed_task {
-						if let Some(destination_project) = projects.get_mut(&dst_project_id) {
-							destination_project.tasks.insert(task_id, task);
+						let missing_tags = projects
+							.get(&dst_project_id)
+							.and_then(|dst_project| {
+								projects.get(&src_project_id)
+									.map(|src_project| {
+										let mut missing_tag_ids = HashMap::new();
+										for tag_id in task.tags.iter() {
+											if !dst_project.task_tags.contains_key(tag_id) {
+												if let Some(tag) = src_project.task_tags.get(tag_id) {
+													missing_tag_ids.insert(*tag_id, tag.clone());
+												}
+											}
+										}
+										missing_tag_ids
+									})
+							}
+						)
+						.unwrap_or_default();
+
+						if let Some(dst_project) = projects.get_mut(&dst_project_id) {
+							for (tag_id, tag) in missing_tags {
+								dst_project.task_tags.insert(tag_id, tag);
+							}
+
+							dst_project.tasks.insert(task_id, task);
 						}
 					}
 				});
