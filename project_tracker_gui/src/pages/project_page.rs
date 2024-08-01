@@ -1,16 +1,14 @@
 use std::collections::HashSet;
-
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_input, Row}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{cancel_create_new_task_tag_button, color_palette, color_palette_item_button, completion_bar, create_new_label_button, create_new_task_button, delete_project_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
-	core::{Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTag, TaskTagId},
+	components::{color_palette, color_palette_item_button, completion_bar, manage_task_tags_button, create_new_task_button, delete_project_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
+	core::{Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
-static TASK_TAG_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[derive(Clone, Debug)]
 pub enum ProjectPageMessage {
@@ -21,11 +19,6 @@ pub enum ProjectPageMessage {
 	ShowDoneTasks(bool),
 
 	ToggleFilterTaskTag(TaskTagId),
-	OpenCreateNewTaskTag,
-	CloseCreateNewTaskTag,
-	ChangeCreateNewTaskTagName(String),
-	ChangeCreateNewTaskTagColor(Color),
-	CreateNewTaskTag,
 
 	ShowColorPicker,
 	HideColorPicker,
@@ -59,7 +52,6 @@ pub struct ProjectPage {
 	show_done_tasks: bool,
 	show_color_picker: bool,
 	filter_task_tags: HashSet<TaskTagId>,
-	create_new_task_tag: Option<TaskTag>,
 	pressed_task: Option<TaskId>,
 	dragged_task: Option<TaskId>,
 }
@@ -74,7 +66,6 @@ impl ProjectPage {
 			show_done_tasks: false,
 			show_color_picker: false,
 			filter_task_tags: HashSet::new(),
-			create_new_task_tag: None,
 			pressed_task: None,
 			dragged_task: None,
 		}
@@ -109,38 +100,6 @@ impl ProjectPage {
 					self.filter_task_tags.insert(task_tag_id);
 				}
 				Command::none()
-			},
-			ProjectPageMessage::OpenCreateNewTaskTag => {
-				self.create_new_task_tag = Some(TaskTag::new(String::new(), Color::WHITE.into()));
-				text_input::focus(TASK_TAG_NAME_TEXT_INPUT_ID.clone())
-			},
-			ProjectPageMessage::CloseCreateNewTaskTag => {
-				self.create_new_task_tag = None;
-				Command::none()
-			},
-			ProjectPageMessage::ChangeCreateNewTaskTagName(new_name) => {
-				if let Some(tag) = &mut self.create_new_task_tag {
-					tag.name = new_name;
-				}
-				Command::none()
-			},
-			ProjectPageMessage::ChangeCreateNewTaskTagColor(new_color) => {
-				if let Some(tag) = &mut self.create_new_task_tag {
-					tag.color = new_color.into();
-				}
-				Command::none()
-			},
-			ProjectPageMessage::CreateNewTaskTag => {
-				if let Some(create_new_task_tag) = &self.create_new_task_tag {
-					if let Some(database) = database {
-						database.modify(|projects| {
-							if let Some(project) = projects.get_mut(&self.project_id) {
-								project.task_tags.insert(TaskTagId::generate(), create_new_task_tag.clone());
-							}
-						});
-					}
-				}
-				self.update(ProjectPageMessage::CloseCreateNewTaskTag, database)
 			},
 
 			ProjectPageMessage::ShowColorPicker => { self.show_color_picker = true; Command::none() },
@@ -271,23 +230,7 @@ impl ProjectPage {
 							.into()
 					);
 				}
-				task_tags_list.push(
-					if let Some(tag) = &self.create_new_task_tag {
-						row![
-							text_input("Tag name", &tag.name)
-								.id(TASK_TAG_NAME_TEXT_INPUT_ID.clone())
-								.on_input(|new_name| ProjectPageMessage::ChangeCreateNewTaskTagName(new_name).into())
-								.on_submit(ProjectPageMessage::CreateNewTaskTag.into())
-								.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
-
-							cancel_create_new_task_tag_button()
-						]
-        				.into()
-					}
-					else {
-						create_new_label_button().into()
-					}
-				);
+				task_tags_list.push(manage_task_tags_button(self.project_id).into());
 
 				column![
 					column![
@@ -327,7 +270,8 @@ impl ProjectPage {
 						.align_items(Alignment::Center),
 
 						row![
-							text("Tags:"),
+							container(text("Tags:"))
+								.padding(Padding { bottom: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO }),
 
 							scrollable(
 								Row::with_children(task_tags_list)

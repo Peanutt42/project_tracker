@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::{ConfirmModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, CancelButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{CancelButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -252,7 +252,21 @@ pub fn task_tag_button(task_tag: &TaskTag, toggled: bool) -> Button<'static, UiM
 	}))
 }
 
-pub fn create_new_label_button() -> Button<'static, UiMessage> {
+pub fn manage_task_tags_button(project_id: ProjectId) -> Button<'static, UiMessage> {
+	button(
+		row![
+			icon_to_text(Bootstrap::BookmarkFill)
+				.style(GREEN_TEXT_STYLE),
+			text("Manage")
+		]
+		.align_items(Alignment::Center)
+		.spacing(SMALL_SPACING_AMOUNT)
+	)
+	.on_press(ManageTaskTagsModalMessage::Open { project_id }.into())
+	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+}
+
+pub fn create_new_task_tags_button() -> Button<'static, UiMessage> {
 	button(
 		row![
 			icon_to_text(Bootstrap::BookmarkPlusFill)
@@ -262,12 +276,20 @@ pub fn create_new_label_button() -> Button<'static, UiMessage> {
 		.align_items(Alignment::Center)
 		.spacing(SMALL_SPACING_AMOUNT)
 	)
-	.on_press(ProjectPageMessage::OpenCreateNewTaskTag.into())
+	.on_press(ManageTaskTagsModalMessage::OpenCreateNewTaskTag.into())
 	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
 }
 
 pub fn cancel_create_new_task_tag_button() -> Button<'static, UiMessage> {
 	button(icon_to_text(Bootstrap::XLg))
-		.on_press(ProjectPageMessage::CloseCreateNewTaskTag.into())
-		.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
+			.on_press(ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into())
+			.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
+}
+
+pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::Trash)
+	)
+	.on_press(ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id).into())
+	.style(theme::Button::custom(DeleteButtonStyle))
 }

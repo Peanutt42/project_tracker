@@ -1,4 +1,4 @@
-use std::collections::hash_map::{HashMap, Values};
+use std::collections::hash_map::{HashMap, Values, ValuesMut};
 use std::cmp::Eq;
 use std::hash::Hash;
 use std::slice::Iter;
@@ -122,6 +122,10 @@ impl<K, V> OrderedHashMap<K, V>
 
 	pub fn values(&self) -> Values<K, V> {
 		self.hash_map.values()
+	}
+
+	pub fn values_mut(&mut self) -> ValuesMut<K, V> {
+		self.hash_map.values_mut()
 	}
 }
 

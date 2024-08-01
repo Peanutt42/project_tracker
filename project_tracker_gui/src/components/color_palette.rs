@@ -35,6 +35,6 @@ pub fn color_palette(selected_color: Color, on_submit: impl Fn(Color) -> UiMessa
 			color_item(Color::from_rgb8(255, 0, 255)), // pink
 		]
 	)
-.style(theme::Container::Custom(Box::new(PaletteContainerStyle)))
+	.style(theme::Container::Custom(Box::new(PaletteContainerStyle)))
 	.into()
 }

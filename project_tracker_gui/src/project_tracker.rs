@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::Duration};
 use iced::{clipboard, event::Status, font, keyboard, mouse, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
-	components::{toggle_sidebar_button, invisible_toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, SettingsModal, SettingsModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
+	components::{invisible_toggle_sidebar_button, toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage},
 	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageMessage},
 	styles::{SplitStyle, PADDING_AMOUNT},
@@ -19,6 +19,7 @@ pub struct ProjectTrackerApp {
 	pub error_msg_modal: ErrorMsgModal,
 	pub switch_project_modal: SwitchProjectModal,
 	pub settings_modal: SettingsModal,
+	pub manage_tags_modal: ManageTaskTagsModal,
 	pub is_system_theme_dark: bool,
 }
 
@@ -51,6 +52,7 @@ pub enum UiMessage {
 	SidebarPageMessage(SidebarPageMessage),
 	SwitchProjectModalMessage(SwitchProjectModalMessage),
 	SettingsModalMessage(SettingsModalMessage),
+	ManageTaskTagsModalMessage(ManageTaskTagsModalMessage),
 }
 
 impl Application for ProjectTrackerApp {
@@ -71,6 +73,7 @@ impl Application for ProjectTrackerApp {
 				error_msg_modal: ErrorMsgModal::Closed,
 				switch_project_modal: SwitchProjectModal::Closed,
 				settings_modal: SettingsModal::Closed,
+				manage_tags_modal: ManageTaskTagsModal::Closed,
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Command::batch([
@@ -170,6 +173,7 @@ impl Application for ProjectTrackerApp {
 				self.update(ErrorMsgModalMessage::Close.into()),
 				self.update(SwitchProjectModalMessage::Close.into()),
 				self.update(SettingsModalMessage::Close.into()),
+				self.update(ManageTaskTagsModalMessage::Close.into()),
 			]),
 			UiMessage::EnterPressed => {
 				self.error_msg_modal = ErrorMsgModal::Closed;
@@ -464,6 +468,7 @@ impl Application for ProjectTrackerApp {
 				])
 			},
 			UiMessage::SettingsModalMessage(message) => self.settings_modal.update(message),
+			UiMessage::ManageTaskTagsModalMessage(message) => self.manage_tags_modal.update(message, &mut self.database),
 			UiMessage::SwitchProjectModalMessage(message) => self.switch_project_modal.update(message, &self.database, self.selected_project_id),
 		}
 	}
@@ -522,6 +527,7 @@ impl Application for ProjectTrackerApp {
 		if let Some((modal_element, modal_style)) = self.error_msg_modal.view()
 			.or(self.confirm_modal.view())
 			.or(self.settings_modal.view(self))
+			.or(self.manage_tags_modal.view(self))
 			.or(switch_project_modal_view())
 		{
 			modal(

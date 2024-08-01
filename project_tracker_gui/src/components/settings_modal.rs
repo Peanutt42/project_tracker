@@ -1,6 +1,6 @@
-use iced::{theme, widget::{button, column, container, row, text, Space}, Alignment, Command, Element};
+use iced::{theme, widget::{button, column, container, row, text}, Alignment, Command, Element};
 use iced_aw::{Bootstrap, CardStyles, ModalStyles, card};
-use crate::{components::{dangerous_button, file_location, horizontal_seperator, sync_database_button}, core::PreferenceMessage, styles::{capped_text, ModalCardStyle, ModalStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
+use crate::{components::{dangerous_button, file_location, horizontal_seperator, sync_database_button}, core::PreferenceMessage, styles::{capped_text, ModalCardStyle, ModalStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage};
 use crate::styles::{LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -74,7 +74,7 @@ impl SettingsModal {
 
 					Some((
 						card(
-							Space::new(0.0, 0.0),
+							text("Settings").size(HEADING_TEXT_SIZE),
 
 							column![
 								column![
