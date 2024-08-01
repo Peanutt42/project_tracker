@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
 use iced::{theme, widget::{button, checkbox, column, container, container::Id, row, text, text_input, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, TaskTagButtonStyle, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, TaskTagButtonStyle, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextInputStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
@@ -12,7 +10,7 @@ use crate::components::{delete_task_button, unfocusable};
 pub static EDIT_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a HashMap<TaskTagId, TaskTag>, edited_name: Option<&'a String>, dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
+pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edited_name: Option<&'a String>, dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
 	let inner_text_element: Element<UiMessage> = if let Some(edited_name) = edited_name {
 		unfocusable(
 			text_input("Task name", edited_name)
@@ -49,11 +47,11 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 						button(
 							text(&tag.name)
 						)
-						.on_press(ProjectPageMessage::ToggleTaskTag(*tag_id).into())
+						.on_press(ProjectPageMessage::ToggleTaskTag(tag_id).into())
 						.style(theme::Button::custom(
 							TaskTagButtonStyle {
 								color: tag.color.into(),
-								toggled: task.tags.contains(tag_id)
+								toggled: task.tags.contains(&tag_id)
 							}
 						))
 						.into()

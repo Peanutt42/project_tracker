@@ -6,7 +6,7 @@ use crate::{
 	components::{cancel_create_new_task_tag_button, color_palette, color_palette_item_button, completion_bar, create_new_label_button, create_new_task_button, delete_project_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
 	core::{Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTag, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{HiddenSecondaryButtonStyle, TextInputStyle, PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -266,8 +266,8 @@ impl ProjectPage {
 				let mut task_tags_list: Vec<Element<UiMessage>> = Vec::new();
 				for (tag_id, tag) in project.task_tags.iter() {
 					task_tags_list.push(
-						task_tag_button(tag, self.filter_task_tags.contains(tag_id))
-							.on_press(ProjectPageMessage::ToggleFilterTaskTag(*tag_id).into())
+						task_tag_button(tag, self.filter_task_tags.contains(&tag_id))
+							.on_press(ProjectPageMessage::ToggleFilterTaskTag(tag_id).into())
 							.into()
 					);
 				}
@@ -329,8 +329,13 @@ impl ProjectPage {
 						row![
 							text("Tags:"),
 
-							Row::with_children(task_tags_list)
-								.spacing(SPACING_AMOUNT),
+							scrollable(
+								Row::with_children(task_tags_list)
+									.spacing(SPACING_AMOUNT)
+									.padding(Padding { bottom: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO })
+							)
+							.direction(scrollable_horizontal_direction())
+							.style(theme::Scrollable::custom(ScrollableStyle)),
 						]
 						.spacing(SPACING_AMOUNT)
 						.align_items(Alignment::Center),

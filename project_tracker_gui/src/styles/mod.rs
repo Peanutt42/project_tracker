@@ -20,7 +20,7 @@ mod text_input;
 pub use text_input::TextInputStyle;
 
 mod scrollable;
-pub use scrollable::{ScrollableStyle, scrollable_vertical_direction, SCROLLBAR_WIDTH};
+pub use scrollable::{ScrollableStyle, scrollable_horizontal_direction, scrollable_vertical_direction, SCROLLBAR_WIDTH};
 
 mod modal_style;
 pub use modal_style::{ModalStyle, PaletteModalStyle, ModalCardStyle};

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Serialize, Deserialize};
 use iced::{widget::container::Id, Color};
 use crate::core::{OrderedHashMap, Task, TaskId, TaskState, TaskTag, TaskTagId};
@@ -17,7 +15,7 @@ impl ProjectId {
 pub struct Project {
 	pub name: String,
 	pub color: SerializableColor,
-	pub task_tags: HashMap<TaskTagId, TaskTag>,
+	pub task_tags: OrderedHashMap<TaskTagId, TaskTag>,
 	pub tasks: OrderedHashMap<TaskId, Task>,
 
 	#[serde(skip, default = "Id::unique")]
@@ -29,7 +27,7 @@ impl Project {
 		Self {
 			name,
 			color: SerializableColor::default(),
-			task_tags: HashMap::new(),
+			task_tags: OrderedHashMap::new(),
 			tasks: OrderedHashMap::new(),
 			preview_dropzone_id: Id::unique(),
 		}

@@ -10,6 +10,13 @@ pub fn scrollable_vertical_direction() -> Direction {
 	)
 }
 
+pub fn scrollable_horizontal_direction() -> Direction {
+	Direction::Horizontal(
+		Properties::new()
+			.scroller_width(SCROLLBAR_WIDTH)
+	)
+}
+
 pub struct ScrollableStyle;
 
 impl StyleSheet for ScrollableStyle {
