@@ -18,7 +18,7 @@ async fn test_database_serialization() {
 
 	let original = database.clone();
 
-	database.save_to(output_filepath.clone()).await.unwrap();
+	Database::save_to(output_filepath.clone(), database.to_json()).await.unwrap();
 
 	match Database::load_from(output_filepath.clone()).await {
 		LoadDatabaseResult::Ok(database) => assert!(database.has_same_content_as(&original)),
@@ -26,5 +26,5 @@ async fn test_database_serialization() {
 		LoadDatabaseResult::FailedToParse(_) => panic!("Failed to parse serialized file!"),
 	};
 
-	tokio::fs::remove_file(output_filepath).await.expect("failed to remove temporary test database file used for serialization testing");
+	tokio::fs::remove_file(&output_filepath).await.expect("failed to remove temporary test database file used for serialization testing");
 }

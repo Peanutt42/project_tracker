@@ -105,7 +105,7 @@ impl Preferences {
 	pub fn update(&mut self, message: PreferenceMessage) -> Command<UiMessage> {
 		match message {
 			PreferenceMessage::Save => Command::perform(
-				self.clone().save(),
+				Self::save(self.to_json()),
 				|result| {
 					match result {
 						Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
@@ -198,8 +198,8 @@ impl Preferences {
 		Self::load_from(Self::get_and_ensure_filepath().await).await
 	}
 
-	async fn save_to(self, filepath: PathBuf) -> Result<(), String> {
-		if let Err(e) = tokio::fs::write(filepath.clone(), serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
+	async fn save_to(filepath: PathBuf, json: String) -> Result<(), String> {
+		if let Err(e) = tokio::fs::write(filepath.clone(), json.as_bytes()).await {
 			Err(format!("Failed to save to {}: {e}", filepath.display()))
 		}
 		else {
@@ -207,10 +207,14 @@ impl Preferences {
 		}
 	}
 
+	pub fn to_json(&self) -> String {
+		serde_json::to_string_pretty(self).unwrap()
+	}
+
 	// returns begin time of saving
-	pub async fn save(self) -> Result<Instant, String> {
+	pub async fn save(json: String) -> Result<Instant, String> {
 		let begin_time = Instant::now();
-		self.save_to(Self::get_and_ensure_filepath().await).await?;
+		Self::save_to(Self::get_and_ensure_filepath().await, json).await?;
 		Ok(begin_time)
 	}
 
@@ -223,7 +227,7 @@ impl Preferences {
 			.await;
 
 		if let Some(result) = file_dialog_result {
-			self.save_to(result.path().to_path_buf()).await?;
+			Self::save_to(result.path().to_path_buf(), self.to_json()).await?;
 		}
 		Ok(())
 	}

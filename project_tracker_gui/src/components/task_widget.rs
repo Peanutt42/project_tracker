@@ -25,17 +25,24 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 		.into()
 	}
 	else {
-		text(if task.is_done() { strikethrough_text(&task.name) } else { task.name.clone() })
-			.style(
-				if task.is_done() {
-					theme::Text::Color(GREY)
-				}
-				else {
-					theme::Text::Default
-				}
-			)
-			.width(Length::Shrink)
-			.into()
+		(
+			if task.is_todo() {
+				text(&task.name)
+			}
+			else {
+				text(strikethrough_text(&task.name))
+			}
+		)
+		.style(
+			if task.is_done() {
+				theme::Text::Color(GREY)
+			}
+			else {
+				theme::Text::Default
+			}
+		)
+		.width(Length::Shrink)
+		.into()
 	};
 
 	if edited_name.is_some() {

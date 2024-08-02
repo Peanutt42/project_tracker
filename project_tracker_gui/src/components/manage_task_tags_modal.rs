@@ -14,7 +14,7 @@ pub enum ManageTaskTagsModalMessage {
 	CloseCreateNewTaskTag,
 	ChangeCreateNewTaskTagName(String),
 	EditTaskTagColor(TaskTagId),
-	EditTaskTagName(TaskTagId, String), // task_tag_id, task_tag_name
+	EditTaskTagName(TaskTagId),
 	ChangeEditTaskTagName(String),
 	ChangeTaskTagName,
 	ChangeTaskTagColor(Color),
@@ -81,8 +81,16 @@ impl ManageTaskTagsModal {
 				}
 				self.update(ManageTaskTagsModalMessage::StopEditTaskTagName, database)
 			},
-			ManageTaskTagsModalMessage::EditTaskTagName(task_tag_id, task_tag_name) => {
-				if let ManageTaskTagsModal::Opened { edit_task_tag_name_id, .. } = self {
+			ManageTaskTagsModalMessage::EditTaskTagName(task_tag_id) => {
+				if let ManageTaskTagsModal::Opened { edit_task_tag_name_id, project_id, .. } = self {
+					let task_tag_name = database.as_ref().and_then(|database| {
+						database
+							.projects()
+							.get(project_id)
+							.and_then(|project| {
+								project.task_tags.get(&task_tag_id).map(|task_tag| task_tag.name.clone())
+							})
+					}).unwrap_or_default();
 					*edit_task_tag_name_id = Some((task_tag_id, task_tag_name));
 				}
 				self.update(ManageTaskTagsModalMessage::StopEditTaskTagColor, database)
@@ -110,7 +118,7 @@ impl ManageTaskTagsModal {
 					if let Some(database) = database {
 						database.modify(|projects| {
 							if let Some(tag) = projects.get_mut(project_id).and_then(|project| project.task_tags.get_mut(edit_task_tag_id)) {
-								tag.name = new_name.clone();
+								tag.name = std::mem::take(new_name);
 							}
 						});
 					}
@@ -134,7 +142,7 @@ impl ManageTaskTagsModal {
 					if let Some(database) = database {
 						database.modify(|projects| {
 							if let Some(project) = projects.get_mut(project_id) {
-								project.task_tags.insert(TaskTagId::generate(), TaskTag::new(new_task_tag_name.clone(), Color::WHITE.into()));
+								project.task_tags.insert(TaskTagId::generate(), TaskTag::new(std::mem::take(new_task_tag_name), Color::WHITE.into()));
 							}
 						});
 					}
@@ -191,7 +199,7 @@ impl ManageTaskTagsModal {
 								text(&tag.name)
             						.width(Length::Fill)
 							)
-							.on_press(ManageTaskTagsModalMessage::EditTaskTagName(tag_id, tag.name.clone()).into())
+							.on_press(ManageTaskTagsModalMessage::EditTaskTagName(tag_id).into())
 							.style(theme::Button::custom(HiddenSecondaryButtonStyle))
 							.into()
 						};

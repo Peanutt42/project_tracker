@@ -164,7 +164,7 @@ impl Database {
 	pub fn update(&mut self, message: DatabaseMessage) -> Command<UiMessage> {
 		match message {
 			DatabaseMessage::Save => Command::perform(
-				self.clone().save(),
+				Self::save(self.to_json()),
 				|result| {
 					match result {
 						Ok(begin_time) => DatabaseMessage::Saved(begin_time).into(),
@@ -174,7 +174,10 @@ impl Database {
 			),
 			DatabaseMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
 			DatabaseMessage::Clear => { *self = Self::new(); self.modified(); Command::none() },
-			DatabaseMessage::Export(filepath) => Command::perform(self.clone().save_to(filepath), |_| DatabaseMessage::Exported.into()),
+			DatabaseMessage::Export(filepath) => Command::perform(
+				Self::save_to(filepath, self.to_json()),
+				|_| DatabaseMessage::Exported.into()
+			),
 			DatabaseMessage::ExportDialog => Command::perform(
 				Self::export_file_dialog(),
 				|filepath| {
@@ -209,7 +212,7 @@ impl Database {
 				})
 			},
 			DatabaseMessage::SyncUpload(filepath) => Command::perform(
-				self.clone().save_to(filepath),
+				Self::save_to(filepath, self.to_json()),
 				|_| DatabaseMessage::SyncUploaded.into()
 			),
 			DatabaseMessage::SyncUploaded | DatabaseMessage::SyncFailed(_) => { self.syncing = false; Command::none() },
@@ -392,7 +395,7 @@ impl Database {
 	}
 
 	pub async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
-		let file_content = if let Ok(file_content) = tokio::fs::read_to_string(filepath.clone()).await {
+		let file_content = if let Ok(file_content) = tokio::fs::read_to_string(&filepath).await {
 			file_content
 		}
 		else {
@@ -409,8 +412,12 @@ impl Database {
 		Self::load_from(Self::get_and_ensure_filepath().await).await
 	}
 
-	pub async fn save_to(self, filepath: PathBuf) -> Result<(), String> {
-		if let Err(e) = tokio::fs::write(filepath.clone(), serde_json::to_string_pretty(&self).unwrap().as_bytes()).await {
+	pub fn to_json(&self) -> String {
+		serde_json::to_string_pretty(self).unwrap()
+	}
+
+	pub async fn save_to(filepath: PathBuf, json: String) -> Result<(), String> {
+		if let Err(e) = tokio::fs::write(filepath.as_path(), json.as_bytes()).await {
 			Err(format!("Failed to save to {}: {e}", filepath.display()))
 		}
 		else {
@@ -419,9 +426,9 @@ impl Database {
 	}
 
 	// returns begin time of saving
-	async fn save(self) -> Result<Instant, String> {
+	async fn save(json: String) -> Result<Instant, String> {
 		let begin_time = Instant::now();
-		self.save_to(Self::get_and_ensure_filepath().await).await?;
+		Self::save_to(Self::get_and_ensure_filepath().await, json).await?;
 		Ok(begin_time)
 	}
 

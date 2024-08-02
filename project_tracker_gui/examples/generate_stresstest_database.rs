@@ -15,5 +15,5 @@ async fn main() {
 		db.modify(|projects| projects.insert(ProjectId(i), project));
 	}
 
-	db.save_to(PathBuf::from("stresstest_database.json")).await.unwrap();
+	Database::save_to(PathBuf::from("stresstest_database.json"), serde_json::to_string_pretty(&db).unwrap()).await.unwrap();
 }
