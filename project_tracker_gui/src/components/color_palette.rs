@@ -27,12 +27,12 @@ pub fn color_palette(selected_color: Color, on_submit: impl Fn(Color) -> UiMessa
 		row![
 			color_item(Color::BLACK),
 			color_item(Color::WHITE),
-			color_item(Color::from_rgb8(255, 0, 0)), // red
-			color_item(Color::from_rgb8(0, 255, 0)), // green
-			color_item(Color::from_rgb8(0, 0, 255)), // blue
-			color_item(Color::from_rgb8(255, 127, 0)), // orange
-			color_item(Color::from_rgb8(255, 230, 0)), // yellow
-			color_item(Color::from_rgb8(255, 0, 255)), // pink
+			color_item(Color::from_rgb8(255, 54, 6)), // red
+			color_item(Color::from_rgb8(162, 250, 163)), // green
+			color_item(Color::from_rgb8(154, 196, 248)), // blue
+			color_item(Color::from_rgb8(245, 143, 41)), // orange
+			color_item(Color::from_rgb8(255, 233, 49)), // yellow
+			color_item(Color::from_rgb8(161, 79, 195)), // pink
 		]
 	)
 	.style(theme::Container::Custom(Box::new(PaletteContainerStyle)))
