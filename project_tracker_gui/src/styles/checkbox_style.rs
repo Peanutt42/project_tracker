@@ -20,7 +20,12 @@ impl StyleSheet for GreenCheckboxStyle {
 			border: Border {
 				radius: 2.0.into(),
 				width: 1.0,
-				color: NICE_GREEN,
+				color: if is_checked {
+					NICE_GREEN
+				}
+				else {
+					style.extended_palette().background.weak.color
+				},
 			},
 		}
 	}
@@ -39,7 +44,12 @@ impl StyleSheet for GreenCheckboxStyle {
 			border: Border {
 				radius: 2.0.into(),
 				width: 1.0,
-				color: NICE_GREEN,
+				color: if is_checked {
+					NICE_GREEN
+				}
+				else {
+					style.extended_palette().background.strong.color
+				},
 			},
 		}
 	}

@@ -25,8 +25,8 @@ pub fn color_palette(selected_color: Color, on_submit: impl Fn(Color) -> UiMessa
 
 	container(
 		row![
-			color_item(Color::BLACK),
-			color_item(Color::WHITE),
+			color_item(Color::from_rgb8(10, 10, 10)), // black
+			color_item(Color::from_rgb8(245, 245, 245)), // white
 			color_item(Color::from_rgb8(255, 54, 6)), // red
 			color_item(Color::from_rgb8(162, 250, 163)), // green
 			color_item(Color::from_rgb8(154, 196, 248)), // blue
