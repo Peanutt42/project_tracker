@@ -217,7 +217,7 @@ impl ManageTaskTagsModal {
 							]
 							.push_maybe(
 								if show_color_palette {
-									Some(color_palette(Color::WHITE, move |new_color| ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color).into()))
+									Some(color_palette(tag.color.into(), move |new_color| ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color).into()))
 								}
 								else {
 									None
