@@ -18,6 +18,7 @@ pub enum ManageTaskTagsModalMessage {
 	ChangeEditTaskTagName(String),
 	ChangeTaskTagName,
 	ChangeTaskTagColor(Color),
+	StopEditTaskTagColor,
 	StopEditTaskTagName,
 	CreateNewTaskTag,
 	DeleteTaskTag(TaskTagId),
@@ -56,7 +57,11 @@ impl ManageTaskTagsModal {
 				if let ManageTaskTagsModal::Opened { create_new_task_tag, .. } = self {
 					*create_new_task_tag = Some(String::new());
 				}
-				text_input::focus(CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID.clone())
+				Command::batch([
+					text_input::focus(CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID.clone()),
+					self.update(ManageTaskTagsModalMessage::StopEditTaskTagColor, database),
+					self.update(ManageTaskTagsModalMessage::StopEditTaskTagName, database),
+				])
 			},
 			ManageTaskTagsModalMessage::CloseCreateNewTaskTag => {
 				if let ManageTaskTagsModal::Opened { create_new_task_tag, .. } = self {
@@ -74,13 +79,13 @@ impl ManageTaskTagsModal {
 				if let ManageTaskTagsModal::Opened { edit_task_tag_color_id, .. } = self {
 					*edit_task_tag_color_id = Some(task_tag_id);
 				}
-				Command::none()
+				self.update(ManageTaskTagsModalMessage::StopEditTaskTagName, database)
 			},
 			ManageTaskTagsModalMessage::EditTaskTagName(task_tag_id, task_tag_name) => {
 				if let ManageTaskTagsModal::Opened { edit_task_tag_name_id, .. } = self {
 					*edit_task_tag_name_id = Some((task_tag_id, task_tag_name));
 				}
-				Command::none()
+				self.update(ManageTaskTagsModalMessage::StopEditTaskTagColor, database)
 			},
 			ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color) => {
 				if let ManageTaskTagsModal::Opened { project_id, edit_task_tag_color_id: Some(edit_task_tag_id), .. } = self {
@@ -111,7 +116,13 @@ impl ManageTaskTagsModal {
 					}
 				}
 				self.update(ManageTaskTagsModalMessage::StopEditTaskTagName, database)
-			}
+			},
+			ManageTaskTagsModalMessage::StopEditTaskTagColor => {
+				if let ManageTaskTagsModal::Opened { edit_task_tag_color_id, .. } = self {
+					*edit_task_tag_color_id = None;
+				}
+				Command::none()
+			},
 			ManageTaskTagsModalMessage::StopEditTaskTagName => {
 				if let ManageTaskTagsModal::Opened { edit_task_tag_name_id, .. } = self {
 					*edit_task_tag_name_id = None;
