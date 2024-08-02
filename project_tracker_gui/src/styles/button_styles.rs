@@ -3,6 +3,8 @@ use core::f32;
 use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
 use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN, color_average, mix_color};
 
+use super::text_color;
+
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
 }
@@ -387,7 +389,7 @@ impl StyleSheet for TaskTagButtonStyle {
 				style.extended_palette().background.base.color.into()
 			}),
 			text_color: if self.toggled {
-				self.color.inverse()
+				text_color(self.color)
 			}
 			else {
 				style.extended_palette().background.base.text

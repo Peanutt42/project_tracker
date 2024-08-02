@@ -10,9 +10,6 @@ pub use completion_bar_style::CompletionBarStyle;
 mod split_style;
 pub use split_style::SplitStyle;
 
-mod text_styles;
-pub use text_styles::{GREEN_TEXT_STYLE, DISABLED_GREEN_TEXT_STYLE};
-
 mod checkbox_style;
 pub use checkbox_style::GreenCheckboxStyle;
 
@@ -35,7 +32,7 @@ pub use constants::{
 };
 
 mod text;
-pub use text::{strikethrough_text, capped_text};
+pub use text::{strikethrough_text, capped_text, text_color, GREEN_TEXT_STYLE, DISABLED_GREEN_TEXT_STYLE};
 
 mod theme;
 pub use theme::ProjectTrackerTheme;
