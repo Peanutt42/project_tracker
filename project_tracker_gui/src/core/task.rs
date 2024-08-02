@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-
+use std::collections::BTreeSet;
 use iced::widget::container::Id;
 use serde::{Serialize, Deserialize};
 use crate::core::{TaskState, TaskTagId};
@@ -14,7 +13,7 @@ pub fn generate_task_id() -> TaskId {
 pub struct Task {
 	pub name: String,
 	pub state: TaskState,
-	pub tags: HashSet<TaskTagId>,
+	pub tags: BTreeSet<TaskTagId>,
 
 	#[serde(skip, default = "Id::unique")]
 	pub dropzone_id: Id,
@@ -25,7 +24,7 @@ impl Task {
 		Self {
 			name,
 			state,
-			tags: HashSet::new(),
+			tags: BTreeSet::new(),
 			dropzone_id: Id::unique(),
 		}
 	}
@@ -38,7 +37,7 @@ impl Task {
 		self.state.is_todo()
 	}
 
-	pub fn matches_filter(&self, filter: &HashSet<TaskTagId>) -> bool {
+	pub fn matches_filter(&self, filter: &BTreeSet<TaskTagId>) -> bool {
 		for tag_id in filter.iter() {
 			if !self.tags.contains(tag_id) {
 				return false;

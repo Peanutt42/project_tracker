@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_input, Row}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
@@ -51,7 +51,7 @@ pub struct ProjectPage {
 	edited_task: Option<(TaskId, String)>, // task_id, new_name
 	show_done_tasks: bool,
 	show_color_picker: bool,
-	filter_task_tags: HashSet<TaskTagId>,
+	filter_task_tags: BTreeSet<TaskTagId>,
 	pressed_task: Option<TaskId>,
 	dragged_task: Option<TaskId>,
 }
@@ -65,7 +65,7 @@ impl ProjectPage {
 			edited_task: None,
 			show_done_tasks: false,
 			show_color_picker: false,
-			filter_task_tags: HashSet::new(),
+			filter_task_tags: BTreeSet::new(),
 			pressed_task: None,
 			dragged_task: None,
 		}

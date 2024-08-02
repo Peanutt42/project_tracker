@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use iced::{theme, widget::{text, tooltip, tooltip::Position}, Border, Color, Element, Length};
 use crate::{core::SerializableColor, project_tracker::UiMessage, styles::{RoundedContainerStyle, SMALL_TEXT_SIZE}};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TaskTagId(pub usize);
 
 impl TaskTagId {
