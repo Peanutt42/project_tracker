@@ -97,7 +97,7 @@ impl ManageTaskTagsModal {
 						});
 					}
 				}
-				Command::none()
+				self.update(ManageTaskTagsModalMessage::StopEditTaskTagColor, database)
 			},
 			ManageTaskTagsModalMessage::ChangeEditTaskTagName(new_name) => {
 				if let ManageTaskTagsModal::Opened { edit_task_tag_name_id: Some((_edit_task_tag_id, edit_task_tag_name)), .. } = self {

@@ -220,7 +220,8 @@ impl ProjectPage {
 					}
 					else {
 						ProjectPageMessage::ShowColorPicker.into()
-					});
+					}
+				);
 
 				let mut task_tags_list: Vec<Element<UiMessage>> = Vec::new();
 				for (tag_id, tag) in project.task_tags.iter() {
@@ -234,29 +235,25 @@ impl ProjectPage {
 
 				column![
 					column![
-						row![
-							column![
-								row![
-									show_color_picker_button,
-									project_name
-								]
-								.align_items(Alignment::Center)
+						column![
+							row![
+								show_color_picker_button,
+								project_name,
+								container(
+									delete_project_button(self.project_id, &project.name)
+								)
+								.width(Length::Fill)
+								.align_x(Horizontal::Right)
 							]
-							.push_maybe(if self.show_color_picker {
-								Some(color_palette(project.color.into(), move |c: Color| DatabaseMessage::ChangeProjectColor{ project_id, new_color: c.into() }.into()))
-							}
-							else {
-								None
-							})
-							.width(Length::Fill),
-
-							container(
-								delete_project_button(self.project_id, &project.name)
-							)
-							.align_x(Horizontal::Right)
+							.align_items(Alignment::Center)
 						]
-						.align_items(Alignment::Center)
-						.spacing(SPACING_AMOUNT),
+						.push_maybe(if self.show_color_picker {
+							Some(color_palette(project.color.into(), move |c: Color| DatabaseMessage::ChangeProjectColor{ project_id, new_color: c.into() }.into()))
+						}
+						else {
+							None
+						})
+						.width(Length::Fill),
 
 						row![
 							text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
