@@ -203,10 +203,10 @@ impl ManageTaskTagsModal {
 										tag.color.into(),
 										false,
 										if show_color_palette {
-											None
+											ManageTaskTagsModalMessage::StopEditTaskTagColor.into()
 										}
 										else {
-											Some(ManageTaskTagsModalMessage::EditTaskTagColor(tag_id).into())
+											ManageTaskTagsModalMessage::EditTaskTagColor(tag_id).into()
 										}
 									),
 									name_element,

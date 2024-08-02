@@ -216,10 +216,10 @@ impl ProjectPage {
 					project.color.into(),
 					false,
 					if self.show_color_picker {
-						None
+						ProjectPageMessage::HideColorPicker.into()
 					}
 					else {
-						Some(ProjectPageMessage::ShowColorPicker.into())
+						ProjectPageMessage::ShowColorPicker.into()
 					});
 
 				let mut task_tags_list: Vec<Element<UiMessage>> = Vec::new();

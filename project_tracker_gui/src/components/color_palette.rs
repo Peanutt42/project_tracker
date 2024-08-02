@@ -2,7 +2,7 @@ use iced::{theme, widget::{button, Button, container, row}, Border, Color, Eleme
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use crate::{project_tracker::UiMessage, styles::{PaletteContainerStyle, ColorPaletteButtonStyle}};
 
-pub fn color_palette_item_button(color: Color, selected: bool, on_submit: Option<UiMessage>) -> Button<'static, UiMessage> {
+pub fn color_palette_item_button(color: Color, selected: bool, on_press: UiMessage) -> Button<'static, UiMessage> {
 	button(
 		Quad {
 			width: Length::Fixed(25.0),
@@ -14,13 +14,13 @@ pub fn color_palette_item_button(color: Color, selected: bool, on_submit: Option
 			..Default::default()
 		}
 	)
-	.on_press_maybe(on_submit)
+	.on_press(on_press)
 	.style(theme::Button::custom(ColorPaletteButtonStyle{ selected }))
 }
 
 pub fn color_palette(selected_color: Color, on_submit: impl Fn(Color) -> UiMessage) -> Element<'static, UiMessage> {
 	let color_item = |color: Color| {
-		color_palette_item_button(color, selected_color == color, Some(on_submit(color)))
+		color_palette_item_button(color, selected_color == color, on_submit(color))
 	};
 
 	container(
