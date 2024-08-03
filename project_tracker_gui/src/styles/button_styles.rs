@@ -406,4 +406,25 @@ impl StyleSheet for TaskTagButtonStyle {
 			..Default::default()
 		}
 	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(
+				if self.toggled {
+					self.color.into()
+				}
+				else {
+					color_average(self.color, style.extended_palette().background.base.color).into()
+				}
+			),
+			..self.active(style)
+		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(self.color.into()),
+			..self.active(style)
+		}
+	}
 }
