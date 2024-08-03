@@ -1,7 +1,7 @@
 use core::f32;
 
 use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
-use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN, color_average, mix_color};
+use crate::styles::{BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN, color_average, mix_color};
 
 use super::text_color;
 
@@ -188,10 +188,10 @@ impl StyleSheet for CancelButtonStyle {
 			background: Some(pair.color.into()),
 			text_color: pair.text,
 			border: Border::with_radius([
-				if self.round_left { LARGE_BORDER_RADIUS } else { 0.0 },
-				if self.round_right { LARGE_BORDER_RADIUS } else { 0.0 },
-				if self.round_right { LARGE_BORDER_RADIUS } else { 0.0 },
-				if self.round_left { LARGE_BORDER_RADIUS } else { 0.0 }
+				if self.round_left { BORDER_RADIUS } else { 0.0 },
+				if self.round_right { BORDER_RADIUS } else { 0.0 },
+				if self.round_right { BORDER_RADIUS } else { 0.0 },
+				if self.round_left { BORDER_RADIUS } else { 0.0 }
 			]),
 			..Default::default()
 		}
@@ -206,7 +206,10 @@ impl StyleSheet for CancelButtonStyle {
 	}
 }
 
-pub struct DeleteButtonStyle;
+pub struct DeleteButtonStyle {
+	pub round_left: bool,
+	pub round_right: bool,
+}
 
 impl StyleSheet for DeleteButtonStyle {
 	type Style = Theme;
@@ -215,7 +218,12 @@ impl StyleSheet for DeleteButtonStyle {
 		Appearance {
 			background: Some(style.extended_palette().secondary.base.color.into()),
 			text_color: style.extended_palette().secondary.base.text,
-			border: Border::with_radius(BORDER_RADIUS),
+			border: Border::with_radius([
+				if self.round_left { BORDER_RADIUS } else { 0.0 },
+				if self.round_right { BORDER_RADIUS } else { 0.0 },
+				if self.round_right { BORDER_RADIUS } else { 0.0 },
+				if self.round_left { BORDER_RADIUS } else { 0.0 }
+			]),
 			..Default::default()
 		}
 	}
@@ -223,18 +231,14 @@ impl StyleSheet for DeleteButtonStyle {
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(style.extended_palette().danger.base.color.into()),
-			text_color: style.extended_palette().secondary.base.text,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
+			..self.active(style)
 		}
 	}
 
 	fn pressed(&self, style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(color_average(style.extended_palette().background.base.color, style.extended_palette().danger.weak.color).into()),
-			text_color: style.extended_palette().secondary.base.text,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
+			..self.active(style)
 		}
 	}
 }

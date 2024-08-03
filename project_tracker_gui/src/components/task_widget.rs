@@ -17,7 +17,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 				.id(EDIT_TASK_NAME_INPUT_ID.clone())
 				.width(Length::Fill)
 				.on_input(move |new_task_name| ProjectPageMessage::ChangeEditedTaskName(new_task_name).into())
-				.on_submit(DatabaseMessage::ChangeTaskName{ project_id, task_id, new_task_name: edited_name.clone() }.into())
+				.on_submit(ProjectPageMessage::ChangeTaskName.into())
 				.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
 
 			ProjectPageMessage::StopEditingTask.into()

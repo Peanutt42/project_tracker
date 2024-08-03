@@ -300,10 +300,6 @@ impl Application for ProjectTrackerApp {
 				if let Some(database) = &mut self.database {
 					let database_command = database.update(database_message.clone());
 					let command = match database_message {
-						DatabaseMessage::CreateProject { project_id, .. } => Command::batch([
-							self.update(UiMessage::SelectProject(Some(project_id))),
-							self.sidebar_page.update(SidebarPageMessage::CloseCreateNewProject, &mut self.database),
-						]),
 						DatabaseMessage::DeleteProject(project_id) => {
 							match self.selected_project_id {
 								Some(selected_project_id) if selected_project_id == project_id => {
@@ -312,17 +308,8 @@ impl Application for ProjectTrackerApp {
 								_ => Command::none(),
 							}
 						},
-						DatabaseMessage::ChangeProjectName { .. } => {
-							self.update(ProjectPageMessage::StopEditingProjectName.into())
-						},
 						DatabaseMessage::ChangeProjectColor { .. } => {
 							self.update(ProjectPageMessage::HideColorPicker.into())
-						},
-						DatabaseMessage::CreateTask { .. } => {
-							self.update(ProjectPageMessage::OpenCreateNewTask.into())
-						},
-						DatabaseMessage::ChangeTaskName { .. } => {
-							self.update(ProjectPageMessage::StopEditingTask.into())
 						},
 						DatabaseMessage::SyncFailed(error_msg) => {
 							self.show_error_msg(error_msg.clone())
@@ -441,6 +428,7 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::SidebarPageMessage(message) => {
 				let command = match &message {
+					SidebarPageMessage::CreateNewProject(project_id) => self.update(UiMessage::SelectProject(Some(*project_id))),
 					SidebarPageMessage::DragTask { task_id, .. } => {
 						match &mut self.content_page {
 							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask(*task_id), &mut self.database),
@@ -462,8 +450,9 @@ impl Application for ProjectTrackerApp {
 					},
 					_ => Command::none(),
 				};
+				let sidebar_command = self.sidebar_page.update(message, &mut self.database);
 				Command::batch([
-					self.sidebar_page.update(message, &mut self.database),
+					sidebar_command,
 					command
 				])
 			},

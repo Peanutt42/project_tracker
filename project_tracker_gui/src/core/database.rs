@@ -5,9 +5,7 @@ use iced::Command;
 use serde::{Serialize, Deserialize};
 use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskState};
-
-use super::TaskTagId;
+use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskState, TaskTagId, TaskTag};
 
 fn default_false() -> bool { false }
 
@@ -105,6 +103,26 @@ pub enum DatabaseMessage {
 	DeleteTask {
 		project_id: ProjectId,
 		task_id: TaskId,
+	},
+
+	CreateTaskTag {
+		project_id: ProjectId,
+		task_tag_id: TaskTagId,
+		task_tag: TaskTag,
+	},
+	ChangeTaskTagColor {
+		project_id: ProjectId,
+		task_tag_id: TaskTagId,
+		new_color: SerializableColor,
+	},
+	ChangeTaskTagName {
+		project_id: ProjectId,
+		task_tag_id: TaskTagId,
+		new_name: String,
+	},
+	DeleteTaskTag {
+		project_id: ProjectId,
+		task_tag_id: TaskTagId,
 	},
 }
 
@@ -371,6 +389,50 @@ impl Database {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
 						project.tasks.remove(&task_id);
+					}
+				});
+				Command::none()
+			},
+
+			DatabaseMessage::CreateTaskTag { project_id, task_tag_id, task_tag } => {
+				self.modify(|projects| {
+					if let Some(project) = projects.get_mut(&project_id) {
+						project.task_tags.insert(task_tag_id, task_tag);
+					}
+				});
+				Command::none()
+			},
+			DatabaseMessage::ChangeTaskTagColor { project_id, task_tag_id, new_color } => {
+				self.modify(|projects| {
+					if let Some(tag) = projects.get_mut(&project_id)
+						.and_then(|project| {
+							project.task_tags.get_mut(&task_tag_id)
+						})
+					{
+						tag.color = new_color;
+					}
+				});
+				Command::none()
+			},
+			DatabaseMessage::ChangeTaskTagName { project_id, task_tag_id, new_name } => {
+				self.modify(|projects| {
+					if let Some(tag) = projects.get_mut(&project_id)
+						.and_then(|project| {
+							project.task_tags.get_mut(&task_tag_id)
+						})
+					{
+						tag.name = new_name;
+					}
+				});
+				Command::none()
+			},
+			DatabaseMessage::DeleteTaskTag { project_id, task_tag_id } => {
+				self.modify(|projects| {
+					if let Some(project) = projects.get_mut(&project_id) {
+						project.task_tags.remove(&task_tag_id);
+						for task in project.tasks.values_mut() {
+							task.tags.remove(&task_tag_id);
+						}
 					}
 				});
 				Command::none()

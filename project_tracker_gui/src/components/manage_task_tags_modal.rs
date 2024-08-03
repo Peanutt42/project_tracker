@@ -1,7 +1,7 @@
 use iced::{theme, widget::{button, column, row, text, text_input, Column}, Alignment, Color, Command, Element, Length};
 use iced_aw::{card, CardStyles, ModalStyles};
 use once_cell::sync::Lazy;
-use crate::{components::{cancel_create_new_task_tag_button, color_palette_item_button, color_palette, create_new_task_tags_button, unfocusable, delete_task_tag_button}, core::{Database, ProjectId, TaskTag, TaskTagId}, project_tracker::UiMessage, styles::{HiddenSecondaryButtonStyle, ModalCardStyle, ModalStyle, TextInputStyle, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{cancel_create_new_task_tag_button, color_palette, color_palette_item_button, create_new_task_tags_button, delete_task_tag_button, unfocusable}, core::{Database, DatabaseMessage, ProjectId, TaskTag, TaskTagId}, project_tracker::UiMessage, styles::{HiddenSecondaryButtonStyle, ModalCardStyle, ModalStyle, TextInputStyle, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT}, ProjectTrackerApp};
 
 static CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -97,12 +97,15 @@ impl ManageTaskTagsModal {
 			},
 			ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color) => {
 				if let ManageTaskTagsModal::Opened { project_id, edit_task_tag_color_id: Some(edit_task_tag_id), .. } = self {
-					if let Some(database) = database {
-						database.modify(|projects| {
-							if let Some(tag) = projects.get_mut(project_id).and_then(|project| project.task_tags.get_mut(edit_task_tag_id)) {
-								tag.color = new_color.into();
-							}
-						});
+					if let Some(db) = database {
+						return Command::batch([
+							db.update(DatabaseMessage::ChangeTaskTagColor {
+								project_id: *project_id,
+								task_tag_id: *edit_task_tag_id,
+								new_color: new_color.into()
+							}),
+							self.update(ManageTaskTagsModalMessage::StopEditTaskTagColor, database)
+						]);
 					}
 				}
 				self.update(ManageTaskTagsModalMessage::StopEditTaskTagColor, database)
@@ -115,12 +118,15 @@ impl ManageTaskTagsModal {
 			},
 			ManageTaskTagsModalMessage::ChangeTaskTagName => {
 				if let ManageTaskTagsModal::Opened { project_id, edit_task_tag_name_id: Some((edit_task_tag_id, new_name)), .. } = self {
-					if let Some(database) = database {
-						database.modify(|projects| {
-							if let Some(tag) = projects.get_mut(project_id).and_then(|project| project.task_tags.get_mut(edit_task_tag_id)) {
-								tag.name = std::mem::take(new_name);
-							}
-						});
+					if let Some(db) = database {
+						return Command::batch([
+							db.update(DatabaseMessage::ChangeTaskTagName {
+								project_id: *project_id,
+								task_tag_id: *edit_task_tag_id,
+								new_name: std::mem::take(new_name)
+							}),
+							self.update(ManageTaskTagsModalMessage::StopEditTaskTagName, database)
+						]);
 					}
 				}
 				self.update(ManageTaskTagsModalMessage::StopEditTaskTagName, database)
@@ -139,12 +145,15 @@ impl ManageTaskTagsModal {
 			},
 			ManageTaskTagsModalMessage::CreateNewTaskTag => {
 				if let ManageTaskTagsModal::Opened { project_id, create_new_task_tag: Some(new_task_tag_name), .. } = self {
-					if let Some(database) = database {
-						database.modify(|projects| {
-							if let Some(project) = projects.get_mut(project_id) {
-								project.task_tags.insert(TaskTagId::generate(), TaskTag::new(std::mem::take(new_task_tag_name), Color::WHITE.into()));
-							}
-						});
+					if let Some(db) = database {
+						return Command::batch([
+							db.update(DatabaseMessage::CreateTaskTag {
+								project_id: *project_id,
+								task_tag_id: TaskTagId::generate(),
+								task_tag: TaskTag::new(std::mem::take(new_task_tag_name), Color::WHITE.into())
+							}),
+							self.update(ManageTaskTagsModalMessage::CloseCreateNewTaskTag, database)
+						]);
 					}
 				}
 				self.update(ManageTaskTagsModalMessage::CloseCreateNewTaskTag, database)
@@ -152,13 +161,9 @@ impl ManageTaskTagsModal {
 			ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) => {
 				if let ManageTaskTagsModal::Opened { project_id, .. } = self {
 					if let Some(database) = database {
-						database.modify(|projects| {
-							if let Some(project) = projects.get_mut(project_id) {
-								project.task_tags.remove(&task_tag_id);
-								for task in project.tasks.values_mut() {
-									task.tags.remove(&task_tag_id);
-								}
-							}
+						return database.update(DatabaseMessage::DeleteTaskTag {
+							project_id: *project_id,
+							task_tag_id
 						});
 					}
 				}

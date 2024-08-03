@@ -2,8 +2,8 @@ use std::collections::BTreeSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_input, Row}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, manage_task_tags_button, create_new_task_button, delete_project_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
-	core::{Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTagId},
+	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
+	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
@@ -15,6 +15,7 @@ pub enum ProjectPageMessage {
 	OpenCreateNewTask,
 	CloseCreateNewTask,
 	ChangeCreateNewTaskName(String),
+	CreateNewTask,
 
 	ShowDoneTasks(bool),
 
@@ -26,10 +27,12 @@ pub enum ProjectPageMessage {
 	EditProjectName,
 	StopEditingProjectName,
 	ChangeEditedProjectName(String),
+	ChangeProjectName,
 
 	EditTask(TaskId),
 	StopEditingTask,
 	ChangeEditedTaskName(String),
+	ChangeTaskName,
 	ToggleTaskTag(TaskTagId),
 
 	DragTask(TaskId),
@@ -90,6 +93,21 @@ impl ProjectPage {
 				}
 				Command::none()
 			},
+			ProjectPageMessage::CreateNewTask => {
+				if let Some(create_new_task_name) = &mut self.create_new_task_name {
+					if let Some(db) = database {
+						return Command::batch([
+							db.update(DatabaseMessage::CreateTask {
+								project_id: self.project_id,
+								task_id: generate_task_id(),
+								task_name: std::mem::take(create_new_task_name)
+							}),
+							self.update(ProjectPageMessage::OpenCreateNewTask, database)
+						]);
+					}
+				}
+				self.update(ProjectPageMessage::OpenCreateNewTask, database)
+			},
 			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; Command::none() },
 
 			ProjectPageMessage::ToggleFilterTaskTag(task_tag_id) => {
@@ -118,6 +136,20 @@ impl ProjectPage {
 			},
 			ProjectPageMessage::ChangeEditedProjectName(edited_name) => { self.edited_project_name = Some(edited_name); Command::none() },
 			ProjectPageMessage::StopEditingProjectName => { self.edited_project_name = None; Command::none() },
+			ProjectPageMessage::ChangeProjectName => {
+				if let Some(db) = database {
+					if let Some(edited_project_name) = &mut self.edited_project_name {
+						return Command::batch([
+							db.update(DatabaseMessage::ChangeProjectName {
+								project_id: self.project_id,
+								new_name: std::mem::take(edited_project_name)
+							}),
+							self.update(ProjectPageMessage::StopEditingProjectName, database)
+						]);
+					}
+				}
+				self.update(ProjectPageMessage::StopEditingProjectName, database)
+			},
 
 			ProjectPageMessage::EditTask(task_id) => {
 				let task_name = database.as_ref().and_then(|db| {
@@ -140,6 +172,21 @@ impl ProjectPage {
 					*edited_task_name = edited_name;
 				}
 				Command::none()
+			},
+			ProjectPageMessage::ChangeTaskName => {
+				if let Some((edited_task_id, edited_task_name)) = &mut self.edited_task {
+					if let Some(db) = database {
+						return Command::batch([
+							db.update(DatabaseMessage::ChangeTaskName {
+								project_id: self.project_id,
+								task_id: *edited_task_id,
+								new_task_name: std::mem::take(edited_task_name)
+							}),
+							self.update(ProjectPageMessage::StopEditingTask, database)
+						]);
+					}
+				}
+				self.update(ProjectPageMessage::StopEditingTask, database)
 			},
 			ProjectPageMessage::ToggleTaskTag(task_tag_id) => {
 				if let Some((edited_task_id, _edited_task_name)) = &mut self.edited_task {
@@ -194,7 +241,7 @@ impl ProjectPage {
 							.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
 							.size(TITLE_TEXT_SIZE)
 							.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
-							.on_submit(DatabaseMessage::ChangeProjectName { project_id: self.project_id, new_name: edited_project_name.clone() }.into())
+							.on_submit(ProjectPageMessage::ChangeProjectName.into())
 							.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
 
 						ProjectPageMessage::StopEditingProjectName.into()

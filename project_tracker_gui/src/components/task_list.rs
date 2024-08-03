@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{core::{Project, TaskTagId}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
-use crate::core::{Task, TaskId, generate_task_id, ProjectId, DatabaseMessage};
+use crate::core::{Task, TaskId, ProjectId};
 use crate::components::{show_done_tasks_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button};
 use crate::styles::{SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
 use crate::pages::ProjectPageMessage;
@@ -54,11 +54,7 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, edited_task: &
 						.id(CREATE_NEW_TASK_NAME_INPUT_ID.clone())
 						.line_height(LineHeight::Relative(1.2))
 						.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
-						.on_submit(DatabaseMessage::CreateTask {
-							project_id,
-							task_id: generate_task_id(),
-							task_name: create_new_task_name.clone(),
-						}.into())
+						.on_submit(ProjectPageMessage::CreateNewTask.into())
 						.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
 
 					ProjectPageMessage::CloseCreateNewTask.into()

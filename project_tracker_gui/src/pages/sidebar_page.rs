@@ -15,6 +15,7 @@ pub enum SidebarPageMessage {
 	OpenCreateNewProject,
 	CloseCreateNewProject,
 	ChangeCreateNewProjectName(String),
+	CreateNewProject(ProjectId),
 
 	DropTask {
 		project_id: ProjectId,
@@ -124,10 +125,7 @@ impl SidebarPage {
 						.id(TEXT_INPUT_ID.clone())
 						.size(LARGE_TEXT_SIZE)
 						.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
-						.on_submit(DatabaseMessage::CreateProject{
-							project_id: ProjectId::generate(),
-							name: create_new_project_name.clone()
-						}.into())
+						.on_submit(SidebarPageMessage::CreateNewProject(ProjectId::generate()).into())
 						.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: true }))),
 
 					SidebarPageMessage::CloseCreateNewProject.into()
@@ -165,6 +163,20 @@ impl SidebarPage {
 			},
 			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; Command::none() },
 			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Command::none() },
+			SidebarPageMessage::CreateNewProject(project_id) => {
+				if let Some(db) = database {
+					if let Some(create_new_project_name) = &mut self.create_new_project_name {
+						return Command::batch([
+							db.update(DatabaseMessage::CreateProject {
+								project_id,
+								name: std::mem::take(create_new_project_name)
+							}),
+							self.update(SidebarPageMessage::CloseCreateNewProject, database)
+						]);
+					}
+				}
+				self.update(SidebarPageMessage::CloseCreateNewProject, database)
+			},
 
 			SidebarPageMessage::DropTask { project_id, task_id, .. } => {
 				let command = self.project_being_task_hovered

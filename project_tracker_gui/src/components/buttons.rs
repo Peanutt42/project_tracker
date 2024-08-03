@@ -64,7 +64,7 @@ pub fn delete_project_button(project_id: ProjectId, project_name: &str) -> Butto
 		icon_to_text(Bootstrap::Trash)
 	)
 	.on_press(ConfirmModalMessage::open(format!("Delete Project '{project_name}'?"), DatabaseMessage::DeleteProject(project_id)))
-	.style(theme::Button::custom(DeleteButtonStyle))
+	.style(theme::Button::custom(DeleteButtonStyle{ round_left: true, round_right: true }))
 }
 
 pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, UiMessage> {
@@ -72,7 +72,7 @@ pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'sta
 		icon_to_text(Bootstrap::Trash)
 	)
 	.on_press(DatabaseMessage::DeleteTask { project_id, task_id }.into())
-	.style(theme::Button::custom(DeleteButtonStyle))
+	.style(theme::Button::custom(DeleteButtonStyle{ round_left: false, round_right: true }))
 }
 
 pub fn delete_all_done_tasks_button(project_id: ProjectId, project_name: &str) -> Button<'static, UiMessage> {
@@ -291,5 +291,5 @@ pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, UiMessa
 		icon_to_text(Bootstrap::Trash)
 	)
 	.on_press(ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id).into())
-	.style(theme::Button::custom(DeleteButtonStyle))
+	.style(theme::Button::custom(DeleteButtonStyle{ round_left: true, round_right: true }))
 }

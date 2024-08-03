@@ -116,7 +116,7 @@ impl Preferences {
 			PreferenceMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
 			PreferenceMessage::Reset => { *self = Preferences::default(); self.modified(); Command::none() },
 			PreferenceMessage::Export => Command::perform(
-				self.clone().export_file_dialog(),
+				Self::export_file_dialog(self.to_json()),
 				|result| {
 					match result {
 						Ok(_) => PreferenceMessage::Exported.into(),
@@ -181,7 +181,7 @@ impl Preferences {
 	}
 
 	async fn load_from(filepath: PathBuf) -> LoadPreferencesResult {
-		let file_content = if let Ok(file_content) = tokio::fs::read_to_string(filepath.clone()).await {
+		let file_content = if let Ok(file_content) = tokio::fs::read_to_string(&filepath).await {
 			file_content
 		}
 		else {
@@ -199,7 +199,7 @@ impl Preferences {
 	}
 
 	async fn save_to(filepath: PathBuf, json: String) -> Result<(), String> {
-		if let Err(e) = tokio::fs::write(filepath.clone(), json.as_bytes()).await {
+		if let Err(e) = tokio::fs::write(&filepath, json.as_bytes()).await {
 			Err(format!("Failed to save to {}: {e}", filepath.display()))
 		}
 		else {
@@ -218,7 +218,7 @@ impl Preferences {
 		Ok(begin_time)
 	}
 
-	pub async fn export_file_dialog(self) -> Result<(), String> {
+	pub async fn export_file_dialog(json: String) -> Result<(), String> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Export ProjectTracker Preferences")
 			.set_file_name(Self::FILE_NAME)
@@ -227,7 +227,7 @@ impl Preferences {
 			.await;
 
 		if let Some(result) = file_dialog_result {
-			Self::save_to(result.path().to_path_buf(), self.to_json()).await?;
+			Self::save_to(result.path().to_path_buf(), json).await?;
 		}
 		Ok(())
 	}
