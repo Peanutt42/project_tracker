@@ -242,13 +242,14 @@ pub fn sync_database_button(synchronizing: bool, synchronization_filepath: Optio
 	.into()
 }
 
-pub fn task_tag_button(task_tag: &TaskTag, toggled: bool) -> Button<'static, UiMessage> {
+pub fn task_tag_button(task_tag: &TaskTag, toggled: bool, round_bottom: bool) -> Button<'static, UiMessage> {
 	button(
 		text(&task_tag.name)
 	)
 	.style(theme::Button::custom(TaskTagButtonStyle{
 		color: task_tag.color.into(),
 		toggled,
+		round_bottom
 	}))
 }
 

@@ -1,7 +1,5 @@
-use core::f32;
-
 use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
-use crate::styles::{BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN, color_average, mix_color};
+use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN, color_average, mix_color};
 
 use super::text_color;
 
@@ -379,6 +377,7 @@ impl StyleSheet for InvisibleButtonStyle {
 pub struct TaskTagButtonStyle {
 	pub color: Color,
 	pub toggled: bool,
+	pub round_bottom: bool,
 }
 
 impl StyleSheet for TaskTagButtonStyle {
@@ -401,7 +400,17 @@ impl StyleSheet for TaskTagButtonStyle {
 			border: Border {
 				color: self.color,
 				width: 1.0,
-				radius: BORDER_RADIUS.into(),
+				radius: if self.round_bottom {
+					LARGE_BORDER_RADIUS.into()
+				}
+				else {
+					[
+						LARGE_BORDER_RADIUS,
+						LARGE_BORDER_RADIUS,
+						0.0,
+						0.0
+					].into()
+				},
 			},
 			..Default::default()
 		}

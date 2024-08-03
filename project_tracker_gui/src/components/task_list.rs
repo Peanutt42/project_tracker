@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::{Project, TaskTagId}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
+use crate::{core::{Project, TaskTagId}, project_tracker::UiMessage, styles::{BORDER_RADIUS, LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
 use crate::core::{Task, TaskId, ProjectId};
 use crate::components::{show_done_tasks_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button, task_tags_buttons};
 use crate::styles::{SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
@@ -49,11 +49,14 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, edited_task: &
 	if let Some((create_new_task_name, create_new_task_tags)) = &create_new_task {
 		let create_new_task_element =
 			column![
-				task_tags_buttons(
-					&project.task_tags,
-					create_new_task_tags,
-					|tag_id| ProjectPageMessage::ToggleCreateNewTaskTag(tag_id).into()
-				),
+				container(
+					task_tags_buttons(
+						&project.task_tags,
+						create_new_task_tags,
+						|tag_id| ProjectPageMessage::ToggleCreateNewTaskTag(tag_id).into()
+					)
+				)
+				.padding(Padding{ left: BORDER_RADIUS, ..Padding::ZERO }),
 
 				row![
 					unfocusable(

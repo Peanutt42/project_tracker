@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use iced::{theme, widget::{text, tooltip, tooltip::Position}, Border, Color, Element, Length};
 use crate::{core::SerializableColor, project_tracker::UiMessage, styles::{RoundedContainerStyle, SMALL_TEXT_SIZE}};
 
+pub const TASK_TAG_QUAD_HEIGHT: f32 = 5.0;
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TaskTagId(pub usize);
 
@@ -31,7 +33,7 @@ impl TaskTag {
 		tooltip(
 			Quad {
 				width: Length::Fixed(50.0),
-				height: Length::Fixed(5.0),
+				height: Length::Fixed(TASK_TAG_QUAD_HEIGHT),
 				inner_bounds: InnerBounds::Ratio(1.0, 1.0),
 				quad_color: color.into(),
 				quad_border: Border::with_radius(f32::MAX),

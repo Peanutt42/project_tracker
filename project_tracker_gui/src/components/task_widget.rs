@@ -1,7 +1,7 @@
 use iced::{theme, widget::{checkbox, column, container, container::Id, row, text, text_input, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, BORDER_RADIUS, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextInputStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
@@ -49,11 +49,14 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 
 	if edited_name.is_some() {
 		column![
-			task_tags_buttons(
-				task_tags,
-				&task.tags,
-				|tag_id| ProjectPageMessage::ToggleTaskTag(tag_id).into()
-			),
+			container(
+				task_tags_buttons(
+					task_tags,
+					&task.tags,
+					|tag_id| ProjectPageMessage::ToggleTaskTag(tag_id).into()
+				)
+			)
+			.padding(Padding{ left: BORDER_RADIUS, ..Padding::ZERO }),
 
 			row![
 				inner_text_element,
@@ -77,23 +80,37 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 		.spacing(TINY_SPACING_AMOUNT);
 
 		let inner: Element<UiMessage> = row![
-			checkbox("", task.state.is_done())
-				.on_toggle(move |checked| {
-					DatabaseMessage::ChangeTaskState {
-						project_id,
-						task_id,
-						new_task_state:
-							if checked {
-								TaskState::Done
-							}
-							else {
-								TaskState::Todo
-							},
-					}.into()
-				})
-				.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle))),
+			container(
+				checkbox("", task.state.is_done())
+					.on_toggle(move |checked| {
+						DatabaseMessage::ChangeTaskState {
+							project_id,
+							task_id,
+							new_task_state:
+								if checked {
+									TaskState::Done
+								}
+								else {
+									TaskState::Todo
+								},
+						}.into()
+					})
+					.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle)))
+			)
+			.padding(Padding{ top: TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT, ..Padding::ZERO }),
 
-			inner_text_element
+
+			if task.tags.is_empty() {
+				inner_text_element
+			}
+			else {
+				column![
+					tags_element,
+					inner_text_element
+				]
+				.spacing(TINY_SPACING_AMOUNT)
+				.into()
+			}
 		]
 		.width(Length::Fill)
 		.align_items(Alignment::Start)
@@ -101,17 +118,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 
 		droppable(
 			container(
-				if task.tags.is_empty() {
-					inner
-				}
-				else {
-					column![
-						tags_element,
-						inner
-					]
-					.spacing(TINY_SPACING_AMOUNT)
-					.into()
-				}
+				inner
 			)
 			.id(if task.state.is_todo() {
 				task.dropzone_id.clone()

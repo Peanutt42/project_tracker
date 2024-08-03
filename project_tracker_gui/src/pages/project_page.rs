@@ -286,7 +286,7 @@ impl ProjectPage {
 				let mut task_tags_list: Vec<Element<UiMessage>> = Vec::new();
 				for (tag_id, tag) in project.task_tags.iter() {
 					task_tags_list.push(
-						task_tag_button(tag, self.filter_task_tags.contains(&tag_id))
+						task_tag_button(tag, self.filter_task_tags.contains(&tag_id), true)
 							.on_press(ProjectPageMessage::ToggleFilterTaskTag(tag_id).into())
 							.into()
 					);
