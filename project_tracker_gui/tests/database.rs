@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::BTreeSet, path::PathBuf};
 use project_tracker_gui::core::{generate_task_id, Database, LoadDatabaseResult, Project, ProjectId};
 
 #[tokio::test]
@@ -10,7 +10,7 @@ async fn test_database_serialization() {
 		let mut project = Project::new(format!("Project Nr.{i}"));
 
 		for j in 0..100 {
-			project.add_task(generate_task_id(), format!("Task Nr. {j}"));
+			project.add_task(generate_task_id(), format!("Task Nr. {j}"), BTreeSet::new());
 		}
 
 		database.modify(|projects| projects.insert(ProjectId::generate(), project));

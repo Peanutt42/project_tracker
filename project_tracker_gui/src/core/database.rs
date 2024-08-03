@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::time::Instant;
 use iced::Command;
@@ -71,6 +71,7 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		task_name: String,
+		task_tags: BTreeSet<TaskTagId>,
 	},
 	ChangeTaskName {
 		project_id: ProjectId,
@@ -337,10 +338,10 @@ impl Database {
 				Command::none()
 			},
 
-			DatabaseMessage::CreateTask { project_id, task_id, task_name } => {
+			DatabaseMessage::CreateTask { project_id, task_id, task_name, task_tags } => {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
-						project.add_task(task_id, task_name);
+						project.add_task(task_id, task_name, task_tags);
 					}
 				});
 				Command::none()

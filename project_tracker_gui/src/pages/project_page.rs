@@ -15,6 +15,7 @@ pub enum ProjectPageMessage {
 	OpenCreateNewTask,
 	CloseCreateNewTask,
 	ChangeCreateNewTaskName(String),
+	ToggleCreateNewTaskTag(TaskTagId),
 	CreateNewTask,
 
 	ShowDoneTasks(bool),
@@ -50,7 +51,7 @@ impl From<ProjectPageMessage> for UiMessage {
 pub struct ProjectPage {
 	pub project_id: ProjectId,
 	edited_project_name: Option<String>,
-	pub create_new_task_name: Option<String>,
+	pub create_new_task: Option<(String, BTreeSet<TaskTagId>)>,
 	edited_task: Option<(TaskId, String)>, // task_id, new_name
 	show_done_tasks: bool,
 	show_color_picker: bool,
@@ -64,7 +65,7 @@ impl ProjectPage {
 		Self {
 			project_id,
 			edited_project_name: None,
-			create_new_task_name: None,
+			create_new_task: None,
 			edited_task: None,
 			show_done_tasks: false,
 			show_color_picker: false,
@@ -79,28 +80,40 @@ impl ProjectPage {
 	pub fn update(&mut self, message: ProjectPageMessage, database: &mut Option<Database>) -> Command<UiMessage> {
 		match message {
 			ProjectPageMessage::OpenCreateNewTask => {
-				self.create_new_task_name = Some(String::new());
+				self.create_new_task = Some((String::new(), BTreeSet::new()));
 				Command::batch([
 					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
 					scrollable::snap_to(TASK_LIST_ID.clone(), RelativeOffset::END),
 					self.update(ProjectPageMessage::StopEditingTask, database),
 				])
 			},
-			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task_name = None; Command::none() },
+			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task = None; Command::none() },
 			ProjectPageMessage::ChangeCreateNewTaskName(new_task_name) => {
-				if let Some(create_new_task_name) = &mut self.create_new_task_name {
+				if let Some((create_new_task_name, _create_new_task_tags)) = &mut self.create_new_task {
 					*create_new_task_name = new_task_name;
 				}
 				Command::none()
 			},
+			ProjectPageMessage::ToggleCreateNewTaskTag(tag_id) => {
+				if let Some((_create_new_task_name, create_new_task_tags)) = &mut self.create_new_task {
+					if create_new_task_tags.contains(&tag_id) {
+						create_new_task_tags.remove(&tag_id);
+					}
+					else {
+						create_new_task_tags.insert(tag_id);
+					}
+				}
+				Command::none()
+			},
 			ProjectPageMessage::CreateNewTask => {
-				if let Some(create_new_task_name) = &mut self.create_new_task_name {
+				if let Some((create_new_task_name, create_new_task_tags)) = &mut self.create_new_task {
 					if let Some(db) = database {
 						return Command::batch([
 							db.update(DatabaseMessage::CreateTask {
 								project_id: self.project_id,
 								task_id: generate_task_id(),
-								task_name: std::mem::take(create_new_task_name)
+								task_name: std::mem::take(create_new_task_name),
+								task_tags: std::mem::take(create_new_task_tags),
 							}),
 							self.update(ProjectPageMessage::OpenCreateNewTask, database)
 						]);
@@ -306,7 +319,7 @@ impl ProjectPage {
 							text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
 								.width(Length::Fill),
 
-							container(create_new_task_button(self.create_new_task_name.is_none()))
+							container(create_new_task_button(self.create_new_task.is_none()))
 								.width(Length::Fill)
 								.align_x(Horizontal::Right),
 						]
@@ -333,7 +346,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(project_id, project, &self.edited_task, self.dragged_task, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.filter_task_tags, &self.create_new_task_name),
+					task_list(project_id, project, &self.edited_task, self.dragged_task, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.filter_task_tags, &self.create_new_task),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)

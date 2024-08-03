@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use serde::{Serialize, Deserialize};
 use iced::{widget::container::Id, Color};
 use crate::core::{OrderedHashMap, Task, TaskId, TaskState, TaskTag, TaskTagId};
@@ -33,8 +35,8 @@ impl Project {
 		}
 	}
 
-	pub fn add_task(&mut self, task_id: TaskId, name: String) {
-		self.tasks.insert(task_id, Task::new(name, TaskState::Todo));
+	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: BTreeSet<TaskTagId>) {
+		self.tasks.insert(task_id, Task::new(name, TaskState::Todo, tags));
 	}
 
 	pub fn set_task_name(&mut self, task_id: TaskId, new_name: String) {

@@ -20,11 +20,11 @@ pub struct Task {
 }
 
 impl Task {
-	pub fn new(name: String, state: TaskState) -> Self {
+	pub fn new(name: String, state: TaskState, tags: BTreeSet<TaskTagId>) -> Self {
 		Self {
 			name,
 			state,
-			tags: BTreeSet::new(),
+			tags,
 			dropzone_id: Id::unique(),
 		}
 	}

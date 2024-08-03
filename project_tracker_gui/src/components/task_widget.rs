@@ -1,11 +1,13 @@
-use iced::{theme, widget::{button, checkbox, column, container, container::Id, row, text, text_input, Row}, Alignment, Element, Length, Padding};
+use iced::{theme, widget::{checkbox, column, container, container::Id, row, text, text_input, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, TaskTagButtonStyle, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextInputStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
 use crate::components::{delete_task_button, unfocusable};
+
+use super::task_tags_buttons;
 
 pub static EDIT_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -47,24 +49,11 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 
 	if edited_name.is_some() {
 		column![
-			Row::with_children(
-				task_tags
-					.iter()
-					.map(|(tag_id, tag)| {
-						button(
-							text(&tag.name)
-						)
-						.on_press(ProjectPageMessage::ToggleTaskTag(tag_id).into())
-						.style(theme::Button::custom(
-							TaskTagButtonStyle {
-								color: tag.color.into(),
-								toggled: task.tags.contains(&tag_id)
-							}
-						))
-						.into()
-					})
-			)
-			.spacing(TINY_SPACING_AMOUNT),
+			task_tags_buttons(
+				task_tags,
+				&task.tags,
+				|tag_id| ProjectPageMessage::ToggleTaskTag(tag_id).into()
+			),
 
 			row![
 				inner_text_element,

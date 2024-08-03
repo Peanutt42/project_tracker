@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::BTreeSet, path::PathBuf};
 
 use project_tracker_gui::core::{Database, Project, ProjectId, Task, TaskState};
 
@@ -9,7 +9,7 @@ async fn main() {
 	for i in 0..1000 {
 		let mut project = Project::new(format!("{i}. Project"));
 		for j in 0..1000 {
-			let task = Task::new(format!("{j}. Task"), if j % 2 == 0 { TaskState::Todo } else { TaskState::Done });
+			let task = Task::new(format!("{j}. Task"), if j % 2 == 0 { TaskState::Todo } else { TaskState::Done }, BTreeSet::new());
 			project.tasks.insert(j, task);
 		}
 		db.modify(|projects| projects.insert(ProjectId(i), project));

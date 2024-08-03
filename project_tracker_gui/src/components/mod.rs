@@ -10,6 +10,9 @@ pub use task_list::{task_list, TASK_LIST_ID, CREATE_NEW_TASK_NAME_INPUT_ID};
 mod task_widget;
 pub use task_widget::{task_widget, EDIT_TASK_NAME_INPUT_ID};
 
+mod task_tags_widget;
+pub use task_tags_widget::task_tags_buttons;
+
 mod loading_screen;
 pub use loading_screen::loading_screen;
 

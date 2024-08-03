@@ -3,7 +3,7 @@ use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container
 use once_cell::sync::Lazy;
 use crate::{core::{Project, TaskTagId}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
 use crate::core::{Task, TaskId, ProjectId};
-use crate::components::{show_done_tasks_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button};
+use crate::components::{show_done_tasks_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button, task_tags_buttons};
 use crate::styles::{SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
 use crate::pages::ProjectPageMessage;
 
@@ -11,7 +11,7 @@ pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, edited_task: &'a Option<(TaskId, String)>, dragged_task: Option<TaskId>, task_being_task_hovered: Option<TaskId>, show_done_tasks: bool, filter_task_tags: &'a BTreeSet<TaskTagId>, create_new_task_name: &'a Option<String>) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, edited_task: &'a Option<(TaskId, String)>, dragged_task: Option<TaskId>, task_being_task_hovered: Option<TaskId>, show_done_tasks: bool, filter_task_tags: &'a BTreeSet<TaskTagId>, create_new_task: &'a Option<(String, BTreeSet<TaskTagId>)>) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks' (matching the filter)
@@ -46,23 +46,31 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, edited_task: &
 		}
 	}
 
-	if let Some(create_new_task_name) = &create_new_task_name {
+	if let Some((create_new_task_name, create_new_task_tags)) = &create_new_task {
 		let create_new_task_element =
-			row![
-				unfocusable(
-					text_input("New task name", create_new_task_name)
-						.id(CREATE_NEW_TASK_NAME_INPUT_ID.clone())
-						.line_height(LineHeight::Relative(1.2))
-						.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
-						.on_submit(ProjectPageMessage::CreateNewTask.into())
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
-
-					ProjectPageMessage::CloseCreateNewTask.into()
+			column![
+				task_tags_buttons(
+					&project.task_tags,
+					create_new_task_tags,
+					|tag_id| ProjectPageMessage::ToggleCreateNewTaskTag(tag_id).into()
 				),
 
-				cancel_create_task_button(),
+				row![
+					unfocusable(
+						text_input("New task name", create_new_task_name)
+							.id(CREATE_NEW_TASK_NAME_INPUT_ID.clone())
+							.line_height(LineHeight::Relative(1.2))
+							.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
+							.on_submit(ProjectPageMessage::CreateNewTask.into())
+							.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
+
+						ProjectPageMessage::CloseCreateNewTask.into()
+					),
+
+					cancel_create_task_button(),
+				]
+				.align_items(Alignment::Center)
 			]
-			.align_items(Alignment::Center)
 			.into();
 
 		todo_task_elements.push(create_new_task_element)
