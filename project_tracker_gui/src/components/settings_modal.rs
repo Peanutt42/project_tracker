@@ -1,9 +1,11 @@
 use iced::{theme, widget::{button, column, container, row, text}, Alignment, Command, Element};
 use iced_aw::{Bootstrap, CardStyles, ModalStyles, card};
-use crate::{components::{dangerous_button, file_location, horizontal_seperator, sync_database_button}, core::PreferenceMessage, styles::{capped_text, ModalCardStyle, ModalStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
+use crate::{components::{dangerous_button, file_location, horizontal_seperator, sync_database_button}, core::PreferenceMessage, styles::{ModalCardStyle, ModalStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage};
 use crate::styles::{LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
+
+use super::filepath_widget;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {
@@ -96,23 +98,20 @@ impl SettingsModal {
 
 									row![
 										text("Synchronization file location: "),
-										container(
-											text(
-												if let Some(filepath) = preferences.synchronization_filepath() {
-													capped_text(&filepath.to_string_lossy(), 60)
-												}
-												else {
-													"not specified".to_string()
-												}
-											)
-										)
-										.style(theme::Container::Box),
+
 										button(text("Clear"))
 											.on_press(PreferenceMessage::SetSynchronizationFilepath(None).into())
 											.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
 										button(text("Browse"))
 											.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
 											.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+
+										if let Some(filepath) = preferences.synchronization_filepath() {
+											filepath_widget(filepath)
+										}
+										else {
+											"not specified".into()
+										},
 									]
 									.spacing(SPACING_AMOUNT)
 									.align_items(Alignment::Center),

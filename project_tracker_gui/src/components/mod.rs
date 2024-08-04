@@ -23,7 +23,7 @@ mod seperator;
 pub use seperator::{horizontal_seperator, colored_horizontal_seperator};
 
 mod file_location;
-pub use file_location::file_location;
+pub use file_location::{filepath_widget, file_location};
 
 mod modals;
 pub use modals::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage};

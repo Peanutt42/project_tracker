@@ -32,7 +32,7 @@ pub use constants::{
 };
 
 mod text;
-pub use text::{strikethrough_text, capped_text, text_color, GREEN_TEXT_STYLE, DISABLED_GREEN_TEXT_STYLE};
+pub use text::{strikethrough_text, text_color, GREEN_TEXT_STYLE, DISABLED_GREEN_TEXT_STYLE};
 
 mod theme;
 pub use theme::ProjectTrackerTheme;
