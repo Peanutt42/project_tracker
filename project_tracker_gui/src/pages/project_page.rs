@@ -1,5 +1,5 @@
 use std::collections::BTreeSet;
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_input, Row}, Color, Command, Element, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
 	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
@@ -32,8 +32,7 @@ pub enum ProjectPageMessage {
 
 	EditTask(TaskId),
 	StopEditingTask,
-	ChangeEditedTaskName(String),
-	ChangeTaskName,
+	TaskNameAction(text_editor::Action),
 	ToggleTaskTag(TaskTagId),
 
 	DragTask(TaskId),
@@ -47,12 +46,12 @@ impl From<ProjectPageMessage> for UiMessage {
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ProjectPage {
 	pub project_id: ProjectId,
 	edited_project_name: Option<String>,
 	pub create_new_task: Option<(String, BTreeSet<TaskTagId>)>,
-	edited_task: Option<(TaskId, String)>, // task_id, new_name
+	edited_task: Option<(TaskId, text_editor::Content)>, // task_id, new_name
 	show_done_tasks: bool,
 	show_color_picker: bool,
 	filter_task_tags: BTreeSet<TaskTagId>,
@@ -173,33 +172,28 @@ impl ProjectPage {
 								.map(|task| task.name.clone())
 						)
 				}).unwrap_or_default();
-				self.edited_task = Some((task_id, task_name));
+				self.edited_task = Some((task_id, text_editor::Content::with_text(&task_name)));
 				Command::batch([
 					text_input::focus(EDIT_TASK_NAME_INPUT_ID.clone()),
 					self.update(ProjectPageMessage::CloseCreateNewTask, database),
 				])
 			},
 			ProjectPageMessage::StopEditingTask => { self.edited_task = None; Command::none() },
-			ProjectPageMessage::ChangeEditedTaskName(edited_name) => {
-				if let Some((_edited_task_id, edited_task_name)) = &mut self.edited_task {
-					*edited_task_name = edited_name;
-				}
-				Command::none()
-			},
-			ProjectPageMessage::ChangeTaskName => {
+			ProjectPageMessage::TaskNameAction(action) => {
 				if let Some((edited_task_id, edited_task_name)) = &mut self.edited_task {
-					if let Some(db) = database {
-						return Command::batch([
-							db.update(DatabaseMessage::ChangeTaskName {
+					let is_edit = action.is_edit();
+					edited_task_name.perform(action);
+					if is_edit {
+						if let Some(database) = database {
+							return database.update(DatabaseMessage::ChangeTaskName {
 								project_id: self.project_id,
 								task_id: *edited_task_id,
-								new_task_name: std::mem::take(edited_task_name)
-							}),
-							self.update(ProjectPageMessage::StopEditingTask, database)
-						]);
+								new_task_name: edited_task_name.text()
+							});
+						}
 					}
 				}
-				self.update(ProjectPageMessage::StopEditingTask, database)
+				Command::none()
 			},
 			ProjectPageMessage::ToggleTaskTag(task_tag_id) => {
 				if let Some((edited_task_id, _edited_task_name)) = &mut self.edited_task {

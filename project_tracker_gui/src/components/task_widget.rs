@@ -1,10 +1,10 @@
-use iced::{theme, widget::{checkbox, column, container, container::Id, row, text, text_input, Row}, Alignment, Element, Length, Padding};
+use iced::{theme, widget::{checkbox, column, container, container::Id, row, text, text_editor, text_input, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
 use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, BORDER_RADIUS, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
-use crate::styles::{TextInputStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
+use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
 use crate::components::{delete_task_button, unfocusable};
 
 use super::task_tags_buttons;
@@ -12,15 +12,12 @@ use super::task_tags_buttons;
 pub static EDIT_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edited_name: Option<&'a String>, dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
+pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edited_name: Option<&'a text_editor::Content>, dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
 	let inner_text_element: Element<UiMessage> = if let Some(edited_name) = edited_name {
 		unfocusable(
-			text_input("Task name", edited_name)
-				.id(EDIT_TASK_NAME_INPUT_ID.clone())
-				.width(Length::Fill)
-				.on_input(move |new_task_name| ProjectPageMessage::ChangeEditedTaskName(new_task_name).into())
-				.on_submit(ProjectPageMessage::ChangeTaskName.into())
-				.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
+			text_editor(edited_name)
+				.on_action(|action| ProjectPageMessage::TaskNameAction(action).into())
+				.style(theme::TextEditor::Custom(Box::new(TextEditorStyle{ round_top_right: false, round_bottom_right: edited_name.line_count() != 1 }))),
 
 			ProjectPageMessage::StopEditingTask.into()
 		)
@@ -62,7 +59,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 				inner_text_element,
 				delete_task_button(project_id, task_id),
 			]
-			.align_items(Alignment::Center)
+			.align_items(Alignment::Start)
 		]
 		.into()
 	}
@@ -97,7 +94,15 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 					})
 					.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle)))
 			)
-			.padding(Padding{ top: TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT, ..Padding::ZERO }),
+			.padding(Padding{
+				top: if task.tags.is_empty() {
+					0.0
+				}
+				else {
+					TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT
+				},
+				..Padding::ZERO
+			}),
 
 
 			if task.tags.is_empty() {

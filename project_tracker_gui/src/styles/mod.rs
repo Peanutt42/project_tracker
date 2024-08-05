@@ -16,6 +16,9 @@ pub use checkbox_style::GreenCheckboxStyle;
 mod text_input;
 pub use text_input::TextInputStyle;
 
+mod text_editor;
+pub use text_editor::TextEditorStyle;
+
 mod scrollable;
 pub use scrollable::{ScrollableStyle, scrollable_horizontal_direction, scrollable_vertical_direction, SCROLLBAR_WIDTH};
 
