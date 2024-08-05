@@ -139,15 +139,10 @@ impl Application for ProjectTrackerApp {
 			}),
 
 			iced::event::listen_with(move |event, status| {
-				match status {
-					Status::Ignored => {
-						match event {
-							Event::Window(id, window::Event::CloseRequested) => Some(UiMessage::CloseWindowRequested(id)),
-							Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(UiMessage::LeftClickReleased),
-							_ => None,
-						}
-					},
-					Status::Captured => None,
+				match event {
+					Event::Window(id, window::Event::CloseRequested) if matches!(status, Status::Ignored) => Some(UiMessage::CloseWindowRequested(id)),
+					Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(UiMessage::LeftClickReleased),
+					_ => None,
 				}
 			}),
 
