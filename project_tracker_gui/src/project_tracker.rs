@@ -427,11 +427,12 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => {
-				let command = match &message {
-					SidebarPageMessage::CreateNewProject(project_id) => self.update(UiMessage::SelectProject(Some(*project_id))),
+				let sidebar_command = self.sidebar_page.update(message.clone(), &mut self.database);
+				let command = match message {
+					SidebarPageMessage::CreateNewProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
 					SidebarPageMessage::DragTask { task_id, .. } => {
 						match &mut self.content_page {
-							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask(*task_id), &mut self.database),
+							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask(task_id), &mut self.database),
 							_ => Command::none()
 						}
 					},
@@ -450,7 +451,6 @@ impl Application for ProjectTrackerApp {
 					},
 					_ => Command::none(),
 				};
-				let sidebar_command = self.sidebar_page.update(message, &mut self.database);
 				Command::batch([
 					sidebar_command,
 					command
