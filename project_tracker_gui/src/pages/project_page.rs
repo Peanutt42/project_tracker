@@ -302,17 +302,25 @@ impl ProjectPage {
 				}
 				task_tags_list.push(manage_task_tags_button(self.project_id).into());
 
+				let delete_project_button_element: Element<UiMessage> = delete_project_button(self.project_id, &project.name).into();
+
 				column![
 					column![
 						column![
 							row![
 								show_color_picker_button,
 								project_name,
-								container(
-									delete_project_button(self.project_id, &project.name)
-								)
-								.width(Length::Fill)
-								.align_x(Horizontal::Right)
+								if self.edited_project_name.is_some() {
+									delete_project_button_element
+								}
+								else {
+									container(
+										delete_project_button_element
+									)
+									.width(Length::Fill)
+									.align_x(Horizontal::Right)
+									.into()
+								}
 							]
 							.align_items(Alignment::Center)
 						]
