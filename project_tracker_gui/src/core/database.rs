@@ -83,6 +83,11 @@ pub enum DatabaseMessage {
 		task_id: TaskId,
 		new_task_state: TaskState,
 	},
+	ChangeTaskNeededTime {
+		project_id: ProjectId,
+		task_id: TaskId,
+		new_needed_time_minutes: Option<usize>,
+	},
 	ToggleTaskTag {
 		project_id: ProjectId,
 		task_id: TaskId,
@@ -358,6 +363,14 @@ impl Database {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
 						project.set_task_state(task_id, new_task_state);
+					}
+				});
+				Command::none()
+			},
+			DatabaseMessage::ChangeTaskNeededTime { project_id, task_id, new_needed_time_minutes } => {
+				self.modify(|projects| {
+					if let Some(project) = projects.get_mut(&project_id) {
+						project.set_task_needed_time(task_id, new_needed_time_minutes);
 					}
 				});
 				Command::none()

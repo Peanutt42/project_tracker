@@ -17,6 +17,7 @@ rand = "0.8.5"
 rfd = "0.14.1"
 open = "5.1.4"
 filetime = "0.2"
+pretty-duration = "0.1.1"
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["fs", "rt", "macros"] }

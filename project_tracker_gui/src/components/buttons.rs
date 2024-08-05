@@ -294,3 +294,11 @@ pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, UiMessa
 	.on_press(ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id).into())
 	.style(theme::Button::custom(DeleteButtonStyle{ round_left: true, round_right: true }))
 }
+
+pub fn clear_task_needed_time_button(task_id: TaskId) -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::XLg)
+	)
+	.on_press(ProjectPageMessage::ClearTaskNeededTime(task_id).into())
+	.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
+}

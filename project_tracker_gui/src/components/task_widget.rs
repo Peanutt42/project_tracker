@@ -1,11 +1,12 @@
-use iced::{theme, widget::{checkbox, column, container, container::Id, row, text, text_editor, text_input, Row}, Alignment, Element, Length, Padding};
+use std::{borrow::Cow, time::Duration, str::FromStr};
+use iced::{theme, widget::{checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, BORDER_RADIUS, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, TextInputStyle, BORDER_RADIUS, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
-use crate::components::{delete_task_button, unfocusable};
+use crate::components::{delete_task_button, clear_task_needed_time_button, unfocusable, duration_widget};
 
 use super::task_tags_buttons;
 
@@ -59,7 +60,48 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 				inner_text_element,
 				delete_task_button(project_id, task_id),
 			]
-			.align_items(Alignment::Start)
+			.align_items(Alignment::Start),
+
+			row![
+				unfocusable(
+					text_input(
+						"mins",
+						&match task.needed_time_minutes {
+							Some(needed_time_minutes) => format!("{needed_time_minutes}"),
+							None => String::new(),
+						}
+					)
+					.width(Length::Fixed(50.0))
+					.on_input(move |input| {
+						let new_needed_time_minutes = match usize::from_str(&input) {
+							Ok(new_needed_time_minutes) => Some(Some(new_needed_time_minutes)),
+							Err(_) => {
+								if input.is_empty() {
+									Some(None)
+								}
+								else {
+									None
+								}
+							},
+						};
+						match new_needed_time_minutes {
+							Some(new_needed_time_minutes) => {
+								DatabaseMessage::ChangeTaskNeededTime {
+									project_id,
+									task_id,
+									new_needed_time_minutes,
+								}.into()
+							},
+							None => ProjectPageMessage::InvalidNeededTimeInput.into(),
+						}
+					})
+					.style(theme::TextInput::Custom(Box::new(TextInputStyle{ round_left: true, round_right: false }))),
+
+					ProjectPageMessage::StopEditingTask.into()
+				),
+
+				clear_task_needed_time_button(task_id),
+			],
 		]
 		.into()
 	}
@@ -105,17 +147,18 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 			}),
 
 
-			if task.tags.is_empty() {
-				inner_text_element
-			}
-			else {
-				column![
-					tags_element,
-					inner_text_element
-				]
+			Column::new()
+				.push_maybe(if task.tags.is_empty() {
+					None
+				}
+				else {
+					Some(tags_element)
+				})
+				.push(inner_text_element)
+				.push_maybe(
+					task.needed_time_minutes.map(|duration_minutes| duration_widget(Cow::Owned(Duration::from_secs(duration_minutes as u64 * 60))))
+				)
 				.spacing(TINY_SPACING_AMOUNT)
-				.into()
-			}
 		]
 		.width(Length::Fill)
 		.align_items(Alignment::Start)

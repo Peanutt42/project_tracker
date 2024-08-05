@@ -13,6 +13,7 @@ pub fn generate_task_id() -> TaskId {
 pub struct Task {
 	pub name: String,
 	pub state: TaskState,
+	pub needed_time_minutes: Option<usize>,
 	pub tags: BTreeSet<TaskTagId>,
 
 	#[serde(skip, default = "Id::unique")]
@@ -24,6 +25,7 @@ impl Task {
 		Self {
 			name,
 			state,
+			needed_time_minutes: None,
 			tags,
 			dropzone_id: Id::unique(),
 		}

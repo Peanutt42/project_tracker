@@ -34,6 +34,8 @@ pub enum ProjectPageMessage {
 	StopEditingTask,
 	TaskNameAction(text_editor::Action),
 	ToggleTaskTag(TaskTagId),
+	ClearTaskNeededTime(TaskId),
+	InvalidNeededTimeInput,
 
 	DragTask(TaskId),
 	PressTask(TaskId),
@@ -114,11 +116,11 @@ impl ProjectPage {
 								task_name: std::mem::take(create_new_task_name),
 								task_tags: std::mem::take(create_new_task_tags),
 							}),
-							self.update(ProjectPageMessage::OpenCreateNewTask, database)
+							self.update(ProjectPageMessage::CloseCreateNewTask, database)
 						]);
 					}
 				}
-				self.update(ProjectPageMessage::OpenCreateNewTask, database)
+				self.update(ProjectPageMessage::CloseCreateNewTask, database)
 			},
 			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; Command::none() },
 
@@ -207,6 +209,19 @@ impl ProjectPage {
 				}
 				Command::none()
 			},
+			ProjectPageMessage::ClearTaskNeededTime(task_id) => {
+				if let Some(database) = database {
+					database.update(DatabaseMessage::ChangeTaskNeededTime {
+						project_id: self.project_id,
+						task_id,
+						new_needed_time_minutes: None,
+					})
+				}
+				else {
+					Command::none()
+				}
+			}
+			ProjectPageMessage::InvalidNeededTimeInput => Command::none(),
 
 			ProjectPageMessage::DragTask(task_id) => {
 				self.dragged_task = Some(task_id);

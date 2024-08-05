@@ -2566,6 +2566,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8cf8e6a8aa66ce33f63993ffc4ea4271eb5b0530a9002db8455ea6050c77bfa"
 
 [[package]]
+name = "pretty-duration"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8868e7264af614b3634ff0abbe37b178e61000611b8a75221aea40221924aba"
+
+[[package]]
 name = "proc-macro-crate"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2611,6 +2617,7 @@ dependencies = [
  "iced_drop",
  "once_cell",
  "open",
+ "pretty-duration",
  "rand",
  "rfd",
  "serde",

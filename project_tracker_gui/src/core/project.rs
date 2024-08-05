@@ -67,6 +67,12 @@ impl Project {
 		}
 	}
 
+	pub fn set_task_needed_time(&mut self, task_id: TaskId, new_needed_time_minutes: Option<usize>) {
+		if let Some(task) = self.tasks.get_mut(&task_id) {
+			task.needed_time_minutes = new_needed_time_minutes;
+		}
+	}
+
 	pub fn toggle_task_tag(&mut self, task_id: TaskId, task_tag_id: TaskTagId) {
 		if let Some(task) = self.tasks.get_mut(&task_id) {
 			if task.tags.contains(&task_tag_id) {
