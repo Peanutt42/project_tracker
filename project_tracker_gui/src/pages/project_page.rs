@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_TASK_NAME_INPUT_ID, TASK_LIST_ID},
+	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
@@ -175,10 +175,7 @@ impl ProjectPage {
 						)
 				}).unwrap_or_default();
 				self.edited_task = Some((task_id, text_editor::Content::with_text(&task_name)));
-				Command::batch([
-					text_input::focus(EDIT_TASK_NAME_INPUT_ID.clone()),
-					self.update(ProjectPageMessage::CloseCreateNewTask, database),
-				])
+				self.update(ProjectPageMessage::CloseCreateNewTask, database)
 			},
 			ProjectPageMessage::StopEditingTask => { self.edited_task = None; Command::none() },
 			ProjectPageMessage::TaskNameAction(action) => {

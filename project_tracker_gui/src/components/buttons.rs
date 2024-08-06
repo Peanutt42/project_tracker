@@ -93,7 +93,7 @@ pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'stati
 		.spacing(SMALL_SPACING_AMOUNT)
 	)
 	.on_press(ProjectPageMessage::ShowDoneTasks(!show).into())
-	.style(theme::Button::Secondary)
+	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
 }
 
 pub fn dangerous_button(icon: Bootstrap, text: &'static str, confirm_label: Option<String>, on_press: impl Into<UiMessage>) -> Button<'static, UiMessage> {

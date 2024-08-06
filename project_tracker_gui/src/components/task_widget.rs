@@ -1,16 +1,11 @@
 use std::{borrow::Cow, time::Duration, str::FromStr};
 use iced::{theme, widget::{checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
-use once_cell::sync::Lazy;
 use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, TextInputStyle, BORDER_RADIUS, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
-use crate::components::{delete_task_button, clear_task_needed_time_button, unfocusable, duration_widget};
-
-use super::task_tags_buttons;
-
-pub static EDIT_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+use crate::components::{delete_task_button, clear_task_needed_time_button, unfocusable, duration_widget, task_tags_buttons};
 
 #[allow(clippy::too_many_arguments)]
 pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edited_name: Option<&'a text_editor::Content>, dragging: bool, highlight: bool) -> Element<'a, UiMessage> {

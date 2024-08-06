@@ -53,7 +53,6 @@ pub enum SidebarPageMessage {
 	},
 	ClickProject(ProjectId),
 	CancelDragProject,
-	LeftClickReleased,
 }
 
 impl From<SidebarPageMessage> for UiMessage {
@@ -67,7 +66,7 @@ pub struct SidebarPage {
 	create_new_project_name: Option<String>,
 	pub task_being_task_hovered: Option<TaskId>,
 	project_being_task_hovered: Option<ProjectId>,
-	project_being_project_hovered: Option<ProjectId>,
+	pub project_being_project_hovered: Option<ProjectId>,
 	pub dragged_project_id: Option<ProjectId>,
 	pub pressed_project_id: Option<ProjectId>,
 }
@@ -92,6 +91,24 @@ impl SidebarPage {
 				y: project_order as f32 / (database.projects().len() as f32 - 1.0),
 			}
 		)
+	}
+
+	pub fn should_select_project(&mut self) -> Option<ProjectId> {
+		let project_id_to_select = if let Some(pressed_project) = &self.pressed_project_id {
+			if self.dragged_project_id.is_none() {
+				Some(*pressed_project)
+			}
+			else {
+				None
+			}
+		}
+		else {
+			None
+		};
+		self.dragged_project_id = None;
+		self.pressed_project_id = None;
+		self.project_being_project_hovered = None;
+		project_id_to_select
 	}
 
 	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
@@ -285,12 +302,6 @@ impl SidebarPage {
 				Command::none()
 			},
 			SidebarPageMessage::CancelDragProject => {
-				self.dragged_project_id = None;
-				self.pressed_project_id = None;
-				self.project_being_project_hovered = None;
-				Command::none()
-			},
-			SidebarPageMessage::LeftClickReleased => {
 				self.dragged_project_id = None;
 				self.pressed_project_id = None;
 				self.project_being_project_hovered = None;

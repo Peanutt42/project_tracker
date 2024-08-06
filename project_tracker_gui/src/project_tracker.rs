@@ -181,10 +181,17 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::ControlReleased => self.update(SwitchProjectModalMessage::Close.into()),
-			UiMessage::LeftClickReleased => Command::batch([
-				self.update(SidebarPageMessage::LeftClickReleased.into()),
-				self.update(ProjectPageMessage::LeftClickReleased.into())
-			]),
+			UiMessage::LeftClickReleased => {
+				let select_project_command = self.sidebar_page
+					.should_select_project()
+        			.map(|project_id| self.update(UiMessage::SelectProject(Some(project_id))))
+               		.unwrap_or(Command::none());
+
+				Command::batch([
+					self.update(ProjectPageMessage::LeftClickReleased.into()),
+					select_project_command,
+				])
+			},
 			UiMessage::CopyToClipboard(copied_text) => clipboard::write(copied_text),
 			UiMessage::SaveChangedFiles => {
 				let mut commands = Vec::new();
@@ -429,19 +436,6 @@ impl Application for ProjectTrackerApp {
 						match &mut self.content_page {
 							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask(task_id), &mut self.database),
 							_ => Command::none()
-						}
-					},
-					SidebarPageMessage::LeftClickReleased => {
-						if let Some(pressed_project) = &self.sidebar_page.pressed_project_id {
-							if self.sidebar_page.dragged_project_id.is_none() {
-								self.update(UiMessage::SelectProject(Some(*pressed_project)))
-							}
-							else {
-								Command::none()
-							}
-						}
-						else {
-							Command::none()
 						}
 					},
 					_ => Command::none(),
