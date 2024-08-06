@@ -5,7 +5,7 @@ use crate::{
 	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -288,7 +288,7 @@ impl ProjectPage {
 							.size(TITLE_TEXT_SIZE)
 							.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
 							.on_submit(ProjectPageMessage::ChangeProjectName.into())
-							.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
+							.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: true }))),
 
 						ProjectPageMessage::StopEditingProjectName.into()
 					)
@@ -347,6 +347,7 @@ impl ProjectPage {
 									.into()
 								}
 							]
+							.spacing(TINY_SPACING_AMOUNT)
 							.align_items(Alignment::Center)
 						]
 						.push_maybe(if self.show_color_picker {
