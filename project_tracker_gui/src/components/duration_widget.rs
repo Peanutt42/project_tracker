@@ -1,35 +1,37 @@
 use std::{borrow::Cow, time::Duration};
 use pretty_duration::{pretty_duration, PrettyDurationLabels, PrettyDurationOptions};
-use iced::{theme, widget::{container, text}, Element};
+use iced::{theme, widget::{container, text, Text}, Element};
 use crate::{project_tracker::UiMessage, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING}};
 
-
+pub fn duration_text(duration: Cow<'_, Duration>) -> Text {
+	text(
+		pretty_duration(duration.as_ref(), Some(PrettyDurationOptions {
+			output_format: None,
+			singular_labels: Some(PrettyDurationLabels {
+				year: "year",
+				month: "month",
+				day: "day",
+				hour: "h",
+				minute: "min",
+				second: "s",
+				millisecond: "ms",
+			}),
+			plural_labels: Some(PrettyDurationLabels {
+				year: "years",
+				month: "months",
+				day: "days",
+				hour: "h",
+				minute: "min",
+				second: "s",
+				millisecond: "ms",
+			})
+		}))
+	)
+}
 
 pub fn duration_widget(duration: Cow<'_, Duration>) -> Element<'_, UiMessage> {
 	container(
-		text(
-			pretty_duration(duration.as_ref(), Some(PrettyDurationOptions {
-				output_format: None,
-				singular_labels: Some(PrettyDurationLabels {
-					year: "year",
-					month: "month",
-					day: "day",
-					hour: "h",
-					minute: "min",
-					second: "s",
-					millisecond: "ms",
-				}),
-				plural_labels: Some(PrettyDurationLabels {
-					year: "years",
-					month: "months",
-					day: "days",
-					hour: "h",
-					minute: "min",
-					second: "s",
-					millisecond: "ms",
-				})
-			}))
-		)
+		duration_text(duration)
 	)
 	.padding(SMALL_HORIZONTAL_PADDING)
 	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))

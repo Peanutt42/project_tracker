@@ -8,13 +8,13 @@ mod task_list;
 pub use task_list::{task_list, TASK_LIST_ID, CREATE_NEW_TASK_NAME_INPUT_ID};
 
 mod task_widget;
-pub use task_widget::task_widget;
+pub use task_widget::{task_widget, EDIT_NEEDED_TIME_TEXT_INPUT_ID};
 
 mod task_tags_widget;
 pub use task_tags_widget::task_tags_buttons;
 
 mod duration_widget;
-pub use duration_widget::duration_widget;
+pub use duration_widget::{duration_widget, duration_text};
 
 mod loading_screen;
 pub use loading_screen::loading_screen;

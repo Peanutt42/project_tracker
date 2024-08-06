@@ -1,19 +1,22 @@
 use std::{borrow::Cow, time::Duration, str::FromStr};
-use iced::{theme, widget::{checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length, Padding};
+use iced::{theme, widget::{button, checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
-use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::SidebarPageMessage, styles::{DropZoneContainerStyle, TaskBackgroundContainerStyle, TextInputStyle, BORDER_RADIUS, TINY_SPACING_AMOUNT}};
+use once_cell::sync::Lazy;
+use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{DropZoneContainerStyle, RoundedSecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, BORDER_RADIUS, SMALL_HORIZONTAL_PADDING, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
-use crate::components::{delete_task_button, clear_task_needed_time_button, unfocusable, duration_widget, task_tags_buttons};
+use crate::components::{delete_task_button, clear_task_needed_time_button, unfocusable, duration_widget, duration_text, task_tags_buttons};
+
+pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edited_name: Option<&'a text_editor::Content>, dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
-	let inner_text_element: Element<UiMessage> = if let Some(edited_name) = edited_name {
+pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edit_task_state: Option<&'a EditTaskState>, dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
+	let inner_text_element: Element<UiMessage> = if let Some(edit_task_state) = edit_task_state {
 		unfocusable(
-			text_editor(edited_name)
+			text_editor(&edit_task_state.new_name)
 				.on_action(|action| ProjectPageMessage::TaskNameAction(action).into())
-				.style(theme::TextEditor::Custom(Box::new(TextEditorStyle{ round_top_right: false, round_bottom_right: edited_name.line_count() != 1 }))),
+				.style(theme::TextEditor::Custom(Box::new(TextEditorStyle{ round_top_right: false, round_bottom_right: edit_task_state.new_name.line_count() != 1 }))),
 
 			ProjectPageMessage::StopEditingTask.into()
 		)
@@ -40,7 +43,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 		.into()
 	};
 
-	if edited_name.is_some() {
+	if let Some(edit_task_state) = edit_task_state {
 		column![
 			container(
 				task_tags_buttons(
@@ -58,44 +61,68 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 			.align_items(Alignment::Start),
 
 			row![
-				unfocusable(
-					text_input(
-						"mins",
-						&match task.needed_time_minutes {
-							Some(needed_time_minutes) => format!("{needed_time_minutes}"),
-							None => String::new(),
-						}
+				if edit_task_state.edit_needed_time {
+					let stop_editing_task_message: UiMessage = ProjectPageMessage::StopEditingTask.into();
+
+					let edit_needed_time_element = unfocusable(
+						text_input(
+							"mins",
+							&match task.needed_time_minutes {
+								Some(needed_time_minutes) => format!("{needed_time_minutes}"),
+								None => String::new(),
+							}
+						)
+						.id(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone())
+						.width(Length::Fixed(50.0))
+						.on_input(move |input| {
+							let new_needed_time_minutes = match usize::from_str(&input) {
+								Ok(new_needed_time_minutes) => Some(Some(new_needed_time_minutes)),
+								Err(_) => {
+									if input.is_empty() {
+										Some(None)
+									}
+									else {
+										None
+									}
+								},
+							};
+							match new_needed_time_minutes {
+								Some(new_needed_time_minutes) => {
+									DatabaseMessage::ChangeTaskNeededTime {
+										project_id,
+										task_id,
+										new_needed_time_minutes,
+									}.into()
+								},
+								None => ProjectPageMessage::InvalidNeededTimeInput.into(),
+							}
+						})
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle{ round_left: true, round_right: false }))),
+
+						stop_editing_task_message
+					);
+
+					row![
+						edit_needed_time_element,
+						clear_task_needed_time_button(task_id),
+					]
+					.into()
+				}
+				else {
+					Element::new(
+						button(
+							if let Some(needed_duration_minutes) = &task.needed_time_minutes {
+								duration_text(Cow::Owned(Duration::from_secs(*needed_duration_minutes as u64 * 60)))
+							}
+							else {
+								text("Add needed time")
+							}
+						)
+						.padding(SMALL_HORIZONTAL_PADDING)
+						.on_press(ProjectPageMessage::EditTaskNeededTime.into())
+						.style(theme::Button::custom(RoundedSecondaryButtonStyle))
 					)
-					.width(Length::Fixed(50.0))
-					.on_input(move |input| {
-						let new_needed_time_minutes = match usize::from_str(&input) {
-							Ok(new_needed_time_minutes) => Some(Some(new_needed_time_minutes)),
-							Err(_) => {
-								if input.is_empty() {
-									Some(None)
-								}
-								else {
-									None
-								}
-							},
-						};
-						match new_needed_time_minutes {
-							Some(new_needed_time_minutes) => {
-								DatabaseMessage::ChangeTaskNeededTime {
-									project_id,
-									task_id,
-									new_needed_time_minutes,
-								}.into()
-							},
-							None => ProjectPageMessage::InvalidNeededTimeInput.into(),
-						}
-					})
-					.style(theme::TextInput::Custom(Box::new(TextInputStyle{ round_left: true, round_right: false }))),
-
-					ProjectPageMessage::StopEditingTask.into()
-				),
-
-				clear_task_needed_time_button(task_id),
+				},
 			],
 		]
 		.into()

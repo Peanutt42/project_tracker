@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, TASK_LIST_ID},
+	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
@@ -34,6 +34,7 @@ pub enum ProjectPageMessage {
 	StopEditingTask,
 	TaskNameAction(text_editor::Action),
 	ToggleTaskTag(TaskTagId),
+	EditTaskNeededTime,
 	ClearTaskNeededTime(TaskId),
 	InvalidNeededTimeInput,
 
@@ -49,11 +50,28 @@ impl From<ProjectPageMessage> for UiMessage {
 }
 
 #[derive(Debug)]
+pub struct EditTaskState {
+	pub task_id: TaskId,
+	pub new_name: text_editor::Content,
+	pub edit_needed_time: bool,
+}
+
+impl EditTaskState {
+	pub fn new(task_id: TaskId, new_name: text_editor::Content) -> Self {
+		Self {
+			task_id,
+			new_name,
+			edit_needed_time: false,
+		}
+	}
+}
+
+#[derive(Debug)]
 pub struct ProjectPage {
 	pub project_id: ProjectId,
 	edited_project_name: Option<String>,
 	pub create_new_task: Option<(String, BTreeSet<TaskTagId>)>,
-	edited_task: Option<(TaskId, text_editor::Content)>, // task_id, new_name
+	edited_task: Option<EditTaskState>,
 	show_done_tasks: bool,
 	show_color_picker: bool,
 	filter_task_tags: BTreeSet<TaskTagId>,
@@ -174,20 +192,20 @@ impl ProjectPage {
 								.map(|task| task.name.clone())
 						)
 				}).unwrap_or_default();
-				self.edited_task = Some((task_id, text_editor::Content::with_text(&task_name)));
+				self.edited_task = Some(EditTaskState::new(task_id, text_editor::Content::with_text(&task_name)));
 				self.update(ProjectPageMessage::CloseCreateNewTask, database)
 			},
 			ProjectPageMessage::StopEditingTask => { self.edited_task = None; Command::none() },
 			ProjectPageMessage::TaskNameAction(action) => {
-				if let Some((edited_task_id, edited_task_name)) = &mut self.edited_task {
+				if let Some(edit_task_state) = &mut self.edited_task {
 					let is_edit = action.is_edit();
-					edited_task_name.perform(action);
+					edit_task_state.new_name.perform(action);
 					if is_edit {
 						if let Some(database) = database {
 							return database.update(DatabaseMessage::ChangeTaskName {
 								project_id: self.project_id,
-								task_id: *edited_task_id,
-								new_task_name: edited_task_name.text()
+								task_id: edit_task_state.task_id,
+								new_task_name: edit_task_state.new_name.text()
 							});
 						}
 					}
@@ -195,18 +213,27 @@ impl ProjectPage {
 				Command::none()
 			},
 			ProjectPageMessage::ToggleTaskTag(task_tag_id) => {
-				if let Some((edited_task_id, _edited_task_name)) = &mut self.edited_task {
+				if let Some(edit_task_state) = &mut self.edited_task {
 					if let Some(database) = database {
 						return database.update(DatabaseMessage::ToggleTaskTag {
 							project_id: self.project_id,
-							task_id: *edited_task_id,
+							task_id: edit_task_state.task_id,
 							task_tag_id
 						});
 					}
 				}
 				Command::none()
 			},
+			ProjectPageMessage::EditTaskNeededTime => {
+				if let Some(edit_task_state) = &mut self.edited_task {
+					edit_task_state.edit_needed_time = true;
+				}
+				text_input::focus(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone())
+			}
 			ProjectPageMessage::ClearTaskNeededTime(task_id) => {
+				if let Some(edit_task_state) = &mut self.edited_task {
+					edit_task_state.edit_needed_time = false;
+				}
 				if let Some(database) = database {
 					database.update(DatabaseMessage::ChangeTaskNeededTime {
 						project_id: self.project_id,
