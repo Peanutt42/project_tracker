@@ -297,9 +297,10 @@ impl ProjectPage {
 							.into()
 					);
 				}
-				task_tags_list.push(manage_task_tags_button(self.project_id).into());
 
 				let delete_project_button_element: Element<UiMessage> = delete_project_button(self.project_id, &project.name).into();
+
+				let tags_bottom_scrollbar_padding = Padding { bottom: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO };
 
 				column![
 					column![
@@ -342,15 +343,19 @@ impl ProjectPage {
 
 						row![
 							container(text("Tags:"))
-								.padding(Padding { bottom: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO }),
+								.padding(tags_bottom_scrollbar_padding),
 
 							scrollable(
 								Row::with_children(task_tags_list)
 									.spacing(SPACING_AMOUNT)
 									.padding(Padding { bottom: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO })
 							)
+							.width(Length::Fill)
 							.direction(scrollable_horizontal_direction())
 							.style(theme::Scrollable::custom(ScrollableStyle)),
+
+							container(manage_task_tags_button(self.project_id))
+								.padding(tags_bottom_scrollbar_padding),
 						]
 						.spacing(SPACING_AMOUNT)
 						.align_items(Alignment::Center),
