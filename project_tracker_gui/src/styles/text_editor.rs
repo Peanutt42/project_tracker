@@ -63,8 +63,9 @@ impl StyleSheet for TextEditorStyle {
 		style.extended_palette().background.base.text
 	}
 
-	fn selection_color(&self, style: &Self::Style) -> Color {
-		style.extended_palette().primary.weak.color
+	fn selection_color(&self, _style: &Self::Style) -> Color {
+		use iced::color;
+		color!(0x3367d1)
 	}
 
 	fn disabled_color(&self, style: &Self::Style) -> Color {
