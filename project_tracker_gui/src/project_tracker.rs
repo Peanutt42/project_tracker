@@ -339,21 +339,18 @@ impl Application for ProjectTrackerApp {
 			UiMessage::OpenOverview => self.update(UiMessage::SelectProject(None)),
 			UiMessage::SelectProject(project_id) => {
 				self.selected_project_id = project_id;
-				let project_id = if let Some(database) = &self.database {
+				let open_project_info = if let Some(database) = &self.database {
 					project_id.and_then(|project_id| {
-						if database.projects().contains_key(&project_id) {
-							Some(project_id)
-						}
-						else {
-							None
-						}
+						database.projects()
+							.get(&project_id)
+							.map(|project| (project_id, project))
 					})
 				}
 				else {
-					project_id
+					None
 				};
-				if let Some(project_id) = project_id {
-					self.content_page = ContentPage::Project(Box::new(ProjectPage::new(project_id)));
+				if let Some((project_id, project)) = open_project_info {
+					self.content_page = ContentPage::Project(Box::new(ProjectPage::new(project_id, project)));
 					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into())
 				}
 				else {

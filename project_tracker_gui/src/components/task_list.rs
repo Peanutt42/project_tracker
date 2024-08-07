@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::{Project, TaskTagId}, pages::EditTaskState, project_tracker::UiMessage, styles::{BORDER_RADIUS, LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
+use crate::{core::{Project, TaskTagId}, pages::{CachedTaskList, EditTaskState}, project_tracker::UiMessage, styles::{BORDER_RADIUS, LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
 use crate::core::{Task, TaskId, ProjectId};
 use crate::components::{show_done_tasks_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button, task_tags_buttons};
 use crate::styles::{SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
@@ -11,7 +11,7 @@ pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, edited_task: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, task_being_task_hovered: Option<TaskId>, show_done_tasks: bool, filter_task_tags: &'a BTreeSet<TaskTagId>, create_new_task: &'a Option<(String, BTreeSet<TaskTagId>)>) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_list: &'a CachedTaskList, edited_task: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, task_being_task_hovered: Option<TaskId>, show_done_tasks: bool, create_new_task: &'a Option<(String, BTreeSet<TaskTagId>)>) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks' (matching the filter)
@@ -32,15 +32,15 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, edited_task: &
 		task_widget(task, task_id, project_id, &project.task_tags, edited_name, dragging, highlight)
 	};
 
-	for (task_id, task) in project.tasks.iter() {
-		if task.matches_filter(filter_task_tags) {
+	for task_id in cached_task_list.list.iter() {
+		if let Some(task) = project.tasks.get(task_id) {
 			if task.is_todo() {
-				todo_task_elements.push(task_view(task_id, task));
+				todo_task_elements.push(task_view(*task_id, task));
 			}
 			else {
 				done_task_count += 1;
 				if show_done_tasks {
-					done_task_elements.push(task_view(task_id, task));
+					done_task_elements.push(task_view(*task_id, task));
 				}
 			}
 		}

@@ -168,6 +168,8 @@ impl Database {
 
 	pub fn projects(&self) -> &OrderedHashMap<ProjectId, Project> { &self.projects }
 
+	pub fn last_changed_time(&self) -> &Instant { &self.last_changed_time }
+
 	pub fn modify(&mut self, f: impl FnOnce(&mut OrderedHashMap<ProjectId, Project>)) {
 		f(&mut self.projects);
 		self.modified();

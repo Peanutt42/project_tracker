@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, time::Instant};
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{
@@ -66,9 +66,35 @@ impl EditTaskState {
 	}
 }
 
+#[derive(Debug, Clone)]
+pub struct CachedTaskList {
+	pub list: Vec<TaskId>,
+	cache_time: Instant,
+}
+
+impl CachedTaskList {
+	pub fn new(list: Vec<TaskId>) -> Self {
+		Self {
+			list,
+			cache_time: Instant::now(),
+		}
+	}
+
+	pub fn generate(project: &Project, task_tag_filter: &BTreeSet<TaskTagId>) -> Self {
+		let mut task_list = Vec::new();
+		for (task_id, task) in project.tasks.iter() {
+			if task.matches_filter(task_tag_filter) {
+				task_list.push(task_id);
+			}
+		}
+		Self::new(task_list)
+	}
+}
+
 #[derive(Debug)]
 pub struct ProjectPage {
 	pub project_id: ProjectId,
+	pub cached_task_list: CachedTaskList,
 	edited_project_name: Option<String>,
 	pub create_new_task: Option<(String, BTreeSet<TaskTagId>)>,
 	edited_task: Option<EditTaskState>,
@@ -80,9 +106,12 @@ pub struct ProjectPage {
 }
 
 impl ProjectPage {
-	pub fn new(project_id: ProjectId) -> Self {
+	pub fn new(project_id: ProjectId, project: &Project) -> Self {
+		let cached_task_list = CachedTaskList::generate(project, &BTreeSet::new());
+
 		Self {
 			project_id,
+			cached_task_list,
 			edited_project_name: None,
 			create_new_task: None,
 			edited_task: None,
@@ -97,7 +126,7 @@ impl ProjectPage {
 
 impl ProjectPage {
 	pub fn update(&mut self, message: ProjectPageMessage, database: &mut Option<Database>) -> Command<UiMessage> {
-		match message {
+		let command = match message {
 			ProjectPageMessage::OpenCreateNewTask => {
 				self.create_new_task = Some((String::new(), BTreeSet::new()));
 				Command::batch([
@@ -148,6 +177,9 @@ impl ProjectPage {
 				}
 				else {
 					self.filter_task_tags.insert(task_tag_id);
+				}
+				if let Some(database) = database {
+					self.generate_cached_task_list(database);
 				}
 				Command::none()
 			},
@@ -271,7 +303,15 @@ impl ProjectPage {
 				self.dragged_task = None;
 				command
 			},
+		};
+
+		if let Some(database) = database {
+			if self.cached_task_list.cache_time < *database.last_changed_time() {
+				self.generate_cached_task_list(database);
+			}
 		}
+
+		command
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
@@ -393,7 +433,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(project_id, project, &self.edited_task, self.dragged_task, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.filter_task_tags, &self.create_new_task),
+					task_list(project_id, project, &self.cached_task_list, &self.edited_task, self.dragged_task, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.create_new_task),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)
@@ -406,6 +446,12 @@ impl ProjectPage {
 		}
 		else {
 			column![].into()
+		}
+	}
+
+	fn generate_cached_task_list(&mut self, database: &Database) {
+		if let Some(project) = database.projects().get(&self.project_id) {
+			self.cached_task_list = CachedTaskList::generate(project, &self.filter_task_tags)
 		}
 	}
 }
