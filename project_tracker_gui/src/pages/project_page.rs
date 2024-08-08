@@ -1,11 +1,11 @@
 use std::{collections::BTreeSet, time::Instant};
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point};
 use once_cell::sync::Lazy;
 use crate::{
 	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -38,7 +38,11 @@ pub enum ProjectPageMessage {
 	ClearTaskNeededTime(TaskId),
 	InvalidNeededTimeInput,
 
-	DragTask(TaskId),
+	DragTask{
+		task_id: TaskId,
+		point: Point,
+	},
+	CancelDragTask,
 	PressTask(TaskId),
 	LeftClickReleased,
 }
@@ -103,6 +107,8 @@ pub struct ProjectPage {
 	filter_task_tags: BTreeSet<TaskTagId>,
 	pressed_task: Option<TaskId>,
 	dragged_task: Option<TaskId>,
+	start_dragging_point: Option<Point>,
+	just_minimal_dragging: bool,
 }
 
 impl ProjectPage {
@@ -120,6 +126,8 @@ impl ProjectPage {
 			filter_task_tags: BTreeSet::new(),
 			pressed_task: None,
 			dragged_task: None,
+			start_dragging_point: None,
+			just_minimal_dragging: true,
 		}
 	}
 }
@@ -279,8 +287,23 @@ impl ProjectPage {
 			}
 			ProjectPageMessage::InvalidNeededTimeInput => Command::none(),
 
-			ProjectPageMessage::DragTask(task_id) => {
+			ProjectPageMessage::DragTask{ task_id, point } => {
 				self.dragged_task = Some(task_id);
+				if let Some(start_dragging_point) = self.start_dragging_point {
+					if self.just_minimal_dragging {
+						self.just_minimal_dragging = start_dragging_point.distance(point) < MINIMAL_DRAG_DISTANCE;
+					}
+				}
+				else {
+					self.start_dragging_point = Some(point);
+					self.just_minimal_dragging = true;
+				}
+				Command::none()
+			},
+			ProjectPageMessage::CancelDragTask => {
+				self.dragged_task = None;
+				self.start_dragging_point = None;
+				self.just_minimal_dragging = true;
 				Command::none()
 			},
 			ProjectPageMessage::PressTask(task_id) => {
@@ -288,8 +311,8 @@ impl ProjectPage {
 				Command::none()
 			},
 			ProjectPageMessage::LeftClickReleased => {
-				let command = if let Some(pressed_task) = &self.pressed_task {
-					if self.dragged_task.is_none() {
+				let command = if self.just_minimal_dragging {
+					if let Some(pressed_task) = &self.pressed_task {
 						self.update(ProjectPageMessage::EditTask(*pressed_task), database)
 					}
 					else {
@@ -301,6 +324,8 @@ impl ProjectPage {
 				};
 				self.pressed_task = None;
 				self.dragged_task = None;
+				self.start_dragging_point = None;
+				self.just_minimal_dragging = true;
 				command
 			},
 		};
@@ -433,7 +458,7 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(project_id, project, &self.cached_task_list, &self.edited_task, self.dragged_task, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.create_new_task),
+					task_list(project_id, project, &self.cached_task_list, &self.edited_task, self.dragged_task, self.just_minimal_dragging, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.create_new_task),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)

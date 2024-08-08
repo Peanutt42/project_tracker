@@ -1,7 +1,7 @@
 use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
 use iced_drop::find_zones;
 use once_cell::sync::Lazy;
-use crate::{components::{horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId, TaskState}, project_tracker::UiMessage, styles::SMALL_SPACING_AMOUNT};
+use crate::{components::{horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId, TaskState}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, SMALL_SPACING_AMOUNT}};
 use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
@@ -68,6 +68,8 @@ pub struct SidebarPage {
 	project_being_task_hovered: Option<ProjectId>,
 	pub project_being_project_hovered: Option<ProjectId>,
 	pub dragged_project_id: Option<ProjectId>,
+	start_dragging_point: Option<Point>,
+	just_minimal_dragging: bool,
 	pub pressed_project_id: Option<ProjectId>,
 }
 
@@ -79,6 +81,8 @@ impl SidebarPage {
 			project_being_task_hovered: None,
 			project_being_project_hovered: None,
 			dragged_project_id: None,
+			start_dragging_point: None,
+			just_minimal_dragging: true,
 			pressed_project_id: None,
 		}
 	}
@@ -94,18 +98,16 @@ impl SidebarPage {
 	}
 
 	pub fn should_select_project(&mut self) -> Option<ProjectId> {
-		let project_id_to_select = if let Some(pressed_project) = &self.pressed_project_id {
-			if self.dragged_project_id.is_none() {
-				Some(*pressed_project)
-			}
-			else {
-				None
-			}
+		let project_id_to_select = if self.just_minimal_dragging {
+			self.pressed_project_id
 		}
 		else {
 			None
 		};
+
 		self.dragged_project_id = None;
+		self.start_dragging_point = None;
+		self.just_minimal_dragging = false;
 		self.pressed_project_id = None;
 		self.project_being_project_hovered = None;
 		project_id_to_select
@@ -131,7 +133,7 @@ impl SidebarPage {
 					Some(dragged_project_id) => dragged_project_id == project_id,
 					None => false,
 				};
-				project_preview(project, project_id, selected, dropzone_highlight, dragging)
+				project_preview(project, project_id, selected, dropzone_highlight, dragging, self.just_minimal_dragging)
 			})
 			.collect();
 
@@ -152,7 +154,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			list.push(custom_project_preview(None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false, false));
+			list.push(custom_project_preview(None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false, false, false));
 		}
 
 		scrollable(
@@ -272,6 +274,15 @@ impl SidebarPage {
 			},
 			SidebarPageMessage::DragProject { project_id, point, .. } => {
 				self.dragged_project_id = Some(project_id);
+				if let Some(start_dragging_point) = self.start_dragging_point {
+					if self.just_minimal_dragging {
+						self.just_minimal_dragging = start_dragging_point.distance(point) < MINIMAL_DRAG_DISTANCE;
+					}
+				}
+				else {
+					self.start_dragging_point = Some(point);
+					self.just_minimal_dragging = true;
+				}
 				let options = Self::project_dropzone_options(database, project_id);
 				find_zones(
 					move |zones| SidebarPageMessage::HandleProjectZones { project_id, zones }.into(),
@@ -303,6 +314,8 @@ impl SidebarPage {
 			},
 			SidebarPageMessage::CancelDragProject => {
 				self.dragged_project_id = None;
+				self.start_dragging_point = None;
+				self.just_minimal_dragging = true;
 				self.pressed_project_id = None;
 				self.project_being_project_hovered = None;
 				Command::none()

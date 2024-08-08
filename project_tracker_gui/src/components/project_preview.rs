@@ -21,7 +21,7 @@ pub fn project_color_block(color: Color, height: f32) -> Element<'static, UiMess
 	.into()
 }
 
-pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool, dropzone_highlight: bool, dragging: bool) -> Element<UiMessage> {
+pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool, dropzone_highlight: bool, dragging: bool, just_minimal_dragging: bool) -> Element<UiMessage> {
 	let inner_text_element = text(&project.name).size(LARGE_TEXT_SIZE).into();
 
 	custom_project_preview(
@@ -33,12 +33,13 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool,
 		inner_text_element,
 		selected,
 		dropzone_highlight,
-		dragging
+		dragging,
+		just_minimal_dragging
 	)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option<Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, dropzone_highlight: bool, dragging: bool) -> Element<UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option<Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, dropzone_highlight: bool, dragging: bool, just_minimal_dragging: bool) -> Element<UiMessage> {
 	let inner = container(
 		row![
 			project_color_block(project_color, DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT),
@@ -89,7 +90,8 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option
 		.on_drag(move |point, rect| SidebarPageMessage::DragProject { project_id, point, rect }.into())
 		.on_click(SidebarPageMessage::ClickProject(project_id).into())
 		.on_cancel(SidebarPageMessage::CancelDragProject.into())
-		.drag_hide(true)
+		.drag_overlay(!just_minimal_dragging)
+		.drag_hide(!just_minimal_dragging)
 		.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
 		.into()
 	}

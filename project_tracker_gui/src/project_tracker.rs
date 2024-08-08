@@ -429,9 +429,15 @@ impl Application for ProjectTrackerApp {
 				let sidebar_command = self.sidebar_page.update(message.clone(), &mut self.database);
 				let command = match message {
 					SidebarPageMessage::CreateNewProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
-					SidebarPageMessage::DragTask { task_id, .. } => {
+					SidebarPageMessage::DragTask { task_id, point, .. } => {
 						match &mut self.content_page {
-							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask(task_id), &mut self.database),
+							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask{ task_id, point }, &mut self.database),
+							_ => Command::none()
+						}
+					},
+					SidebarPageMessage::CancelDragTask => {
+						match &mut self.content_page {
+							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::CancelDragTask, &mut self.database),
 							_ => Command::none()
 						}
 					},

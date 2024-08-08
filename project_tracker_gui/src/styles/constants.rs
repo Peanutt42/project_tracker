@@ -15,6 +15,8 @@ pub mod size {
 	pub const LARGE_TEXT_SIZE: f32 = 20.0;
 	pub const HEADING_TEXT_SIZE: f32 = 25.0;
 	pub const TITLE_TEXT_SIZE: f32 = 35.0;
+
+	pub const MINIMAL_DRAG_DISTANCE: f32 = 10.0;
 }
 
 pub mod colors {

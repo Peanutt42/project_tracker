@@ -11,7 +11,7 @@ use crate::components::{delete_task_button, clear_task_needed_time_button, unfoc
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edit_task_state: Option<&'a EditTaskState>, dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
+pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edit_task_state: Option<&'a EditTaskState>, dragging: bool, just_minimal_dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
 	let inner_text_element: Element<UiMessage> = if let Some(edit_task_state) = edit_task_state {
 		unfocusable(
 			text_editor(&edit_task_state.new_name)
@@ -208,7 +208,8 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 		.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, task_state: task.state, point, rect }.into())
 		.on_click(ProjectPageMessage::PressTask(task_id).into())
 		.on_cancel(SidebarPageMessage::CancelDragTask.into())
-		.drag_hide(true)
+		.drag_overlay(!just_minimal_dragging)
+		.drag_hide(!just_minimal_dragging)
 		.style(theme::Button::custom(HiddenSecondaryButtonStyle))
 		.into()
 	}

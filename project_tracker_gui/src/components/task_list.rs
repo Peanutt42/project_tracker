@@ -11,7 +11,7 @@ pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_list: &'a CachedTaskList, edited_task: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, task_being_task_hovered: Option<TaskId>, show_done_tasks: bool, create_new_task: &'a Option<(String, BTreeSet<TaskTagId>)>) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_list: &'a CachedTaskList, edited_task: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, just_minimal_dragging: bool, task_being_task_hovered: Option<TaskId>, show_done_tasks: bool, create_new_task: &'a Option<(String, BTreeSet<TaskTagId>)>) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks' (matching the filter)
@@ -29,7 +29,7 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 			Some(hovered_task_id) => hovered_task_id == task_id,
 			None => false,
 		};
-		task_widget(task, task_id, project_id, &project.task_tags, edited_name, dragging, highlight)
+		task_widget(task, task_id, project_id, &project.task_tags, edited_name, dragging, just_minimal_dragging, highlight)
 	};
 
 	for task_id in cached_task_list.list.iter() {
