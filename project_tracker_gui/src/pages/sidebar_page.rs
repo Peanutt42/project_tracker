@@ -107,7 +107,7 @@ impl SidebarPage {
 
 		self.dragged_project_id = None;
 		self.start_dragging_point = None;
-		self.just_minimal_dragging = false;
+		self.just_minimal_dragging = true;
 		self.pressed_project_id = None;
 		self.project_being_project_hovered = None;
 		project_id_to_select
