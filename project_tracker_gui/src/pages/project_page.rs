@@ -2,8 +2,8 @@ use std::{collections::BTreeSet, time::Instant};
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
-	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, TaskId, TaskTagId},
+	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
+	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, SerializableDate, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
@@ -35,8 +35,13 @@ pub enum ProjectPageMessage {
 	TaskNameAction(text_editor::Action),
 	ToggleTaskTag(TaskTagId),
 	EditTaskNeededTime,
-	ClearTaskNeededTime(TaskId),
+	ClearTaskNeededTime,
 	InvalidNeededTimeInput,
+	StopEditingTaskNeededTime,
+	EditTaskDueDate,
+	ChangeTaskDueDate(SerializableDate),
+	ClearTaskDueDate,
+	StopEditingTaskDueDate,
 
 	DragTask{
 		task_id: TaskId,
@@ -58,6 +63,7 @@ pub struct EditTaskState {
 	pub task_id: TaskId,
 	pub new_name: text_editor::Content,
 	pub edit_needed_time: bool,
+	pub edit_due_date: bool,
 }
 
 impl EditTaskState {
@@ -66,6 +72,7 @@ impl EditTaskState {
 			task_id,
 			new_name,
 			edit_needed_time: false,
+			edit_due_date: false,
 		}
 	}
 }
@@ -269,23 +276,65 @@ impl ProjectPage {
 					edit_task_state.edit_needed_time = true;
 				}
 				text_input::focus(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone())
-			}
-			ProjectPageMessage::ClearTaskNeededTime(task_id) => {
+			},
+			ProjectPageMessage::ClearTaskNeededTime => {
+				if let Some(edit_task_state) = &mut self.edited_task {
+					edit_task_state.edit_needed_time = false;
+					if let Some(database) = database {
+						return database.update(DatabaseMessage::ChangeTaskNeededTime {
+							project_id: self.project_id,
+							task_id: edit_task_state.task_id,
+							new_needed_time_minutes: None,
+						});
+					}
+				}
+				Command::none()
+			},
+			ProjectPageMessage::InvalidNeededTimeInput => Command::none(),
+			ProjectPageMessage::StopEditingTaskNeededTime => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					edit_task_state.edit_needed_time = false;
 				}
-				if let Some(database) = database {
-					database.update(DatabaseMessage::ChangeTaskNeededTime {
-						project_id: self.project_id,
-						task_id,
-						new_needed_time_minutes: None,
-					})
+				Command::none()
+			},
+			ProjectPageMessage::EditTaskDueDate => {
+				if let Some(edit_task_state) = &mut self.edited_task {
+					edit_task_state.edit_due_date = true;
 				}
-				else {
-					Command::none()
+				text_input::focus(EDIT_DUE_DATE_TEXT_INPUT_ID.clone())
+			},
+			ProjectPageMessage::ChangeTaskDueDate(new_due_date) => {
+				if let Some(edit_task_state) = &mut self.edited_task {
+					edit_task_state.edit_due_date = false;
+					if let Some(database) = database {
+						return database.update(DatabaseMessage::ChangeTaskDueDate {
+							project_id: self.project_id,
+							task_id: edit_task_state.task_id,
+							new_due_date: new_due_date.into()
+						});
+					}
 				}
-			}
-			ProjectPageMessage::InvalidNeededTimeInput => Command::none(),
+				Command::none()
+			},
+			ProjectPageMessage::ClearTaskDueDate => {
+				if let Some(edit_task_state) = &mut self.edited_task {
+					edit_task_state.edit_due_date = false;
+					if let Some(database) = database {
+						return database.update(DatabaseMessage::ChangeTaskDueDate {
+							project_id: self.project_id,
+							task_id: edit_task_state.task_id,
+							new_due_date: None,
+						});
+					}
+				}
+				Command::none()
+			},
+			ProjectPageMessage::StopEditingTaskDueDate => {
+				if let Some(edit_task_state) = &mut self.edited_task {
+					edit_task_state.edit_due_date = false;
+				}
+				Command::none()
+			},
 
 			ProjectPageMessage::DragTask{ task_id, point } => {
 				self.dragged_task = Some(task_id);

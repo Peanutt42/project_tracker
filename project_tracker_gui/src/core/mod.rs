@@ -11,7 +11,7 @@ mod project;
 pub use project::{Project, ProjectId, SerializableColor};
 
 mod task;
-pub use task::{Task, TaskId, generate_task_id};
+pub use task::{Task, TaskId, generate_task_id, SerializableDate};
 
 mod task_state;
 pub use task_state::TaskState;

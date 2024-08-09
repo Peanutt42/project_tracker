@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use serde::{Serialize, Deserialize};
 use iced::{widget::container::Id, Color};
-use crate::core::{OrderedHashMap, Task, TaskId, TaskState, TaskTag, TaskTagId};
+use crate::core::{OrderedHashMap, Task, TaskId, TaskState, TaskTag, TaskTagId, SerializableDate};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
 pub struct ProjectId(pub usize);
@@ -70,6 +70,12 @@ impl Project {
 	pub fn set_task_needed_time(&mut self, task_id: TaskId, new_needed_time_minutes: Option<usize>) {
 		if let Some(task) = self.tasks.get_mut(&task_id) {
 			task.needed_time_minutes = new_needed_time_minutes;
+		}
+	}
+
+	pub fn set_task_due_date(&mut self, task_id: TaskId, new_due_date: Option<SerializableDate>) {
+		if let Some(task) = self.tasks.get_mut(&task_id) {
+			task.due_date = new_due_date;
 		}
 	}
 

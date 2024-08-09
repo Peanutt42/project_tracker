@@ -1,14 +1,18 @@
 use std::{borrow::Cow, time::Duration, str::FromStr};
 use iced::{theme, widget::{button, checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
+use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{DropZoneContainerStyle, RoundedSecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{CancelButtonStyle, DropZoneContainerStyle, RoundedSecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
-use crate::components::{delete_task_button, clear_task_needed_time_button, unfocusable, duration_widget, duration_text, task_tags_buttons};
+use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons};
+
+use super::{date_text, date_widget};
 
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
 pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edit_task_state: Option<&'a EditTaskState>, dragging: bool, just_minimal_dragging: bool, highlight: bool) -> Element<'a, UiMessage> {
@@ -98,6 +102,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 								None => ProjectPageMessage::InvalidNeededTimeInput.into(),
 							}
 						})
+						.on_submit(ProjectPageMessage::StopEditingTaskNeededTime.into())
 						.style(theme::TextInput::Custom(Box::new(TextInputStyle{ round_left: true, round_right: false }))),
 
 						stop_editing_task_message
@@ -105,7 +110,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 
 					row![
 						edit_needed_time_element,
-						clear_task_needed_time_button(task_id),
+						clear_task_needed_time_button(),
 					]
 					.into()
 				}
@@ -124,7 +129,40 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 						.style(theme::Button::custom(RoundedSecondaryButtonStyle))
 					)
 				},
-			],
+
+				if edit_task_state.edit_due_date {
+					Element::new(date_picker(
+						edit_task_state.edit_due_date,
+						task.due_date.unwrap_or(Date::today().into()),
+						text("Edit due date"),
+						ProjectPageMessage::StopEditingTaskDueDate.into(),
+						move |date| ProjectPageMessage::ChangeTaskDueDate(date.into()).into()
+					))
+				}
+				else if let Some(due_date) = &task.due_date {
+					row![
+						button(
+							date_text(due_date)
+						)
+						.padding(SMALL_HORIZONTAL_PADDING)
+						.on_press(ProjectPageMessage::EditTaskDueDate.into())
+						.style(theme::Button::custom(CancelButtonStyle{ round_left: true, round_right: false })),
+						clear_task_due_date_button(),
+					]
+					.into()
+				}
+				else {
+					Element::new(
+						button(
+							text("Add due date")
+						)
+						.padding(SMALL_HORIZONTAL_PADDING)
+						.on_press(ProjectPageMessage::EditTaskDueDate.into())
+						.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+					)
+				},
+			]
+			.spacing(SPACING_AMOUNT),
 		]
 		.into()
 	}
@@ -179,7 +217,21 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 				})
 				.push(inner_text_element)
 				.push_maybe(
-					task.needed_time_minutes.map(|duration_minutes| duration_widget(Cow::Owned(Duration::from_secs(duration_minutes as u64 * 60))))
+					if task.needed_time_minutes.is_some() || task.due_date.is_some() {
+						Some(
+							Row::new()
+								.push_maybe(
+									task.needed_time_minutes.map(|duration_minutes| duration_widget(Cow::Owned(Duration::from_secs(duration_minutes as u64 * 60))))
+								)
+								.push_maybe(
+									task.due_date.as_ref().map(|due_date| date_widget(due_date))
+								)
+								.spacing(SPACING_AMOUNT)
+						)
+					}
+					else {
+						None
+					}
 				)
 				.spacing(TINY_SPACING_AMOUNT)
 		]

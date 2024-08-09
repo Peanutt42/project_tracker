@@ -302,10 +302,19 @@ pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, UiMessa
 	.style(theme::Button::custom(DeleteButtonStyle{ round_left: true, round_right: true }))
 }
 
-pub fn clear_task_needed_time_button(task_id: TaskId) -> Button<'static, UiMessage> {
+pub fn clear_task_needed_time_button() -> Button<'static, UiMessage> {
 	button(
 		icon_to_text(Bootstrap::XLg)
 	)
-	.on_press(ProjectPageMessage::ClearTaskNeededTime(task_id).into())
+	.on_press(ProjectPageMessage::ClearTaskNeededTime.into())
+	.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
+}
+
+pub fn clear_task_due_date_button() -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::XLg)
+	)
+	.padding(SMALL_HORIZONTAL_PADDING)
+	.on_press(ProjectPageMessage::ClearTaskDueDate.into())
 	.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
 }

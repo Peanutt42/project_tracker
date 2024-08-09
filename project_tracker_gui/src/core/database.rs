@@ -5,7 +5,7 @@ use iced::Command;
 use serde::{Serialize, Deserialize};
 use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskState, TaskTagId, TaskTag};
+use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskState, TaskTagId, TaskTag, SerializableDate};
 
 fn default_false() -> bool { false }
 
@@ -87,6 +87,11 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		new_needed_time_minutes: Option<usize>,
+	},
+	ChangeTaskDueDate {
+		project_id: ProjectId,
+		task_id: TaskId,
+		new_due_date: Option<SerializableDate>,
 	},
 	ToggleTaskTag {
 		project_id: ProjectId,
@@ -373,6 +378,14 @@ impl Database {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
 						project.set_task_needed_time(task_id, new_needed_time_minutes);
+					}
+				});
+				Command::none()
+			},
+			DatabaseMessage::ChangeTaskDueDate { project_id, task_id, new_due_date } => {
+				self.modify(|projects| {
+					if let Some(project) = projects.get_mut(&project_id) {
+						project.set_task_due_date(task_id, new_due_date);
 					}
 				});
 				Command::none()
