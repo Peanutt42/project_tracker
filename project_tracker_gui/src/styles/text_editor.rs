@@ -3,6 +3,7 @@ use iced::{widget::text_editor::{Appearance, StyleSheet}, Border, Color, Theme};
 use super::BORDER_RADIUS;
 
 pub struct TextEditorStyle {
+	pub round_top_left: bool,
 	pub round_top_right: bool,
 	pub round_bottom_right: bool,
 }
@@ -17,7 +18,7 @@ impl StyleSheet for TextEditorStyle {
 			background: palette.background.base.color.into(),
 			border: Border {
 				radius: [
-					BORDER_RADIUS,
+					if self.round_top_left { BORDER_RADIUS } else { 0.0 },
 					if self.round_top_right { BORDER_RADIUS } else { 0.0 },
 					if self.round_bottom_right { BORDER_RADIUS } else { 0.0 },
 					BORDER_RADIUS,

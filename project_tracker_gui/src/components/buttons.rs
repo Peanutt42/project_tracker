@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::{ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{CancelButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{CancelButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -242,15 +242,22 @@ pub fn sync_database_button(synchronizing: bool, synchronization_filepath: Optio
 	.into()
 }
 
-pub fn task_tag_button(task_tag: &TaskTag, toggled: bool, round_bottom: bool) -> Button<'static, UiMessage> {
-	button(
+pub fn task_tag_button(task_tag: &TaskTag, toggled: bool, round_bottom: bool, tall: bool) -> Button<'static, UiMessage> {
+	let button = button(
 		text(&task_tag.name)
 	)
 	.style(theme::Button::custom(TaskTagButtonStyle{
 		color: task_tag.color.into(),
 		toggled,
 		round_bottom
-	}))
+	}));
+
+	if tall {
+		button
+	}
+	else {
+		button.padding(SMALL_HORIZONTAL_PADDING)
+	}
 }
 
 pub fn manage_task_tags_button(project_id: ProjectId) -> Button<'static, UiMessage> {

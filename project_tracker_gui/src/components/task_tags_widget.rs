@@ -10,7 +10,7 @@ pub fn task_tags_buttons<'a>(available_tags: &'a OrderedHashMap<TaskTagId, TaskT
 			.iter()
 			.map(|(tag_id, tag)| {
 				let toggled = tags.contains(&tag_id);
-				task_tag_button(tag, toggled, !toggled)
+				task_tag_button(tag, toggled, !toggled, false)
 					.on_press(on_press(tag_id))
 					.into()
 			})

@@ -2,7 +2,7 @@ use std::{borrow::Cow, time::Duration, str::FromStr};
 use iced::{theme, widget::{button, checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length, Padding};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{DropZoneContainerStyle, RoundedSecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, BORDER_RADIUS, SMALL_HORIZONTAL_PADDING, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{DropZoneContainerStyle, RoundedSecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
@@ -16,7 +16,11 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 		unfocusable(
 			text_editor(&edit_task_state.new_name)
 				.on_action(|action| ProjectPageMessage::TaskNameAction(action).into())
-				.style(theme::TextEditor::Custom(Box::new(TextEditorStyle{ round_top_right: false, round_bottom_right: edit_task_state.new_name.line_count() != 1 }))),
+				.style(theme::TextEditor::Custom(Box::new(TextEditorStyle{
+					round_top_left: task_tags.iter().next().map(|(tag_id, _tag)| !task.tags.contains(&tag_id)).unwrap_or(true), // is the first tag enabled?
+					round_top_right: false,
+					round_bottom_right: edit_task_state.new_name.line_count() > 1 // multiline?
+				}))),
 
 			ProjectPageMessage::StopEditingTask.into()
 		)
@@ -45,14 +49,11 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 
 	if let Some(edit_task_state) = edit_task_state {
 		column![
-			container(
-				task_tags_buttons(
-					task_tags,
-					&task.tags,
-					|tag_id| ProjectPageMessage::ToggleTaskTag(tag_id).into()
-				)
-			)
-			.padding(Padding{ left: BORDER_RADIUS, ..Padding::ZERO }),
+			task_tags_buttons(
+				task_tags,
+				&task.tags,
+				|tag_id| ProjectPageMessage::ToggleTaskTag(tag_id).into()
+			),
 
 			row![
 				inner_text_element,
