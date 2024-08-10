@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 use std::time::Instant;
-use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Command, Element, Length};
-use iced_aw::Bootstrap;
+use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, column, container, row, text, Column}, Alignment, Command, Element, Length};
+use iced_aw::{drop_down, Bootstrap, DropDown};
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage}, core::ProjectId, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage, SettingsModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::{DropDownContainerStyle, HiddenSecondaryButtonStyle, RoundedSecondaryButtonStyle, SPACING_AMOUNT}, theme_mode::ThemeMode};
 
 fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }
@@ -11,6 +11,8 @@ fn default_show_sidebar() -> bool { true }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
 	theme_mode: ThemeMode,
+
+	date_formatting: DateFormatting,
 
 	#[serde(default = "default_sidebar_dividor_position")]
 	sidebar_dividor_position: u16,
@@ -33,6 +35,7 @@ impl Default for Preferences {
 	fn default() -> Self {
 		Self {
 			theme_mode: ThemeMode::default(),
+			date_formatting: DateFormatting::default(),
 			sidebar_dividor_position: default_sidebar_dividor_position(),
 			show_sidebar: default_show_sidebar(),
 			selected_content_page: SerializedContentPage::default(),
@@ -65,6 +68,7 @@ pub enum PreferenceMessage {
 	ToggleShowSidebar,
 	SetContentPage(SerializedContentPage),
 	SetSynchronizationFilepath(Option<PathBuf>),
+	SetDateFormatting(DateFormatting),
 }
 
 impl From<PreferenceMessage> for UiMessage {
@@ -88,6 +92,7 @@ impl Preferences {
 	pub fn selected_content_page(&self) -> &SerializedContentPage { &self.selected_content_page }
 	pub fn show_sidebar(&self) -> bool { self.show_sidebar }
 	pub fn sidebar_dividor_position(&self) -> u16 { self.sidebar_dividor_position }
+	pub fn date_formatting(&self) -> DateFormatting { self.date_formatting }
 
 	pub fn modify(&mut self, f: impl FnOnce(&mut Preferences)) {
 		f(self);
@@ -160,7 +165,12 @@ impl Preferences {
 			PreferenceMessage::SetSynchronizationFilepath(filepath) => {
 				self.modify(|pref| pref.synchronization_filepath = filepath);
 				Command::none()
-			}
+			},
+
+			PreferenceMessage::SetDateFormatting(date_formatting) => {
+				self.modify(|pref| pref.date_formatting = date_formatting);
+				Command::none()
+			},
 		}
 	}
 
@@ -247,7 +257,7 @@ impl Preferences {
 		}
 	}
 
-	pub fn view(&self) -> Element<UiMessage> {
+	pub fn view(&self, date_formatting_expanded: bool) -> Element<UiMessage> {
 		column![
 			row![
 				text("File location: "),
@@ -268,6 +278,44 @@ impl Preferences {
 				)
 				.width(Length::Fill)
 				.align_x(Horizontal::Right),
+			]
+			.align_items(Alignment::Center),
+
+			row![
+				text("Date Formatting:"),
+				container(
+					DropDown::new(
+						button(text(self.date_formatting.as_str()))
+							.on_press(SettingsModalMessage::ToggleExpandDateFormatting.into())
+							.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+
+						container(
+							Column::with_children(DateFormatting::FORMATS.iter()
+								.map(|format| {
+									button(
+										text(format.as_str()).horizontal_alignment(Horizontal::Center)
+									)
+									.width(Length::Fill)
+									.on_press(SettingsModalMessage::SetDateFormatting(*format).into())
+									.style(
+										if self.date_formatting == *format {
+											theme::Button::custom(RoundedSecondaryButtonStyle)
+										}
+										else {
+											theme::Button::custom(HiddenSecondaryButtonStyle)
+										})
+									.into()
+								}))
+						)
+						.style(theme::Container::Custom(Box::new(DropDownContainerStyle))),
+
+						date_formatting_expanded
+					)
+					.on_dismiss(SettingsModalMessage::DismissDateFormatting.into())
+					.alignment(drop_down::Alignment::Bottom)
+				)
+				.width(Length::Fill)
+				.align_x(Horizontal::Right)
 			]
 			.align_items(Alignment::Center),
 
@@ -297,5 +345,33 @@ impl Preferences {
 		]
 		.spacing(SPACING_AMOUNT)
 		.into()
+	}
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub enum DateFormatting {
+	#[default]
+	DayMonthYear,
+	MonthDayYear,
+}
+
+impl DateFormatting {
+	pub const FORMATS: [DateFormatting; 2] = [
+		DateFormatting::DayMonthYear,
+		DateFormatting::MonthDayYear,
+	];
+
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			DateFormatting::DayMonthYear => "DD.MM.YY",
+			DateFormatting::MonthDayYear => "MM.DD.YY",
+		}
+	}
+
+	pub fn format(&self, date: &SerializableDate) -> String {
+		match self {
+			DateFormatting::DayMonthYear => format!("{}.{}.{}", date.day, date.month, date.year),
+			DateFormatting::MonthDayYear => format!("{}.{}.{}", date.month, date.day, date.year),
+		}
 	}
 }

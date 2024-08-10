@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 iced = { version = "0.12.0", features = ["image", "tokio"] }
-iced_aw = { version = "0.9.3", default-features = false, features = ["spinner", "modal", "card", "split", "quad", "icons", "date_picker"] }
+iced_aw = { version = "0.9.3", default-features = false, features = ["spinner", "modal", "card", "split", "quad", "icons", "date_picker", "drop_down"] }
 iced_drop = { path = "../iced_drop" }
 tokio = { version = "1.0", features = ["fs"] }
 serde = { version = "1.0", features = ["derive"] }

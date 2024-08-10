@@ -2,7 +2,7 @@ mod database;
 pub use database::{Database, DatabaseMessage, LoadDatabaseResult};
 
 mod preferences;
-pub use preferences::{Preferences, LoadPreferencesResult, PreferenceMessage, SerializedContentPage};
+pub use preferences::{Preferences, LoadPreferencesResult, PreferenceMessage, SerializedContentPage, DateFormatting};
 
 mod ordered_hash_map;
 pub use ordered_hash_map::OrderedHashMap;

@@ -507,7 +507,18 @@ impl ProjectPage {
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),
 
-					task_list(project_id, project, &self.cached_task_list, &self.edited_task, self.dragged_task, self.just_minimal_dragging, app.sidebar_page.task_being_task_hovered, self.show_done_tasks, &self.create_new_task),
+					task_list(
+						project_id,
+						project,
+						&self.cached_task_list,
+						&self.edited_task,
+						self.dragged_task,
+						self.just_minimal_dragging,
+						app.sidebar_page.task_being_task_hovered,
+						self.show_done_tasks,
+						&self.create_new_task,
+						app.preferences.as_ref().map(|pref| pref.date_formatting()).unwrap_or_default()
+					),
 				]
 				.spacing(SPACING_AMOUNT)
 				.width(Length::Fill)

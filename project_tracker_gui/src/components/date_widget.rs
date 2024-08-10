@@ -1,16 +1,13 @@
 use iced::{theme, widget::{container, text, Text}, Element};
+use crate::{core::{DateFormatting, SerializableDate}, project_tracker::UiMessage, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING}};
 
-use crate::{core::SerializableDate, project_tracker::UiMessage, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING}};
-
-
-// TODO: more formats (MM.DD.YY)
-pub fn date_text(date: &SerializableDate) -> Text<'static> {
-	text(format!("{}.{}.{}", date.day, date.month, date.year))
+pub fn date_text(date: &SerializableDate, formatting: DateFormatting) -> Text<'static> {
+	text(formatting.format(date))
 }
 
-pub fn date_widget(date: &SerializableDate) -> Element<UiMessage> {
+pub fn date_widget(date: &SerializableDate, formatting: DateFormatting) -> Element<UiMessage> {
 	container(
-		date_text(date)
+		date_text(date, formatting)
 	)
 	.padding(SMALL_HORIZONTAL_PADDING)
 	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))

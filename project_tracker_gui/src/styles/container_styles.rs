@@ -107,3 +107,17 @@ impl StyleSheet for TaskBackgroundContainerStyle {
 		}
 	}
 }
+
+pub struct DropDownContainerStyle;
+
+impl StyleSheet for DropDownContainerStyle {
+	type Style = Theme;
+
+	fn appearance(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(style.extended_palette().background.base.color.into()),
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+}

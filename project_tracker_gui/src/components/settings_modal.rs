@@ -1,6 +1,6 @@
 use iced::{theme, widget::{button, column, container, row, text}, Alignment, Command, Element};
 use iced_aw::{Bootstrap, CardStyles, ModalStyles, card};
-use crate::{components::{dangerous_button, file_location, horizontal_seperator, sync_database_button}, core::PreferenceMessage, styles::{ModalCardStyle, ModalStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
+use crate::{components::{dangerous_button, file_location, horizontal_seperator, sync_database_button}, core::{DateFormatting, PreferenceMessage, Preferences}, styles::{ModalCardStyle, ModalStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage};
 use crate::styles::{LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -14,6 +14,10 @@ pub enum SettingsModalMessage {
 
 	BrowseSynchronizationFilepath,
 	BrowseSynchronizationFilepathCanceled,
+
+	ToggleExpandDateFormatting,
+	DismissDateFormatting,
+	SetDateFormatting(DateFormatting),
 }
 
 impl From<SettingsModalMessage> for UiMessage {
@@ -24,20 +28,22 @@ impl From<SettingsModalMessage> for UiMessage {
 
 #[derive(Debug, Clone, Default)]
 pub enum SettingsModal {
-	Opened,
+	Opened {
+		date_formatting_expanded: bool,
+	},
 	#[default]
 	Closed,
 }
 
 impl SettingsModal {
 	pub fn is_open(&self) -> bool {
-		matches!(self, SettingsModal::Opened)
+		matches!(self, SettingsModal::Opened{ .. })
 	}
 
-	pub fn update(&mut self, message: SettingsModalMessage) -> Command<UiMessage> {
+	pub fn update(&mut self, message: SettingsModalMessage, preferences: &mut Option<Preferences>) -> Command<UiMessage> {
 		match message {
 			SettingsModalMessage::Open => {
-				*self = SettingsModal::Opened;
+				*self = SettingsModal::Opened{ date_formatting_expanded: false };
 				Command::none()
 			},
 			SettingsModalMessage::Close => {
@@ -55,13 +61,38 @@ impl SettingsModal {
 				}
 			),
 			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => Command::none(),
+
+			SettingsModalMessage::ToggleExpandDateFormatting => {
+				if let SettingsModal::Opened { date_formatting_expanded } = self {
+					*date_formatting_expanded = !(*date_formatting_expanded);
+				}
+				Command::none()
+			},
+			SettingsModalMessage::DismissDateFormatting => {
+				if let SettingsModal::Opened { date_formatting_expanded } = self {
+					*date_formatting_expanded = false;
+				}
+				Command::none()
+			},
+			SettingsModalMessage::SetDateFormatting(date_formatting) => {
+				let command = if let Some(preferences) = preferences {
+					preferences.update(PreferenceMessage::SetDateFormatting(date_formatting))
+				}
+				else {
+					Command::none()
+				};
+				Command::batch([
+					command,
+					self.update(SettingsModalMessage::DismissDateFormatting, preferences)
+				])
+			}
 		}
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<(Element<UiMessage>, ModalStyles)> {
 		match self {
 			SettingsModal::Closed => None,
-			SettingsModal::Opened => {
+			SettingsModal::Opened{ date_formatting_expanded } => {
 				if let Some(preferences) = &app.preferences {
 					let shortcut = |name, shortcut| {
 						row![
@@ -82,7 +113,7 @@ impl SettingsModal {
 								column![
 									text("Preferences").size(LARGE_TEXT_SIZE),
 
-									preferences.view(),
+									preferences.view(*date_formatting_expanded),
 								],
 
 								horizontal_seperator(),

@@ -448,7 +448,7 @@ impl Application for ProjectTrackerApp {
 					command
 				])
 			},
-			UiMessage::SettingsModalMessage(message) => self.settings_modal.update(message),
+			UiMessage::SettingsModalMessage(message) => self.settings_modal.update(message, &mut self.preferences),
 			UiMessage::ManageTaskTagsModalMessage(message) => self.manage_tags_modal.update(message, &mut self.database),
 			UiMessage::SwitchProjectModalMessage(message) => self.switch_project_modal.update(message, &self.database, self.selected_project_id),
 		}
