@@ -1,2 +1,4 @@
-# project_tracker
- My personal coding project tracker for simple projects with tasks to complete
+# Project Tracker
+personal project todo list tracker
+
+![](Screenshot.png)
