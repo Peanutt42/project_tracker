@@ -545,7 +545,7 @@ impl Database {
 		}
 	}
 
-	async fn export_file_dialog() -> Option<PathBuf> {
+	pub async fn export_file_dialog() -> Option<PathBuf> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Export ProjectTracker Database")
 			.set_file_name(Self::FILE_NAME)

@@ -52,7 +52,7 @@ impl SettingsModal {
 			},
 
 			SettingsModalMessage::BrowseSynchronizationFilepath => Command::perform(
-				Database::import_file_dialog(),
+				Database::export_file_dialog(),
 				|filepath| {
 					match filepath {
 						Some(filepath) => PreferenceMessage::SetSynchronizationFilepath(Some(filepath)).into(),
