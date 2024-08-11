@@ -167,7 +167,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 						)
 						.padding(SMALL_HORIZONTAL_PADDING)
 						.on_press(ProjectPageMessage::EditTaskDueDate.into())
-						.style(theme::Button::custom(SecondaryButtonStyle::default()))
+						.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_BOTTOM))
 					)
 				},
 			]
