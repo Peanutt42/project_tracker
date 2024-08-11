@@ -1,4 +1,4 @@
-use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Theme, Vector};
+use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Theme};
 use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN, color_average, mix_color};
 
 use super::text_color;
@@ -141,42 +141,48 @@ impl StyleSheet for DeleteDoneTasksButtonStyle {
 	}
 }
 
+pub struct SecondaryButtonStyle {
+	pub round_left_top: bool,
+	pub round_left_bottom: bool,
+	pub round_right_top: bool,
+	pub round_right_bottom: bool,
+}
 
-pub struct RoundedSecondaryButtonStyle;
+impl SecondaryButtonStyle {
+	pub const ONLY_ROUND_RIGHT: Self = Self {
+		round_left_top: false,
+		round_right_top: true,
+		round_right_bottom: true,
+		round_left_bottom: false,
+	};
 
-impl StyleSheet for RoundedSecondaryButtonStyle {
-	type Style = Theme;
+	pub const ONLY_ROUND_BOTTOM: Self = Self {
+		round_left_top: false,
+		round_left_bottom: true,
+		round_right_top: false,
+		round_right_bottom: true,
+	};
 
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			border: Border::with_radius(BORDER_RADIUS),
-			background: Some(style.extended_palette().secondary.base.color.into()),
-			text_color: style.extended_palette().secondary.base.text,
-			..Default::default()
-		}
-	}
+	pub const NO_ROUNDING: Self = Self {
+		round_left_top: false,
+		round_left_bottom: false,
+		round_right_top: false,
+		round_right_bottom: false,
+	};
+}
 
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(style.extended_palette().background.strong.color.into()),
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			shadow_offset: Vector::default(),
-			..self.active(style)
+impl Default for SecondaryButtonStyle {
+	fn default() -> Self {
+		Self {
+			round_left_top: true,
+			round_left_bottom: true,
+			round_right_top: true,
+			round_right_bottom: true,
 		}
 	}
 }
 
-pub struct CancelButtonStyle {
-	pub round_left: bool,
-	pub round_right: bool,
-}
-
-impl StyleSheet for CancelButtonStyle {
+impl StyleSheet for SecondaryButtonStyle {
 	type Style = Theme;
 
 	fn active(&self, style: &Self::Style) -> Appearance {
@@ -186,10 +192,10 @@ impl StyleSheet for CancelButtonStyle {
 			background: Some(pair.color.into()),
 			text_color: pair.text,
 			border: Border::with_radius([
-				if self.round_left { BORDER_RADIUS } else { 0.0 },
-				if self.round_right { BORDER_RADIUS } else { 0.0 },
-				if self.round_right { BORDER_RADIUS } else { 0.0 },
-				if self.round_left { BORDER_RADIUS } else { 0.0 }
+				if self.round_left_top { BORDER_RADIUS } else { 0.0 },
+				if self.round_right_top { BORDER_RADIUS } else { 0.0 },
+				if self.round_right_bottom { BORDER_RADIUS } else { 0.0 },
+				if self.round_left_bottom { BORDER_RADIUS } else { 0.0 }
 			]),
 			..Default::default()
 		}
@@ -201,6 +207,10 @@ impl StyleSheet for CancelButtonStyle {
 			text_color: style.extended_palette().secondary.base.text,
 			..self.active(style)
 		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		self.active(style)
 	}
 }
 

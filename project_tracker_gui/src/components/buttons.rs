@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::{ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{CancelButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, SecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -23,7 +23,7 @@ pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
 			None
 		}
 	)
-	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -44,19 +44,19 @@ pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
 			None
 		}
 	)
-	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn cancel_create_project_button() -> Button<'static, UiMessage> {
 	button(icon_to_text(Bootstrap::XLg))
 		.on_press(SidebarPageMessage::CloseCreateNewProject.into())
-		.style(theme::Button::custom(CancelButtonStyle{ round_left: true, round_right: true }))
+		.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn cancel_create_task_button() -> Button<'static, UiMessage> {
 	button(icon_to_text(Bootstrap::XLg))
 		.on_press(ProjectPageMessage::CloseCreateNewTask.into())
-		.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
+		.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_RIGHT))
 }
 
 pub fn delete_project_button(project_id: ProjectId, project_name: &str) -> Button<'static, UiMessage> {
@@ -93,7 +93,7 @@ pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'stati
 		.spacing(SMALL_SPACING_AMOUNT)
 	)
 	.on_press(ProjectPageMessage::ShowDoneTasks(!show).into())
-	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn dangerous_button(icon: Bootstrap, text: &'static str, confirm_label: Option<String>, on_press: impl Into<UiMessage>) -> Button<'static, UiMessage> {
@@ -148,7 +148,7 @@ pub fn settings_button() -> Button<'static, UiMessage> {
 	)
 	.width(Length::Fixed(35.0))
 	.on_press(SettingsModalMessage::Open.into())
-	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn open_location_button(filepath: Option<PathBuf>) -> Element<'static, UiMessage> {
@@ -157,7 +157,7 @@ pub fn open_location_button(filepath: Option<PathBuf>) -> Element<'static, UiMes
 			icon_to_text(Bootstrap::Folder)
 		)
 		.on_press_maybe(filepath.map(UiMessage::OpenFolderLocation))
-		.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+		.style(theme::Button::custom(SecondaryButtonStyle::default())),
 
 		text("Open folder location")
 			.size(SMALL_TEXT_SIZE),
@@ -175,7 +175,7 @@ pub fn copy_to_clipboard_button(copied_text: String) -> Element<'static, UiMessa
 			icon_to_text(Bootstrap::Clipboard)
 		)
 		.on_press(UiMessage::CopyToClipboard(copied_text))
-		.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+		.style(theme::Button::custom(SecondaryButtonStyle::default())),
 
 		text("Copy to clipboard")
 			.size(SMALL_TEXT_SIZE),
@@ -193,7 +193,7 @@ pub fn toggle_sidebar_button() -> Element<'static, UiMessage> {
 			icon_to_text(Bootstrap::LayoutSidebar)
 		)
 		.on_press(PreferenceMessage::ToggleShowSidebar.into())
-		.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+		.style(theme::Button::custom(SecondaryButtonStyle::default())),
 
 		text("Toggle sidebar (Ctrl + B)").size(SMALL_TEXT_SIZE),
 
@@ -271,7 +271,7 @@ pub fn manage_task_tags_button(project_id: ProjectId) -> Button<'static, UiMessa
 		.spacing(SMALL_SPACING_AMOUNT)
 	)
 	.on_press(ManageTaskTagsModalMessage::Open { project_id }.into())
-	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn create_new_task_tags_button() -> Button<'static, UiMessage> {
@@ -285,13 +285,13 @@ pub fn create_new_task_tags_button() -> Button<'static, UiMessage> {
 		.spacing(SMALL_SPACING_AMOUNT)
 	)
 	.on_press(ManageTaskTagsModalMessage::OpenCreateNewTaskTag.into())
-	.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn cancel_create_new_task_tag_button() -> Button<'static, UiMessage> {
 	button(icon_to_text(Bootstrap::XLg))
 			.on_press(ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into())
-			.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
+			.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_RIGHT))
 }
 
 pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, UiMessage> {
@@ -307,7 +307,10 @@ pub fn clear_task_needed_time_button() -> Button<'static, UiMessage> {
 		icon_to_text(Bootstrap::XLg)
 	)
 	.on_press(ProjectPageMessage::ClearTaskNeededTime.into())
-	.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
+	.style(theme::Button::custom(SecondaryButtonStyle {
+		round_right_bottom: true,
+		..SecondaryButtonStyle::NO_ROUNDING
+	}))
 }
 
 pub fn clear_task_due_date_button() -> Button<'static, UiMessage> {
@@ -316,5 +319,8 @@ pub fn clear_task_due_date_button() -> Button<'static, UiMessage> {
 	)
 	.padding(SMALL_HORIZONTAL_PADDING)
 	.on_press(ProjectPageMessage::ClearTaskDueDate.into())
-	.style(theme::Button::custom(CancelButtonStyle{ round_left: false, round_right: true }))
+	.style(theme::Button::custom(SecondaryButtonStyle {
+		round_right_bottom: true,
+		..SecondaryButtonStyle::NO_ROUNDING
+	}))
 }

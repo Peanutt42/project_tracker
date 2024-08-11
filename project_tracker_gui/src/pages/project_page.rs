@@ -402,7 +402,7 @@ impl ProjectPage {
 							.size(TITLE_TEXT_SIZE)
 							.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
 							.on_submit(ProjectPageMessage::ChangeProjectName.into())
-							.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: true }))),
+							.style(theme::TextInput::Custom(Box::new(TextInputStyle::default()))),
 
 						ProjectPageMessage::StopEditingProjectName.into()
 					)

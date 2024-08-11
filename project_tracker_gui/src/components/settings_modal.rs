@@ -1,6 +1,6 @@
 use iced::{theme, widget::{button, column, container, row, text}, Alignment, Command, Element};
 use iced_aw::{Bootstrap, CardStyles, ModalStyles, card};
-use crate::{components::{dangerous_button, file_location, horizontal_seperator, sync_database_button}, core::{DateFormatting, PreferenceMessage, Preferences}, styles::{ModalCardStyle, ModalStyle, RoundedContainerStyle, RoundedSecondaryButtonStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
+use crate::{components::{dangerous_button, file_location, horizontal_seperator, sync_database_button}, core::{DateFormatting, PreferenceMessage, Preferences}, styles::{ModalCardStyle, ModalStyle, RoundedContainerStyle, SecondaryButtonStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage};
 use crate::styles::{LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -132,10 +132,10 @@ impl SettingsModal {
 
 										button(text("Clear"))
 											.on_press(PreferenceMessage::SetSynchronizationFilepath(None).into())
-											.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+											.style(theme::Button::custom(SecondaryButtonStyle::default())),
 										button(text("Browse"))
 											.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
-											.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+											.style(theme::Button::custom(SecondaryButtonStyle::default())),
 
 										if let Some(filepath) = preferences.synchronization_filepath() {
 											filepath_widget(filepath)

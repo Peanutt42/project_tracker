@@ -3,7 +3,7 @@ use std::time::Instant;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, column, container, row, text, Column}, Alignment, Command, Element, Length};
 use iced_aw::{drop_down, Bootstrap, DropDown};
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage, SettingsModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::{DropDownContainerStyle, HiddenSecondaryButtonStyle, RoundedSecondaryButtonStyle, SPACING_AMOUNT}, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage, SettingsModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::{DropDownContainerStyle, HiddenSecondaryButtonStyle, SecondaryButtonStyle, SPACING_AMOUNT}, theme_mode::ThemeMode};
 
 fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }
@@ -287,7 +287,7 @@ impl Preferences {
 					DropDown::new(
 						button(text(self.date_formatting.as_str()))
 							.on_press(SettingsModalMessage::ToggleExpandDateFormatting.into())
-							.style(theme::Button::custom(RoundedSecondaryButtonStyle)),
+							.style(theme::Button::custom(SecondaryButtonStyle::default())),
 
 						container(
 							Column::with_children(DateFormatting::FORMATS.iter()
@@ -299,7 +299,7 @@ impl Preferences {
 									.on_press(SettingsModalMessage::SetDateFormatting(*format).into())
 									.style(
 										if self.date_formatting == *format {
-											theme::Button::custom(RoundedSecondaryButtonStyle)
+											theme::Button::custom(SecondaryButtonStyle::default())
 										}
 										else {
 											theme::Button::custom(HiddenSecondaryButtonStyle)

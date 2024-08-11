@@ -62,7 +62,7 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 							.line_height(LineHeight::Relative(1.2))
 							.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
 							.on_submit(ProjectPageMessage::CreateNewTask.into())
-							.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: false }))),
+							.style(theme::TextInput::Custom(Box::new(TextInputStyle::ONLY_ROUND_LEFT))),
 
 						ProjectPageMessage::CloseCreateNewTask.into()
 					),

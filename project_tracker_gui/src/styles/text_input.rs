@@ -3,8 +3,30 @@ use iced::{widget::text_input::{Appearance, StyleSheet}, Border, Color, Theme};
 use super::BORDER_RADIUS;
 
 pub struct TextInputStyle {
-	pub round_left: bool,
-	pub round_right: bool,
+	pub round_left_top: bool,
+	pub round_right_top: bool,
+	pub round_right_bottom: bool,
+	pub round_left_bottom: bool,
+}
+
+impl TextInputStyle {
+	pub const ONLY_ROUND_LEFT: Self = Self {
+		round_left_top: true,
+		round_right_top: false,
+		round_right_bottom: false,
+		round_left_bottom: true,
+	};
+}
+
+impl Default for TextInputStyle {
+	fn default() -> Self {
+		Self {
+			round_left_top: true,
+			round_right_top: true,
+			round_right_bottom: true,
+			round_left_bottom: true,
+		}
+	}
 }
 
 impl StyleSheet for TextInputStyle {
@@ -17,10 +39,10 @@ impl StyleSheet for TextInputStyle {
 			background: palette.background.base.color.into(),
 			border: Border {
 				radius: [
-					if self.round_left { BORDER_RADIUS } else { 0.0 },
-					if self.round_right { BORDER_RADIUS } else { 0.0 },
-					if self.round_right { BORDER_RADIUS } else { 0.0 },
-					if self.round_left { BORDER_RADIUS } else { 0.0 },
+					if self.round_left_top { BORDER_RADIUS } else { 0.0 },
+					if self.round_right_top { BORDER_RADIUS } else { 0.0 },
+					if self.round_right_bottom { BORDER_RADIUS } else { 0.0 },
+					if self.round_left_bottom { BORDER_RADIUS } else { 0.0 },
 				].into(),
 				width: 1.0,
 				color: palette.background.strong.color,

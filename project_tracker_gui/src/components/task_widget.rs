@@ -3,7 +3,7 @@ use iced::{theme, widget::{button, checkbox, column, container, container::Id, r
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{CancelButtonStyle, DropZoneContainerStyle, RoundedSecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{DropZoneContainerStyle, SecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
@@ -20,9 +20,10 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 		unfocusable(
 			text_editor(&edit_task_state.new_name)
 				.on_action(|action| ProjectPageMessage::TaskNameAction(action).into())
-				.style(theme::TextEditor::Custom(Box::new(TextEditorStyle{
+				.style(theme::TextEditor::Custom(Box::new(TextEditorStyle {
 					round_top_left: task_tags.iter().next().map(|(tag_id, _tag)| !task.tags.contains(&tag_id)).unwrap_or(true), // is the first tag enabled?
 					round_top_right: false,
+					round_bottom_left: false,
 					round_bottom_right: edit_task_state.new_name.line_count() > 1 // multiline?
 				}))),
 
@@ -103,7 +104,12 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 							}
 						})
 						.on_submit(ProjectPageMessage::StopEditingTaskNeededTime.into())
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle{ round_left: true, round_right: false }))),
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle{
+							round_left_top: false,
+							round_left_bottom: true,
+							round_right_top: false,
+							round_right_bottom: false
+						}))),
 
 						stop_editing_task_message
 					);
@@ -126,7 +132,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 						)
 						.padding(SMALL_HORIZONTAL_PADDING)
 						.on_press(ProjectPageMessage::EditTaskNeededTime.into())
-						.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+						.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_BOTTOM))
 					)
 				},
 
@@ -146,7 +152,10 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 						)
 						.padding(SMALL_HORIZONTAL_PADDING)
 						.on_press(ProjectPageMessage::EditTaskDueDate.into())
-						.style(theme::Button::custom(CancelButtonStyle{ round_left: true, round_right: false })),
+						.style(theme::Button::custom(SecondaryButtonStyle {
+							round_left_bottom: true,
+							..SecondaryButtonStyle::NO_ROUNDING
+						})),
 						clear_task_due_date_button(),
 					]
 					.into()
@@ -158,7 +167,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 						)
 						.padding(SMALL_HORIZONTAL_PADDING)
 						.on_press(ProjectPageMessage::EditTaskDueDate.into())
-						.style(theme::Button::custom(RoundedSecondaryButtonStyle))
+						.style(theme::Button::custom(SecondaryButtonStyle::default()))
 					)
 				},
 			]

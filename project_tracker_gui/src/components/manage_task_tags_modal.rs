@@ -196,7 +196,7 @@ impl ManageTaskTagsModal {
 							text_input("tag name", edited_name)
 								.on_input(move |new_name| ManageTaskTagsModalMessage::ChangeEditTaskTagName(new_name).into())
 								.on_submit(ManageTaskTagsModalMessage::ChangeTaskTagName.into())
-								.style(theme::TextInput::Custom(Box::new(TextInputStyle{ round_left: true, round_right: false })))
+								.style(theme::TextInput::Custom(Box::new(TextInputStyle::ONLY_ROUND_LEFT)))
 								.into()
 						}
 						else {
@@ -248,7 +248,7 @@ impl ManageTaskTagsModal {
 										.id(CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID.clone())
 										.on_input(|new_name| ManageTaskTagsModalMessage::ChangeCreateNewTaskTagName(new_name).into())
 										.on_submit(ManageTaskTagsModalMessage::CreateNewTaskTag.into())
-										.style(theme::TextInput::Custom(Box::new(TextInputStyle{ round_left: true, round_right: false }))),
+										.style(theme::TextInput::Custom(Box::new(TextInputStyle::ONLY_ROUND_LEFT))),
 
 									ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into()
 								),

@@ -145,7 +145,7 @@ impl SidebarPage {
 						.size(LARGE_TEXT_SIZE)
 						.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
 						.on_submit(SidebarPageMessage::CreateNewProject(ProjectId::generate()).into())
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle { round_left: true, round_right: true }))),
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle::default()))),
 
 					SidebarPageMessage::CloseCreateNewProject.into()
 				)
