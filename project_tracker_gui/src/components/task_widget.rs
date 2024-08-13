@@ -3,13 +3,11 @@ use iced::{theme, widget::{button, checkbox, column, container, container::Id, r
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{DropZoneContainerStyle, SecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
-use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons};
-
-use super::{date_text, date_widget};
+use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, date_text, in_between_dropzone, date_widget};
 
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -21,7 +19,14 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 			text_editor(&edit_task_state.new_name)
 				.on_action(|action| ProjectPageMessage::TaskNameAction(action).into())
 				.style(theme::TextEditor::Custom(Box::new(TextEditorStyle {
-					round_top_left: task_tags.iter().next().map(|(tag_id, _tag)| !task.tags.contains(&tag_id)).unwrap_or(true), // is the first tag enabled?
+					// is the first tag enabled?
+					round_top_left: task_tags
+						.iter()
+						.next()
+						.map(|(tag_id, _tag)|
+							!task.tags.contains(&tag_id)
+						)
+						.unwrap_or(true),
 					round_top_right: false,
 					round_bottom_left: false,
 					round_bottom_right: edit_task_state.new_name.line_count() > 1 // multiline?
@@ -248,31 +253,32 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 		.align_items(Alignment::Start)
 		.into();
 
-		droppable(
-			container(
-				inner
-			)
-			.id(if task.state.is_todo() {
-				task.dropzone_id.clone()
-			}
-			else {
-				Id::unique()
-			})
-			.padding(Padding::new(SMALL_PADDING_AMOUNT))
-			.style(if highlight {
-					theme::Container::Custom(Box::new(DropZoneContainerStyle{ highlight }))
+		column![
+			in_between_dropzone(
+				if task.state.is_todo() {
+					task.dropzone_id.clone()
 				}
 				else {
-					theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging }))
-				})
-		)
-		.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
-		.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, task_state: task.state, point, rect }.into())
-		.on_click(ProjectPageMessage::PressTask(task_id).into())
-		.on_cancel(SidebarPageMessage::CancelDragTask.into())
-		.drag_overlay(!just_minimal_dragging)
-		.drag_hide(!just_minimal_dragging)
-		.style(theme::Button::custom(HiddenSecondaryButtonStyle))
+					Id::unique()
+				},
+				highlight
+			),
+
+			droppable(
+				container(
+					inner
+				)
+				.padding(Padding::new(SMALL_PADDING_AMOUNT))
+				.style(theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging })))
+			)
+			.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
+			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, task_state: task.state, point, rect }.into())
+			.on_click(ProjectPageMessage::PressTask(task_id).into())
+			.on_cancel(SidebarPageMessage::CancelDragTask.into())
+			.drag_overlay(!just_minimal_dragging)
+			.drag_hide(!just_minimal_dragging)
+			.style(theme::Button::custom(HiddenSecondaryButtonStyle))
+		]
 		.into()
 	}
 }

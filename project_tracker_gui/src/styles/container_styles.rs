@@ -39,27 +39,40 @@ impl StyleSheet for PaletteContainerStyle {
 	}
 }
 
-pub const DROP_HIGHLIGHT_WIDTH: f32 = 2.0;
-
-pub struct DropZoneContainerStyle {
-	pub highlight: bool
+pub struct DropzoneContainerStyle {
+	pub highlight: bool,
 }
 
-impl StyleSheet for DropZoneContainerStyle {
+impl StyleSheet for DropzoneContainerStyle {
 	type Style = Theme;
 
 	fn appearance(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
 			background: None,
 			border: Border {
-				color: color!(0x3584e4), // highlight color
-				width: if self.highlight { DROP_HIGHLIGHT_WIDTH } else { 0.0 },
-				radius: BORDER_RADIUS.into()
+				color: color!(0x3584e4),
+				width: if self.highlight { 2.0 } else { 0.0 },
+				radius: BORDER_RADIUS.into(),
 			},
-			shadow: Shadow {
-				color: Color::BLACK,
-				offset: Vector::default(),
-				blur_radius: if self.highlight { 20.0 } else { 0.0 },
+			..Default::default()
+		}
+	}
+}
+
+pub struct InBetweenDropzoneContainerStyle {
+	pub highlight: bool
+}
+
+impl StyleSheet for InBetweenDropzoneContainerStyle {
+	type Style = Theme;
+
+	fn appearance(&self, _style: &Self::Style) -> Appearance {
+		Appearance {
+			background: if self.highlight {
+				Some(color!(0x3584e4).into())
+			}
+			else {
+				None
 			},
 			..Default::default()
 		}

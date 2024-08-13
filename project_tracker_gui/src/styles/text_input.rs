@@ -16,6 +16,13 @@ impl TextInputStyle {
 		round_right_bottom: false,
 		round_left_bottom: true,
 	};
+
+	pub const NO_ROUNDING: Self = Self {
+		round_left_top: false,
+		round_right_top: false,
+		round_right_bottom: false,
+		round_left_bottom: false,
+	};
 }
 
 impl Default for TextInputStyle {

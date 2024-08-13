@@ -514,13 +514,13 @@ impl ProjectPage {
 						&self.edited_task,
 						self.dragged_task,
 						self.just_minimal_dragging,
-						app.sidebar_page.task_being_task_hovered,
+						app.sidebar_page.task_dropzone_hovered,
 						self.show_done_tasks,
 						&self.create_new_task,
 						app.preferences.as_ref().map(|pref| pref.date_formatting()).unwrap_or_default()
 					),
 				]
-				.spacing(SPACING_AMOUNT)
+				// .spacing(SPACING_AMOUNT) this is not needed since every task in the list has a SPACING_AMOUNT height dropzone
 				.width(Length::Fill)
 				.height(Length::Fill)
 				.into()

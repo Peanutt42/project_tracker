@@ -21,7 +21,10 @@ pub struct Project {
 	pub tasks: OrderedHashMap<TaskId, Task>,
 
 	#[serde(skip, default = "Id::unique")]
-	pub preview_dropzone_id: Id,
+	pub project_dropzone_id: Id,
+
+	#[serde(skip, default = "Id::unique")]
+	pub task_dropzone_id: Id,
 }
 
 impl Project {
@@ -31,8 +34,31 @@ impl Project {
 			color: SerializableColor::default(),
 			task_tags: OrderedHashMap::new(),
 			tasks: OrderedHashMap::new(),
-			preview_dropzone_id: Id::unique(),
+			project_dropzone_id: Id::unique(),
+			task_dropzone_id: Id::unique(),
 		}
+	}
+
+	pub fn has_same_content_as(&self, other: &Project) -> bool {
+		if self.name != other.name ||
+			self.color != other.color ||
+			self.task_tags != other.task_tags
+		{
+			return false;
+		}
+
+		for (task_id, task) in self.tasks.iter() {
+			if let Some(other_task) = other.tasks.get(&task_id) {
+				if !task.has_same_content_as(other_task) {
+					return false;
+				}
+			}
+			else {
+				return false;
+			}
+		}
+
+		true
 	}
 
 	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: BTreeSet<TaskTagId>) {
@@ -58,7 +84,7 @@ impl Project {
 				}
 			},
 			TaskState::Done => {
-				self.tasks.move_to_bottom(&task_id);
+				self.tasks.move_to_end(&task_id);
 			},
 		}
 

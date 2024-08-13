@@ -1,5 +1,5 @@
 mod sidebar_page;
-pub use sidebar_page::{SidebarPage, SidebarPageMessage};
+pub use sidebar_page::{SidebarPage, SidebarPageMessage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID};
 
 mod project_page;
 pub use project_page::{ProjectPage, ProjectPageMessage, EditTaskState, CachedTaskList};

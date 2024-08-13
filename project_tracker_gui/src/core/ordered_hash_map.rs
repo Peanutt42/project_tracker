@@ -56,6 +56,56 @@ impl<K, V> OrderedHashMap<K, V>
 		}
 	}
 
+	pub fn move_to_end(&mut self, key: &K) {
+		if let Some(order) = self.get_order(key) {
+			for i in order..self.order.len()-1 {
+				self.order.swap(i, i + 1);
+			}
+		}
+	}
+
+	/// Moves item with `key` before the item with `other_key`.
+	/// Therefore `get_order(key) = get_order(other_key) - 1` must be true
+	pub fn move_before_other(&mut self, key: K, other_key: K) {
+		if let Some(order) = self.get_order(&key) {
+			if let Some(other_order) = self.get_order(&other_key) {
+				// already before other
+				if order == other_order - 1 {
+					return;
+				}
+
+				if order < other_order {
+					for i in order..other_order-1 {
+						self.order.swap(i, i + 1);
+					}
+				}
+				else {
+					for i in (other_order..order).rev() {
+						self.order.swap(i, i + 1);
+					}
+				}
+			}
+		}
+	}
+
+	pub fn move_before_other_with_order(&mut self, order: usize, other_order: usize) {
+		// already before other
+		if order == other_order - 1 {
+			return;
+		}
+
+		if order < other_order {
+			for i in order..other_order-1 {
+				self.order.swap(i, i + 1);
+			}
+		}
+		else {
+			for i in (other_order..order).rev() {
+				self.order.swap(i, i + 1);
+			}
+		}
+	}
+
 	pub fn swap_order(&mut self, key_a: &K, key_b: &K) {
 		if let Some(order_a) = self.get_order(key_a) {
 			if let Some(order_b) = self.get_order(key_b) {
@@ -94,14 +144,6 @@ impl<K, V> OrderedHashMap<K, V>
 			self.order.remove(old_order);
 			self.order.insert(order, key);
 		}
-	}
-
-	pub fn move_to_bottom(&mut self, key: &K) {
-		if let Some(index) = self.get_order(key) {
-			self.order.remove(index);
-		}
-
-		self.order.push(*key);
 	}
 
 	pub fn len(&self) -> usize {

@@ -54,10 +54,11 @@ pub enum DatabaseMessage {
 	},
 	MoveProjectUp(ProjectId),
 	MoveProjectDown(ProjectId),
-	SwapProjectOrder {
-		project_a_id: ProjectId,
-		project_b_id: ProjectId,
+	MoveProjectBeforeOtherProject {
+		project_id: ProjectId,
+		other_project_id: ProjectId,
 	},
+	MoveProjectToEnd(ProjectId),
 	DeleteProject(ProjectId),
 	DeleteDoneTasks(ProjectId),
 
@@ -106,10 +107,10 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 	},
-	SwapTasks {
+	MoveTaskBeforeOtherTask {
 		project_id: ProjectId,
-		task_a_id: TaskId,
-		task_b_id: TaskId,
+		task_id: TaskId,
+		other_task_id: TaskId,
 	},
 	DeleteTask {
 		project_id: ProjectId,
@@ -181,7 +182,22 @@ impl Database {
 	}
 
 	pub fn has_same_content_as(&self, other: &Database) -> bool {
-		self.projects == other.projects
+		if self.projects.len() != other.projects.len() {
+			return false;
+		}
+
+		for (project_id, project) in self.projects.iter() {
+			if let Some(other_project) = other.projects.get(&project_id) {
+				if !project.has_same_content_as(other_project) {
+					return false;
+				}
+			}
+			else {
+				return false;
+			}
+		}
+
+		true
 	}
 
 	fn modified(&mut self) {
@@ -278,20 +294,26 @@ impl Database {
 				self.modify(|projects| projects.move_down(&project_id));
 				Command::none()
 			},
-			DatabaseMessage::SwapTasks { project_id, task_a_id, task_b_id } => {
+			DatabaseMessage::MoveTaskBeforeOtherTask { project_id, task_id, other_task_id } => {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
-						project.tasks.swap_order(&task_a_id, &task_b_id);
+						project.tasks.move_before_other(task_id, other_task_id);
 					}
 				});
 				Command::none()
 			},
-			DatabaseMessage::SwapProjectOrder { project_a_id, project_b_id } => {
+			DatabaseMessage::MoveProjectBeforeOtherProject { project_id, other_project_id } => {
 				self.modify(|projects| {
-					projects.swap_order(&project_a_id, &project_b_id);
+					projects.move_before_other(project_id, other_project_id);
 				});
 				Command::none()
 			},
+			DatabaseMessage::MoveProjectToEnd(project_id) => {
+				self.modify(|projects| {
+					projects.move_to_end(&project_id);
+				});
+				Command::none()
+			}
 			DatabaseMessage::DeleteProject(project_id) => {
 				self.modify(|projects| { projects.remove(&project_id); });
 				Command::none()

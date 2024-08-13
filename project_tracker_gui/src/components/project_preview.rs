@@ -1,10 +1,10 @@
-use iced::{alignment::Horizontal, theme, widget::{container, container::Id, row, text}, Alignment, Border, Color, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{column, container, container::Id, row, text, Space}, Alignment, Border, Color, Element, Length, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use iced_drop::droppable;
-use crate::{pages::SidebarPageMessage, project_tracker::UiMessage, styles::DROP_HIGHLIGHT_WIDTH};
-use crate::styles::{ProjectPreviewButtonStyle, DropZoneContainerStyle, ProjectPreviewBackgroundContainerStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_PADDING_AMOUNT};
+use crate::{pages::SidebarPageMessage, project_tracker::UiMessage, styles::{DropzoneContainerStyle, SPACING_AMOUNT}};
+use crate::styles::{ProjectPreviewButtonStyle, ProjectPreviewBackgroundContainerStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_PADDING_AMOUNT};
 use crate::core::{Project, ProjectId};
-use crate::components::cancel_create_project_button;
+use crate::components::{cancel_create_project_button, in_between_dropzone};
 
 pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
 const DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT: f32 = 35.0;
@@ -21,25 +21,27 @@ pub fn project_color_block(color: Color, height: f32) -> Element<'static, UiMess
 	.into()
 }
 
-pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool, dropzone_highlight: bool, dragging: bool, just_minimal_dragging: bool) -> Element<UiMessage> {
+pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool, project_dropzone_highlight: bool, task_dropzone_highlight: bool, dragging: bool, just_minimal_dragging: bool) -> Element<UiMessage> {
 	let inner_text_element = text(&project.name).size(LARGE_TEXT_SIZE).into();
 
 	custom_project_preview(
 		Some(project_id),
-		Some(project.preview_dropzone_id.clone()),
+		Some(project.project_dropzone_id.clone()),
+		Some(project.task_dropzone_id.clone()),
 		project.color.into(),
 		project.get_tasks_done(),
 		project.tasks.len(),
 		inner_text_element,
 		selected,
-		dropzone_highlight,
+		project_dropzone_highlight,
+		task_dropzone_highlight,
 		dragging,
 		just_minimal_dragging
 	)
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option<Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, dropzone_highlight: bool, dragging: bool, just_minimal_dragging: bool) -> Element<UiMessage> {
+pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id: Option<Id>, task_dropzone_id: Option<Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, project_dropzone_highlight: bool, task_dropzone_highlight: bool, dragging: bool, just_minimal_dragging: bool) -> Element<UiMessage> {
 	let inner = container(
 		row![
 			project_color_block(project_color, DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT),
@@ -71,37 +73,38 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, dropzone_id: Option
 	)
 	.style(theme::Container::Custom(Box::new(ProjectPreviewBackgroundContainerStyle{ dragging })));
 
-	let underlay =
-		container(
-			inner
-		)
-		.id(
-			dropzone_id.unwrap_or(container::Id::unique())
-		)
-		.width(Length::Fill)
-		.padding(Padding::new(DROP_HIGHLIGHT_WIDTH))
-		.style(theme::Container::Custom(Box::new(DropZoneContainerStyle{ highlight: dropzone_highlight })));
-
 	if let Some(project_id) = project_id {
-		droppable(
-			underlay
-		)
-		.on_drop(move |point, rect| SidebarPageMessage::DropProject { project_id, point, rect }.into())
-		.on_drag(move |point, rect| SidebarPageMessage::DragProject { project_id, point, rect }.into())
-		.on_click(SidebarPageMessage::ClickProject(project_id).into())
-		.on_cancel(SidebarPageMessage::CancelDragProject.into())
-		.drag_overlay(!just_minimal_dragging)
-		.drag_hide(!just_minimal_dragging)
-		.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected }))
+		column![
+			in_between_dropzone(project_dropzone_id.unwrap_or(container::Id::unique()), project_dropzone_highlight),
+
+			droppable(
+				container(
+					inner
+				)
+				.id(task_dropzone_id.unwrap_or(container::Id::unique()))
+				.style(theme::Container::Custom(Box::new(DropzoneContainerStyle { highlight: task_dropzone_highlight })))
+			)
+			.on_drop(move |point, rect| SidebarPageMessage::DropProject { project_id, point, rect }.into())
+			.on_drag(move |point, rect| SidebarPageMessage::DragProject { project_id, point, rect }.into())
+			.on_click(SidebarPageMessage::ClickProject(project_id).into())
+			.on_cancel(SidebarPageMessage::CancelDragProject.into())
+			.drag_overlay(!just_minimal_dragging)
+			.drag_hide(!just_minimal_dragging)
+			.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected })),
+		]
 		.into()
 	}
 	else {
-		row![
-			underlay,
-			cancel_create_project_button()
+		column![
+			Space::new(Length::Fill, SPACING_AMOUNT),
+
+			row![
+				inner,
+				cancel_create_project_button()
+			]
+			.align_items(Alignment::Center)
+			.width(Length::Fill)
 		]
-		.align_items(Alignment::Center)
-		.width(Length::Fill)
    		.into()
 	}
 }
