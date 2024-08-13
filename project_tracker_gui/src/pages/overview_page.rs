@@ -22,15 +22,12 @@ impl OverviewPage {
 	fn todo_tasks_list(projects: &OrderedHashMap<ProjectId, Project>) -> Element<UiMessage> {
 		scrollable(
 			Column::from_vec(projects.iter()
-				.filter(|(_project_id, project)| {
-					project.tasks.values()
-						.filter(|t| t.is_todo())
-						.count() != 0
-				})
+				.filter(|(_project_id, project)|
+					!project.todo_tasks.is_empty()
+				)
 				.map(|(project_id, project)| {
-					let task_list = project.tasks.iter()
-						.filter(|(_, task)| task.is_todo())
-						.map(|(_, task)| {
+					let task_list = project.todo_tasks.iter()
+						.map(|(_task_id, task)| {
 							row![
 								text("\u{2022}"), // bullet-point:'•'
 								text(&task.name)

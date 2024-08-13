@@ -5,7 +5,7 @@ use iced::Command;
 use serde::{Serialize, Deserialize};
 use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskState, TaskTagId, TaskTag, SerializableDate};
+use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskTagId, TaskTag, SerializableDate};
 
 fn default_false() -> bool { false }
 
@@ -79,10 +79,13 @@ pub enum DatabaseMessage {
 		task_id: TaskId,
 		new_task_name: String,
 	},
-	ChangeTaskState {
+	SetTaskTodo {
 		project_id: ProjectId,
 		task_id: TaskId,
-		new_task_state: TaskState,
+	},
+	SetTaskDone {
+		project_id: ProjectId,
+		task_id: TaskId,
 	},
 	ChangeTaskNeededTime {
 		project_id: ProjectId,
@@ -98,14 +101,6 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		task_tag_id: TaskTagId,
-	},
-	MoveTaskUp {
-		project_id: ProjectId,
-		task_id: TaskId,
-	},
-	MoveTaskDown {
-		project_id: ProjectId,
-		task_id: TaskId,
 	},
 	MoveTaskBeforeOtherTask {
 		project_id: ProjectId,
@@ -297,7 +292,7 @@ impl Database {
 			DatabaseMessage::MoveTaskBeforeOtherTask { project_id, task_id, other_task_id } => {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
-						project.tasks.move_before_other(task_id, other_task_id);
+						project.todo_tasks.move_before_other(task_id, other_task_id);
 					}
 				});
 				Command::none()
@@ -321,13 +316,7 @@ impl Database {
 			DatabaseMessage::DeleteDoneTasks(project_id) => {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
-						let done_tasks: Vec<TaskId> = project.tasks.iter()
-							.filter(|(_task_id, task)| task.is_done())
-							.map(|(task_id, _task)| task_id)
-							.collect();
-						for task_id in done_tasks {
-							project.tasks.remove(&task_id);
-						}
+						project.done_tasks.clear();
 					}
 				});
 				Command::none()
@@ -335,12 +324,12 @@ impl Database {
 
 			DatabaseMessage::MoveTask { task_id, src_project_id, dst_project_id } => {
 				self.modify(|projects| {
-					let removed_task: Option<Task> = projects
+					let removed_task: Option<(bool, Task)> = projects
 						.get_mut(&src_project_id)
-						.map(|src_project| src_project.tasks.remove(&task_id))
+						.map(|src_project| src_project.remove_task(&task_id))
 						.unwrap_or(None);
 
-					if let Some(task) = removed_task {
+					if let Some((task_was_todo, task)) = removed_task {
 						let missing_tags = projects
 							.get(&dst_project_id)
 							.and_then(|dst_project| {
@@ -365,7 +354,12 @@ impl Database {
 								dst_project.task_tags.insert(tag_id, tag);
 							}
 
-							dst_project.tasks.insert(task_id, task);
+							if task_was_todo {
+								dst_project.todo_tasks.insert(task_id, task);
+							}
+							else {
+								dst_project.done_tasks.insert(task_id, task);
+							}
 						}
 					}
 				});
@@ -388,10 +382,18 @@ impl Database {
 				});
 				Command::none()
 			},
-			DatabaseMessage::ChangeTaskState { project_id, task_id, new_task_state } => {
+			DatabaseMessage::SetTaskTodo { project_id, task_id } => {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
-						project.set_task_state(task_id, new_task_state);
+						project.set_task_todo(task_id);
+					}
+				});
+				Command::none()
+			},
+			DatabaseMessage::SetTaskDone { project_id, task_id } => {
+				self.modify(|projects| {
+					if let Some(project) = projects.get_mut(&project_id) {
+						project.set_task_done(task_id);
 					}
 				});
 				Command::none()
@@ -420,26 +422,10 @@ impl Database {
 				});
 				Command::none()
 			},
-			DatabaseMessage::MoveTaskUp { project_id, task_id } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.tasks.move_up(&task_id);
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::MoveTaskDown { project_id, task_id } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.tasks.move_down(&task_id);
-					}
-				});
-				Command::none()
-			},
 			DatabaseMessage::DeleteTask { project_id, task_id } => {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
-						project.tasks.remove(&task_id);
+						project.remove_task(&task_id);
 					}
 				});
 				Command::none()
@@ -481,7 +467,10 @@ impl Database {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
 						project.task_tags.remove(&task_tag_id);
-						for task in project.tasks.values_mut() {
+						for task in project.todo_tasks.values_mut() {
+							task.tags.remove(&task_tag_id);
+						}
+						for task in project.done_tasks.values_mut() {
 							task.tags.remove(&task_tag_id);
 						}
 					}

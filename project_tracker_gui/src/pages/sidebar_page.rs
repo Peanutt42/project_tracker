@@ -1,7 +1,7 @@
 use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
 use iced_drop::find_zones;
 use once_cell::sync::Lazy;
-use crate::{components::{in_between_dropzone, horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId, TaskState}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, SMALL_SPACING_AMOUNT}};
+use crate::{components::{in_between_dropzone, horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, SMALL_SPACING_AMOUNT}};
 use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
@@ -33,7 +33,7 @@ pub enum SidebarPageMessage {
 	DragTask {
 		project_id: ProjectId,
 		task_id: TaskId,
-		task_state: TaskState,
+		is_task_todo: bool,
 		point: Point,
 		rect: Rectangle,
 	},
@@ -229,14 +229,7 @@ impl SidebarPage {
 									.map(|db| {
 										db.modify(|projects| {
 											if let Some(project) = projects.get_mut(&project_id) {
-												for (other_task_id, task) in project.tasks.iter() {
-													if task.is_done() {
-														project.tasks.move_before_other(task_id, other_task_id);
-														return;
-													}
-												}
-
-												project.tasks.move_to_end(&task_id);
+												project.todo_tasks.move_to_end(&task_id);
 											}
 										});
 										Command::none()
@@ -267,7 +260,7 @@ impl SidebarPage {
 							self.task_dropzone_hovered = Some(TaskDropzone::Project(dst_project_id));
 							break;
 						}
-						for (task_id, task) in dst_project.tasks.iter() {
+						for (task_id, task) in dst_project.todo_tasks.iter() {
 							if is_hovered(task.dropzone_id.clone().into()) {
 								self.task_dropzone_hovered = Some(TaskDropzone::Task(task_id));
 								break;
@@ -280,8 +273,8 @@ impl SidebarPage {
 				}
 				Command::none()
 			},
-			SidebarPageMessage::DragTask { project_id, task_id, task_state, rect, .. } => {
-				let options = Self::task_dropzone_options(database, project_id, task_id, task_state.is_todo());
+			SidebarPageMessage::DragTask { project_id, task_id, is_task_todo, rect, .. } => {
+				let options = Self::task_dropzone_options(database, project_id, task_id, is_task_todo);
 				find_zones(
 					move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
 					move |zone_bounds| zone_bounds.intersects(&rect),
@@ -463,14 +456,10 @@ impl SidebarPage {
 			for (project_id, project) in database.projects().iter() {
 				if project_id == project_exception {
 					if is_task_todo {
-						let mut last_todo_task_id = None;
-						let mut last_task_id = None;
+						let last_task_id = project.todo_tasks.get_key_at_order(project.todo_tasks.len() - 1);
 						let mut skip_task_order = None;
 
-						for (i, (task_id, task)) in project.tasks.iter().enumerate() {
-							if task.is_done() {
-								last_todo_task_id = last_task_id;
-							}
+						for (i, (task_id, task)) in project.todo_tasks.iter().enumerate() {
 							if task_id == task_exception {
 								skip_task_order = Some(i + 1);
 							}
@@ -480,15 +469,9 @@ impl SidebarPage {
 									_ => options.push(task.dropzone_id.clone().into()),
 								}
 							}
-							last_task_id = Some(task_id);
 						}
-						if let Some(last_todo_task_id) = last_todo_task_id {
-							if task_exception != last_todo_task_id {
-								options.push(BOTTOM_TODO_TASK_DROPZONE_ID.clone().into());
-							}
-						}
-						else if let Some(last_task_id) = last_task_id {
-							if task_exception != last_task_id {
+						if let Some(last_task_id) = last_task_id {
+							if task_exception != *last_task_id {
 								options.push(BOTTOM_TODO_TASK_DROPZONE_ID.clone().into());
 							}
 						}

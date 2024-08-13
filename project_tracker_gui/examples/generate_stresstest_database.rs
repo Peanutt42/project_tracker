@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, path::PathBuf};
 
-use project_tracker_gui::core::{Database, Project, ProjectId, Task, TaskState};
+use project_tracker_gui::core::{Database, Project, ProjectId, Task};
 
 #[tokio::main]
 async fn main() {
@@ -9,8 +9,13 @@ async fn main() {
 	for i in 0..1000 {
 		let mut project = Project::new(format!("{i}. Project"));
 		for j in 0..1000 {
-			let task = Task::new(format!("{j}. Task"), if j % 2 == 0 { TaskState::Todo } else { TaskState::Done }, BTreeSet::new());
-			project.tasks.insert(j, task);
+			let task = Task::new(format!("{j}. Task"), BTreeSet::new());
+			if j % 2 == 0 {
+				project.todo_tasks.insert(j, task);
+			}
+			else {
+				project.done_tasks.insert(j, task);
+			}
 		}
 		db.modify(|projects| projects.insert(ProjectId(i), project));
 	}

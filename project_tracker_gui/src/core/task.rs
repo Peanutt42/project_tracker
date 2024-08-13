@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use iced::widget::container::Id;
 use iced_aw::date_picker::Date;
 use serde::{Serialize, Deserialize};
-use crate::core::{TaskState, TaskTagId};
+use crate::core::TaskTagId;
 
 pub type TaskId = usize;
 
@@ -13,7 +13,6 @@ pub fn generate_task_id() -> TaskId {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Task {
 	pub name: String,
-	pub state: TaskState,
 	pub needed_time_minutes: Option<usize>,
 	pub due_date: Option<SerializableDate>,
 	pub tags: BTreeSet<TaskTagId>,
@@ -23,10 +22,9 @@ pub struct Task {
 }
 
 impl Task {
-	pub fn new(name: String, state: TaskState, tags: BTreeSet<TaskTagId>) -> Self {
+	pub fn new(name: String, tags: BTreeSet<TaskTagId>) -> Self {
 		Self {
 			name,
-			state,
 			needed_time_minutes: None,
 			due_date: None,
 			tags,
@@ -36,18 +34,9 @@ impl Task {
 
 	pub fn has_same_content_as(&self, other: &Task) -> bool {
 		self.name == other.name &&
-		self.state == other.state &&
 		self.needed_time_minutes == other.needed_time_minutes &&
 		self.due_date == other.due_date &&
 		self.tags == other.tags
-	}
-
-	pub fn is_done(&self) -> bool {
-		self.state.is_done()
-	}
-
-	pub fn is_todo(&self) -> bool {
-		self.state.is_todo()
 	}
 
 	pub fn matches_filter(&self, filter: &BTreeSet<TaskTagId>) -> bool {

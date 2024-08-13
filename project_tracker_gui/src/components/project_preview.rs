@@ -1,7 +1,7 @@
-use iced::{alignment::Horizontal, theme, widget::{column, container, container::Id, row, text, Space}, Alignment, Border, Color, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{column, container, container::Id, row, text}, Alignment, Border, Color, Element, Length, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use iced_drop::droppable;
-use crate::{pages::SidebarPageMessage, project_tracker::UiMessage, styles::{DropzoneContainerStyle, SPACING_AMOUNT}};
+use crate::{pages::SidebarPageMessage, project_tracker::UiMessage, styles::DropzoneContainerStyle};
 use crate::styles::{ProjectPreviewButtonStyle, ProjectPreviewBackgroundContainerStyle, SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_PADDING_AMOUNT};
 use crate::core::{Project, ProjectId};
 use crate::components::{cancel_create_project_button, in_between_dropzone};
@@ -29,8 +29,8 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool,
 		Some(project.project_dropzone_id.clone()),
 		Some(project.task_dropzone_id.clone()),
 		project.color.into(),
-		project.get_tasks_done(),
-		project.tasks.len(),
+		project.tasks_done(),
+		project.total_tasks(),
 		inner_text_element,
 		selected,
 		project_dropzone_highlight,
@@ -95,16 +95,12 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id
 		.into()
 	}
 	else {
-		column![
-			Space::new(Length::Fill, SPACING_AMOUNT),
-
-			row![
-				inner,
-				cancel_create_project_button()
-			]
-			.align_items(Alignment::Center)
-			.width(Length::Fill)
+		row![
+			inner,
+			cancel_create_project_button()
 		]
+		.align_items(Alignment::Center)
+		.width(Length::Fill)
    		.into()
 	}
 }

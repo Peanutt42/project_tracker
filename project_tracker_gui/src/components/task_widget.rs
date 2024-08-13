@@ -3,7 +3,7 @@ use iced::{theme, widget::{button, checkbox, column, container, container::Id, r
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskState, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
@@ -13,7 +13,7 @@ pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text
 pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edit_task_state: Option<&'a EditTaskState>, dragging: bool, just_minimal_dragging: bool, highlight: bool, date_formatting: DateFormatting) -> Element<'a, UiMessage> {
+pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edit_task_state: Option<&'a EditTaskState>, dragging: bool, just_minimal_dragging: bool, highlight: bool, date_formatting: DateFormatting) -> Element<'a, UiMessage> {
 	let inner_text_element: Element<UiMessage> = if let Some(edit_task_state) = edit_task_state {
 		unfocusable(
 			text_editor(&edit_task_state.new_name)
@@ -38,7 +38,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 	}
 	else {
 		(
-			if task.is_todo() {
+			if is_task_todo {
 				text(&task.name)
 			}
 			else {
@@ -46,11 +46,11 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 			}
 		)
 		.style(
-			if task.is_done() {
-				theme::Text::Color(GREY)
+			if is_task_todo {
+				theme::Text::Default
 			}
 			else {
-				theme::Text::Default
+				theme::Text::Color(GREY)
 			}
 		)
 		.width(Length::Shrink)
@@ -195,19 +195,14 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 
 		let inner: Element<UiMessage> = row![
 			container(
-				checkbox("", task.state.is_done())
+				checkbox("", !is_task_todo)
 					.on_toggle(move |checked| {
-						DatabaseMessage::ChangeTaskState {
-							project_id,
-							task_id,
-							new_task_state:
-								if checked {
-									TaskState::Done
-								}
-								else {
-									TaskState::Todo
-								},
-						}.into()
+						if checked {
+							DatabaseMessage::SetTaskDone { project_id, task_id }.into()
+						}
+						else {
+							DatabaseMessage::SetTaskTodo { project_id, task_id }.into()
+						}
 					})
 					.style(theme::Checkbox::Custom(Box::new(GreenCheckboxStyle)))
 			)
@@ -255,7 +250,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 
 		column![
 			in_between_dropzone(
-				if task.state.is_todo() {
+				if is_task_todo {
 					task.dropzone_id.clone()
 				}
 				else {
@@ -272,7 +267,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, project_id: ProjectId, t
 				.style(theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging })))
 			)
 			.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
-			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, task_state: task.state, point, rect }.into())
+			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, is_task_todo, point, rect }.into())
 			.on_click(ProjectPageMessage::PressTask(task_id).into())
 			.on_cancel(SidebarPageMessage::CancelDragTask.into())
 			.drag_overlay(!just_minimal_dragging)

@@ -79,26 +79,34 @@ impl EditTaskState {
 
 #[derive(Debug, Clone)]
 pub struct CachedTaskList {
-	pub list: Vec<TaskId>,
+	pub todo: Vec<TaskId>,
+	pub done: Vec<TaskId>,
 	cache_time: Instant,
 }
 
 impl CachedTaskList {
-	pub fn new(list: Vec<TaskId>) -> Self {
+	pub fn new(todo: Vec<TaskId>, done: Vec<TaskId>) -> Self {
 		Self {
-			list,
+			todo,
+			done,
 			cache_time: Instant::now(),
 		}
 	}
 
 	pub fn generate(project: &Project, task_tag_filter: &BTreeSet<TaskTagId>) -> Self {
-		let mut task_list = Vec::new();
-		for (task_id, task) in project.tasks.iter() {
+		let mut todo_list = Vec::new();
+		for (task_id, task) in project.todo_tasks.iter() {
 			if task.matches_filter(task_tag_filter) {
-				task_list.push(task_id);
+				todo_list.push(task_id);
 			}
 		}
-		Self::new(task_list)
+		let mut done_list = Vec::new();
+		for (task_id, task) in project.done_tasks.iter() {
+			if task.matches_filter(task_tag_filter) {
+				done_list.push(*task_id);
+			}
+		}
+		Self::new(todo_list, done_list)
 	}
 }
 
@@ -234,8 +242,7 @@ impl ProjectPage {
 				let task_name = database.as_ref().and_then(|db| {
 					db.projects().get(&self.project_id)
 						.and_then(|project|
-							project.tasks
-								.get(&task_id)
+							project.get_task(&task_id)
 								.map(|task| task.name.clone())
 						)
 				}).unwrap_or_default();
@@ -391,10 +398,6 @@ impl ProjectPage {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
 		if let Some(database) = &app.database {
 			if let Some(project) = database.projects().get(&self.project_id) {
-				let tasks_done = project.get_tasks_done();
-				let tasks_len = project.tasks.len();
-				let completion_percentage = Project::calculate_completion_percentage(tasks_done, tasks_len);
-
 				let project_name : Element<UiMessage> = if let Some(edited_project_name) = &self.edited_project_name {
 					unfocusable(
 						text_input("New project name", edited_project_name)
@@ -473,8 +476,15 @@ impl ProjectPage {
 						.width(Length::Fill),
 
 						row![
-							text(format!("{tasks_done}/{tasks_len} finished ({}%)", (completion_percentage * 100.0).round()))
-								.width(Length::Fill),
+							text(
+								format!(
+									"{}/{} finished ({}%)",
+									project.tasks_done(),
+									project.total_tasks(),
+									(project.get_completion_percentage() * 100.0).round()
+								)
+							)
+							.width(Length::Fill),
 
 							container(create_new_task_button(self.create_new_task.is_none()))
 								.width(Length::Fill)
@@ -502,7 +512,7 @@ impl ProjectPage {
 						.spacing(SPACING_AMOUNT)
 						.align_items(Alignment::Center),
 
-						completion_bar(completion_percentage),
+						completion_bar(project.get_completion_percentage()),
 					]
 					.padding(Padding::new(PADDING_AMOUNT))
 					.spacing(SPACING_AMOUNT),

@@ -1,8 +1,7 @@
-use std::collections::BTreeSet;
-
+use std::collections::{BTreeSet, HashMap};
 use serde::{Serialize, Deserialize};
 use iced::{widget::container::Id, Color};
-use crate::core::{OrderedHashMap, Task, TaskId, TaskState, TaskTag, TaskTagId, SerializableDate};
+use crate::core::{OrderedHashMap, Task, TaskId, TaskTag, TaskTagId, SerializableDate};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
 pub struct ProjectId(pub usize);
@@ -18,7 +17,8 @@ pub struct Project {
 	pub name: String,
 	pub color: SerializableColor,
 	pub task_tags: OrderedHashMap<TaskTagId, TaskTag>,
-	pub tasks: OrderedHashMap<TaskId, Task>,
+	pub todo_tasks: OrderedHashMap<TaskId, Task>,
+	pub done_tasks: HashMap<TaskId, Task>,
 
 	#[serde(skip, default = "Id::unique")]
 	pub project_dropzone_id: Id,
@@ -33,12 +33,103 @@ impl Project {
 			name,
 			color: SerializableColor::default(),
 			task_tags: OrderedHashMap::new(),
-			tasks: OrderedHashMap::new(),
+			todo_tasks: OrderedHashMap::new(),
+			done_tasks: HashMap::new(),
 			project_dropzone_id: Id::unique(),
 			task_dropzone_id: Id::unique(),
 		}
 	}
 
+	/// task can be todo or done
+	pub fn get_task(&self, task_id: &TaskId) -> Option<&Task> {
+		self.todo_tasks
+			.get(task_id)
+			.or(self.done_tasks.get(task_id))
+	}
+
+	/// task can be todo or done
+	pub fn get_task_mut(&mut self, task_id: &TaskId) -> Option<&mut Task> {
+		self.todo_tasks
+			.get_mut(task_id)
+			.or(self.done_tasks.get_mut(task_id))
+	}
+
+	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: BTreeSet<TaskTagId>) {
+		self.todo_tasks.insert(task_id, Task::new(name, tags));
+	}
+
+	/// task can be todo or done
+	/// returns Option of whether the task was todo and the task
+	pub fn remove_task(&mut self, task_id: &TaskId) -> Option<(bool, Task)> {
+		self.todo_tasks
+			.remove(task_id)
+			.map(|task| (true, task))
+			.or(
+				self.done_tasks
+					.remove(task_id)
+					.map(|task| (false, task))
+			)
+	}
+
+	pub fn set_task_name(&mut self, task_id: TaskId, new_name: String) {
+		if let Some(task) = self.get_task_mut(&task_id) {
+			task.name = new_name;
+		}
+	}
+
+	pub fn set_task_todo(&mut self, task_id: TaskId) {
+		if let Some(task) = self.done_tasks.remove(&task_id) {
+			self.todo_tasks.insert(task_id, task);
+		}
+	}
+
+	pub fn set_task_done(&mut self, task_id: TaskId) {
+		if let Some(task) = self.todo_tasks.remove(&task_id) {
+			self.done_tasks.insert(task_id, task);
+		}
+	}
+
+	pub fn set_task_needed_time(&mut self, task_id: TaskId, new_needed_time_minutes: Option<usize>) {
+		if let Some(task) = self.get_task_mut(&task_id) {
+			task.needed_time_minutes = new_needed_time_minutes;
+		}
+	}
+
+	pub fn set_task_due_date(&mut self, task_id: TaskId, new_due_date: Option<SerializableDate>) {
+		if let Some(task) = self.get_task_mut(&task_id) {
+			task.due_date = new_due_date;
+		}
+	}
+
+	pub fn toggle_task_tag(&mut self, task_id: TaskId, task_tag_id: TaskTagId) {
+		if let Some(task) = self.get_task_mut(&task_id) {
+			if task.tags.contains(&task_tag_id) {
+				task.tags.remove(&task_tag_id);
+			}
+			else {
+				task.tags.insert(task_tag_id);
+			}
+		}
+	}
+
+	pub fn total_tasks(&self) -> usize {
+		self.todo_tasks.len() + self.done_tasks.len()
+	}
+
+	pub fn tasks_done(&self) -> usize {
+		self.done_tasks.len()
+	}
+
+	pub fn get_completion_percentage(&self) -> f32 {
+		let tasks_done = self.done_tasks.len();
+		match tasks_done {
+			0 => 0.0,
+			_ => tasks_done as f32 / self.total_tasks() as f32,
+		}
+	}
+
+
+	// ignores iced unique id's, probably only for tests
 	pub fn has_same_content_as(&self, other: &Project) -> bool {
 		if self.name != other.name ||
 			self.color != other.color ||
@@ -47,8 +138,19 @@ impl Project {
 			return false;
 		}
 
-		for (task_id, task) in self.tasks.iter() {
-			if let Some(other_task) = other.tasks.get(&task_id) {
+		for (task_id, task) in self.todo_tasks.iter() {
+			if let Some(other_task) = other.todo_tasks.get(&task_id) {
+				if !task.has_same_content_as(other_task) {
+					return false;
+				}
+			}
+			else {
+				return false;
+			}
+		}
+
+		for (task_id, task) in self.done_tasks.iter() {
+			if let Some(other_task) = other.done_tasks.get(task_id) {
 				if !task.has_same_content_as(other_task) {
 					return false;
 				}
@@ -59,81 +161,6 @@ impl Project {
 		}
 
 		true
-	}
-
-	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: BTreeSet<TaskTagId>) {
-		self.tasks.insert(task_id, Task::new(name, TaskState::Todo, tags));
-	}
-
-	pub fn set_task_name(&mut self, task_id: TaskId, new_name: String) {
-		if let Some(task) = self.tasks.get_mut(&task_id) {
-			task.name = new_name;
-		}
-	}
-
-	pub fn set_task_state(&mut self, task_id: TaskId, new_state: TaskState) {
-		// reorder
-		match new_state {
-			TaskState::Todo => {
-				// put new todo task at the top of the done tasks / at the end of all todo tasks
-				for (i, (_task_id, task)) in self.tasks.iter().enumerate() {
-					if task.is_done() {
-						self.tasks.move_to(task_id, i);
-						break;
-					}
-				}
-			},
-			TaskState::Done => {
-				self.tasks.move_to_end(&task_id);
-			},
-		}
-
-		if let Some(task) = self.tasks.get_mut(&task_id) {
-			task.state = new_state;
-		}
-	}
-
-	pub fn set_task_needed_time(&mut self, task_id: TaskId, new_needed_time_minutes: Option<usize>) {
-		if let Some(task) = self.tasks.get_mut(&task_id) {
-			task.needed_time_minutes = new_needed_time_minutes;
-		}
-	}
-
-	pub fn set_task_due_date(&mut self, task_id: TaskId, new_due_date: Option<SerializableDate>) {
-		if let Some(task) = self.tasks.get_mut(&task_id) {
-			task.due_date = new_due_date;
-		}
-	}
-
-	pub fn toggle_task_tag(&mut self, task_id: TaskId, task_tag_id: TaskTagId) {
-		if let Some(task) = self.tasks.get_mut(&task_id) {
-			if task.tags.contains(&task_tag_id) {
-				task.tags.remove(&task_tag_id);
-			}
-			else {
-				task.tags.insert(task_tag_id);
-			}
-		}
-	}
-
-	pub fn get_tasks_done(&self) -> usize {
-		self.tasks
-			.values()
-			.filter(|t| t.is_done())
-			.count()
-	}
-
-	pub fn calculate_completion_percentage(tasks_done: usize, task_count: usize) -> f32 {
-		if task_count == 0 {
-			0.0
-		}
-		else {
-			tasks_done as f32 / task_count as f32
-		}
-	}
-
-	pub fn get_completion_percentage(&self) -> f32 {
-		Self::calculate_completion_percentage(self.get_tasks_done(), self.tasks.len())
 	}
 }
 

@@ -14,9 +14,8 @@ pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_
 pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_list: &'a CachedTaskList, edited_task: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, just_minimal_dragging: bool, hovered_task_dropzone: Option<TaskDropzone>, show_done_tasks: bool, create_new_task: &'a Option<(String, BTreeSet<TaskTagId>)>, date_formatting: DateFormatting) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
-	let mut done_task_count = 0; // always counts how many, independant of 'show_done_tasks' (matching the filter)
 
-	let task_view = |task_id: TaskId, task: &'a Task| {
+	let task_view = |task_id: TaskId, task: &'a Task, is_todo: bool| {
 		let edited_name = match edited_task {
 			Some(edit_task_state) if task_id == edit_task_state.task_id => Some(edit_task_state),
 			_ => None,
@@ -29,19 +28,18 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 			Some(TaskDropzone::Task(hovered_task_id)) => hovered_task_id == task_id,
 			_ => false,
 		};
-		task_widget(task, task_id, project_id, &project.task_tags, edited_name, dragging, just_minimal_dragging, highlight, date_formatting)
+		task_widget(task, task_id, is_todo, project_id, &project.task_tags, edited_name, dragging, just_minimal_dragging, highlight, date_formatting)
 	};
 
-	for task_id in cached_task_list.list.iter() {
-		if let Some(task) = project.tasks.get(task_id) {
-			if task.is_todo() {
-				todo_task_elements.push(task_view(*task_id, task));
-			}
-			else {
-				done_task_count += 1;
-				if show_done_tasks {
-					done_task_elements.push(task_view(*task_id, task));
-				}
+	for task_id in cached_task_list.todo.iter() {
+		if let Some(task) = project.todo_tasks.get(task_id) {
+			todo_task_elements.push(task_view(*task_id, task, true));
+		}
+	}
+	if show_done_tasks {
+		for task_id in cached_task_list.done.iter() {
+			if let Some(task) = project.done_tasks.get(task_id) {
+				done_task_elements.push(task_view(*task_id, task, false));
 			}
 		}
 	}
@@ -82,6 +80,7 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 				]
 				.align_items(Alignment::Center)
 			]
+			.padding(Padding{ top: SPACING_AMOUNT as f32, ..Padding::ZERO })
 			.into();
 
 		todo_task_elements.push(create_new_task_element)
@@ -91,13 +90,13 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 	todo_task_elements.push(in_between_dropzone(BOTTOM_TODO_TASK_DROPZONE_ID.clone(), highlight_bottom_todo_task_dropzone));
 
 	let show_tasks_button: Element<UiMessage> =
-		if done_task_count == 0 {
+		if cached_task_list.done.is_empty() {
 			column![].into()
 		}
 		else {
 			container(
 				row![
-					show_done_tasks_button(show_done_tasks, done_task_count)
+					show_done_tasks_button(show_done_tasks, cached_task_list.done.len())
 				]
 				.push_maybe(
 					if done_task_elements.is_empty() {
