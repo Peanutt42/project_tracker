@@ -1,5 +1,6 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 use serde::{Serialize, Deserialize};
+use indexmap::IndexMap;
 use iced::{widget::container::Id, Color};
 use crate::core::{OrderedHashMap, Task, TaskId, TaskTag, TaskTagId, SerializableDate};
 
@@ -18,7 +19,8 @@ pub struct Project {
 	pub color: SerializableColor,
 	pub task_tags: OrderedHashMap<TaskTagId, TaskTag>,
 	pub todo_tasks: OrderedHashMap<TaskId, Task>,
-	pub done_tasks: HashMap<TaskId, Task>,
+	#[serde(with = "indexmap::map::serde_seq")]
+	pub done_tasks: IndexMap<TaskId, Task>,
 
 	#[serde(skip, default = "Id::unique")]
 	pub project_dropzone_id: Id,
@@ -34,7 +36,7 @@ impl Project {
 			color: SerializableColor::default(),
 			task_tags: OrderedHashMap::new(),
 			todo_tasks: OrderedHashMap::new(),
-			done_tasks: HashMap::new(),
+			done_tasks: IndexMap::new(),
 			project_dropzone_id: Id::unique(),
 			task_dropzone_id: Id::unique(),
 		}
@@ -66,7 +68,7 @@ impl Project {
 			.map(|task| (true, task))
 			.or(
 				self.done_tasks
-					.remove(task_id)
+					.shift_remove(task_id)
 					.map(|task| (false, task))
 			)
 	}
@@ -78,7 +80,7 @@ impl Project {
 	}
 
 	pub fn set_task_todo(&mut self, task_id: TaskId) {
-		if let Some(task) = self.done_tasks.remove(&task_id) {
+		if let Some(task) = self.done_tasks.shift_remove(&task_id) {
 			self.todo_tasks.insert(task_id, task);
 		}
 	}

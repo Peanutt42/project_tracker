@@ -1780,6 +1780,7 @@ checksum = "93ead53efc7ea8ed3cfb0c79fc8023fbb782a5432b52830b6518941cebe6505c"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.5",
+ "serde",
 ]
 
 [[package]]
@@ -2660,6 +2661,7 @@ dependencies = [
  "iced",
  "iced_aw",
  "iced_drop",
+ "indexmap",
  "once_cell",
  "open",
  "pretty-duration",
