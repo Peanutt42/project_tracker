@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
 use once_cell::sync::Lazy;
 use crate::{core::{DateFormatting, Project, TaskTagId}, pages::{CachedTaskList, EditTaskState, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
@@ -11,7 +11,7 @@ pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_list: &'a CachedTaskList, edited_task: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, just_minimal_dragging: bool, hovered_task_dropzone: Option<TaskDropzone>, show_done_tasks: bool, create_new_task: &'a Option<(String, BTreeSet<TaskTagId>)>, date_formatting: DateFormatting) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_list: &'a CachedTaskList, edited_task: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, just_minimal_dragging: bool, hovered_task_dropzone: Option<TaskDropzone>, show_done_tasks: bool, create_new_task: &'a Option<(String, HashSet<TaskTagId>)>, date_formatting: DateFormatting) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 

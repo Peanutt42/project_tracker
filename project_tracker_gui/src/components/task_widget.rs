@@ -182,14 +182,9 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 	}
 	else {
 		let tags_element = Row::with_children(
-			task.tags
-				.iter()
-				.map(|tag_id| {
-					task_tags
-						.get(tag_id)
-						.map(TaskTag::view)
-						.unwrap_or("<invalid tag id>".into())
-				})
+			task_tags.iter()
+				.filter(|(tag_id, _tag)| task.tags.contains(tag_id))
+				.map(|(_tag_id, tag)| tag.view())
 		)
 		.spacing(TINY_SPACING_AMOUNT);
 

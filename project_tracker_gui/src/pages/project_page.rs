@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, time::Instant};
+use std::{collections::HashSet, time::Instant};
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point};
 use once_cell::sync::Lazy;
 use crate::{
@@ -93,7 +93,7 @@ impl CachedTaskList {
 		}
 	}
 
-	pub fn generate(project: &Project, task_tag_filter: &BTreeSet<TaskTagId>) -> Self {
+	pub fn generate(project: &Project, task_tag_filter: &HashSet<TaskTagId>) -> Self {
 		let mut todo_list = Vec::new();
 		for (task_id, task) in project.todo_tasks.iter() {
 			if task.matches_filter(task_tag_filter) {
@@ -115,11 +115,11 @@ pub struct ProjectPage {
 	pub project_id: ProjectId,
 	pub cached_task_list: CachedTaskList,
 	edited_project_name: Option<String>,
-	pub create_new_task: Option<(String, BTreeSet<TaskTagId>)>,
+	pub create_new_task: Option<(String, HashSet<TaskTagId>)>,
 	edited_task: Option<EditTaskState>,
 	show_done_tasks: bool,
 	show_color_picker: bool,
-	filter_task_tags: BTreeSet<TaskTagId>,
+	filter_task_tags: HashSet<TaskTagId>,
 	pressed_task: Option<TaskId>,
 	dragged_task: Option<TaskId>,
 	start_dragging_point: Option<Point>,
@@ -128,7 +128,7 @@ pub struct ProjectPage {
 
 impl ProjectPage {
 	pub fn new(project_id: ProjectId, project: &Project) -> Self {
-		let cached_task_list = CachedTaskList::generate(project, &BTreeSet::new());
+		let cached_task_list = CachedTaskList::generate(project, &HashSet::new());
 
 		Self {
 			project_id,
@@ -138,7 +138,7 @@ impl ProjectPage {
 			edited_task: None,
 			show_done_tasks: false,
 			show_color_picker: false,
-			filter_task_tags: BTreeSet::new(),
+			filter_task_tags: HashSet::new(),
 			pressed_task: None,
 			dragged_task: None,
 			start_dragging_point: None,
@@ -151,7 +151,7 @@ impl ProjectPage {
 	pub fn update(&mut self, message: ProjectPageMessage, database: &mut Option<Database>) -> Command<UiMessage> {
 		let command = match message {
 			ProjectPageMessage::OpenCreateNewTask => {
-				self.create_new_task = Some((String::new(), BTreeSet::new()));
+				self.create_new_task = Some((String::new(), HashSet::new()));
 				Command::batch([
 					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
 					scrollable::snap_to(TASK_LIST_ID.clone(), RelativeOffset::END),

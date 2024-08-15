@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use iced::widget::container::Id;
 use iced_aw::date_picker::Date;
 use serde::{Serialize, Deserialize};
@@ -15,14 +15,14 @@ pub struct Task {
 	pub name: String,
 	pub needed_time_minutes: Option<usize>,
 	pub due_date: Option<SerializableDate>,
-	pub tags: BTreeSet<TaskTagId>,
+	pub tags: HashSet<TaskTagId>,
 
 	#[serde(skip, default = "Id::unique")]
 	pub dropzone_id: Id,
 }
 
 impl Task {
-	pub fn new(name: String, tags: BTreeSet<TaskTagId>) -> Self {
+	pub fn new(name: String, tags: HashSet<TaskTagId>) -> Self {
 		Self {
 			name,
 			needed_time_minutes: None,
@@ -39,7 +39,7 @@ impl Task {
 		self.tags == other.tags
 	}
 
-	pub fn matches_filter(&self, filter: &BTreeSet<TaskTagId>) -> bool {
+	pub fn matches_filter(&self, filter: &HashSet<TaskTagId>) -> bool {
 		for tag_id in filter.iter() {
 			if !self.tags.contains(tag_id) {
 				return false;

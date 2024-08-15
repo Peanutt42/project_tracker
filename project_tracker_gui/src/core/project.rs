@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use serde::{Serialize, Deserialize};
 use indexmap::IndexMap;
 use iced::{widget::container::Id, Color};
@@ -56,7 +56,7 @@ impl Project {
 			.or(self.done_tasks.get_mut(task_id))
 	}
 
-	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: BTreeSet<TaskTagId>) {
+	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: HashSet<TaskTagId>) {
 		self.todo_tasks.insert(task_id, Task::new(name, tags));
 	}
 

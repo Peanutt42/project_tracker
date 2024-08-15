@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, path::PathBuf};
+use std::{collections::HashSet, path::PathBuf};
 
 use project_tracker_gui::core::{Database, Project, ProjectId, Task};
 
@@ -9,7 +9,7 @@ async fn main() {
 	for i in 0..1000 {
 		let mut project = Project::new(format!("{i}. Project"));
 		for j in 0..1000 {
-			let task = Task::new(format!("{j}. Task"), BTreeSet::new());
+			let task = Task::new(format!("{j}. Task"), HashSet::new());
 			if j % 2 == 0 {
 				project.todo_tasks.insert(j, task);
 			}

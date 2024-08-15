@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{HashSet, HashMap};
 use std::path::PathBuf;
 use std::time::Instant;
 use iced::Command;
@@ -72,7 +72,7 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		task_name: String,
-		task_tags: BTreeSet<TaskTagId>,
+		task_tags: HashSet<TaskTagId>,
 	},
 	ChangeTaskName {
 		project_id: ProjectId,
