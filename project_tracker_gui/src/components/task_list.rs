@@ -111,7 +111,12 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 					}
 				)
 			)
-			.padding(Padding{ left: LARGE_PADDING_AMOUNT, right: PADDING_AMOUNT, top: LARGE_PADDING_AMOUNT, bottom: 0.0 })
+			.padding(Padding{
+				left: LARGE_PADDING_AMOUNT,
+				right: LARGE_PADDING_AMOUNT,
+				top: PADDING_AMOUNT,
+				bottom: if show_done_tasks { 0.0 } else { PADDING_AMOUNT },
+			})
 			.into()
 		};
 
@@ -125,7 +130,6 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 			Column::with_children(done_task_elements)
 				.padding(HORIZONTAL_PADDING),
 		]
-		.spacing(SPACING_AMOUNT)
 	)
 	.id(TASK_LIST_ID.clone())
 	.width(Length::Fill)
