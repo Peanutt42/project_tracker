@@ -1,5 +1,5 @@
 use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
-use iced_drop::find_zones;
+use iced_drop::{find_zones, zones_on_point};
 use once_cell::sync::Lazy;
 use crate::{components::{in_between_dropzone, horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, SMALL_SPACING_AMOUNT}};
 use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
@@ -25,6 +25,12 @@ pub enum SidebarPageMessage {
 		point: Point,
 		rect: Rectangle,
 	},
+	/// Handles Project Dropzones only for tasks being dropped onto them
+	HandleProjectZonesForTasks {
+		project_id: ProjectId,
+		task_id: TaskId,
+		zones: Vec<(Id, Rectangle)>
+	},
 	HandleTaskZones {
 		project_id: ProjectId,
 		task_id: TaskId,
@@ -33,7 +39,6 @@ pub enum SidebarPageMessage {
 	DragTask {
 		project_id: ProjectId,
 		task_id: TaskId,
-		is_task_todo: bool,
 		point: Point,
 		rect: Rectangle,
 	},
@@ -244,43 +249,62 @@ impl SidebarPage {
 				self.task_dropzone_hovered = None;
 				Command::none()
 			},
-			SidebarPageMessage::HandleTaskZones{ zones, .. } => {
+			SidebarPageMessage::HandleProjectZonesForTasks { zones, .. } => {
 				self.task_dropzone_hovered = None;
-				let is_hovered = |target_id| {
-					for (id, _bounds) in zones.iter() {
-						if *id == target_id {
-							return true;
-						}
-					}
-					false
-				};
 				if let Some(projects) = database.as_ref().map(|db| db.projects()) {
 					for (dst_project_id, dst_project) in projects.iter() {
-						if is_hovered(dst_project.task_dropzone_id.clone().into()) {
-							self.task_dropzone_hovered = Some(TaskDropzone::Project(dst_project_id));
-							break;
+						for (id, _bounds) in zones.iter() {
+							if *id == dst_project.task_dropzone_id.clone().into() {
+								self.task_dropzone_hovered = Some(TaskDropzone::Project(dst_project_id));
+								break;
+							}
 						}
-						for (task_id, task) in dst_project.todo_tasks.iter() {
+					}
+				}
+				Command::none()
+			},
+			SidebarPageMessage::HandleTaskZones{ zones, project_id, .. } => {
+				if !zones.is_empty() && !matches!(self.task_dropzone_hovered, Some(TaskDropzone::Project(_))) {
+					self.task_dropzone_hovered = None;
+					let is_hovered = |target_id| {
+						for (id, _bounds) in zones.iter() {
+							if *id == target_id {
+								return true;
+							}
+						}
+						false
+					};
+					if let Some(project) = database.as_ref().and_then(|db| db.projects().get(&project_id)) {
+						for (task_id, task) in project.todo_tasks.iter() {
 							if is_hovered(task.dropzone_id.clone().into()) {
 								self.task_dropzone_hovered = Some(TaskDropzone::Task(task_id));
 								break;
 							}
 						}
-					}
-					if is_hovered(BOTTOM_TODO_TASK_DROPZONE_ID.clone().into()) {
-						self.task_dropzone_hovered = Some(TaskDropzone::EndOfTodoTaskList);
+						if is_hovered(BOTTOM_TODO_TASK_DROPZONE_ID.clone().into()) {
+							self.task_dropzone_hovered = Some(TaskDropzone::EndOfTodoTaskList);
+						}
 					}
 				}
 				Command::none()
 			},
-			SidebarPageMessage::DragTask { project_id, task_id, is_task_todo, rect, .. } => {
-				let options = Self::task_dropzone_options(database, project_id, task_id, is_task_todo);
-				find_zones(
-					move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
-					move |zone_bounds| zone_bounds.intersects(&rect),
-					options,
-					None
-				)
+			SidebarPageMessage::DragTask { project_id, task_id, rect, point } => {
+				let project_options = Self::project_dropzones_for_tasks_options(database, project_id);
+				let task_options = Self::task_dropzone_options(database, project_id, task_id);
+				Command::batch([
+					zones_on_point(
+						move |zones| SidebarPageMessage::HandleProjectZonesForTasks { project_id, task_id, zones }.into(),
+						point,
+						project_options,
+						None
+					),
+					find_zones(
+						move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
+						move |zone_bounds| zone_bounds.intersects(&rect),
+						task_options,
+						None
+					)
+				])
 			},
 
 			SidebarPageMessage::DropProject { .. } => {
@@ -449,37 +473,49 @@ impl SidebarPage {
 		})
 	}
 
-	fn task_dropzone_options(database: &Option<Database>, project_exception: ProjectId, task_exception: TaskId, is_task_todo: bool) -> Option<Vec<Id>> {
+	fn project_dropzones_for_tasks_options(database: &Option<Database>, exception: ProjectId) -> Option<Vec<Id>> {
+		database.as_ref().map(|database| {
+			database.projects().iter().filter_map(|(project_id, project)| {
+				if project_id == exception {
+					None
+				}
+				else {
+					Some(project.task_dropzone_id.clone().into())
+				}
+			})
+			.collect()
+		})
+	}
+
+	fn task_dropzone_options(database: &Option<Database>, project_exception: ProjectId, task_exception: TaskId) -> Option<Vec<Id>> {
 		if let Some(database) = database {
 			let mut options = Vec::new();
 
 			for (project_id, project) in database.projects().iter() {
 				if project_id == project_exception {
-					if is_task_todo {
-						let last_task_id = project.todo_tasks.get_key_at_order(project.todo_tasks.len() - 1);
-						let mut skip_task_order = None;
+					let last_task_id = project.todo_tasks.get_key_at_order(project.todo_tasks.len() - 1);
+					let mut skip_task_order = None;
 
-						for (i, (task_id, task)) in project.todo_tasks.iter().enumerate() {
-							if task_id == task_exception {
-								skip_task_order = Some(i + 1);
-							}
-							else {
-								match skip_task_order {
-									Some(skip_order) if i == skip_order => skip_task_order = None,
-									_ => options.push(task.dropzone_id.clone().into()),
-								}
-							}
+					for (i, (task_id, task)) in project.todo_tasks.iter().enumerate() {
+						if task_id == task_exception {
+							skip_task_order = Some(i + 1);
 						}
-						if let Some(last_task_id) = last_task_id {
-							if task_exception != *last_task_id {
-								options.push(BOTTOM_TODO_TASK_DROPZONE_ID.clone().into());
+						else {
+							match skip_task_order {
+								Some(skip_order) if i == skip_order => skip_task_order = None,
+								_ => options.push(task.dropzone_id.clone().into()),
 							}
 						}
 					}
+					if let Some(last_task_id) = last_task_id {
+						if task_exception != *last_task_id {
+							options.push(BOTTOM_TODO_TASK_DROPZONE_ID.clone().into());
+						}
+					}
 				}
-				else {
+				/*else {
 					options.push(project.task_dropzone_id.clone().into());
-				}
+				}*/
 			}
 
 			Some(options)

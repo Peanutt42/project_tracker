@@ -262,7 +262,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 				.style(theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging })))
 			)
 			.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
-			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, is_task_todo, point, rect }.into())
+			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, point, rect }.into())
 			.on_click(ProjectPageMessage::PressTask(task_id).into())
 			.on_cancel(SidebarPageMessage::CancelDragTask.into())
 			.drag_overlay(!just_minimal_dragging)
