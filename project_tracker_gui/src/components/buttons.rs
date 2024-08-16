@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::{ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, PreferenceMessage, ProjectId, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, SecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage, date_text}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, SecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -321,6 +321,35 @@ pub fn clear_task_due_date_button() -> Button<'static, UiMessage> {
 	.on_press(ProjectPageMessage::ClearTaskDueDate.into())
 	.style(theme::Button::custom(SecondaryButtonStyle {
 		round_right_bottom: true,
+		..SecondaryButtonStyle::NO_ROUNDING
+	}))
+}
+
+pub fn add_due_date_button() -> Button<'static, UiMessage> {
+	button(
+		row![
+			icon_to_text(Bootstrap::CalendarCheck),
+			text("Add due date")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+	)
+	.padding(SMALL_HORIZONTAL_PADDING)
+	.on_press(ProjectPageMessage::EditTaskDueDate.into())
+	.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_BOTTOM))
+}
+
+pub fn edit_due_date_button(due_date: &SerializableDate, date_formatting: DateFormatting) -> Button<'static, UiMessage> {
+	button(
+		row![
+			icon_to_text(Bootstrap::CalendarCheck),
+			date_text(due_date, date_formatting)
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+	)
+	.padding(SMALL_HORIZONTAL_PADDING)
+	.on_press(ProjectPageMessage::EditTaskDueDate.into())
+	.style(theme::Button::custom(SecondaryButtonStyle {
+		round_left_bottom: true,
 		..SecondaryButtonStyle::NO_ROUNDING
 	}))
 }

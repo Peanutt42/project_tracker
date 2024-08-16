@@ -1,13 +1,14 @@
 use std::{borrow::Cow, time::Duration, str::FromStr};
 use iced::{theme, widget::{button, checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length, Padding};
+use iced_aw::{Bootstrap, core::icons::bootstrap::icon_to_text};
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
-use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, date_text, in_between_dropzone, date_widget};
+use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, in_between_dropzone, date_widget, add_due_date_button, edit_due_date_button};
 
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -128,12 +129,16 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 				else {
 					Element::new(
 						button(
-							if let Some(needed_duration_minutes) = &task.needed_time_minutes {
-								duration_text(Cow::Owned(Duration::from_secs(*needed_duration_minutes as u64 * 60)))
-							}
-							else {
-								text("Add needed time")
-							}
+							row![
+								icon_to_text(Bootstrap::Stopwatch),
+								if let Some(needed_duration_minutes) = &task.needed_time_minutes {
+									duration_text(Cow::Owned(Duration::from_secs(*needed_duration_minutes as u64 * 60)))
+								}
+								else {
+									text("Add needed time")
+								}
+							]
+							.spacing(SMALL_SPACING_AMOUNT)
 						)
 						.padding(SMALL_HORIZONTAL_PADDING)
 						.on_press(ProjectPageMessage::EditTaskNeededTime.into())
@@ -152,28 +157,13 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 				}
 				else if let Some(due_date) = &task.due_date {
 					row![
-						button(
-							date_text(due_date, date_formatting)
-						)
-						.padding(SMALL_HORIZONTAL_PADDING)
-						.on_press(ProjectPageMessage::EditTaskDueDate.into())
-						.style(theme::Button::custom(SecondaryButtonStyle {
-							round_left_bottom: true,
-							..SecondaryButtonStyle::NO_ROUNDING
-						})),
+						edit_due_date_button(due_date, date_formatting),
 						clear_task_due_date_button(),
 					]
 					.into()
 				}
 				else {
-					Element::new(
-						button(
-							text("Add due date")
-						)
-						.padding(SMALL_HORIZONTAL_PADDING)
-						.on_press(ProjectPageMessage::EditTaskDueDate.into())
-						.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_BOTTOM))
-					)
+					Element::new(add_due_date_button())
 				},
 			]
 			.spacing(SPACING_AMOUNT),
