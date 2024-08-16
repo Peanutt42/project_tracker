@@ -53,7 +53,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 				theme::Text::Color(GREY)
 			}
 		)
-		.width(Length::Shrink)
+		.width(Length::Fill)
 		.into()
 	};
 
@@ -219,23 +219,24 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 				else {
 					Some(tags_element)
 				})
-				.push(inner_text_element)
-				.push_maybe(
-					if task.needed_time_minutes.is_some() || task.due_date.is_some() {
-						Some(
-							Row::new()
-								.push_maybe(
-									task.needed_time_minutes.map(|duration_minutes| duration_widget(Cow::Owned(Duration::from_secs(duration_minutes as u64 * 60))))
-								)
-								.push_maybe(
-									task.due_date.as_ref().map(|due_date| date_widget(due_date, date_formatting))
-								)
-								.spacing(SPACING_AMOUNT)
+				.push(
+					Row::new()
+						.push(inner_text_element)
+						.push_maybe(
+							if task.needed_time_minutes.is_some() || task.due_date.is_some() {
+								Some(
+									Column::new()
+										.push_maybe(task.due_date.as_ref().map(|due_date| date_widget(due_date, date_formatting)))
+										.push_maybe(task.needed_time_minutes.map(|duration_minutes| duration_widget(Cow::Owned(Duration::from_secs(duration_minutes as u64 * 60)))))
+										.spacing(TINY_SPACING_AMOUNT)
+										.align_items(Alignment::End)
+										.into()
+								) as Option<Element<UiMessage>>
+							}
+							else {
+								None
+							}
 						)
-					}
-					else {
-						None
-					}
 				)
 				.spacing(TINY_SPACING_AMOUNT)
 		]
