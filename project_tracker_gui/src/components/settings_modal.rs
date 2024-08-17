@@ -1,8 +1,8 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, row, text}, Alignment, Command, Element, Length};
 use iced_aw::{card, Bootstrap, CardStyles, ModalStyles};
-use crate::components::{dangerous_button, file_location, filepath_widget, horizontal_seperator, sync_database_button, browse_synchronization_filepath_button, clear_synchronization_filepath_button};
+use crate::components::{dangerous_button, file_location, filepath_widget, horizontal_seperator, sync_database_button, select_synchronization_filepath_button, clear_synchronization_filepath_button};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
-use crate::styles::{LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT, ModalCardStyle, ModalStyle, RoundedContainerStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
+use crate::styles::{LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT, ModalCardStyle, ModalStyle, RoundedContainerStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 
 #[derive(Debug, Clone)]
@@ -13,8 +13,6 @@ pub enum SettingsModalMessage {
 	BrowseSynchronizationFilepath,
 	BrowseSynchronizationFilepathCanceled,
 
-	ToggleExpandDateFormatting,
-	DismissDateFormatting,
 	SetDateFormatting(DateFormatting),
 }
 
@@ -26,9 +24,7 @@ impl From<SettingsModalMessage> for UiMessage {
 
 #[derive(Debug, Clone, Default)]
 pub enum SettingsModal {
-	Opened {
-		date_formatting_expanded: bool,
-	},
+	Opened,
 	#[default]
 	Closed,
 }
@@ -41,7 +37,7 @@ impl SettingsModal {
 	pub fn update(&mut self, message: SettingsModalMessage, preferences: &mut Option<Preferences>) -> Command<UiMessage> {
 		match message {
 			SettingsModalMessage::Open => {
-				*self = SettingsModal::Opened{ date_formatting_expanded: false };
+				*self = SettingsModal::Opened;
 				Command::none()
 			},
 			SettingsModalMessage::Close => {
@@ -60,29 +56,13 @@ impl SettingsModal {
 			),
 			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => Command::none(),
 
-			SettingsModalMessage::ToggleExpandDateFormatting => {
-				if let SettingsModal::Opened { date_formatting_expanded } = self {
-					*date_formatting_expanded = !(*date_formatting_expanded);
-				}
-				Command::none()
-			},
-			SettingsModalMessage::DismissDateFormatting => {
-				if let SettingsModal::Opened { date_formatting_expanded } = self {
-					*date_formatting_expanded = false;
-				}
-				Command::none()
-			},
 			SettingsModalMessage::SetDateFormatting(date_formatting) => {
-				let command = if let Some(preferences) = preferences {
+				if let Some(preferences) = preferences {
 					preferences.update(PreferenceMessage::SetDateFormatting(date_formatting))
 				}
 				else {
 					Command::none()
-				};
-				Command::batch([
-					command,
-					self.update(SettingsModalMessage::DismissDateFormatting, preferences)
-				])
+				}
 			}
 		}
 	}
@@ -90,7 +70,7 @@ impl SettingsModal {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<(Element<UiMessage>, ModalStyles)> {
 		match self {
 			SettingsModal::Closed => None,
-			SettingsModal::Opened{ date_formatting_expanded } => {
+			SettingsModal::Opened => {
 				if let Some(preferences) = &app.preferences {
 					let shortcut = |name, shortcut| {
 						row![
@@ -111,7 +91,7 @@ impl SettingsModal {
 								column![
 									text("Preferences").size(LARGE_TEXT_SIZE),
 
-									preferences.view(*date_formatting_expanded),
+									preferences.view(),
 								],
 
 								horizontal_seperator(),
@@ -139,7 +119,7 @@ impl SettingsModal {
 
 										clear_synchronization_filepath_button(),
 
-										browse_synchronization_filepath_button(),
+										select_synchronization_filepath_button(),
 									]
 									.spacing(SPACING_AMOUNT)
 									.align_items(Alignment::Center),
@@ -186,10 +166,10 @@ impl SettingsModal {
 								]
 								.spacing(SMALL_SPACING_AMOUNT)
 							]
-							.padding(LARGE_PADDING_AMOUNT)
+							//.padding(LARGE_PADDING_AMOUNT)
 							.spacing(LARGE_SPACING_AMOUNT)
 						)
-						.max_width(900.0)
+						.max_width(600.0)
 						.close_size(LARGE_TEXT_SIZE)
 						.style(CardStyles::custom(ModalCardStyle))
 						.on_close(SettingsModalMessage::Close.into())

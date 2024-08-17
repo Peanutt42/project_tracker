@@ -251,11 +251,13 @@ impl StyleSheet for DeleteButtonStyle {
 	}
 }
 
-pub struct ThemeModeButtonStyle {
+pub struct SelectionListButtonStyle {
 	pub selected: bool,
+	pub round_left: bool,
+	pub round_right: bool,
 }
 
-impl StyleSheet for ThemeModeButtonStyle {
+impl StyleSheet for SelectionListButtonStyle {
 	type Style = Theme;
 
 	fn active(&self, style: &Self::Style) -> Appearance {
@@ -268,7 +270,12 @@ impl StyleSheet for ThemeModeButtonStyle {
 					style.extended_palette().secondary.base.color.into()
 				}
 			),
-			border: Border::with_radius(BORDER_RADIUS),
+			border: Border::with_radius([
+				if self.round_left { BORDER_RADIUS } else { 0.0 },
+				if self.round_right { BORDER_RADIUS } else { 0.0 },
+				if self.round_right { BORDER_RADIUS } else { 0.0 },
+				if self.round_left { BORDER_RADIUS } else { 0.0 },
+			]),
 			text_color: if self.selected {
 				style.extended_palette().primary.base.text
 			}

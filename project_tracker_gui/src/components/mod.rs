@@ -2,7 +2,7 @@ mod completion_bar;
 pub use completion_bar::completion_bar;
 
 mod buttons;
-pub use buttons::{create_new_project_button, create_new_task_button, delete_project_button, delete_task_button, delete_all_done_tasks_button, show_done_tasks_button, cancel_create_project_button, cancel_create_task_button, overview_button, dangerous_button, theme_mode_button, settings_button, copy_to_clipboard_button, toggle_sidebar_button, invisible_toggle_sidebar_button, sync_database_button, task_tag_button, manage_task_tags_button, create_new_task_tags_button, cancel_create_new_task_tag_button, delete_task_tag_button, clear_task_needed_time_button, clear_task_due_date_button, add_due_date_button, edit_due_date_button, browse_synchronization_filepath_button, clear_synchronization_filepath_button};
+pub use buttons::{create_new_project_button, create_new_task_button, delete_project_button, delete_task_button, delete_all_done_tasks_button, show_done_tasks_button, cancel_create_project_button, cancel_create_task_button, overview_button, dangerous_button, theme_mode_button, settings_button, copy_to_clipboard_button, toggle_sidebar_button, invisible_toggle_sidebar_button, sync_database_button, task_tag_button, manage_task_tags_button, create_new_task_tags_button, cancel_create_new_task_tag_button, delete_task_tag_button, clear_task_needed_time_button, clear_task_due_date_button, add_due_date_button, edit_due_date_button, select_synchronization_filepath_button, clear_synchronization_filepath_button, date_formatting_button};
 
 mod task_list;
 pub use task_list::{task_list, TASK_LIST_ID, CREATE_NEW_TASK_NAME_INPUT_ID};

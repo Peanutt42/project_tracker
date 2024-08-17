@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, SecondaryButtonStyle, TaskTagButtonStyle, ThemeModeButtonStyle, DISABLED_GREEN_TEXT_STYLE, GAP, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, SecondaryButtonStyle, TaskTagButtonStyle, SelectionListButtonStyle, DISABLED_GREEN_TEXT_STYLE, GAP, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -114,11 +114,18 @@ pub fn dangerous_button(icon: Bootstrap, text: &'static str, confirm_label: Opti
 	})
 }
 
-pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode) -> Button<'static, UiMessage> {
-	button(text(format!("{:?}", theme_mode)).horizontal_alignment(Horizontal::Center))
-		.style(theme::Button::custom(ThemeModeButtonStyle{ selected: theme_mode == current_theme_mode }))
-		.width(60.0)
-		.on_press(PreferenceMessage::SetThemeMode(theme_mode).into())
+pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode, round_left: bool, round_right: bool) -> Button<'static, UiMessage> {
+	button(
+		text(format!("{:?}", theme_mode))
+			.horizontal_alignment(Horizontal::Center)
+	)
+	.style(theme::Button::custom(SelectionListButtonStyle{
+		selected: theme_mode == current_theme_mode,
+		round_left,
+		round_right
+	}))
+	.width(80.0)
+	.on_press(PreferenceMessage::SetThemeMode(theme_mode).into())
 }
 
 pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
@@ -151,7 +158,7 @@ pub fn settings_button() -> Button<'static, UiMessage> {
 	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
-pub fn browse_synchronization_filepath_button() -> Element<'static, UiMessage> {
+pub fn select_synchronization_filepath_button() -> Element<'static, UiMessage> {
 	tooltip(
 		button(
 			icon_to_text(Bootstrap::Folder)
@@ -159,7 +166,7 @@ pub fn browse_synchronization_filepath_button() -> Element<'static, UiMessage> {
 		.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
 		.style(theme::Button::custom(SecondaryButtonStyle::default())),
 
-		text("Browse").size(SMALL_TEXT_SIZE),
+		text("Select file").size(SMALL_TEXT_SIZE),
 
 		Position::Bottom
 	)
@@ -181,6 +188,19 @@ pub fn clear_synchronization_filepath_button() -> Element<'static, UiMessage> {
 	.gap(GAP)
 	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
 	.into()
+}
+
+pub fn date_formatting_button(format: &DateFormatting, selected_format: &DateFormatting, is_left: bool) -> Button<'static, UiMessage> {
+	button(
+		text(format.as_str()).horizontal_alignment(Horizontal::Center)
+	)
+	.width(120.0)
+	.on_press(SettingsModalMessage::SetDateFormatting(*format).into())
+	.style(theme::Button::custom(SelectionListButtonStyle {
+		selected: *selected_format == *format,
+		round_left: is_left,
+		round_right: !is_left,
+	}))
 }
 
 pub fn copy_to_clipboard_button(copied_text: String) -> Element<'static, UiMessage> {

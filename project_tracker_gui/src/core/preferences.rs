@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 use std::time::Instant;
-use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, column, container, row, text, Column}, Alignment, Command, Element, Length};
-use iced_aw::{drop_down, Bootstrap, DropDown};
+use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Command, Element, Length};
+use iced_aw::Bootstrap;
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, file_location, theme_mode_button, ErrorMsgModalMessage, SettingsModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::{DropDownContainerStyle, HiddenSecondaryButtonStyle, SecondaryButtonStyle, SPACING_AMOUNT}, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, date_formatting_button, file_location, theme_mode_button, ErrorMsgModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
 fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }
@@ -257,7 +257,7 @@ impl Preferences {
 		}
 	}
 
-	pub fn view(&self, date_formatting_expanded: bool) -> Element<UiMessage> {
+	pub fn view(&self) -> Element<UiMessage> {
 		column![
 			row![
 				text("File location: "),
@@ -271,11 +271,10 @@ impl Preferences {
 				text("Theme Mode:").horizontal_alignment(Horizontal::Center).vertical_alignment(Vertical::Center),
 				container(
 					row![
-						theme_mode_button(ThemeMode::System, self.theme_mode),
-						theme_mode_button(ThemeMode::Dark, self.theme_mode),
-						theme_mode_button(ThemeMode::Light, self.theme_mode),
+						theme_mode_button(ThemeMode::System, self.theme_mode, true, false),
+						theme_mode_button(ThemeMode::Dark, self.theme_mode, false, false),
+						theme_mode_button(ThemeMode::Light, self.theme_mode, false, true),
 					]
-					.spacing(SPACING_AMOUNT)
 					.align_items(Alignment::Center)
 				)
 				.width(Length::Fill)
@@ -286,35 +285,10 @@ impl Preferences {
 			row![
 				text("Date Formatting:"),
 				container(
-					DropDown::new(
-						button(text(self.date_formatting.as_str()))
-							.on_press(SettingsModalMessage::ToggleExpandDateFormatting.into())
-							.style(theme::Button::custom(SecondaryButtonStyle::default())),
-
-						container(
-							Column::with_children(DateFormatting::FORMATS.iter()
-								.map(|format| {
-									button(
-										text(format.as_str()).horizontal_alignment(Horizontal::Center)
-									)
-									.width(Length::Fill)
-									.on_press(SettingsModalMessage::SetDateFormatting(*format).into())
-									.style(
-										if self.date_formatting == *format {
-											theme::Button::custom(SecondaryButtonStyle::default())
-										}
-										else {
-											theme::Button::custom(HiddenSecondaryButtonStyle)
-										})
-									.into()
-								}))
-						)
-						.style(theme::Container::Custom(Box::new(DropDownContainerStyle))),
-
-						date_formatting_expanded
-					)
-					.on_dismiss(SettingsModalMessage::DismissDateFormatting.into())
-					.alignment(drop_down::Alignment::Bottom)
+					row![
+						date_formatting_button(&DateFormatting::DayMonthYear, &self.date_formatting, true),
+						date_formatting_button(&DateFormatting::MonthDayYear, &self.date_formatting, false),
+					]
 				)
 				.width(Length::Fill)
 				.align_x(Horizontal::Right)
@@ -358,11 +332,6 @@ pub enum DateFormatting {
 }
 
 impl DateFormatting {
-	pub const FORMATS: [DateFormatting; 2] = [
-		DateFormatting::DayMonthYear,
-		DateFormatting::MonthDayYear,
-	];
-
 	pub fn as_str(&self) -> &'static str {
 		match self {
 			DateFormatting::DayMonthYear => "DD.MM.YY",
