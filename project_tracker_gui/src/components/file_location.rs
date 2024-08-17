@@ -1,7 +1,6 @@
 use std::path::Path;
-use iced::{theme, widget::{container, row, scrollable, text}, Alignment, Element, Padding};
-use crate::{project_tracker::UiMessage, styles::{scrollable_horizontal_direction, RoundedContainerStyle, ScrollableStyle, SCROLLBAR_WIDTH, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}};
-use crate::components::open_location_button;
+use iced::{theme, widget::{button, container, scrollable, text, tooltip, tooltip::Position}, Element, Length, Padding};
+use crate::{project_tracker::UiMessage, styles::{scrollable_horizontal_direction, RoundedContainerStyle, ScrollableStyle, SecondaryButtonStyle, GAP, SCROLLBAR_WIDTH, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE}};
 
 pub fn filepath_widget(filepath: &Path) -> Element<'static, UiMessage> {
 	scrollable(
@@ -18,18 +17,47 @@ pub fn filepath_widget(filepath: &Path) -> Element<'static, UiMessage> {
 			..Padding::ZERO
 		})
 	)
+	.width(Length::Fill)
 	.direction(scrollable_horizontal_direction())
 	.style(theme::Scrollable::custom(ScrollableStyle))
 	.into()
 }
 
 pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
-	row![
-		open_location_button(filepath.parent().map(|folder| folder.to_path_buf())),
+	let parent_filepath = filepath
+		.parent()
+		.map(Path::to_path_buf);
 
-		filepath_widget(filepath),
-	]
-	.align_items(Alignment::Center)
-	.spacing(SPACING_AMOUNT)
+	scrollable(
+		container(
+			tooltip(
+				button(
+					if let Some(parent_filepath) = &parent_filepath {
+						text(parent_filepath.display())
+					}
+					else {
+						text(format!("no parent folder for {}", filepath.display()))
+					}
+				)
+				.on_press_maybe(parent_filepath.map(UiMessage::OpenFolderLocation))
+				.padding(SMALL_HORIZONTAL_PADDING)
+				.style(theme::Button::custom(SecondaryButtonStyle::default())),
+
+				text("Open folder location")
+					.size(SMALL_TEXT_SIZE),
+
+				Position::Bottom
+			)
+			.gap(GAP)
+			.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+		)
+		.padding(Padding{
+			top: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
+			bottom: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
+			..Padding::ZERO
+		})
+	)
+	.direction(scrollable_horizontal_direction())
+	.style(theme::Scrollable::custom(ScrollableStyle))
 	.into()
 }

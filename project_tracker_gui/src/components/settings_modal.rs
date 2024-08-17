@@ -1,11 +1,9 @@
-use iced::{theme, widget::{button, column, container, row, text}, Alignment, Command, Element};
-use iced_aw::{Bootstrap, CardStyles, ModalStyles, card};
-use crate::{components::{dangerous_button, file_location, horizontal_seperator, sync_database_button}, core::{DateFormatting, PreferenceMessage, Preferences}, styles::{ModalCardStyle, ModalStyle, RoundedContainerStyle, SecondaryButtonStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT}};
-use crate::core::{Database, DatabaseMessage};
-use crate::styles::{LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT};
+use iced::{alignment::Horizontal, theme, widget::{column, container, row, text}, Alignment, Command, Element, Length};
+use iced_aw::{card, Bootstrap, CardStyles, ModalStyles};
+use crate::components::{dangerous_button, file_location, filepath_widget, horizontal_seperator, sync_database_button, browse_synchronization_filepath_button, clear_synchronization_filepath_button};
+use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
+use crate::styles::{LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT, ModalCardStyle, ModalStyle, RoundedContainerStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
-
-use super::filepath_widget;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {
@@ -123,19 +121,14 @@ impl SettingsModal {
 
 									row![
 										text("File location: "),
-										file_location(&Database::get_filepath()),
+										container(file_location(&Database::get_filepath()))
+											.width(Length::Fill)
+											.align_x(Horizontal::Right),
 									]
 									.align_items(Alignment::Center),
 
 									row![
 										text("Synchronization file location: "),
-
-										button(text("Clear"))
-											.on_press(PreferenceMessage::SetSynchronizationFilepath(None).into())
-											.style(theme::Button::custom(SecondaryButtonStyle::default())),
-										button(text("Browse"))
-											.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
-											.style(theme::Button::custom(SecondaryButtonStyle::default())),
 
 										if let Some(filepath) = preferences.synchronization_filepath() {
 											filepath_widget(filepath)
@@ -143,6 +136,10 @@ impl SettingsModal {
 										else {
 											"not specified".into()
 										},
+
+										clear_synchronization_filepath_button(),
+
+										browse_synchronization_filepath_button(),
 									]
 									.spacing(SPACING_AMOUNT)
 									.align_items(Alignment::Center),

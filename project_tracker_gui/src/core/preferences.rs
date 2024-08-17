@@ -261,7 +261,9 @@ impl Preferences {
 		column![
 			row![
 				text("File location: "),
-				file_location(&Self::get_filepath())
+				container(file_location(&Self::get_filepath()))
+					.width(Length::Fill)
+					.align_x(Horizontal::Right)
 			]
 			.align_items(Alignment::Center),
 

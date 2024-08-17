@@ -66,3 +66,5 @@ pub mod padding {
 			..Padding::ZERO
 	};
 }
+
+pub const GAP: f32 = 5.0;
