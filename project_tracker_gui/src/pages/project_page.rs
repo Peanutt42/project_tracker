@@ -152,9 +152,26 @@ impl ProjectPage {
 		let command = match message {
 			ProjectPageMessage::OpenCreateNewTask => {
 				self.create_new_task = Some((String::new(), HashSet::new()));
+				let create_new_task_element_relative_y_offset = if self.show_done_tasks {
+					database
+						.as_ref()
+						.and_then(|db| db.projects().get(&self.project_id))
+						.map(|project| {
+							if project.total_tasks() == 0 {
+								1.0
+							}
+							else {
+								project.tasks_todo() as f32 / project.total_tasks() as f32
+							}
+						})
+						.unwrap_or(1.0)
+				}
+				else {
+					1.0
+				};
 				Command::batch([
 					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
-					scrollable::snap_to(TASK_LIST_ID.clone(), RelativeOffset::END),
+					scrollable::snap_to(TASK_LIST_ID.clone(), RelativeOffset{ x: 0.0, y: create_new_task_element_relative_y_offset }),
 					self.update(ProjectPageMessage::StopEditingTask, database),
 				])
 			},
@@ -475,23 +492,6 @@ impl ProjectPage {
 						})
 						.width(Length::Fill),
 
-						row![
-							text(
-								format!(
-									"{}/{} finished ({}%)",
-									project.tasks_done(),
-									project.total_tasks(),
-									(project.get_completion_percentage() * 100.0).round()
-								)
-							)
-							.width(Length::Fill),
-
-							container(create_new_task_button(self.create_new_task.is_none()))
-								.width(Length::Fill)
-								.align_x(Horizontal::Right),
-						]
-						.width(Length::Fill)
-						.align_items(Alignment::Center),
 
 						row![
 							container(text("Tags:"))
@@ -510,6 +510,24 @@ impl ProjectPage {
 								.padding(tags_bottom_scrollbar_padding),
 						]
 						.spacing(SPACING_AMOUNT)
+						.align_items(Alignment::Center),
+
+						row![
+							text(
+								format!(
+									"{}/{} finished ({}%)",
+									project.tasks_done(),
+									project.total_tasks(),
+									(project.get_completion_percentage() * 100.0).round()
+								)
+							)
+							.width(Length::Fill),
+
+							container(create_new_task_button(self.create_new_task.is_none()))
+								.width(Length::Fill)
+								.align_x(Horizontal::Right),
+						]
+						.width(Length::Fill)
 						.align_items(Alignment::Center),
 
 						completion_bar(project.get_completion_percentage()),

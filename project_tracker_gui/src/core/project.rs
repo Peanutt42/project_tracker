@@ -118,6 +118,10 @@ impl Project {
 		self.todo_tasks.len() + self.done_tasks.len()
 	}
 
+	pub fn tasks_todo(&self) -> usize {
+		self.todo_tasks.len()
+	}
+
 	pub fn tasks_done(&self) -> usize {
 		self.done_tasks.len()
 	}
