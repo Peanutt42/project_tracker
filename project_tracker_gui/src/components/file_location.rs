@@ -32,12 +32,7 @@ pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
 		container(
 			tooltip(
 				button(
-					if let Some(parent_filepath) = &parent_filepath {
-						text(parent_filepath.display())
-					}
-					else {
-						text(format!("no parent folder for {}", filepath.display()))
-					}
+					text(filepath.display())
 				)
 				.on_press_maybe(parent_filepath.map(UiMessage::OpenFolderLocation))
 				.padding(SMALL_HORIZONTAL_PADDING)
