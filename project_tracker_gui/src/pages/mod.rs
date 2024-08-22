@@ -19,6 +19,15 @@ impl ContentPage {
 	pub fn is_overview_page(&self) -> bool {
 		matches!(self, ContentPage::Overview(_))
 	}
+
+	pub fn project_page_mut(&mut self) -> Option<&mut ProjectPage> {
+		if let ContentPage::Project(project_page) = self {
+			Some(project_page)
+		}
+		else {
+			None
+		}
+	}
 }
 
 impl ContentPage {

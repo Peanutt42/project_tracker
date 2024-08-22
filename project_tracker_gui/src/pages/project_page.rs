@@ -21,6 +21,7 @@ pub enum ProjectPageMessage {
 	ShowDoneTasks(bool),
 
 	ToggleFilterTaskTag(TaskTagId),
+	UnsetFilterTaskTag(TaskTagId),
 
 	ShowColorPicker,
 	HideColorPicker,
@@ -218,6 +219,13 @@ impl ProjectPage {
 				else {
 					self.filter_task_tags.insert(task_tag_id);
 				}
+				if let Some(database) = database {
+					self.generate_cached_task_list(database);
+				}
+				Command::none()
+			},
+			ProjectPageMessage::UnsetFilterTaskTag(task_tag_id) => {
+				self.filter_task_tags.remove(&task_tag_id);
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}

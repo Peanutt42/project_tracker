@@ -449,7 +449,24 @@ impl Application for ProjectTrackerApp {
 				])
 			},
 			UiMessage::SettingsModalMessage(message) => self.settings_modal.update(message, &mut self.preferences),
-			UiMessage::ManageTaskTagsModalMessage(message) => self.manage_tags_modal.update(message, &mut self.database),
+			UiMessage::ManageTaskTagsModalMessage(message) => {
+				let deleted_task_tag_id = if let ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) = &message {
+					Some(*task_tag_id)
+				}
+				else {
+					None
+				};
+
+				Command::batch([
+					self.manage_tags_modal.update(message, &mut self.database),
+					deleted_task_tag_id.and_then(|deleted_task_tag_id| {
+						self.content_page
+							.project_page_mut()
+							.map(|project_page| project_page.update(ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id), &mut self.database))
+					})
+					.unwrap_or(Command::none())
+				])
+			},
 			UiMessage::SwitchProjectModalMessage(message) => self.switch_project_modal.update(message, &self.database, self.selected_project_id),
 		}
 	}
