@@ -17,7 +17,7 @@ mod duration_widget;
 pub use duration_widget::{duration_widget, duration_text};
 
 mod date_widget;
-pub use date_widget::{date_widget, date_text};
+pub use date_widget::{date_text, days_left_widget};
 
 mod loading_screen;
 pub use loading_screen::loading_screen;

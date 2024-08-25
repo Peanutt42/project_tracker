@@ -2655,6 +2655,7 @@ dependencies = [
 name = "project_tracker_gui"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "dark-light",
  "directories",
  "filetime",

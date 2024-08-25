@@ -8,7 +8,7 @@ use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, T
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
-use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, in_between_dropzone, date_widget, add_due_date_button, edit_due_date_button};
+use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, in_between_dropzone, add_due_date_button, edit_due_date_button, days_left_widget};
 
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -217,7 +217,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 					if task.needed_time_minutes.is_some() || task.due_date.is_some() {
 						Some(
 							Column::new()
-								.push_maybe(task.due_date.as_ref().map(|due_date| date_widget(due_date, date_formatting)))
+								.push_maybe(task.due_date.as_ref().map(|due_date| days_left_widget(*due_date)))
 								.push_maybe(task.needed_time_minutes.map(|duration_minutes| duration_widget(Cow::Owned(Duration::from_secs(duration_minutes as u64 * 60)))))
 								.spacing(TINY_SPACING_AMOUNT)
 								.align_items(Alignment::End)
