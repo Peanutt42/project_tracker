@@ -4,7 +4,7 @@ use project_tracker_gui::core::{Database, Project, ProjectId, Task};
 
 #[tokio::main]
 async fn main() {
-	let mut db = Database::new();
+	let mut db = Database::default();
 
 	for i in 0..1000 {
 		let mut project = Project::new(format!("{i}. Project"));

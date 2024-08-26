@@ -248,7 +248,7 @@ impl Application for ProjectTrackerApp {
 					},
 					LoadDatabaseResult::FailedToOpenFile(_) => {
 						if self.database.is_none() {
-							self.database = Some(Database::new());
+							self.database = Some(Database::default());
 							self.update(DatabaseMessage::Save.into())
 						}
 						else {
@@ -260,7 +260,7 @@ impl Application for ProjectTrackerApp {
 						let saved_corrupted_filepath = Database::get_filepath().parent().unwrap().join("corrupted - database.json");
 						let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
 						if self.database.is_none() {
-							self.database = Some(Database::new());
+							self.database = Some(Database::default());
 						}
 						Command::batch([
 							self.update(DatabaseMessage::Save.into()),

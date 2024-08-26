@@ -2,7 +2,7 @@ use std::collections::{HashSet, HashMap};
 use std::path::PathBuf;
 use std::time::Instant;
 use iced::Command;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskTagId, TaskTag, SerializableDate};
@@ -156,9 +156,9 @@ enum SyncDatabaseResult {
 impl Database {
 	const FILE_NAME: &'static str = "database.json";
 
-	pub fn new() -> Self {
+	pub fn new(projects: OrderedHashMap<ProjectId, Project>) -> Self {
 		Self {
-			projects: OrderedHashMap::new(),
+			projects,
 			syncing: false,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
@@ -215,7 +215,7 @@ impl Database {
 				}
 			),
 			DatabaseMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
-			DatabaseMessage::Clear => { *self = Self::new(); self.modified(); Command::none() },
+			DatabaseMessage::Clear => { *self = Self::default(); self.modified(); Command::none() },
 			DatabaseMessage::Export(filepath) => Command::perform(
 				Self::save_to(filepath, self.to_json()),
 				|_| DatabaseMessage::Exported.into()
@@ -580,6 +580,6 @@ impl Database {
 
 impl Default for Database {
 	fn default() -> Self {
-		Self::new()
+		Self::new(OrderedHashMap::new())
 	}
 }

@@ -1,10 +1,11 @@
 use std::collections::hash_map::{HashMap, Values, ValuesMut};
 use std::cmp::Eq;
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::slice::Iter;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeMap, de::{MapAccess, Visitor}};
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OrderedHashMap<K, V> where K: Copy + Eq + Hash, V: Eq {
 	hash_map: HashMap<K, V>,
 	order: Vec<K>,
@@ -17,6 +18,13 @@ impl<K, V> OrderedHashMap<K, V>
 		Self {
 			hash_map: HashMap::new(),
 			order: Vec::new(),
+		}
+	}
+
+	pub fn with_capacity(capacity: usize) -> Self {
+		Self {
+			hash_map: HashMap::with_capacity(capacity),
+			order: Vec::with_capacity(capacity),
 		}
 	}
 
@@ -70,7 +78,7 @@ impl<K, V> OrderedHashMap<K, V>
 		if let Some(order) = self.get_order(&key) {
 			if let Some(other_order) = self.get_order(&other_key) {
 				// already before other
-				if order == other_order - 1 {
+				if other_order != 0 && order == other_order - 1 {
 					return;
 				}
 
@@ -196,5 +204,48 @@ impl<'a, K, V> Iterator for OrderedHashMapIter<'a, K, V>
 		else {
 			None
 		}
+	}
+}
+
+
+
+impl<K: Copy + Eq + Hash + Serialize, V: Eq + Serialize> Serialize for OrderedHashMap<K, V> {
+	fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+		let mut map = serializer.serialize_map(Some(self.len()))?;
+		for (key, value) in self.iter() {
+			map.serialize_entry(&key, value)?;
+		}
+		map.end()
+	}
+}
+
+struct OrderedHashMapVisitor<K, V>(PhantomData<(K, V)>);
+
+impl<'de, K: Copy + Eq + Hash + Deserialize<'de>, V: Eq + Deserialize<'de>> Visitor<'de> for OrderedHashMapVisitor<K, V> {
+	type Value = OrderedHashMap<K, V>;
+
+	fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+		write!(formatter, "a map of project_id's to projects")
+	}
+
+	fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+		let mut ordered_hash_map = if let Some(capacity) = map.size_hint() {
+			OrderedHashMap::with_capacity(capacity)
+		}
+		else {
+			OrderedHashMap::default()
+		};
+
+		while let Some((key, value)) = map.next_entry()? {
+			ordered_hash_map.insert(key, value);
+		}
+
+		Ok(ordered_hash_map)
+	}
+}
+
+impl<'de, K: Copy + Eq + Hash + Deserialize<'de>, V: Eq + Deserialize<'de>> Deserialize<'de> for OrderedHashMap<K, V> {
+	fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+		deserializer.deserialize_map(OrderedHashMapVisitor(PhantomData))
 	}
 }

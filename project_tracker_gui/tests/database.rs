@@ -4,7 +4,7 @@ use project_tracker_gui::core::{generate_task_id, Database, LoadDatabaseResult, 
 #[tokio::test]
 async fn test_database_serialization() {
 	let output_filepath: PathBuf = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("tmp_test_database.json");
-	let mut database = Database::new();
+	let mut database = Database::default();
 
 	for i in 0..10 {
 		let mut project = Project::new(format!("Project Nr.{i}"));
