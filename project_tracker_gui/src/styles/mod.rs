@@ -27,7 +27,7 @@ pub use modal_style::{ModalStyle, PaletteModalStyle, ModalCardStyle};
 
 mod constants;
 pub use constants::{
-	colors::{color_average, mix_color, NICE_GREEN, LIGHT_DARK_GREEN, GREY, DARK_GREY},
+	colors::{color_average, mix_color, GREY},
 	padding::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, LARGE_PADDING_AMOUNT},
 	size::{SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, HEADING_TEXT_SIZE, TITLE_TEXT_SIZE, MINIMAL_DRAG_DISTANCE},
 	spacing::{TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, LARGE_SPACING_AMOUNT},
@@ -36,7 +36,7 @@ pub use constants::{
 };
 
 mod text;
-pub use text::{strikethrough_text, text_color, GREEN_TEXT_STYLE, DISABLED_GREEN_TEXT_STYLE};
+pub use text::{strikethrough_text, text_color, primary_text_color, disabled_primary_text_color};
 
 mod theme;
 pub use theme::ProjectTrackerTheme;

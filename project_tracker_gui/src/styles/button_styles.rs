@@ -1,5 +1,5 @@
 use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Theme};
-use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, LIGHT_DARK_GREEN, NICE_GREEN, color_average, mix_color};
+use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, color_average, mix_color};
 
 use super::text_color;
 
@@ -264,7 +264,7 @@ impl StyleSheet for SelectionListButtonStyle {
 		Appearance {
 			background: Some(
 				if self.selected {
-					NICE_GREEN.into()
+					style.extended_palette().primary.base.color.into()
 				}
 				else {
 					style.extended_palette().secondary.base.color.into()
@@ -290,7 +290,7 @@ impl StyleSheet for SelectionListButtonStyle {
 		Appearance {
 			background: Some(
 				if self.selected {
-					LIGHT_DARK_GREEN.into()
+					style.extended_palette().success.base.color.into()
 				}
 				else {
 					style.extended_palette().background.strong.color.into()

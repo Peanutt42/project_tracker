@@ -1,5 +1,5 @@
 use iced::{widget::{container, scrollable::{self, Appearance, Direction, Properties, StyleSheet}}, Border, Theme};
-use crate::styles::{LIGHT_DARK_GREEN, SMALL_PADDING_AMOUNT};
+use crate::styles::SMALL_PADDING_AMOUNT;
 
 pub const SCROLLBAR_WIDTH: f32 = SMALL_PADDING_AMOUNT;
 
@@ -56,7 +56,7 @@ impl StyleSheet for ScrollableStyle {
 		}
 	}
 
-	fn dragging(&self, _style: &Self::Style) -> Appearance {
+	fn dragging(&self, style: &Self::Style) -> Appearance {
 		scrollable::Appearance {
 			container: container::Appearance::default(),
 			gap: None,
@@ -64,7 +64,7 @@ impl StyleSheet for ScrollableStyle {
 				background: None,
 				border: Border::default(),
 				scroller: scrollable::Scroller {
-					color: LIGHT_DARK_GREEN,
+					color: style.extended_palette().success.base.color,
 					border: Border::with_radius(f32::MAX),
 				},
 			},

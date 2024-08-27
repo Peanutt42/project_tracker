@@ -1,16 +1,26 @@
-use iced::{theme, Color};
-use crate::styles::NICE_GREEN;
+use iced::Color;
+use crate::styles::ProjectTrackerTheme;
 
-pub const GREEN_TEXT_STYLE: theme::Text = theme::Text::Color(NICE_GREEN);
-pub const DISABLED_GREEN_TEXT_STYLE: theme::Text = theme::Text::Color(Color{ a: 0.5, ..NICE_GREEN });
+// TODO: replace this once we have a fully custom iced Theme!
+pub fn primary_text_color() -> Color {
+	ProjectTrackerTheme::Dark.get_theme().extended_palette().primary.base.color
+}
+
+// TODO: replace this once we have a fully custom iced Theme!
+pub fn disabled_primary_text_color() -> Color {
+	Color {
+		a: 0.5,
+		..ProjectTrackerTheme::Dark.get_theme().extended_palette().primary.base.color
+	}
+}
 
 pub fn text_color(background: Color) -> Color {
 	let brightness = 0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b;
 	if brightness > 0.6 {
-		Color::BLACK
+		Color::from_rgb(0.1, 0.1, 0.1)
 	}
 	else {
-		Color::WHITE
+		Color::from_rgb(0.9, 0.9, 0.9)
 	}
 }
 

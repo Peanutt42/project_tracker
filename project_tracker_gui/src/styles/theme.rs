@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use iced::{theme::{palette::{Extended, Secondary}, Custom, Palette}, Color, Theme};
-use crate::styles::{LIGHT_DARK_GREEN, NICE_GREEN};
 
 
 #[derive(Copy, Clone, Default)]
@@ -17,8 +16,8 @@ impl ProjectTrackerTheme {
 				let palette = Palette {
 					background: Color::from_rgb(0.1, 0.1, 0.1),
 					text: Color::from_rgb(0.9, 0.9, 0.9),
-					primary: NICE_GREEN,
-					success: LIGHT_DARK_GREEN,
+					primary: Color::from_rgb(0.0, 0.835, 0.3),
+					success: Color::from_rgb(0.0, 0.6, 0.212),
 					danger: Color::from_rgb(1.0, 0.0, 0.0),
 				};
 
@@ -32,10 +31,10 @@ impl ProjectTrackerTheme {
 			ProjectTrackerTheme::Light => Theme::custom(
 				"Light".to_string(),
 				Palette {
-					background: Color::WHITE,
-					text: Color::BLACK,
-					primary: NICE_GREEN,
-					success: LIGHT_DARK_GREEN,
+					background: Color::from_rgb(0.9, 0.9, 0.9),
+					text: Color::from_rgb(0.1, 0.1, 0.1),
+					primary: Color::from_rgb(0.16, 1.0, 0.46),
+					success: Color::from_rgb(0.4, 1.0, 0.62),
 					danger: Color::from_rgb(1.0, 0.0, 0.0),
 				}
 			),

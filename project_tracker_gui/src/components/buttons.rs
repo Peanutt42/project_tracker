@@ -2,14 +2,14 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, SecondaryButtonStyle, TaskTagButtonStyle, SelectionListButtonStyle, DISABLED_GREEN_TEXT_STYLE, GAP, GREEN_TEXT_STYLE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{disabled_primary_text_color, primary_text_color, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, SecondaryButtonStyle, SelectionListButtonStyle, TaskTagButtonStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
 	button(
 		row![
 			icon_to_text(Bootstrap::PlusSquareFill)
-				.style(if enabled { GREEN_TEXT_STYLE } else { DISABLED_GREEN_TEXT_STYLE }),
+				.style(if enabled { primary_text_color() } else { disabled_primary_text_color() }),
 			text("New project")
 		]
 		.align_items(Alignment::Center)
@@ -30,7 +30,7 @@ pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
 	button(
 		row![
 			icon_to_text(Bootstrap::PlusCircleFill)
-				.style(if enabled { GREEN_TEXT_STYLE } else { DISABLED_GREEN_TEXT_STYLE }),
+				.style(if enabled { primary_text_color() } else { disabled_primary_text_color() }),
 			text("New task")
 		]
 		.align_items(Alignment::Center)
@@ -298,7 +298,7 @@ pub fn manage_task_tags_button(project_id: ProjectId) -> Button<'static, UiMessa
 	button(
 		row![
 			icon_to_text(Bootstrap::BookmarkFill)
-				.style(GREEN_TEXT_STYLE),
+				.style(theme::Text::Default),
 			text("Manage")
 		]
 		.align_items(Alignment::Center)
@@ -312,7 +312,7 @@ pub fn create_new_task_tags_button() -> Button<'static, UiMessage> {
 	button(
 		row![
 			icon_to_text(Bootstrap::BookmarkPlusFill)
-				.style(GREEN_TEXT_STYLE),
+				.style(primary_text_color()),
 			text("Create new")
 		]
 		.align_items(Alignment::Center)
