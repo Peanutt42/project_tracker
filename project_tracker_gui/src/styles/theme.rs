@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use iced::{theme::{palette::{Extended, Secondary}, Custom, Palette}, Color, Theme};
-
+use crate::styles::GREY;
 
 #[derive(Copy, Clone, Default)]
 pub enum ProjectTrackerTheme {
@@ -23,21 +23,27 @@ impl ProjectTrackerTheme {
 
 				Theme::Custom(Arc::new(Custom::with_fn("Dark".to_string(), palette, |p| {
 					Extended {
-						secondary: Secondary::generate(p.background, Color::from_rgb(0.5, 0.5, 0.5)),
-						..Extended::generate(palette)
+						secondary: Secondary::generate(p.background, GREY),
+						..Extended::generate(p)
 					}
 				})))
 			},
-			ProjectTrackerTheme::Light => Theme::custom(
-				"Light".to_string(),
-				Palette {
+			ProjectTrackerTheme::Light => {
+				let palette = Palette {
 					background: Color::from_rgb(0.9, 0.9, 0.9),
 					text: Color::from_rgb(0.1, 0.1, 0.1),
 					primary: Color::from_rgb(0.16, 1.0, 0.46),
 					success: Color::from_rgb(0.4, 1.0, 0.62),
 					danger: Color::from_rgb(1.0, 0.0, 0.0),
-				}
-			),
+				};
+
+				Theme::Custom(Arc::new(Custom::with_fn("Light".to_string(), palette, |p| {
+					Extended {
+						secondary: Secondary::generate(p.background, GREY),
+						..Extended::generate(p)
+					}
+				})))
+			},
 		}
 	}
 }

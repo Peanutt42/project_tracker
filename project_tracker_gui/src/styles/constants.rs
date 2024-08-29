@@ -3,6 +3,11 @@ pub mod border_radius {
 	pub const LARGE_BORDER_RADIUS: f32 = 7.5;
 }
 
+pub mod blur_radius {
+	pub const SMALL_BLUR_RADIUS: f32 = 7.5;
+	pub const BLUR_RADIUS: f32 = 15.0;
+}
+
 pub mod spacing {
 	pub const TINY_SPACING_AMOUNT: f32 = 2.5;
 	pub const SMALL_SPACING_AMOUNT: u16 = 5;
@@ -20,9 +25,21 @@ pub mod size {
 }
 
 pub mod colors {
-	use iced::Color;
+	use iced::{theme::palette, Color};
 
 	pub const GREY: Color = Color::from_rgb(0.5, 0.5, 0.5);
+
+	pub fn background_shadow_color(palette: &palette::Extended) -> Color {
+		let background = palette.background.base.color;
+		let amount = if palette.is_dark { 0.1 } else { 0.15 };
+
+		Color {
+			r: background.r - amount,
+			g: background.g - amount,
+			b: background.b - amount,
+			a: background.a,
+		}
+	}
 
 	pub fn color_average(a: Color, b: Color) -> Color {
 		Color {
@@ -51,15 +68,15 @@ pub mod padding {
 	pub const LARGE_PADDING_AMOUNT: f32 = 20.0;
 
 	pub const HORIZONTAL_PADDING: Padding = Padding {
-			left: PADDING_AMOUNT,
-			right: PADDING_AMOUNT,
-			..Padding::ZERO
+		left: PADDING_AMOUNT,
+		right: PADDING_AMOUNT,
+		..Padding::ZERO
 	};
 
 	pub const SMALL_HORIZONTAL_PADDING: Padding = Padding {
-			left: SMALL_PADDING_AMOUNT,
-			right: SMALL_PADDING_AMOUNT,
-			..Padding::ZERO
+		left: SMALL_PADDING_AMOUNT,
+		right: SMALL_PADDING_AMOUNT,
+		..Padding::ZERO
 	};
 }
 

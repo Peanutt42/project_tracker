@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
 use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{disabled_primary_text_color, primary_text_color, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, RoundedContainerStyle, SecondaryButtonStyle, SelectionListButtonStyle, TaskTagButtonStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{disabled_primary_text_color, primary_text_color, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -171,7 +171,7 @@ pub fn select_synchronization_filepath_button() -> Element<'static, UiMessage> {
 		Position::Bottom
 	)
 	.gap(GAP)
-	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
 	.into()
 }
 
@@ -186,7 +186,7 @@ pub fn clear_synchronization_filepath_button() -> Element<'static, UiMessage> {
 		Position::Bottom
 	)
 	.gap(GAP)
-	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
 	.into()
 }
 
@@ -217,7 +217,7 @@ pub fn copy_to_clipboard_button(copied_text: String) -> Element<'static, UiMessa
 		Position::Bottom
 	)
 	.gap(GAP)
-	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
 	.into()
 }
 
@@ -234,7 +234,7 @@ pub fn toggle_sidebar_button() -> Element<'static, UiMessage> {
 		Position::Bottom
 	)
 	.gap(GAP)
-	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
 	.into()
 }
 

@@ -4,10 +4,10 @@ use iced_aw::{Bootstrap, core::icons::bootstrap::icon_to_text};
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, TaskBackgroundContainerStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, TaskBackgroundContainerStyle, TaskButtonStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
-use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, HiddenSecondaryButtonStyle, strikethrough_text};
+use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, strikethrough_text};
 use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, in_between_dropzone, add_due_date_button, edit_due_date_button, days_left_widget};
 
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -249,7 +249,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 					inner
 				)
 				.padding(Padding::new(SMALL_PADDING_AMOUNT))
-				.style(theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging })))
+				.style(theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging: dragging && !just_minimal_dragging })))
 			)
 			.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
 			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, point, rect }.into())
@@ -257,7 +257,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 			.on_cancel(SidebarPageMessage::CancelDragTask.into())
 			.drag_overlay(!just_minimal_dragging)
 			.drag_hide(!just_minimal_dragging)
-			.style(theme::Button::custom(HiddenSecondaryButtonStyle))
+			.style(theme::Button::custom(TaskButtonStyle))
 		]
 		.into()
 	}

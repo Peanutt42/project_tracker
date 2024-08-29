@@ -1,7 +1,7 @@
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use serde::{Deserialize, Serialize};
 use iced::{theme, widget::{text, tooltip, tooltip::Position}, Border, Color, Element, Length};
-use crate::{core::SerializableColor, project_tracker::UiMessage, styles::{RoundedContainerStyle, SMALL_TEXT_SIZE}};
+use crate::{core::SerializableColor, project_tracker::UiMessage, styles::{TooltipContainerStyle, SMALL_TEXT_SIZE}};
 
 pub const TASK_TAG_QUAD_HEIGHT: f32 = 5.0;
 
@@ -43,7 +43,7 @@ impl TaskTag {
 			Position::Top
 		)
 		.gap(5)
-		.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+		.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
 		.into()
 	}
 }

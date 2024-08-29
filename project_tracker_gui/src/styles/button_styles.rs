@@ -1,7 +1,5 @@
-use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Theme};
-use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, color_average, mix_color};
-
-use super::text_color;
+use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Shadow, Theme};
+use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, SMALL_BLUR_RADIUS, BLUR_RADIUS, color_average, mix_color, background_shadow_color, text_color};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -80,30 +78,33 @@ pub struct DangerousButtonStyle;
 impl StyleSheet for DangerousButtonStyle {
 	type Style = Theme;
 
-	fn active(&self, _style: &Self::Style) -> Appearance {
+	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(Color::from_rgb(1.0, 0.0, 0.0).into()),
-			text_color: Color::WHITE,
+			text_color: style.extended_palette().danger.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}
 	}
 
-	fn hovered(&self, _style: &Self::Style) -> Appearance {
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		let color = Color::from_rgb(0.8, 0.0, 0.0);
+
 		Appearance {
-			background: Some(Color::from_rgb(0.8, 0.0, 0.0).into()),
-			text_color: Color::WHITE,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
+			background: Some(color.into()),
+			shadow: Shadow {
+				color: Color { a: if style.extended_palette().is_dark { 0.25 } else { 1.0 }, ..color },
+				blur_radius: SMALL_BLUR_RADIUS,
+				..Default::default()
+			},
+			..self.active(style)
 		}
 	}
 
-	fn pressed(&self, _style: &Self::Style) -> Appearance {
+	fn pressed(&self, style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(Color::from_rgb(0.6, 0.0, 0.0).into()),
-			text_color: Color::WHITE,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
+			..self.active(style)
 		}
 	}
 }
@@ -122,21 +123,25 @@ impl StyleSheet for DeleteDoneTasksButtonStyle {
 		}
 	}
 
-	fn hovered(&self, _style: &Self::Style) -> Appearance {
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		let color = Color::from_rgb(0.8, 0.0, 0.0);
+
 		Appearance {
-			background: Some(Color::from_rgb(0.8, 0.0, 0.0).into()),
-			text_color: Color::WHITE,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
+			background: Some(color.into()),
+			text_color: style.extended_palette().danger.base.text,
+			shadow: Shadow {
+				color: Color { a: 0.25, ..color },
+				blur_radius: SMALL_BLUR_RADIUS,
+				..Default::default()
+			},
+			..self.active(style)
 		}
 	}
 
-	fn pressed(&self, _style: &Self::Style) -> Appearance {
+	fn pressed(&self, style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(Color::from_rgb(0.6, 0.0, 0.0).into()),
-			text_color: Color::WHITE,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
+			..self.hovered(style)
 		}
 	}
 }
@@ -239,6 +244,14 @@ impl StyleSheet for DeleteButtonStyle {
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(style.extended_palette().danger.base.color.into()),
+			shadow: Shadow {
+				color: Color {
+					a: if style.extended_palette().is_dark { 0.25 } else { 1.0 },
+					..style.extended_palette().danger.base.color
+				},
+				blur_radius: SMALL_BLUR_RADIUS,
+				..Default::default()
+			},
 			..self.active(style)
 		}
 	}
@@ -443,6 +456,14 @@ impl StyleSheet for TaskTagButtonStyle {
 					color_average(self.color, style.extended_palette().background.base.color).into()
 				}
 			),
+			shadow: Shadow {
+				color: Color {
+					a: if style.extended_palette().is_dark { 0.25 } else { 1.0 },
+					..self.color
+				},
+				blur_radius: SMALL_BLUR_RADIUS,
+				..Default::default()
+			},
 			..self.active(style)
 		}
 	}
@@ -452,5 +473,36 @@ impl StyleSheet for TaskTagButtonStyle {
 			background: Some(self.color.into()),
 			..self.active(style)
 		}
+	}
+}
+
+pub struct TaskButtonStyle;
+
+impl StyleSheet for TaskButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: None,
+			text_color: style.palette().text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()),
+			shadow: Shadow {
+				color: background_shadow_color(style.extended_palette()),
+				blur_radius: BLUR_RADIUS,
+				..Default::default()
+			},
+			..self.active(style)
+		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		self.hovered(style)
 	}
 }

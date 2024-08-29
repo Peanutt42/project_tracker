@@ -1,7 +1,5 @@
 use iced::{color, widget::container::{Appearance, StyleSheet}, Border, Color, Shadow, Theme, Vector};
-use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, mix_color};
-
-use super::color_average;
+use crate::styles::{BLUR_RADIUS, BORDER_RADIUS, LARGE_BORDER_RADIUS, mix_color, background_shadow_color, color_average};
 
 pub struct RoundedContainerStyle;
 
@@ -12,6 +10,28 @@ impl StyleSheet for RoundedContainerStyle {
 		Appearance {
 			background: Some(style.extended_palette().background.weak.color.into()),
 			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+}
+
+pub struct TooltipContainerStyle;
+
+impl StyleSheet for TooltipContainerStyle {
+	type Style = Theme;
+
+	fn appearance(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(style.extended_palette().background.weak.color.into()),
+			border: Border::with_radius(BORDER_RADIUS),
+			shadow: Shadow {
+				color: Color {
+					a: if style.extended_palette().is_dark { 0.5 } else { 1.0 },
+					..background_shadow_color(style.extended_palette())
+				},
+				blur_radius: BLUR_RADIUS,
+				..Default::default()
+			},
 			..Default::default()
 		}
 	}
@@ -31,7 +51,7 @@ impl StyleSheet for PaletteContainerStyle {
 			border: Border::with_radius(LARGE_BORDER_RADIUS),
 			shadow: Shadow {
 				blur_radius: if style.extended_palette().is_dark { 50.0 } else { 35.0 },
-				color: if style.extended_palette().is_dark { Color::BLACK } else { Color::from_rgba(0.0, 0.0, 0.0, 0.5) },
+				color: background_shadow_color(style.extended_palette()),
 				offset: Vector::ZERO,
 			},
 			..Default::default()
@@ -116,6 +136,16 @@ impl StyleSheet for TaskBackgroundContainerStyle {
 				None
 			},
 			border: Border::with_radius(BORDER_RADIUS),
+			shadow: if self.dragging {
+				Shadow {
+					color: background_shadow_color(style.extended_palette()),
+					blur_radius: BLUR_RADIUS,
+					..Default::default()
+				}
+			}
+			else {
+				Shadow::default()
+			},
 			..Default::default()
 		}
 	}

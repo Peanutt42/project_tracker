@@ -1,6 +1,6 @@
 use std::path::Path;
 use iced::{theme, widget::{button, container, scrollable, text, tooltip, tooltip::Position}, Element, Length, Padding};
-use crate::{project_tracker::UiMessage, styles::{scrollable_horizontal_direction, RoundedContainerStyle, ScrollableStyle, SecondaryButtonStyle, GAP, SCROLLBAR_WIDTH, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE}};
+use crate::{project_tracker::UiMessage, styles::{scrollable_horizontal_direction, RoundedContainerStyle, TooltipContainerStyle, ScrollableStyle, SecondaryButtonStyle, GAP, SCROLLBAR_WIDTH, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE}};
 
 pub fn filepath_widget(filepath: &Path) -> Element<'static, UiMessage> {
 	scrollable(
@@ -44,7 +44,7 @@ pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
 				Position::Bottom
 			)
 			.gap(GAP)
-			.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+			.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
 		)
 		.padding(Padding{
 			top: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
