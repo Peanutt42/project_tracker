@@ -4,7 +4,7 @@ use iced_aw::{Bootstrap, core::icons::bootstrap::icon_to_text};
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, TaskBackgroundContainerStyle, TaskButtonStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, ShadowContainerStyle, TaskBackgroundContainerStyle, TaskButtonStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, strikethrough_text};
@@ -17,21 +17,24 @@ pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_in
 pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edit_task_state: Option<&'a EditTaskState>, dragging: bool, just_minimal_dragging: bool, highlight: bool, date_formatting: DateFormatting) -> Element<'a, UiMessage> {
 	let inner_text_element: Element<UiMessage> = if let Some(edit_task_state) = edit_task_state {
 		unfocusable(
-			text_editor(&edit_task_state.new_name)
-				.on_action(|action| ProjectPageMessage::TaskNameAction(action).into())
-				.style(theme::TextEditor::Custom(Box::new(TextEditorStyle {
-					// is the first tag enabled?
-					round_top_left: task_tags
-						.iter()
-						.next()
-						.map(|(tag_id, _tag)|
-							!task.tags.contains(&tag_id)
-						)
-						.unwrap_or(true),
-					round_top_right: false,
-					round_bottom_left: false,
-					round_bottom_right: edit_task_state.new_name.line_count() > 1 // multiline?
-				}))),
+			container(
+				text_editor(&edit_task_state.new_name)
+					.on_action(|action| ProjectPageMessage::TaskNameAction(action).into())
+					.style(theme::TextEditor::Custom(Box::new(TextEditorStyle {
+						// is the first tag enabled?
+						round_top_left: task_tags
+							.iter()
+							.next()
+							.map(|(tag_id, _tag)|
+								!task.tags.contains(&tag_id)
+							)
+							.unwrap_or(true),
+						round_top_right: false,
+						round_bottom_left: false,
+						round_bottom_right: edit_task_state.new_name.line_count() > 1 // multiline?
+					})))
+			)
+			.style(theme::Container::Custom(Box::new(ShadowContainerStyle))),
 
 			ProjectPageMessage::StopEditingTask.into()
 		)

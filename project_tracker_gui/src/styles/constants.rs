@@ -25,9 +25,11 @@ pub mod size {
 }
 
 pub mod colors {
-	use iced::{theme::palette, Color};
+	use iced::{theme::palette, Color, color};
 
 	pub const GREY: Color = Color::from_rgb(0.5, 0.5, 0.5);
+
+	pub const SELECTION_COLOR: Color = color!(0x3584e4);
 
 	pub fn background_shadow_color(palette: &palette::Extended) -> Color {
 		let background = palette.background.base.color;
@@ -38,6 +40,15 @@ pub mod colors {
 			g: background.g - amount,
 			b: background.b - amount,
 			a: background.a,
+		}
+	}
+
+	pub fn background_shadow_alpha(palette: &palette::Extended) -> f32 {
+		if palette.is_dark {
+			0.25
+		}
+		else {
+			1.0
 		}
 	}
 

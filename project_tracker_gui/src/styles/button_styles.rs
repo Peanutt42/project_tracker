@@ -1,5 +1,5 @@
-use iced::{color, widget::button::{Appearance, StyleSheet}, Border, Color, Shadow, Theme};
-use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, SMALL_BLUR_RADIUS, BLUR_RADIUS, color_average, mix_color, background_shadow_color, text_color};
+use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Shadow, Theme};
+use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, SMALL_BLUR_RADIUS, BLUR_RADIUS, SELECTION_COLOR, color_average, mix_color, background_shadow_color, background_shadow_alpha, text_color};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -21,8 +21,21 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 			text_color: style.extended_palette().background.base.text,
 			border: Border {
 				radius: BORDER_RADIUS.into(),
-				color: color!(0x3584e4),
+				color: SELECTION_COLOR,
 				width: if self.selected { 2.0 } else { 0.0 },
+			},
+			shadow: if self.selected {
+				Shadow {
+					color: Color {
+						a: background_shadow_alpha(style.extended_palette()),
+						..SELECTION_COLOR
+					},
+					blur_radius: SMALL_BLUR_RADIUS,
+					..Default::default()
+				}
+			}
+			else {
+				Shadow::default()
 			},
 			..Default::default()
 		}
@@ -38,6 +51,14 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 					color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
 				}
 			),
+			shadow: Shadow {
+				color: Color {
+					a: background_shadow_alpha(style.extended_palette()),
+					..SELECTION_COLOR
+				},
+				blur_radius: SMALL_BLUR_RADIUS,
+				..Default::default()
+			},
 			..self.active(style)
 		}
 	}
@@ -93,7 +114,7 @@ impl StyleSheet for DangerousButtonStyle {
 		Appearance {
 			background: Some(color.into()),
 			shadow: Shadow {
-				color: Color { a: if style.extended_palette().is_dark { 0.25 } else { 1.0 }, ..color },
+				color: Color { a: background_shadow_alpha(style.extended_palette()), ..color },
 				blur_radius: SMALL_BLUR_RADIUS,
 				..Default::default()
 			},
@@ -246,7 +267,7 @@ impl StyleSheet for DeleteButtonStyle {
 			background: Some(style.extended_palette().danger.base.color.into()),
 			shadow: Shadow {
 				color: Color {
-					a: if style.extended_palette().is_dark { 0.25 } else { 1.0 },
+					a: background_shadow_alpha(style.extended_palette()),
 					..style.extended_palette().danger.base.color
 				},
 				blur_radius: SMALL_BLUR_RADIUS,
@@ -458,7 +479,7 @@ impl StyleSheet for TaskTagButtonStyle {
 			),
 			shadow: Shadow {
 				color: Color {
-					a: if style.extended_palette().is_dark { 0.25 } else { 1.0 },
+					a: background_shadow_alpha(style.extended_palette()),
 					..self.color
 				},
 				blur_radius: SMALL_BLUR_RADIUS,

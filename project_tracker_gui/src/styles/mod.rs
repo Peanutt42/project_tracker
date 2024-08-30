@@ -2,7 +2,7 @@ mod button_styles;
 pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, PaletteItemButtonStyle, ColorPaletteButtonStyle, InvisibleButtonStyle, TaskTagButtonStyle, TaskButtonStyle};
 
 mod container_styles;
-pub use container_styles::{RoundedContainerStyle, PaletteContainerStyle, ProjectPreviewBackgroundContainerStyle, TaskBackgroundContainerStyle, DropzoneContainerStyle, InBetweenDropzoneContainerStyle, TooltipContainerStyle};
+pub use container_styles::{RoundedContainerStyle, PaletteContainerStyle, ProjectPreviewBackgroundContainerStyle, TaskBackgroundContainerStyle, DropzoneContainerStyle, InBetweenDropzoneContainerStyle, TooltipContainerStyle, ShadowContainerStyle};
 
 mod completion_bar_style;
 pub use completion_bar_style::CompletionBarStyle;
@@ -27,7 +27,7 @@ pub use modal_style::{ModalStyle, PaletteModalStyle, ModalCardStyle};
 
 mod constants;
 pub use constants::{
-	colors::{color_average, mix_color, background_shadow_color, GREY},
+	colors::{color_average, mix_color, background_shadow_color, background_shadow_alpha, GREY, SELECTION_COLOR},
 	padding::{HORIZONTAL_PADDING, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, LARGE_PADDING_AMOUNT},
 	size::{SMALL_TEXT_SIZE, LARGE_TEXT_SIZE, HEADING_TEXT_SIZE, TITLE_TEXT_SIZE, MINIMAL_DRAG_DISTANCE},
 	spacing::{TINY_SPACING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, LARGE_SPACING_AMOUNT},

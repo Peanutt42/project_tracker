@@ -1,5 +1,5 @@
-use iced::{color, widget::container::{Appearance, StyleSheet}, Border, Color, Shadow, Theme, Vector};
-use crate::styles::{BLUR_RADIUS, BORDER_RADIUS, LARGE_BORDER_RADIUS, mix_color, background_shadow_color, color_average};
+use iced::{widget::container::{Appearance, StyleSheet}, Border, Color, Shadow, Theme, Vector};
+use crate::styles::{BLUR_RADIUS, BORDER_RADIUS, LARGE_BORDER_RADIUS, SELECTION_COLOR, mix_color, background_shadow_color, color_average};
 
 pub struct RoundedContainerStyle;
 
@@ -70,7 +70,7 @@ impl StyleSheet for DropzoneContainerStyle {
 		Appearance {
 			background: None,
 			border: Border {
-				color: color!(0x3584e4),
+				color: SELECTION_COLOR,
 				width: if self.highlight { 2.0 } else { 0.0 },
 				radius: BORDER_RADIUS.into(),
 			},
@@ -89,7 +89,7 @@ impl StyleSheet for InBetweenDropzoneContainerStyle {
 	fn appearance(&self, _style: &Self::Style) -> Appearance {
 		Appearance {
 			background: if self.highlight {
-				Some(color!(0x3584e4).into())
+				Some(SELECTION_COLOR.into())
 			}
 			else {
 				None
@@ -145,6 +145,24 @@ impl StyleSheet for TaskBackgroundContainerStyle {
 			}
 			else {
 				Shadow::default()
+			},
+			..Default::default()
+		}
+	}
+}
+
+pub struct ShadowContainerStyle;
+
+impl StyleSheet for ShadowContainerStyle {
+	type Style = Theme;
+
+	fn appearance(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			border: Border::with_radius(BORDER_RADIUS),
+			shadow: Shadow {
+				color: background_shadow_color(style.extended_palette()),
+				blur_radius: BLUR_RADIUS,
+				..Default::default()
 			},
 			..Default::default()
 		}
