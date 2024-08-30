@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::{DateFormatting, Project, TaskTagId}, pages::{CachedTaskList, EditTaskState, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT}};
+use crate::{core::{DateFormatting, Project, TaskTagId}, pages::{CachedTaskList, EditTaskState, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{LARGE_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH}};
 use crate::core::{Task, TaskId, ProjectId};
 use crate::components::{show_done_tasks_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button, task_tags_buttons, in_between_dropzone};
-use crate::styles::{SPACING_AMOUNT, HORIZONTAL_PADDING, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
+use crate::styles::{SPACING_AMOUNT, ScrollableStyle, TextInputStyle, scrollable_vertical_direction};
 use crate::pages::ProjectPageMessage;
 
 pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
@@ -120,15 +120,21 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 			.into()
 		};
 
+	let scrollable_padding = Padding {
+		left: PADDING_AMOUNT,
+		right: PADDING_AMOUNT + SCROLLBAR_WIDTH,
+		..Padding::ZERO
+	};
+
 	scrollable(
 		column![
 			Column::with_children(todo_task_elements)
-				.padding(HORIZONTAL_PADDING),
+				.padding(scrollable_padding),
 
 			show_tasks_button,
 
 			Column::with_children(done_task_elements)
-				.padding(HORIZONTAL_PADDING),
+				.padding(scrollable_padding),
 		]
 	)
 	.id(TASK_LIST_ID.clone())
