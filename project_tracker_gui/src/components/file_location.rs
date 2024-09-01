@@ -1,26 +1,15 @@
 use std::path::Path;
-use iced::{theme, widget::{button, container, scrollable, text, tooltip, tooltip::Position}, Element, Length, Padding};
-use crate::{project_tracker::UiMessage, styles::{scrollable_horizontal_direction, RoundedContainerStyle, TooltipContainerStyle, ScrollableStyle, SecondaryButtonStyle, GAP, SCROLLBAR_WIDTH, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE}};
+use iced::{theme, widget::{button, container, text, tooltip, tooltip::Position, Scrollable}, Element};
+use crate::{project_tracker::UiMessage, components::horizontal_scrollable, styles::{RoundedContainerStyle, TooltipContainerStyle, SecondaryButtonStyle, GAP, SMALL_HORIZONTAL_PADDING, SMALL_TEXT_SIZE}};
 
-pub fn filepath_widget(filepath: &Path) -> Element<'static, UiMessage> {
-	scrollable(
+pub fn filepath_widget(filepath: &Path) -> Scrollable<'static, UiMessage> {
+	horizontal_scrollable(
 		container(
-			container(
-				text(filepath.display())
-			)
-			.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
-			.padding(SMALL_HORIZONTAL_PADDING)
+			text(filepath.display())
 		)
-		.padding(Padding{
-			top: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
-			bottom: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
-			..Padding::ZERO
-		})
+		.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+		.padding(SMALL_HORIZONTAL_PADDING)
 	)
-	.width(Length::Fill)
-	.direction(scrollable_horizontal_direction())
-	.style(theme::Scrollable::custom(ScrollableStyle))
-	.into()
 }
 
 pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
@@ -28,31 +17,22 @@ pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
 		.parent()
 		.map(Path::to_path_buf);
 
-	scrollable(
-		container(
-			tooltip(
-				button(
-					text(filepath.display())
-				)
-				.on_press_maybe(parent_filepath.map(UiMessage::OpenFolderLocation))
-				.padding(SMALL_HORIZONTAL_PADDING)
-				.style(theme::Button::custom(SecondaryButtonStyle::default())),
-
-				text("Open folder location")
-					.size(SMALL_TEXT_SIZE),
-
-				Position::Bottom
+	horizontal_scrollable(
+		tooltip(
+			button(
+				text(filepath.display())
 			)
-			.gap(GAP)
-			.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
+			.on_press_maybe(parent_filepath.map(UiMessage::OpenFolderLocation))
+			.padding(SMALL_HORIZONTAL_PADDING)
+			.style(theme::Button::custom(SecondaryButtonStyle::default())),
+
+			text("Open folder location")
+				.size(SMALL_TEXT_SIZE),
+
+			Position::Bottom
 		)
-		.padding(Padding{
-			top: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
-			bottom: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
-			..Padding::ZERO
-		})
+		.gap(GAP)
+		.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
 	)
-	.direction(scrollable_horizontal_direction())
-	.style(theme::Scrollable::custom(ScrollableStyle))
 	.into()
 }

@@ -1,7 +1,7 @@
 use iced::{theme, widget::{button, column, row, text, text_input, Column}, Alignment, Color, Command, Element, Length};
 use iced_aw::{card, CardStyles, ModalStyles};
 use once_cell::sync::Lazy;
-use crate::{components::{cancel_create_new_task_tag_button, color_palette, color_palette_item_button, create_new_task_tags_button, delete_task_tag_button, unfocusable}, core::{Database, DatabaseMessage, ProjectId, TaskTag, TaskTagId}, project_tracker::UiMessage, styles::{HiddenSecondaryButtonStyle, ModalCardStyle, ModalStyle, TextInputStyle, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{cancel_create_new_task_tag_button, color_palette, color_palette_item_button, create_new_task_tags_button, delete_task_tag_button, unfocusable}, core::{Database, DatabaseMessage, Project, ProjectId, TaskTag, TaskTagId}, project_tracker::UiMessage, styles::{HiddenSecondaryButtonStyle, ModalCardStyle, ModalStyle, TextInputStyle, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT}, ProjectTrackerApp};
 
 static CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -180,93 +180,11 @@ impl ManageTaskTagsModal {
 		match self {
 			ManageTaskTagsModal::Opened { project_id, create_new_task_tag, edit_task_tag_color_id, edit_task_tag_name_id } => {
 				app.database.as_ref().and_then(|db| db.projects().get(project_id)).map(|project| {
-					let mut tags_list = Vec::new();
-					for (tag_id, tag) in project.task_tags.iter() {
-						let show_color_palette = match edit_task_tag_color_id {
-							Some(edit_task_tag_color_id) => tag_id == *edit_task_tag_color_id,
-							None => false,
-						};
-
-						let edited_name = match edit_task_tag_name_id {
-							Some((edit_task_tag_name_id, new_name)) if tag_id == *edit_task_tag_name_id => Some(new_name),
-							_ => None,
-						};
-
-						let name_element: Element<UiMessage> = if let Some(edited_name) = edited_name {
-							text_input("tag name", edited_name)
-								.on_input(move |new_name| ManageTaskTagsModalMessage::ChangeEditTaskTagName(new_name).into())
-								.on_submit(ManageTaskTagsModalMessage::ChangeTaskTagName.into())
-								.style(theme::TextInput::Custom(Box::new(TextInputStyle::ONLY_ROUND_LEFT)))
-								.into()
-						}
-						else {
-							button(
-								text(&tag.name)
-            						.width(Length::Fill)
-							)
-							.on_press(ManageTaskTagsModalMessage::EditTaskTagName(tag_id).into())
-							.style(theme::Button::custom(HiddenSecondaryButtonStyle))
-							.into()
-						};
-
-						tags_list.push(
-							column![
-								row![
-									color_palette_item_button(
-										tag.color.into(),
-										false,
-										if show_color_palette {
-											ManageTaskTagsModalMessage::StopEditTaskTagColor.into()
-										}
-										else {
-											ManageTaskTagsModalMessage::EditTaskTagColor(tag_id).into()
-										}
-									),
-									name_element,
-									delete_task_tag_button(tag_id),
-								]
-								.align_items(Alignment::Center)
-								.spacing(SMALL_SPACING_AMOUNT)
-							]
-							.push_maybe(
-								if show_color_palette {
-									Some(color_palette(tag.color.into(), move |new_color| ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color).into()))
-								}
-								else {
-									None
-								}
-							)
-							.into()
-						);
-					}
-
-					if let Some(create_new_task_tag_name) = create_new_task_tag {
-						tags_list.push(
-							row![
-								unfocusable(
-									text_input("New tag name", create_new_task_tag_name)
-										.id(CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID.clone())
-										.on_input(|new_name| ManageTaskTagsModalMessage::ChangeCreateNewTaskTagName(new_name).into())
-										.on_submit(ManageTaskTagsModalMessage::CreateNewTaskTag.into())
-										.style(theme::TextInput::Custom(Box::new(TextInputStyle::ONLY_ROUND_LEFT))),
-
-									ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into()
-								),
-
-								cancel_create_new_task_tag_button(),
-							].into()
-						);
-					}
-					else {
-						tags_list.push(create_new_task_tags_button().into());
-					}
-
 					let view = card(
 						text(format!("Manage project '{}' task tags", project.name))
 							.size(LARGE_TEXT_SIZE),
 
-						Column::with_children(tags_list)
-							.spacing(SMALL_SPACING_AMOUNT)
+						self.tags_list_view(project, create_new_task_tag, edit_task_tag_color_id, edit_task_tag_name_id)
 					)
 					.style(CardStyles::custom(ModalCardStyle))
 					.max_width(500.0)
@@ -284,5 +202,92 @@ impl ManageTaskTagsModal {
 				None
 			},
 		}
+	}
+
+	fn tags_list_view(&self, project: &Project, create_new_task_tag: &Option<String>, edit_task_tag_color_id: &Option<TaskTagId>, edit_task_tag_name_id: &Option<(TaskTagId, String)>) -> Element<UiMessage> {
+		let mut tags_list = Vec::new();
+		for (tag_id, tag) in project.task_tags.iter() {
+			let show_color_palette = match edit_task_tag_color_id {
+				Some(edit_task_tag_color_id) => tag_id == *edit_task_tag_color_id,
+				None => false,
+			};
+
+			let edited_name = match edit_task_tag_name_id {
+				Some((edit_task_tag_name_id, new_name)) if tag_id == *edit_task_tag_name_id => Some(new_name),
+				_ => None,
+			};
+
+			let name_element: Element<UiMessage> = if let Some(edited_name) = edited_name {
+				text_input("tag name", edited_name)
+					.on_input(move |new_name| ManageTaskTagsModalMessage::ChangeEditTaskTagName(new_name).into())
+					.on_submit(ManageTaskTagsModalMessage::ChangeTaskTagName.into())
+					.style(theme::TextInput::Custom(Box::new(TextInputStyle::ONLY_ROUND_LEFT)))
+					.into()
+			}
+			else {
+				button(
+					text(&tag.name)
+            			.width(Length::Fill)
+				)
+				.on_press(ManageTaskTagsModalMessage::EditTaskTagName(tag_id).into())
+				.style(theme::Button::custom(HiddenSecondaryButtonStyle))
+				.into()
+			};
+
+			tags_list.push(
+				column![
+					row![
+						color_palette_item_button(
+							tag.color.into(),
+							false,
+							if show_color_palette {
+								ManageTaskTagsModalMessage::StopEditTaskTagColor.into()
+							}
+							else {
+								ManageTaskTagsModalMessage::EditTaskTagColor(tag_id).into()
+							}
+						),
+						name_element,
+						delete_task_tag_button(tag_id),
+					]
+					.align_items(Alignment::Center)
+					.spacing(SMALL_SPACING_AMOUNT)
+				]
+				.push_maybe(
+					if show_color_palette {
+						Some(color_palette(tag.color.into(), move |new_color| ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color).into()))
+					}
+					else {
+						None
+					}
+				)
+				.into()
+			);
+		}
+
+		if let Some(create_new_task_tag_name) = create_new_task_tag {
+			tags_list.push(
+				row![
+					unfocusable(
+						text_input("New tag name", create_new_task_tag_name)
+							.id(CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID.clone())
+							.on_input(|new_name| ManageTaskTagsModalMessage::ChangeCreateNewTaskTagName(new_name).into())
+							.on_submit(ManageTaskTagsModalMessage::CreateNewTaskTag.into())
+							.style(theme::TextInput::Custom(Box::new(TextInputStyle::ONLY_ROUND_LEFT))),
+
+						ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into()
+					),
+
+					cancel_create_new_task_tag_button(),
+				].into()
+			);
+		}
+		else {
+			tags_list.push(create_new_task_tags_button().into());
+		}
+
+		Column::with_children(tags_list)
+			.spacing(SMALL_SPACING_AMOUNT)
+			.into()
 	}
 }

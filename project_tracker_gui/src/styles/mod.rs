@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, PaletteItemButtonStyle, ColorPaletteButtonStyle, InvisibleButtonStyle, TaskTagButtonStyle, TaskButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, ColorPaletteButtonStyle, InvisibleButtonStyle, TaskTagButtonStyle, TaskButtonStyle};
 
 mod container_styles;
 pub use container_styles::{RoundedContainerStyle, PaletteContainerStyle, ProjectPreviewBackgroundContainerStyle, TaskBackgroundContainerStyle, DropzoneContainerStyle, InBetweenDropzoneContainerStyle, TooltipContainerStyle, ShadowContainerStyle};
@@ -20,10 +20,10 @@ mod text_editor;
 pub use text_editor::TextEditorStyle;
 
 mod scrollable;
-pub use scrollable::{ScrollableStyle, scrollable_horizontal_direction, scrollable_vertical_direction, SCROLLBAR_WIDTH};
+pub use scrollable::ScrollableStyle;
 
 mod modal_style;
-pub use modal_style::{ModalStyle, PaletteModalStyle, ModalCardStyle};
+pub use modal_style::{ModalStyle, ModalCardStyle};
 
 mod constants;
 pub use constants::{

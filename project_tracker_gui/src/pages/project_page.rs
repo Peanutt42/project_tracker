@@ -2,10 +2,10 @@ use std::{collections::HashSet, time::Instant};
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point};
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
+	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, horizontal_scrollable, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, SerializableDate, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{scrollable_horizontal_direction, HiddenSecondaryButtonStyle, ScrollableStyle, TextInputStyle, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SCROLLBAR_WIDTH, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	styles::{HiddenSecondaryButtonStyle, TextInputStyle, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -423,128 +423,11 @@ impl ProjectPage {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
 		if let Some(database) = &app.database {
 			if let Some(project) = database.projects().get(&self.project_id) {
-				let project_name : Element<UiMessage> = if let Some(edited_project_name) = &self.edited_project_name {
-					unfocusable(
-						text_input("New project name", edited_project_name)
-							.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
-							.size(TITLE_TEXT_SIZE)
-							.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
-							.on_submit(ProjectPageMessage::ChangeProjectName.into())
-							.style(theme::TextInput::Custom(Box::new(TextInputStyle::default()))),
-
-						ProjectPageMessage::StopEditingProjectName.into()
-					)
-					.into()
-				}
-				else {
-					button(
-						text(&project.name).size(TITLE_TEXT_SIZE)
-					)
-					.on_press(ProjectPageMessage::EditProjectName.into())
-					.style(theme::Button::custom(HiddenSecondaryButtonStyle))
-					.into()
-				};
-
-				let project_id = self.project_id;
-
-				let show_color_picker_button = color_palette_item_button(
-					project.color.into(),
-					false,
-					if self.show_color_picker {
-						ProjectPageMessage::HideColorPicker.into()
-					}
-					else {
-						ProjectPageMessage::ShowColorPicker.into()
-					}
-				);
-
-				let mut task_tags_list: Vec<Element<UiMessage>> = Vec::new();
-				for (tag_id, tag) in project.task_tags.iter() {
-					task_tags_list.push(
-						task_tag_button(tag, self.filter_task_tags.contains(&tag_id), true, true)
-							.on_press(ProjectPageMessage::ToggleFilterTaskTag(tag_id).into())
-							.into()
-					);
-				}
-
-				let delete_project_button_element: Element<UiMessage> = delete_project_button(self.project_id, &project.name).into();
-
-				let tags_bottom_scrollbar_padding = Padding { bottom: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO };
-
 				column![
-					column![
-						column![
-							row![
-								show_color_picker_button,
-								project_name,
-								if self.edited_project_name.is_some() {
-									delete_project_button_element
-								}
-								else {
-									container(
-										delete_project_button_element
-									)
-									.width(Length::Fill)
-									.align_x(Horizontal::Right)
-									.into()
-								}
-							]
-							.spacing(TINY_SPACING_AMOUNT)
-							.align_items(Alignment::Center)
-						]
-						.push_maybe(if self.show_color_picker {
-							Some(color_palette(project.color.into(), move |c: Color| DatabaseMessage::ChangeProjectColor{ project_id, new_color: c.into() }.into()))
-						}
-						else {
-							None
-						})
-						.width(Length::Fill),
-
-
-						row![
-							container(text("Tags:"))
-								.padding(tags_bottom_scrollbar_padding),
-
-							scrollable(
-								Row::with_children(task_tags_list)
-									.spacing(SPACING_AMOUNT)
-									.padding(Padding { bottom: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO })
-							)
-							.width(Length::Fill)
-							.direction(scrollable_horizontal_direction())
-							.style(theme::Scrollable::custom(ScrollableStyle)),
-
-							container(manage_task_tags_button(self.project_id))
-								.padding(tags_bottom_scrollbar_padding),
-						]
-						.spacing(SPACING_AMOUNT)
-						.align_items(Alignment::Center),
-
-						row![
-							text(
-								format!(
-									"{}/{} finished ({}%)",
-									project.tasks_done(),
-									project.total_tasks(),
-									(project.get_completion_percentage() * 100.0).round()
-								)
-							)
-							.width(Length::Fill),
-
-							container(create_new_task_button(self.create_new_task.is_none()))
-								.width(Length::Fill)
-								.align_x(Horizontal::Right),
-						]
-						.width(Length::Fill)
-						.align_items(Alignment::Center),
-
-						completion_bar(project.get_completion_percentage()),
-					]
-					.padding(Padding::new(PADDING_AMOUNT))
-					.spacing(SPACING_AMOUNT),
+					self.project_details_view(self.project_id, project),
 
 					task_list(
-						project_id,
+						self.project_id,
 						project,
 						&self.cached_task_list,
 						&self.edited_task,
@@ -568,6 +451,118 @@ impl ProjectPage {
 		else {
 			column![].into()
 		}
+	}
+
+	fn project_details_view(&self, project_id: ProjectId, project: &Project) -> Element<UiMessage> {
+		let project_name : Element<UiMessage> = if let Some(edited_project_name) = &self.edited_project_name {
+			unfocusable(
+				text_input("New project name", edited_project_name)
+					.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
+					.size(TITLE_TEXT_SIZE)
+					.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
+					.on_submit(ProjectPageMessage::ChangeProjectName.into())
+					.style(theme::TextInput::Custom(Box::new(TextInputStyle::default()))),
+
+				ProjectPageMessage::StopEditingProjectName.into()
+			)
+			.into()
+		}
+		else {
+			button(
+				text(&project.name).size(TITLE_TEXT_SIZE)
+			)
+			.on_press(ProjectPageMessage::EditProjectName.into())
+			.style(theme::Button::custom(HiddenSecondaryButtonStyle))
+			.into()
+		};
+
+		let show_color_picker_button = color_palette_item_button(
+			project.color.into(),
+			false,
+			if self.show_color_picker {
+				ProjectPageMessage::HideColorPicker.into()
+			}
+			else {
+				ProjectPageMessage::ShowColorPicker.into()
+			}
+		);
+
+		let mut task_tags_list: Vec<Element<UiMessage>> = Vec::new();
+		for (tag_id, tag) in project.task_tags.iter() {
+			task_tags_list.push(
+				task_tag_button(tag, self.filter_task_tags.contains(&tag_id), true, true)
+					.on_press(ProjectPageMessage::ToggleFilterTaskTag(tag_id).into())
+					.into()
+			);
+		}
+
+		let delete_project_button_element: Element<UiMessage> = delete_project_button(self.project_id, &project.name).into();
+
+		column![
+			column![
+				row![
+					show_color_picker_button,
+					project_name,
+					if self.edited_project_name.is_some() {
+						delete_project_button_element
+					}
+					else {
+						container(
+							delete_project_button_element
+						)
+						.width(Length::Fill)
+						.align_x(Horizontal::Right)
+						.into()
+					}
+				]
+				.spacing(TINY_SPACING_AMOUNT)
+				.align_items(Alignment::Center)
+			]
+			.push_maybe(if self.show_color_picker {
+				Some(color_palette(project.color.into(), move |c: Color| DatabaseMessage::ChangeProjectColor{ project_id, new_color: c.into() }.into()))
+			}
+			else {
+				None
+			})
+			.width(Length::Fill),
+
+
+			row![
+				text("Tags:"),
+
+				horizontal_scrollable(
+					Row::with_children(task_tags_list)
+						.spacing(SPACING_AMOUNT)
+				),
+
+				manage_task_tags_button(self.project_id),
+			]
+			.spacing(SPACING_AMOUNT)
+			.align_items(Alignment::Center),
+
+			row![
+				text(
+					format!(
+						"{}/{} finished ({}%)",
+						project.tasks_done(),
+						project.total_tasks(),
+						(project.get_completion_percentage() * 100.0).round()
+					)
+				)
+				.width(Length::Fill),
+
+				container(create_new_task_button(self.create_new_task.is_none()))
+					.width(Length::Fill)
+					.align_x(Horizontal::Right),
+			]
+			.width(Length::Fill)
+			.align_items(Alignment::Center),
+
+			completion_bar(project.get_completion_percentage()),
+		]
+		.padding(Padding::new(PADDING_AMOUNT))
+		.spacing(SPACING_AMOUNT)
+		.into()
 	}
 
 	fn generate_cached_task_list(&mut self, database: &Database) {

@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::Duration};
 use iced::{clipboard, event::Status, font, keyboard, mouse, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
-	components::{invisible_toggle_sidebar_button, toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, SwitchProjectModal, SwitchProjectModalMessage},
+	components::{invisible_toggle_sidebar_button, toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage},
 	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageMessage},
 	styles::{SplitStyle, PADDING_AMOUNT},
@@ -17,7 +17,6 @@ pub struct ProjectTrackerApp {
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
 	pub error_msg_modal: ErrorMsgModal,
-	pub switch_project_modal: SwitchProjectModal,
 	pub settings_modal: SettingsModal,
 	pub manage_tags_modal: ManageTaskTagsModal,
 	pub is_system_theme_dark: bool,
@@ -28,7 +27,6 @@ pub enum UiMessage {
 	CloseWindowRequested(window::Id),
 	EscapePressed,
 	EnterPressed,
-	ControlReleased,
 	LeftClickReleased,
 	CopyToClipboard(String),
 	SaveChangedFiles,
@@ -50,7 +48,6 @@ pub enum UiMessage {
 	OpenOverview,
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
-	SwitchProjectModalMessage(SwitchProjectModalMessage),
 	SettingsModalMessage(SettingsModalMessage),
 	ManageTaskTagsModalMessage(ManageTaskTagsModalMessage),
 }
@@ -71,7 +68,6 @@ impl Application for ProjectTrackerApp {
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
 				error_msg_modal: ErrorMsgModal::Closed,
-				switch_project_modal: SwitchProjectModal::Closed,
 				settings_modal: SettingsModal::Closed,
 				manage_tags_modal: ManageTaskTagsModal::Closed,
 				is_system_theme_dark: is_system_theme_dark(),
@@ -133,11 +129,6 @@ impl Application for ProjectTrackerApp {
 				_ => None,
 			}),
 
-			keyboard::on_key_release(|key, _modifiers| match key.as_ref() {
-				keyboard::Key::Named(keyboard::key::Named::Control) => Some(UiMessage::ControlReleased),
-				_ => None,
-			}),
-
 			iced::event::listen_with(move |event, status| {
 				match event {
 					Event::Window(id, window::Event::CloseRequested) if matches!(status, Status::Ignored) => Some(UiMessage::CloseWindowRequested(id)),
@@ -166,7 +157,6 @@ impl Application for ProjectTrackerApp {
 				self.update(ProjectPageMessage::HideColorPicker.into()),
 				self.update(ConfirmModalMessage::Close.into()),
 				self.update(ErrorMsgModalMessage::Close.into()),
-				self.update(SwitchProjectModalMessage::Close.into()),
 				self.update(SettingsModalMessage::Close.into()),
 				self.update(ManageTaskTagsModalMessage::Close.into()),
 			]),
@@ -180,7 +170,6 @@ impl Application for ProjectTrackerApp {
 					ConfirmModal::Closed => Command::none()
 				}
 			},
-			UiMessage::ControlReleased => self.update(SwitchProjectModalMessage::Close.into()),
 			UiMessage::LeftClickReleased => {
 				let select_project_command = self.sidebar_page
 					.should_select_project()
@@ -404,7 +393,6 @@ impl Application for ProjectTrackerApp {
 							Command::none()
 						},
 						sidebar_snap_command,
-						self.update(SwitchProjectModalMessage::Open.into()),
 					]);
 				}
 				Command::none()
@@ -467,7 +455,6 @@ impl Application for ProjectTrackerApp {
 					.unwrap_or(Command::none())
 				])
 			},
-			UiMessage::SwitchProjectModalMessage(message) => self.switch_project_modal.update(message, &self.database, self.selected_project_id),
 		}
 	}
 
@@ -501,32 +488,21 @@ impl Application for ProjectTrackerApp {
 		}
 		else {
 			row![
-				container(toggle_sidebar_button()).padding(Padding { left: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
+				container(toggle_sidebar_button())
+					.padding(Padding { left: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
+
 				self.content_page.view(self),
-				container(invisible_toggle_sidebar_button()).padding(Padding { right: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
+
+				container(invisible_toggle_sidebar_button())
+					.padding(Padding { right: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
 			]
 			.into()
-		};
-
-		let switch_project_modal_view = || {
-			if let Some(preferences) = &self.preferences {
-				if preferences.show_sidebar() {
-					None
-				}
-				else {
-					self.switch_project_modal.view(&self.database, self.selected_project_id)
-				}
-			}
-			else {
-				None
-			}
 		};
 
 		if let Some((modal_element, modal_style)) = self.error_msg_modal.view()
 			.or(self.confirm_modal.view())
 			.or(self.settings_modal.view(self))
 			.or(self.manage_tags_modal.view(self))
-			.or(switch_project_modal_view())
 		{
 			modal(
 				underlay,

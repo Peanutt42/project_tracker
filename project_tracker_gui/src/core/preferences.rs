@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::time::Instant;
-use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, text}, Alignment, Command, Element, Length};
+use iced::{alignment::Horizontal, widget::{column, container, row, text, Row}, Alignment, Command, Element, Length};
 use iced_aw::Bootstrap;
 use serde::{Serialize, Deserialize};
 use crate::{components::{dangerous_button, date_formatting_button, file_location, theme_mode_button, ErrorMsgModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
@@ -257,43 +257,39 @@ impl Preferences {
 		}
 	}
 
-	pub fn view(&self) -> Element<UiMessage> {
-		column![
-			row![
-				text("File location: "),
-				container(file_location(&Self::get_filepath()))
-					.width(Length::Fill)
-					.align_x(Horizontal::Right)
-			]
-			.align_items(Alignment::Center),
-
-			row![
-				text("Theme Mode:").horizontal_alignment(Horizontal::Center).vertical_alignment(Vertical::Center),
-				container(
-					row![
-						theme_mode_button(ThemeMode::System, self.theme_mode, true, false),
-						theme_mode_button(ThemeMode::Dark, self.theme_mode, false, false),
-						theme_mode_button(ThemeMode::Light, self.theme_mode, false, true),
-					]
-					.align_items(Alignment::Center)
-				)
+	fn setting_item(label: &'static str, content: impl Into<Element<'static, UiMessage>>) -> Row<'static, UiMessage> {
+		row![
+			text(label),
+			container(content)
 				.width(Length::Fill)
 				.align_x(Horizontal::Right),
-			]
-			.align_items(Alignment::Center),
+		]
+		.align_items(Alignment::Center)
+	}
 
-			row![
-				text("Date Formatting:"),
-				container(
-					row![
-						date_formatting_button(&DateFormatting::DayMonthYear, &self.date_formatting, true),
-						date_formatting_button(&DateFormatting::MonthDayYear, &self.date_formatting, false),
-					]
-				)
-				.width(Length::Fill)
-				.align_x(Horizontal::Right)
-			]
-			.align_items(Alignment::Center),
+	pub fn view(&self) -> Element<UiMessage> {
+		column![
+			Self::setting_item(
+				"File location:",
+				file_location(&Self::get_filepath())
+			),
+
+			Self::setting_item(
+				"Theme Mode:",
+				row![
+					theme_mode_button(ThemeMode::System, self.theme_mode, true, false),
+					theme_mode_button(ThemeMode::Dark, self.theme_mode, false, false),
+					theme_mode_button(ThemeMode::Light, self.theme_mode, false, true),
+				]
+			),
+
+			Self::setting_item(
+				"Date Formatting:",
+				row![
+					date_formatting_button(&DateFormatting::DayMonthYear, &self.date_formatting, true),
+					date_formatting_button(&DateFormatting::MonthDayYear, &self.date_formatting, false),
+				]
+			),
 
 			row![
 				dangerous_button(

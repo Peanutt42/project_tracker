@@ -1,9 +1,9 @@
-use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
+use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
 use iced_drop::{find_zones, zones_on_point};
 use once_cell::sync::Lazy;
-use crate::{components::{in_between_dropzone, horizontal_seperator, unfocusable}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, SMALL_SPACING_AMOUNT}};
+use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
 use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
-use crate::styles::{TextInputStyle, ScrollableStyle, scrollable_vertical_direction, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, PADDING_AMOUNT, SCROLLBAR_WIDTH, SPACING_AMOUNT};
+use crate::styles::{TextInputStyle, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::core::{OrderedHashMap, ProjectId, Project};
 
@@ -116,71 +116,6 @@ impl SidebarPage {
 		self.pressed_project_id = None;
 		self.project_dropzone_hovered = None;
 		project_id_to_select
-	}
-
-	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
-		let mut list: Vec<Element<UiMessage>> = projects.iter()
-			.map(|(project_id, project)| {
-				let selected = match app.selected_project_id {
-					Some(selected_project_id) => project_id == selected_project_id,
-					None => false,
-				};
-				let project_dropzone_highlight = match self.project_dropzone_hovered {
-					Some(ProjectDropzone::Project(hovered_project_id)) => hovered_project_id == project_id,
-					_ => false,
-				};
-				let task_dropzone_highlight = match self.task_dropzone_hovered {
-					Some(TaskDropzone::Project(hovered_project_id)) => project_id == hovered_project_id,
-					_ => false
-				};
-				let dragging = match self.dragged_project_id {
-					Some(dragged_project_id) => dragged_project_id == project_id,
-					None => false,
-				};
-				project_preview(project, project_id, selected, project_dropzone_highlight, task_dropzone_highlight, dragging, self.just_minimal_dragging)
-			})
-			.collect();
-
-		let end_of_list_dropzone_hovered = match self.project_dropzone_hovered {
-			Some(dropzone_hovered) => matches!(dropzone_hovered, ProjectDropzone::EndOfList),
-			None => false,
-		};
-
-		list.push(
-			in_between_dropzone(BOTTOM_PROJECT_DROPZONE_ID.clone(), end_of_list_dropzone_hovered)
-		);
-
-		if let Some(create_new_project_name) = &self.create_new_project_name {
-			let project_name_text_input_element = container(
-				unfocusable(
-					text_input("New project name", create_new_project_name)
-						.id(TEXT_INPUT_ID.clone())
-						.size(LARGE_TEXT_SIZE)
-						.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
-						.on_submit(SidebarPageMessage::CreateNewProject(ProjectId::generate()).into())
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle::default()))),
-
-					SidebarPageMessage::CloseCreateNewProject.into()
-				)
-			)
-			.width(Length::Fill)
-			.align_x(Horizontal::Center)
-			.into();
-
-			list.push(custom_project_preview(None, None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false, false, false, false));
-		}
-
-		scrollable(
-			Column::from_vec(list)
-				.width(Length::Fill)
-				.padding(Padding{ right: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO })
-		)
-		.id(SCROLLABLE_ID.clone())
-		.width(Length::Fill)
-		.height(Length::Fill)
-		.style(theme::Scrollable::custom(ScrollableStyle))
-		.direction(scrollable_vertical_direction())
-		.into()
 	}
 
 	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>) -> Command<UiMessage> {
@@ -387,52 +322,106 @@ impl SidebarPage {
 		}
 	}
 
+	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
+		let mut list: Vec<Element<UiMessage>> = projects.iter()
+			.map(|(project_id, project)| {
+				let selected = match app.selected_project_id {
+					Some(selected_project_id) => project_id == selected_project_id,
+					None => false,
+				};
+				let project_dropzone_highlight = match self.project_dropzone_hovered {
+					Some(ProjectDropzone::Project(hovered_project_id)) => hovered_project_id == project_id,
+					_ => false,
+				};
+				let task_dropzone_highlight = match self.task_dropzone_hovered {
+					Some(TaskDropzone::Project(hovered_project_id)) => project_id == hovered_project_id,
+					_ => false
+				};
+				let dragging = match self.dragged_project_id {
+					Some(dragged_project_id) => dragged_project_id == project_id,
+					None => false,
+				};
+				project_preview(project, project_id, selected, project_dropzone_highlight, task_dropzone_highlight, dragging, self.just_minimal_dragging)
+			})
+			.collect();
+
+		let end_of_list_dropzone_hovered = match self.project_dropzone_hovered {
+			Some(dropzone_hovered) => matches!(dropzone_hovered, ProjectDropzone::EndOfList),
+			None => false,
+		};
+
+		list.push(
+			in_between_dropzone(BOTTOM_PROJECT_DROPZONE_ID.clone(), end_of_list_dropzone_hovered)
+		);
+
+		if let Some(create_new_project_name) = &self.create_new_project_name {
+			let project_name_text_input_element = container(
+				unfocusable(
+					text_input("New project name", create_new_project_name)
+						.id(TEXT_INPUT_ID.clone())
+						.size(LARGE_TEXT_SIZE)
+						.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
+						.on_submit(SidebarPageMessage::CreateNewProject(ProjectId::generate()).into())
+						.style(theme::TextInput::Custom(Box::new(TextInputStyle::default()))),
+
+					SidebarPageMessage::CloseCreateNewProject.into()
+				)
+			)
+			.width(Length::Fill)
+			.align_x(Horizontal::Center)
+			.into();
+
+			list.push(custom_project_preview(None, None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false, false, false, false));
+		}
+
+		vertical_scrollable(
+			Column::from_vec(list)
+				.width(Length::Fill)
+		)
+		.id(SCROLLABLE_ID.clone())
+		.height(Length::Fill)
+		.into()
+	}
+
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
-		let scrollbar_padding = Padding{ right: SMALL_PADDING_AMOUNT + SCROLLBAR_WIDTH, ..Padding::ZERO };
+		let padding = Padding::new(PADDING_AMOUNT);
 
 		let list: Element<UiMessage> = if let Some(database) = &app.database {
 				self.project_preview_list(database.projects(), app)
 			}
 			else {
-				container(loading_screen())
-					.padding(scrollbar_padding)
-					.into()
+				loading_screen()
 			};
 
 		column![
-			container(
-				column![
-					row![
-						overview_button(app.content_page.is_overview_page()),
-						toggle_sidebar_button(),
-					]
-					.align_items(Alignment::Center)
-					.spacing(SMALL_SPACING_AMOUNT),
-
-					horizontal_seperator(),
+			column![
+				row![
+					overview_button(app.content_page.is_overview_page()),
+					toggle_sidebar_button(),
 				]
-				.spacing(SPACING_AMOUNT)
-			)
-			.padding(scrollbar_padding),
+				.align_items(Alignment::Center)
+				.spacing(SMALL_SPACING_AMOUNT),
+
+				horizontal_seperator(),
+			]
+			.spacing(SPACING_AMOUNT)
+			.padding(padding),
 
 			list,
 
-			container(
-				row![
-					settings_button(),
+			row![
+				settings_button(),
 
-					container(create_new_project_button(self.create_new_project_name.is_none()))
-						.width(Length::Fill)
-						.align_x(Horizontal::Right),
-				]
-				.align_items(Alignment::Center)
-			)
-			.padding(scrollbar_padding),
+				container(create_new_project_button(self.create_new_project_name.is_none()))
+					.width(Length::Fill)
+					.align_x(Horizontal::Right),
+			]
+			.align_items(Alignment::Center)
+			.padding(padding),
 		]
 		.width(Length::Fill)
 		.height(Length::Fill)
 		// .spacing(SPACING_AMOUNT) this is not needed since every project in the list has a SPACING_AMOUNT height dropzone
-		.padding(Padding{ left: PADDING_AMOUNT, right: 0.0, top: PADDING_AMOUNT, bottom: PADDING_AMOUNT })
 		.into()
 	}
 

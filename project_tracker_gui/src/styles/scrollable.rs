@@ -1,21 +1,4 @@
-use iced::{widget::{container, scrollable::{self, Appearance, Direction, Properties, StyleSheet}}, Border, Theme};
-use crate::styles::SMALL_PADDING_AMOUNT;
-
-pub const SCROLLBAR_WIDTH: f32 = SMALL_PADDING_AMOUNT;
-
-pub fn scrollable_vertical_direction() -> Direction {
-	Direction::Vertical(
-		Properties::new()
-			.scroller_width(SCROLLBAR_WIDTH)
-	)
-}
-
-pub fn scrollable_horizontal_direction() -> Direction {
-	Direction::Horizontal(
-		Properties::new()
-			.scroller_width(SCROLLBAR_WIDTH)
-	)
-}
+use iced::{widget::{container, scrollable::{self, Appearance, StyleSheet}}, Border, Theme};
 
 pub struct ScrollableStyle;
 

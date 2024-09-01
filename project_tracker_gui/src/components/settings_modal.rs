@@ -111,7 +111,7 @@ impl SettingsModal {
 										text("Synchronization file location: "),
 
 										if let Some(filepath) = preferences.synchronization_filepath() {
-											filepath_widget(filepath)
+											Element::new(filepath_widget(filepath).width(Length::Fill))
 										}
 										else {
 											"not specified".into()

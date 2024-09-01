@@ -1,8 +1,8 @@
 use std::path::PathBuf;
-use iced::{alignment::Horizontal, theme, widget::{container, button, row, text, tooltip, tooltip::Position, Button}, Alignment, alignment::Vertical, Element, Length};
-use iced_aw::{Spinner, core::icons::bootstrap::{icon_to_text, Bootstrap}};
+use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
+use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{disabled_primary_text_color, primary_text_color, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{disabled_primary_text_color, primary_text_color, ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -386,4 +386,40 @@ pub fn edit_due_date_button(due_date: &SerializableDate, date_formatting: DateFo
 		round_left_bottom: true,
 		..SecondaryButtonStyle::NO_ROUNDING
 	}))
+}
+
+pub fn color_palette_item_button(color: Color, selected: bool, on_press: UiMessage) -> Button<'static, UiMessage> {
+	button(
+		Quad {
+			width: Length::Fixed(25.0),
+			height: Length::Fixed(25.0),
+			inner_bounds: InnerBounds::Ratio(0.8, 0.8),
+			quad_color: color.into(),
+			quad_border: Border::with_radius(f32::MAX),
+			bg_color: None,
+			..Default::default()
+		}
+	)
+	.on_press(on_press)
+	.style(theme::Button::custom(ColorPaletteButtonStyle{ selected }))
+}
+
+pub fn confirm_ok_button(on_confirmed: &UiMessage) -> Button<'static, UiMessage> {
+	button(
+		text("Ok")
+			.horizontal_alignment(Horizontal::Center)
+	)
+	.width(Length::Fill)
+	.style(theme::Button::custom(DangerousButtonStyle))
+	.on_press(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())))
+}
+
+pub fn confirm_cancel_button() -> Button<'static, UiMessage> {
+	button(
+		text("Cancel")
+			.horizontal_alignment(Horizontal::Center)
+	)
+	.width(Length::Fill)
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
+	.on_press(ConfirmModalMessage::Close.into())
 }
