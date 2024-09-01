@@ -90,7 +90,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id
 			.on_cancel(SidebarPageMessage::CancelDragProject.into())
 			.drag_overlay(!just_minimal_dragging)
 			.drag_hide(!just_minimal_dragging)
-			.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected })),
+			.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected, project_color: Some(project_color) })),
 		]
 		.into()
 	}

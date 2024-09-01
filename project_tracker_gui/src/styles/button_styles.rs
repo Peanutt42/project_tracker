@@ -3,6 +3,7 @@ use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, SMALL_BLUR_RADIUS, BLUR_
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
+	pub project_color: Option<Color>,
 }
 
 impl StyleSheet for ProjectPreviewButtonStyle {
@@ -21,14 +22,14 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 			text_color: style.extended_palette().background.base.text,
 			border: Border {
 				radius: BORDER_RADIUS.into(),
-				color: SELECTION_COLOR,
+				color: self.project_color.unwrap_or(SELECTION_COLOR),
 				width: if self.selected { 2.0 } else { 0.0 },
 			},
 			shadow: if self.selected {
 				Shadow {
 					color: Color {
 						a: background_shadow_alpha(style.extended_palette()),
-						..SELECTION_COLOR
+						..self.project_color.unwrap_or(SELECTION_COLOR)
 					},
 					blur_radius: SMALL_BLUR_RADIUS,
 					..Default::default()
@@ -54,7 +55,7 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 			shadow: Shadow {
 				color: Color {
 					a: background_shadow_alpha(style.extended_palette()),
-					..SELECTION_COLOR
+					..self.project_color.unwrap_or(SELECTION_COLOR)
 				},
 				blur_radius: SMALL_BLUR_RADIUS,
 				..Default::default()
@@ -101,7 +102,7 @@ impl StyleSheet for DangerousButtonStyle {
 
 	fn active(&self, style: &Self::Style) -> Appearance {
 		Appearance {
-			background: Some(Color::from_rgb(1.0, 0.0, 0.0).into()),
+			background: Some(style.extended_palette().danger.base.color.into()),
 			text_color: style.extended_palette().danger.base.text,
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
@@ -298,7 +299,7 @@ impl StyleSheet for SelectionListButtonStyle {
 		Appearance {
 			background: Some(
 				if self.selected {
-					style.extended_palette().primary.base.color.into()
+					style.extended_palette().success.strong.color.into()
 				}
 				else {
 					style.extended_palette().secondary.base.color.into()
@@ -324,7 +325,7 @@ impl StyleSheet for SelectionListButtonStyle {
 		Appearance {
 			background: Some(
 				if self.selected {
-					style.extended_palette().success.base.color.into()
+					style.extended_palette().success.strong.color.into()
 				}
 				else {
 					style.extended_palette().background.strong.color.into()

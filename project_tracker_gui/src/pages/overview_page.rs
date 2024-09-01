@@ -52,7 +52,7 @@ impl OverviewPage {
 						Self::todo_tasks_list(project),
 					])
 					.width(Length::Fill)
-					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected: false }))
+					.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected: false, project_color: Some(project.color.into()) }))
 					.on_press(UiMessage::SelectProject(Some(project_id)))
 					.into()
 				})

@@ -533,7 +533,8 @@ impl ProjectPage {
 				horizontal_scrollable(
 					Row::with_children(task_tags_list)
 						.spacing(SPACING_AMOUNT)
-				),
+				)
+				.width(Length::Fill),
 
 				manage_task_tags_button(self.project_id),
 			]
