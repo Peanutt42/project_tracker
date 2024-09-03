@@ -423,3 +423,19 @@ pub fn confirm_cancel_button() -> Button<'static, UiMessage> {
 	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 	.on_press(ConfirmModalMessage::Close.into())
 }
+
+pub fn search_tasks_button() -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::Search)
+	)
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
+	.on_press(ProjectPageMessage::OpenSearchTasks.into())
+}
+
+pub fn cancel_search_tasks_button() -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::XLg)
+	)
+	.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_RIGHT))
+	.on_press(ProjectPageMessage::CloseSearchTasks.into())
+}

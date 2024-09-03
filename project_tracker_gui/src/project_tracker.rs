@@ -114,6 +114,7 @@ impl Application for ProjectTrackerApp {
 				keyboard::Key::Character("b") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
 				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::OpenOverview),
 				keyboard::Key::Character("r") if modifiers.command() => Some(ProjectPageMessage::EditProjectName.into()),
+				keyboard::Key::Character("f") if modifiers.command() => Some(ProjectPageMessage::OpenSearchTasks.into()),
 				keyboard::Key::Character(",") if modifiers.command() => Some(SettingsModalMessage::Open.into()),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),

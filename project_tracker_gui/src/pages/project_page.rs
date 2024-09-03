@@ -1,14 +1,16 @@
 use std::{collections::HashSet, time::Instant};
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point};
+use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
 use crate::{
-	components::{color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, horizontal_scrollable, manage_task_tags_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
-	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, SerializableDate, TaskId, TaskTagId},
+	components::{cancel_search_tasks_button, color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, horizontal_scrollable, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
+	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{HiddenSecondaryButtonStyle, TextInputStyle, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	styles::{HiddenSecondaryButtonStyle, TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+static SEARCH_TASKS_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[derive(Clone, Debug)]
 pub enum ProjectPageMessage {
@@ -17,6 +19,10 @@ pub enum ProjectPageMessage {
 	ChangeCreateNewTaskName(String),
 	ToggleCreateNewTaskTag(TaskTagId),
 	CreateNewTask,
+
+	OpenSearchTasks,
+	CloseSearchTasks,
+	ChangeSearchTasksFilter(String),
 
 	ShowDoneTasks(bool),
 
@@ -94,16 +100,21 @@ impl CachedTaskList {
 		}
 	}
 
-	pub fn generate(project: &Project, task_tag_filter: &HashSet<TaskTagId>) -> Self {
+	pub fn generate(project: &Project, task_tag_filter: &HashSet<TaskTagId>, search_filter: &Option<String>) -> Self {
+		let matches = |task: &Task| {
+			task.matches_filter(task_tag_filter) &&
+			search_filter.as_ref().map(|search_filter| task.name.contains(search_filter)).unwrap_or(true) // TODO: improve task searching with fuzzy string matching
+		};
+
 		let mut todo_list = Vec::new();
 		for (task_id, task) in project.todo_tasks.iter() {
-			if task.matches_filter(task_tag_filter) {
+			if matches(task) {
 				todo_list.push(task_id);
 			}
 		}
 		let mut done_list = Vec::new();
 		for (task_id, task) in project.done_tasks.iter() {
-			if task.matches_filter(task_tag_filter) {
+			if matches(task) {
 				done_list.push(*task_id);
 			}
 		}
@@ -121,6 +132,7 @@ pub struct ProjectPage {
 	show_done_tasks: bool,
 	show_color_picker: bool,
 	filter_task_tags: HashSet<TaskTagId>,
+	search_tasks_filter: Option<String>,
 	pressed_task: Option<TaskId>,
 	dragged_task: Option<TaskId>,
 	start_dragging_point: Option<Point>,
@@ -129,7 +141,7 @@ pub struct ProjectPage {
 
 impl ProjectPage {
 	pub fn new(project_id: ProjectId, project: &Project) -> Self {
-		let cached_task_list = CachedTaskList::generate(project, &HashSet::new());
+		let cached_task_list = CachedTaskList::generate(project, &HashSet::new(), &None);
 
 		Self {
 			project_id,
@@ -140,6 +152,7 @@ impl ProjectPage {
 			show_done_tasks: false,
 			show_color_picker: false,
 			filter_task_tags: HashSet::new(),
+			search_tasks_filter: None,
 			pressed_task: None,
 			dragged_task: None,
 			start_dragging_point: None,
@@ -210,6 +223,20 @@ impl ProjectPage {
 				}
 				self.update(ProjectPageMessage::CloseCreateNewTask, database)
 			},
+
+			ProjectPageMessage::OpenSearchTasks => {
+				self.search_tasks_filter = Some(String::new());
+				text_input::focus(SEARCH_TASKS_TEXT_INPUT_ID.clone())
+			},
+			ProjectPageMessage::CloseSearchTasks => { self.search_tasks_filter = None; Command::none() },
+			ProjectPageMessage::ChangeSearchTasksFilter(new_filter) => {
+				self.search_tasks_filter = Some(new_filter);
+				if let Some(database) = database {
+					self.generate_cached_task_list(database);
+				}
+				Command::none()
+			},
+
 			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; Command::none() },
 
 			ProjectPageMessage::ToggleFilterTaskTag(task_tag_id) => {
@@ -496,7 +523,46 @@ impl ProjectPage {
 			);
 		}
 
+		let search_tasks_element: Element<UiMessage> = if let Some(search_tasks_filter) = &self.search_tasks_filter {
+			row![
+				unfocusable(
+					text_input(
+						"Search tasks...",
+						search_tasks_filter
+					)
+					.id(SEARCH_TASKS_TEXT_INPUT_ID.clone())
+					.icon(text_input::Icon {
+						font: BOOTSTRAP_FONT,
+						code_point: '\u{F52A}', // Search icon, see Bootstrap::Search
+						size: None,
+						spacing: SMALL_SPACING_AMOUNT as f32,
+						side: text_input::Side::Left,
+					})
+					.on_input(|new_search_filter| ProjectPageMessage::ChangeSearchTasksFilter(new_search_filter).into())
+					.style(theme::TextInput::Custom(Box::new(TextInputStyle::ONLY_ROUND_LEFT))),
+
+					ProjectPageMessage::CloseSearchTasks.into()
+				),
+				cancel_search_tasks_button(),
+			]
+			.padding(Padding {
+				left: LARGE_PADDING_AMOUNT + LARGE_PADDING_AMOUNT,
+				..Padding::ZERO
+			})
+			.into()
+		}
+		else {
+			search_tasks_button().into()
+		};
+
 		let delete_project_button_element: Element<UiMessage> = delete_project_button(self.project_id, &project.name).into();
+
+		let quick_actions: Element<UiMessage> = row![
+			search_tasks_element,
+			delete_project_button_element,
+		]
+		.spacing(SPACING_AMOUNT)
+		.into();
 
 		column![
 			column![
@@ -504,11 +570,11 @@ impl ProjectPage {
 					show_color_picker_button,
 					project_name,
 					if self.edited_project_name.is_some() {
-						delete_project_button_element
+						quick_actions
 					}
 					else {
 						container(
-							delete_project_button_element
+							quick_actions
 						)
 						.width(Length::Fill)
 						.align_x(Horizontal::Right)
@@ -568,7 +634,7 @@ impl ProjectPage {
 
 	fn generate_cached_task_list(&mut self, database: &Database) {
 		if let Some(project) = database.projects().get(&self.project_id) {
-			self.cached_task_list = CachedTaskList::generate(project, &self.filter_task_tags)
+			self.cached_task_list = CachedTaskList::generate(project, &self.filter_task_tags, &self.search_tasks_filter)
 		}
 	}
 }
