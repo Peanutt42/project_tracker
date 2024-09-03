@@ -153,13 +153,21 @@ impl Application for ProjectTrackerApp {
 					window::close(id),
 				])
 			},
-			UiMessage::EscapePressed => Command::batch([
-				self.update(ProjectPageMessage::HideColorPicker.into()),
-				self.update(ConfirmModalMessage::Close.into()),
-				self.update(ErrorMsgModalMessage::Close.into()),
-				self.update(SettingsModalMessage::Close.into()),
-				self.update(ManageTaskTagsModalMessage::Close.into()),
-			]),
+			UiMessage::EscapePressed => {
+				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
+					return self.update(ErrorMsgModalMessage::Close.into());
+				}
+				if matches!(self.confirm_modal, ConfirmModal::Opened { .. }) {
+					return self.update(ConfirmModalMessage::Close.into());
+				}
+				if matches!(self.settings_modal, SettingsModal::Opened) {
+					return self.update(SettingsModalMessage::Close.into());
+				}
+				if matches!(self.manage_tags_modal, ManageTaskTagsModal::Opened { .. }) {
+					return self.update(ManageTaskTagsModalMessage::Close.into());
+				}
+				self.update(ProjectPageMessage::HideColorPicker.into())
+			},
 			UiMessage::EnterPressed => {
 				self.error_msg_modal = ErrorMsgModal::Closed;
 
@@ -520,8 +528,6 @@ impl Application for ProjectTrackerApp {
 			.on_esc(UiMessage::EscapePressed)
 			.into()
 		}
-
-
 	}
 }
 
