@@ -270,11 +270,6 @@ impl Preferences {
 	pub fn view(&self) -> Element<UiMessage> {
 		column![
 			Self::setting_item(
-				"File location:",
-				file_location(&Self::get_filepath())
-			),
-
-			Self::setting_item(
 				"Theme Mode:",
 				row![
 					theme_mode_button(ThemeMode::System, self.theme_mode, true, false),
@@ -289,6 +284,11 @@ impl Preferences {
 					date_formatting_button(&DateFormatting::DayMonthYear, &self.date_formatting, true),
 					date_formatting_button(&DateFormatting::MonthDayYear, &self.date_formatting, false),
 				]
+			),
+
+			Self::setting_item(
+				"File location:",
+				file_location(&Self::get_filepath())
 			),
 
 			row![

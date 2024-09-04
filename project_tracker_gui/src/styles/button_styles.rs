@@ -528,3 +528,41 @@ impl StyleSheet for TaskButtonStyle {
 		self.hovered(style)
 	}
 }
+
+pub struct SettingsTabButtonStyle {
+	pub selected: bool,
+}
+
+impl StyleSheet for SettingsTabButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: if self.selected {
+				Some(style.extended_palette().success.strong.color.into())
+			}
+			else {
+				None
+			},
+			text_color: style.palette().text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: if self.selected {
+				Some(style.extended_palette().success.strong.color.into())
+			}
+			else {
+				Some(style.extended_palette().secondary.base.color.into())
+			},
+			..self.active(style)
+		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		self.active(style)
+	}
+}

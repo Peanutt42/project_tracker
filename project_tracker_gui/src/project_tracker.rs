@@ -161,7 +161,7 @@ impl Application for ProjectTrackerApp {
 				if matches!(self.confirm_modal, ConfirmModal::Opened { .. }) {
 					return self.update(ConfirmModalMessage::Close.into());
 				}
-				if matches!(self.settings_modal, SettingsModal::Opened) {
+				if matches!(self.settings_modal, SettingsModal::Opened{ .. }) {
 					return self.update(SettingsModalMessage::Close.into());
 				}
 				if matches!(self.manage_tags_modal, ManageTaskTagsModal::Opened { .. }) {

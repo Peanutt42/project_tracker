@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
 use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{disabled_primary_text_color, primary_text_color, ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{disabled_primary_text_color, primary_text_color, ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
@@ -438,4 +438,13 @@ pub fn cancel_search_tasks_button() -> Button<'static, UiMessage> {
 	)
 	.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_RIGHT))
 	.on_press(ProjectPageMessage::CloseSearchTasks.into())
+}
+
+pub fn settings_tab_button(tab: SettingTab, selected_tab: SettingTab) -> Button<'static, UiMessage> {
+	button(
+		text(format!("{tab:?}"))
+	)
+	.width(Length::Fill)
+	.style(theme::Button::custom(SettingsTabButtonStyle{ selected: tab == selected_tab }))
+	.on_press(SettingsModalMessage::SwitchSettingsTab(tab).into())
 }
