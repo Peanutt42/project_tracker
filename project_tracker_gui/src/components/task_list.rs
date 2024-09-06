@@ -3,7 +3,7 @@ use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container
 use once_cell::sync::Lazy;
 use crate::{core::{DateFormatting, Project, TaskTagId, TaskType}, pages::{CachedTaskList, EditTaskState, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::PADDING_AMOUNT};
 use crate::core::{Task, TaskId, ProjectId};
-use crate::components::{vertical_scrollable, show_done_tasks_button, show_source_code_todos_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button, explicit_import_source_code_todos_button, task_tags_buttons, in_between_dropzone};
+use crate::components::{vertical_scrollable, show_done_tasks_button, show_source_code_todos_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button, reimport_source_code_todos_button, task_tags_buttons, in_between_dropzone};
 use crate::styles::{SPACING_AMOUNT, TextInputStyle};
 use crate::pages::ProjectPageMessage;
 
@@ -112,7 +112,7 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 						}
 						else {
 							Some(
-								container(explicit_import_source_code_todos_button())
+								container(reimport_source_code_todos_button())
 									.width(Length::Fill)
 									.align_x(Horizontal::Right)
 							)

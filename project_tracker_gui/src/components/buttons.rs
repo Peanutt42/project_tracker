@@ -469,11 +469,11 @@ pub fn import_source_code_todos_button() -> Element<'static, UiMessage> {
 	.into()
 }
 
-pub fn explicit_import_source_code_todos_button() -> Button<'static, UiMessage> {
+pub fn reimport_source_code_todos_button() -> Button<'static, UiMessage> {
 	button(
 		row![
 			icon_to_text(Bootstrap::FileEarmarkCode),
-			text("Import source code TODO's")
+			text("Reimport source code TODO's")
 		]
 		.spacing(SMALL_SPACING_AMOUNT)
 	)
