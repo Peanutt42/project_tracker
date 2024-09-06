@@ -1,9 +1,10 @@
-use std::{collections::HashSet, time::Instant};
+use std::{collections::HashSet, fs::File, io::{self, BufRead}, time::Instant};
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point};
 use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
+use walkdir::WalkDir;
 use crate::{
-	components::{cancel_search_tasks_button, color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, horizontal_scrollable, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
+	components::{cancel_search_tasks_button, color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{HiddenSecondaryButtonStyle, TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
@@ -23,6 +24,12 @@ pub enum ProjectPageMessage {
 	OpenSearchTasks,
 	CloseSearchTasks,
 	ChangeSearchTasksFilter(String),
+
+	ImportSourceCodeTodosDialog,
+	ImportSourceCodeTodos(Vec<Task>),
+	ImportSourceCodeTodosDialogCanceled,
+
+	ShowSourceCodeTodos(bool),
 
 	ShowDoneTasks(bool),
 
@@ -88,14 +95,16 @@ impl EditTaskState {
 pub struct CachedTaskList {
 	pub todo: Vec<TaskId>,
 	pub done: Vec<TaskId>,
+	pub source_code_todo: Vec<TaskId>,
 	cache_time: Instant,
 }
 
 impl CachedTaskList {
-	pub fn new(todo: Vec<TaskId>, done: Vec<TaskId>) -> Self {
+	pub fn new(todo: Vec<TaskId>, done: Vec<TaskId>, source_code_todo: Vec<TaskId>) -> Self {
 		Self {
 			todo,
 			done,
+			source_code_todo,
 			cache_time: Instant::now(),
 		}
 	}
@@ -118,7 +127,13 @@ impl CachedTaskList {
 				done_list.push(*task_id);
 			}
 		}
-		Self::new(todo_list, done_list)
+		let mut source_code_todo_list = Vec::new();
+		for (task_id, task) in project.source_code_todos.iter() {
+			if matches(task) {
+				source_code_todo_list.push(*task_id);
+			}
+		}
+		Self::new(todo_list, done_list, source_code_todo_list)
 	}
 }
 
@@ -130,6 +145,7 @@ pub struct ProjectPage {
 	pub create_new_task: Option<(String, HashSet<TaskTagId>)>,
 	edited_task: Option<EditTaskState>,
 	show_done_tasks: bool,
+	show_source_code_todos: bool,
 	show_color_picker: bool,
 	filter_task_tags: HashSet<TaskTagId>,
 	search_tasks_filter: Option<String>,
@@ -150,6 +166,7 @@ impl ProjectPage {
 			create_new_task: None,
 			edited_task: None,
 			show_done_tasks: false,
+			show_source_code_todos: true,
 			show_color_picker: false,
 			filter_task_tags: HashSet::new(),
 			search_tasks_filter: None,
@@ -236,6 +253,33 @@ impl ProjectPage {
 				}
 				Command::none()
 			},
+
+			ProjectPageMessage::ImportSourceCodeTodosDialog => Command::perform(
+				Self::pick_todo_source_folders_dialog(),
+				|folders| {
+					if let Some(folders) = folders {
+						ProjectPageMessage::ImportSourceCodeTodos(folders).into()
+					}
+					else {
+						ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into()
+					}
+				}),
+			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => Command::none(),
+			ProjectPageMessage::ImportSourceCodeTodos(todos) => {
+				if let Some(database) = database {
+					database.modify(|projects| {
+						if let Some(project) = projects.get_mut(&self.project_id) {
+							project.source_code_todos.clear();
+							for task in todos {
+								project.source_code_todos.insert(generate_task_id(), task);
+							}
+						}
+					})
+				}
+				Command::none()
+			},
+
+			ProjectPageMessage::ShowSourceCodeTodos(show) => { self.show_source_code_todos = show; Command::none() },
 
 			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; Command::none() },
 
@@ -462,6 +506,7 @@ impl ProjectPage {
 						self.just_minimal_dragging,
 						app.sidebar_page.task_dropzone_hovered,
 						self.show_done_tasks,
+						self.show_source_code_todos,
 						&self.create_new_task,
 						app.preferences.as_ref().map(|pref| pref.date_formatting()).unwrap_or_default()
 					),
@@ -559,6 +604,7 @@ impl ProjectPage {
 
 		let quick_actions: Element<UiMessage> = row![
 			search_tasks_element,
+			import_source_code_todos_button(),
 			delete_project_button_element,
 		]
 		.spacing(SPACING_AMOUNT)
@@ -636,5 +682,65 @@ impl ProjectPage {
 		if let Some(project) = database.projects().get(&self.project_id) {
 			self.cached_task_list = CachedTaskList::generate(project, &self.filter_task_tags, &self.search_tasks_filter)
 		}
+	}
+
+	async fn pick_todo_source_folders_dialog() -> Option<Vec<Task>> {
+		let file_dialog_result = rfd::AsyncFileDialog::new()
+			.set_title("Import Todos from source files")
+			.pick_folders()
+			.await;
+
+		file_dialog_result.map(|folder_handles| {
+			let mut todos = Vec::new();
+
+			for folder_handle in folder_handles {
+				let folder_path = folder_handle.path();
+				if folder_path.file_name().and_then(|file_name| file_name.to_str().map(|file_name| file_name.starts_with('.'))).unwrap_or(false) {
+					continue;
+				}
+				for entry in WalkDir::new(folder_path).into_iter().filter_map(|e| e.ok()) {
+					if entry.file_name().to_str().map(|file_name| file_name.starts_with('.')).unwrap_or(false) {
+						continue;
+					}
+					if entry.metadata().map(|meta| meta.is_dir()).unwrap_or(false) {
+						continue;
+					}
+					if let Ok(file) = File::open(entry.path()) {
+						for (i, line) in io::BufReader::new(file).lines().map_while(Result::ok).enumerate() {
+							let mut search_todo = |keyword: &'static str| {
+								if let Some(index) = line.to_lowercase().find(&keyword.to_lowercase()) {
+									let mut string_quotes_counter = 0;
+									for c in line[0..index].chars() {
+										if c == '\"' || c == '\'' {
+											string_quotes_counter += 1;
+										}
+									}
+
+									if string_quotes_counter % 2 == 0 {
+										let line = line[index + keyword.len()..].to_string();
+										let line = line.strip_prefix(':').unwrap_or(&line);
+										let line = line.strip_prefix(' ').unwrap_or(line);
+										let source = entry.path().display();
+										let line_number = i + 1;
+										todos.push(Task::new(
+											format!("{line}:\n    {source} on line {line_number}"),
+											HashSet::new()
+										));
+									}
+								}
+							};
+
+							// case insensitive!
+							search_todo("// todo");
+							search_todo("//todo");
+							search_todo("# todo");
+							search_todo("#todo");
+						}
+					}
+				}
+			}
+
+			todos
+		})
 	}
 }

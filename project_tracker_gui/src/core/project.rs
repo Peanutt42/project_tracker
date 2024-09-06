@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use serde::{Serialize, Deserialize};
 use indexmap::IndexMap;
 use iced::{widget::container::Id, Color};
-use crate::core::{OrderedHashMap, Task, TaskId, TaskTag, TaskTagId, SerializableDate};
+use crate::core::{OrderedHashMap, Task, TaskId, TaskType, TaskTag, TaskTagId, SerializableDate};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
 pub struct ProjectId(pub usize);
@@ -21,6 +21,7 @@ pub struct Project {
 	pub todo_tasks: OrderedHashMap<TaskId, Task>,
 	#[serde(with = "indexmap::map::serde_seq")]
 	pub done_tasks: IndexMap<TaskId, Task>,
+	pub source_code_todos: IndexMap<TaskId, Task>,
 
 	#[serde(skip, default = "Id::unique")]
 	pub project_dropzone_id: Id,
@@ -37,6 +38,7 @@ impl Project {
 			task_tags: OrderedHashMap::new(),
 			todo_tasks: OrderedHashMap::new(),
 			done_tasks: IndexMap::new(),
+			source_code_todos: IndexMap::new(),
 			project_dropzone_id: Id::unique(),
 			task_dropzone_id: Id::unique(),
 		}
@@ -47,29 +49,35 @@ impl Project {
 		self.todo_tasks
 			.get(task_id)
 			.or(self.done_tasks.get(task_id))
+			.or(self.source_code_todos.get(task_id))
 	}
 
-	/// task can be todo or done
+	/// task can be todo or done or source code todos
 	pub fn get_task_mut(&mut self, task_id: &TaskId) -> Option<&mut Task> {
 		self.todo_tasks
 			.get_mut(task_id)
 			.or(self.done_tasks.get_mut(task_id))
+			.or(self.source_code_todos.get_mut(task_id))
 	}
 
 	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: HashSet<TaskTagId>) {
 		self.todo_tasks.insert(task_id, Task::new(name, tags));
 	}
 
-	/// task can be todo or done
-	/// returns Option of whether the task was todo and the task
-	pub fn remove_task(&mut self, task_id: &TaskId) -> Option<(bool, Task)> {
+	/// task can be todo or done or source code todos
+	pub fn remove_task(&mut self, task_id: &TaskId) -> Option<(TaskType, Task)> {
 		self.todo_tasks
 			.remove(task_id)
-			.map(|task| (true, task))
+			.map(|task| (TaskType::Todo, task))
 			.or(
 				self.done_tasks
 					.shift_remove(task_id)
-					.map(|task| (false, task))
+					.map(|task| (TaskType::Done, task))
+			)
+			.or(
+				self.source_code_todos
+					.shift_remove(task_id)
+					.map(|task| (TaskType::SourceCodeTodo, task))
 			)
 	}
 
@@ -86,7 +94,7 @@ impl Project {
 	}
 
 	pub fn set_task_done(&mut self, task_id: TaskId) {
-		if let Some(task) = self.todo_tasks.remove(&task_id) {
+		if let Some(task) = self.todo_tasks.remove(&task_id).or(self.source_code_todos.shift_remove(&task_id)) {
 			self.done_tasks.insert(task_id, task);
 		}
 	}
@@ -115,11 +123,11 @@ impl Project {
 	}
 
 	pub fn total_tasks(&self) -> usize {
-		self.todo_tasks.len() + self.done_tasks.len()
+		self.todo_tasks.len() + self.done_tasks.len() + self.source_code_todos.len()
 	}
 
 	pub fn tasks_todo(&self) -> usize {
-		self.todo_tasks.len()
+		self.todo_tasks.len() + self.source_code_todos.len()
 	}
 
 	pub fn tasks_done(&self) -> usize {
@@ -166,6 +174,17 @@ impl Project {
 			}
 		}
 
+		for (task_id, task) in self.source_code_todos.iter() {
+			if let Some(other_task) = other.source_code_todos.get(task_id) {
+				if !task.has_same_content_as(other_task) {
+					return false;
+				}
+			}
+			else {
+				return false;
+			}
+		}
+
 		true
 	}
 }
@@ -173,7 +192,7 @@ impl Project {
 
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct SerializableColor([u8; 3]);
+pub struct SerializableColor(pub [u8; 3]);
 
 impl From<SerializableColor> for Color {
 	fn from(value: SerializableColor) -> Self {

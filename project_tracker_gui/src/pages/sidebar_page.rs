@@ -39,6 +39,7 @@ pub enum SidebarPageMessage {
 	DragTask {
 		project_id: ProjectId,
 		task_id: TaskId,
+		task_is_todo: bool,
 		point: Point,
 		rect: Rectangle,
 	},
@@ -223,23 +224,28 @@ impl SidebarPage {
 				}
 				Command::none()
 			},
-			SidebarPageMessage::DragTask { project_id, task_id, rect, point } => {
+			SidebarPageMessage::DragTask { project_id, task_id, task_is_todo, rect, point } => {
 				let project_options = Self::project_dropzones_for_tasks_options(database, project_id);
-				let task_options = Self::task_dropzone_options(database, project_id, task_id);
-				Command::batch([
+				let mut commands = vec![
 					zones_on_point(
 						move |zones| SidebarPageMessage::HandleProjectZonesForTasks { project_id, task_id, zones }.into(),
 						point,
 						project_options,
 						None
-					),
-					find_zones(
-						move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
-						move |zone_bounds| zone_bounds.intersects(&rect),
-						task_options,
-						None
 					)
-				])
+				];
+				if task_is_todo {
+					let task_options = Self::task_dropzone_options(database, project_id, task_id);
+					commands.push(
+						find_zones(
+							move |zones| SidebarPageMessage::HandleTaskZones { project_id, task_id, zones }.into(),
+							move |zone_bounds| zone_bounds.intersects(&rect),
+							task_options,
+							None
+						)
+					);
+				}
+				Command::batch(commands)
 			},
 
 			SidebarPageMessage::DropProject { .. } => {
@@ -502,9 +508,6 @@ impl SidebarPage {
 						}
 					}
 				}
-				/*else {
-					options.push(project.task_dropzone_id.clone().into());
-				}*/
 			}
 
 			Some(options)

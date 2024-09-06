@@ -5,7 +5,7 @@ use iced::Command;
 use serde::{Deserialize, Serialize};
 use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
-use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskTagId, TaskTag, SerializableDate};
+use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskType, TaskTagId, TaskTag, SerializableDate};
 
 fn default_false() -> bool { false }
 
@@ -324,12 +324,12 @@ impl Database {
 
 			DatabaseMessage::MoveTask { task_id, src_project_id, dst_project_id } => {
 				self.modify(|projects| {
-					let removed_task: Option<(bool, Task)> = projects
+					let removed_task: Option<(TaskType, Task)> = projects
 						.get_mut(&src_project_id)
 						.map(|src_project| src_project.remove_task(&task_id))
 						.unwrap_or(None);
 
-					if let Some((task_was_todo, task)) = removed_task {
+					if let Some((task_type, task)) = removed_task {
 						let missing_tags = projects
 							.get(&dst_project_id)
 							.and_then(|dst_project| {
@@ -354,11 +354,10 @@ impl Database {
 								dst_project.task_tags.insert(tag_id, tag);
 							}
 
-							if task_was_todo {
-								dst_project.todo_tasks.insert(task_id, task);
-							}
-							else {
-								dst_project.done_tasks.insert(task_id, task);
+							match task_type {
+								TaskType::Todo => dst_project.todo_tasks.insert(task_id, task),
+								TaskType::Done => { let _ = dst_project.done_tasks.insert(task_id, task); },
+								TaskType::SourceCodeTodo => { let _ = dst_project.source_code_todos.insert(task_id, task); },
 							}
 						}
 					}

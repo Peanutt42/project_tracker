@@ -11,7 +11,7 @@ mod project;
 pub use project::{Project, ProjectId, SerializableColor};
 
 mod task;
-pub use task::{Task, TaskId, generate_task_id, SerializableDate};
+pub use task::{Task, TaskId, TaskType, generate_task_id, SerializableDate};
 
 mod task_tag;
 pub use task_tag::{TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT};

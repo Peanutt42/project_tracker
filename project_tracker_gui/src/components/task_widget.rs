@@ -4,7 +4,7 @@ use iced_aw::{Bootstrap, core::icons::bootstrap::icon_to_text};
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, ShadowContainerStyle, TaskBackgroundContainerStyle, TaskButtonStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TaskType, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{SecondaryButtonStyle, ShadowContainerStyle, TaskBackgroundContainerStyle, TaskButtonStyle, TextInputStyle, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, strikethrough_text};
@@ -14,7 +14,7 @@ pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text
 pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edit_task_state: Option<&'a EditTaskState>, dragging: bool, just_minimal_dragging: bool, highlight: bool, date_formatting: DateFormatting) -> Element<'a, UiMessage> {
+pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, task_type: TaskType, project_id: ProjectId, task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>, edit_task_state: Option<&'a EditTaskState>, dragging: bool, just_minimal_dragging: bool, highlight: bool, date_formatting: DateFormatting) -> Element<'a, UiMessage> {
 	let inner_text_element: Element<UiMessage> = if let Some(edit_task_state) = edit_task_state {
 		unfocusable(
 			container(
@@ -42,19 +42,19 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 	}
 	else {
 		(
-			if is_task_todo {
-				text(&task.name)
+			if matches!(task_type, TaskType::Done) {
+				text(strikethrough_text(&task.name))
 			}
 			else {
-				text(strikethrough_text(&task.name))
+				text(&task.name)
 			}
 		)
 		.style(
-			if is_task_todo {
-				theme::Text::Default
+			if matches!(task_type, TaskType::Done) {
+				theme::Text::Color(GREY)
 			}
 			else {
-				theme::Text::Color(GREY)
+				theme::Text::Default
 			}
 		)
 		.width(Length::Fill)
@@ -183,7 +183,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 
 		let inner: Element<UiMessage> = row![
 			container(
-				checkbox("", !is_task_todo)
+				checkbox("", matches!(task_type, TaskType::Done))
 					.on_toggle(move |checked| {
 						if checked {
 							DatabaseMessage::SetTaskDone { project_id, task_id }.into()
@@ -238,7 +238,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 
 		column![
 			in_between_dropzone(
-				if is_task_todo {
+				if  matches!(task_type, TaskType::Todo) {
 					task.dropzone_id.clone()
 				}
 				else {
@@ -255,7 +255,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, is_task_todo: bool, proj
 				.style(theme::Container::Custom(Box::new(TaskBackgroundContainerStyle{ dragging: dragging && !just_minimal_dragging })))
 			)
 			.on_drop(move |point, rect| SidebarPageMessage::DropTask{ project_id, task_id, point, rect }.into())
-			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, point, rect }.into())
+			.on_drag(move |point, rect| SidebarPageMessage::DragTask{ project_id, task_id, task_is_todo: matches!(task_type, TaskType::Todo), point, rect }.into())
 			.on_click(ProjectPageMessage::PressTask(task_id).into())
 			.on_cancel(SidebarPageMessage::CancelDragTask.into())
 			.drag_overlay(!just_minimal_dragging)

@@ -10,6 +10,12 @@ pub fn generate_task_id() -> TaskId {
 	rand::random()
 }
 
+pub enum TaskType {
+	Todo,
+	Done,
+	SourceCodeTodo,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Task {
 	pub name: String,

@@ -76,10 +76,13 @@ pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'sta
 }
 
 pub fn delete_all_done_tasks_button(project_id: ProjectId, project_name: &str) -> Button<'static, UiMessage> {
-	button(row![
-		icon_to_text(Bootstrap::Trash),
-		text("Delete done tasks")
-	])
+	button(
+		row![
+			icon_to_text(Bootstrap::Trash),
+			text("Delete done tasks")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+	)
 	.on_press(ConfirmModalMessage::open(format!("Delete all done tasks of project '{project_name}'?"), DatabaseMessage::DeleteDoneTasks(project_id)))
 	.style(theme::Button::custom(DeleteDoneTasksButtonStyle))
 }
@@ -447,4 +450,45 @@ pub fn settings_tab_button(tab: SettingTab, selected_tab: SettingTab) -> Button<
 	.width(Length::Fill)
 	.style(theme::Button::custom(SettingsTabButtonStyle{ selected: tab == selected_tab }))
 	.on_press(SettingsModalMessage::SwitchSettingsTab(tab).into())
+}
+
+pub fn import_source_code_todos_button() -> Element<'static, UiMessage> {
+	tooltip(
+		button(
+			icon_to_text(Bootstrap::FileEarmarkCode)
+		)
+		.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
+		.style(theme::Button::custom(SecondaryButtonStyle::default())),
+
+		text("Import source code TODO's").size(SMALL_TEXT_SIZE),
+
+		Position::Bottom
+	)
+	.gap(GAP)
+	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
+	.into()
+}
+
+pub fn explicit_import_source_code_todos_button() -> Button<'static, UiMessage> {
+	button(
+		row![
+			icon_to_text(Bootstrap::FileEarmarkCode),
+			text("Import source code TODO's")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+	)
+	.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
+}
+
+pub fn show_source_code_todos_button(show: bool, source_code_todos_len: usize) -> Button<'static, UiMessage> {
+	button(
+		row![
+			icon_to_text(if show { Bootstrap::CaretDownFill } else { Bootstrap::CaretRightFill }),
+			text(format!("{} source code todos ({source_code_todos_len})", if show { "Hide" } else { "Show" })),
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+	)
+	.on_press(ProjectPageMessage::ShowSourceCodeTodos(!show).into())
+	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
