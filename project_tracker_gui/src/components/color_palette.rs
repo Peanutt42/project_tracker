@@ -1,7 +1,19 @@
 use iced::{theme, widget::{container, row}, Color, Element};
 use crate::{project_tracker::UiMessage, styles::PaletteContainerStyle, components::color_palette_item_button};
 
+pub const COLOR_PALETTE_BLACK: Color = Color {
+	r: 0.04,
+	g: 0.04,
+	b: 0.04,
+	a: 1.0
+};
 
+pub const COLOR_PALETTE_WHITE: Color = Color {
+	r: 0.96,
+	g: 0.96,
+	b: 0.96,
+	a: 1.0
+};
 
 pub fn color_palette(selected_color: Color, on_submit: impl Fn(Color) -> UiMessage) -> Element<'static, UiMessage> {
 	let color_item = |color: Color| {
@@ -10,8 +22,8 @@ pub fn color_palette(selected_color: Color, on_submit: impl Fn(Color) -> UiMessa
 
 	container(
 		row![
-			color_item(Color::from_rgb8(10, 10, 10)), // black
-			color_item(Color::from_rgb8(245, 245, 245)), // white
+			color_item(COLOR_PALETTE_BLACK), // black
+			color_item(COLOR_PALETTE_WHITE), // white
 			color_item(Color::from_rgb8(255, 54, 6)), // red
 			color_item(Color::from_rgb8(162, 250, 163)), // green
 			color_item(Color::from_rgb8(154, 196, 248)), // blue

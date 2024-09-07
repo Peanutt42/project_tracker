@@ -52,6 +52,25 @@ pub enum UiMessage {
 	ManageTaskTagsModalMessage(ManageTaskTagsModalMessage),
 }
 
+impl ProjectTrackerApp {
+	fn show_error_msg(&mut self, error_msg: String) -> Command<UiMessage> {
+		self.update(ErrorMsgModalMessage::open(error_msg))
+	}
+
+	pub fn is_theme_dark(&self) -> bool {
+		if let Some(preferences) = &self.preferences {
+			match preferences.theme_mode() {
+				ThemeMode::System => self.is_system_theme_dark,
+				ThemeMode::Dark => true,
+				ThemeMode::Light => false,
+			}
+		}
+		else {
+			self.is_system_theme_dark
+		}
+	}
+}
+
 impl Application for ProjectTrackerApp {
 	type Flags = ();
 	type Theme = Theme;
@@ -86,16 +105,7 @@ impl Application for ProjectTrackerApp {
 	}
 
 	fn theme(&self) -> Theme {
-		if let Some(preferences) = &self.preferences {
-			match preferences.theme_mode() {
-				ThemeMode::System => get_theme(self.is_system_theme_dark),
-				ThemeMode::Dark => get_theme(true),
-				ThemeMode::Light => get_theme(false),
-			}
-		}
-		else {
-			get_theme(self.is_system_theme_dark)
-		}
+		get_theme(self.is_theme_dark())
 	}
 
 	fn subscription(&self) -> Subscription<Self::Message> {
@@ -423,7 +433,8 @@ impl Application for ProjectTrackerApp {
 				}
 			},
 			UiMessage::SidebarPageMessage(message) => {
-				let sidebar_command = self.sidebar_page.update(message.clone(), &mut self.database);
+				let is_theme_dark = self.is_theme_dark();
+				let sidebar_command = self.sidebar_page.update(message.clone(), &mut self.database, is_theme_dark);
 				let command = match message {
 					SidebarPageMessage::CreateNewProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
 					SidebarPageMessage::DragTask { task_id, point, .. } => {
@@ -529,11 +540,5 @@ impl Application for ProjectTrackerApp {
 			.on_esc(UiMessage::EscapePressed)
 			.into()
 		}
-	}
-}
-
-impl ProjectTrackerApp {
-	fn show_error_msg(&mut self, error_msg: String) -> Command<UiMessage> {
-		self.update(ErrorMsgModalMessage::open(error_msg))
 	}
 }

@@ -43,6 +43,7 @@ pub enum DatabaseMessage {
 	CreateProject {
 		project_id: ProjectId,
 		name: String,
+		color: SerializableColor,
 	},
 	ChangeProjectName {
 		project_id: ProjectId,
@@ -259,9 +260,9 @@ impl Database {
 			),
 			DatabaseMessage::SyncUploaded | DatabaseMessage::SyncFailed(_) => { self.syncing = false; Command::none() },
 
-			DatabaseMessage::CreateProject { project_id, name } => {
+			DatabaseMessage::CreateProject { project_id, name, color } => {
 				self.modify(|projects| {
-					projects.insert(project_id, Project::new(name));
+					projects.insert(project_id, Project::new(name, color));
 				});
 				Command::none()
 			},

@@ -1,7 +1,7 @@
 use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
 use iced_drop::{find_zones, zones_on_point};
 use once_cell::sync::Lazy;
-use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
+use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
 use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
@@ -69,6 +69,15 @@ impl From<SidebarPageMessage> for UiMessage {
 	}
 }
 
+fn get_new_project_color(is_theme_dark: bool) -> Color {
+	if is_theme_dark {
+		COLOR_PALETTE_WHITE
+	}
+	else {
+		COLOR_PALETTE_BLACK
+	}
+}
+
 #[derive(Clone)]
 pub struct SidebarPage {
 	create_new_project_name: Option<String>,
@@ -119,7 +128,7 @@ impl SidebarPage {
 		project_id_to_select
 	}
 
-	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>) -> Command<UiMessage> {
+	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>, is_theme_dark: bool) -> Command<UiMessage> {
 		match message {
 			SidebarPageMessage::OpenCreateNewProject => {
 				self.create_new_project_name = Some(String::new());
@@ -136,13 +145,14 @@ impl SidebarPage {
 						return Command::batch([
 							db.update(DatabaseMessage::CreateProject {
 								project_id,
-								name: std::mem::take(create_new_project_name)
+								name: std::mem::take(create_new_project_name),
+								color: get_new_project_color(is_theme_dark).into(),
 							}),
-							self.update(SidebarPageMessage::CloseCreateNewProject, database)
+							self.update(SidebarPageMessage::CloseCreateNewProject, database, is_theme_dark)
 						]);
 					}
 				}
-				self.update(SidebarPageMessage::CloseCreateNewProject, database)
+				self.update(SidebarPageMessage::CloseCreateNewProject, database, is_theme_dark)
 			},
 
 			SidebarPageMessage::DropTask { project_id, task_id, .. } => {
@@ -377,7 +387,7 @@ impl SidebarPage {
 			.align_x(Horizontal::Center)
 			.into();
 
-			list.push(custom_project_preview(None, None, None, Color::WHITE, 0, 0, project_name_text_input_element, true, false, false, false, false));
+			list.push(custom_project_preview(None, None, None, get_new_project_color(app.is_theme_dark()), 0, 0, project_name_text_input_element, true, false, false, false, false));
 		}
 
 		vertical_scrollable(

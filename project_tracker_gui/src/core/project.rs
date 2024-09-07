@@ -31,10 +31,10 @@ pub struct Project {
 }
 
 impl Project {
-	pub fn new(name: String) -> Self {
+	pub fn new(name: String, color: SerializableColor) -> Self {
 		Self {
 			name,
-			color: SerializableColor::default(),
+			color,
 			task_tags: OrderedHashMap::new(),
 			todo_tasks: OrderedHashMap::new(),
 			done_tasks: IndexMap::new(),

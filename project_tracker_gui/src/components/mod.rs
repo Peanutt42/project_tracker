@@ -41,7 +41,7 @@ mod manage_task_tags_modal;
 pub use manage_task_tags_modal::{ManageTaskTagsModal, ManageTaskTagsModalMessage};
 
 mod color_palette;
-pub use color_palette::color_palette;
+pub use color_palette::{color_palette, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE};
 
 mod unfocusable;
 pub use unfocusable::unfocusable;
