@@ -3,6 +3,7 @@ use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, c
 use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
+use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use crate::{
 	components::{cancel_search_tasks_button, color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
@@ -112,7 +113,14 @@ impl CachedTaskList {
 	pub fn generate(project: &Project, task_tag_filter: &HashSet<TaskTagId>, search_filter: &Option<String>) -> Self {
 		let matches = |task: &Task| {
 			task.matches_filter(task_tag_filter) &&
-			search_filter.as_ref().map(|search_filter| task.name.contains(search_filter)).unwrap_or(true) // TODO: improve task searching with fuzzy string matching
+			search_filter
+				.as_ref()
+				.map(|search_filter|
+					SkimMatcherV2::default()
+						.fuzzy_match(&task.name, search_filter)
+						.is_some()
+				)
+				.unwrap_or(true)
 		};
 
 		let mut todo_list = Vec::new();
