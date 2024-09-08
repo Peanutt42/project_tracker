@@ -681,7 +681,12 @@ impl ProjectPage {
 
 			completion_bar(project.get_completion_percentage()),
 		]
-		.padding(Padding::new(PADDING_AMOUNT))
+		.padding(Padding {
+			top: PADDING_AMOUNT,
+			bottom: 0.0, // task_list already has padding on the top due to dropzone padding/spacing
+			left: PADDING_AMOUNT,
+			right: PADDING_AMOUNT,
+		})
 		.spacing(SPACING_AMOUNT)
 		.into()
 	}

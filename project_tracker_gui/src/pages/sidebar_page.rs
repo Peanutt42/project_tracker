@@ -400,8 +400,6 @@ impl SidebarPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
-		let padding = Padding::new(PADDING_AMOUNT);
-
 		let list: Element<UiMessage> = if let Some(database) = &app.database {
 				self.project_preview_list(database.projects(), app)
 			}
@@ -421,7 +419,12 @@ impl SidebarPage {
 				horizontal_seperator(),
 			]
 			.spacing(SPACING_AMOUNT)
-			.padding(padding),
+			.padding(Padding {
+				left: PADDING_AMOUNT,
+				right: PADDING_AMOUNT,
+				top: PADDING_AMOUNT,
+				bottom: 0.0, // project list already has a dropzone padding/spacing
+			}),
 
 			list,
 
@@ -433,7 +436,7 @@ impl SidebarPage {
 					.align_x(Horizontal::Right),
 			]
 			.align_items(Alignment::Center)
-			.padding(padding),
+			.padding(Padding::new(PADDING_AMOUNT)),
 		]
 		.width(Length::Fill)
 		.height(Length::Fill)
