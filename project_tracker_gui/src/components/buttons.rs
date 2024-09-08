@@ -301,7 +301,7 @@ pub fn manage_task_tags_button(project_id: ProjectId) -> Button<'static, UiMessa
 	button(
 		row![
 			icon_to_text(Bootstrap::BookmarkFill)
-				.style(theme::Text::Default),
+				.style(primary_text_color()),
 			text("Manage")
 		]
 		.align_items(Alignment::Center)
