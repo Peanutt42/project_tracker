@@ -60,8 +60,15 @@ impl Project {
 			.or(self.source_code_todos.get_mut(task_id))
 	}
 
-	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: HashSet<TaskTagId>) {
-		self.todo_tasks.insert(task_id, Task::new(name, tags));
+	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: HashSet<TaskTagId>, create_at_top: bool) {
+		let task = Task::new(name, tags);
+
+		if create_at_top {
+			self.todo_tasks.insert_at_top(task_id, task);
+		}
+		else {
+			self.todo_tasks.insert(task_id, task);
+		}
 	}
 
 	/// task can be todo or done or source code todos
@@ -124,14 +131,6 @@ impl Project {
 
 	pub fn total_tasks(&self) -> usize {
 		self.todo_tasks.len() + self.done_tasks.len() + self.source_code_todos.len()
-	}
-
-	pub fn tasks_todo(&self) -> usize {
-		self.todo_tasks.len() + self.source_code_todos.len()
-	}
-
-	pub fn tasks_done(&self) -> usize {
-		self.done_tasks.len()
 	}
 
 	pub fn get_completion_percentage(&self) -> f32 {

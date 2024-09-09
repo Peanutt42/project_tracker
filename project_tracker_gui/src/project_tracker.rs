@@ -428,7 +428,7 @@ impl Application for ProjectTrackerApp {
 			}
 			UiMessage::ProjectPageMessage(message) => {
 				match &mut self.content_page {
-					ContentPage::Project(project_page) => project_page.update(message, &mut self.database),
+					ContentPage::Project(project_page) => project_page.update(message, &mut self.database, &self.preferences),
 					_ => Command::none()
 				}
 			},
@@ -439,13 +439,13 @@ impl Application for ProjectTrackerApp {
 					SidebarPageMessage::CreateNewProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
 					SidebarPageMessage::DragTask { task_id, point, .. } => {
 						match &mut self.content_page {
-							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask{ task_id, point }, &mut self.database),
+							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask{ task_id, point }, &mut self.database, &self.preferences),
 							_ => Command::none()
 						}
 					},
 					SidebarPageMessage::CancelDragTask => {
 						match &mut self.content_page {
-							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::CancelDragTask, &mut self.database),
+							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::CancelDragTask, &mut self.database, &self.preferences),
 							_ => Command::none()
 						}
 					},
@@ -470,7 +470,7 @@ impl Application for ProjectTrackerApp {
 					deleted_task_tag_id.and_then(|deleted_task_tag_id| {
 						self.content_page
 							.project_page_mut()
-							.map(|project_page| project_page.update(ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id), &mut self.database))
+							.map(|project_page| project_page.update(ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id), &mut self.database, &self.preferences))
 					})
 					.unwrap_or(Command::none())
 				])

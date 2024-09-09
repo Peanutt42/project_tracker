@@ -74,6 +74,7 @@ pub enum DatabaseMessage {
 		task_id: TaskId,
 		task_name: String,
 		task_tags: HashSet<TaskTagId>,
+		create_at_top: bool,
 	},
 	ChangeTaskName {
 		project_id: ProjectId,
@@ -366,10 +367,10 @@ impl Database {
 				Command::none()
 			},
 
-			DatabaseMessage::CreateTask { project_id, task_id, task_name, task_tags } => {
+			DatabaseMessage::CreateTask { project_id, task_id, task_name, task_tags, create_at_top } => {
 				self.modify(|projects| {
 					if let Some(project) = projects.get_mut(&project_id) {
-						project.add_task(task_id, task_name, task_tags);
+						project.add_task(task_id, task_name, task_tags, create_at_top);
 					}
 				});
 				Command::none()

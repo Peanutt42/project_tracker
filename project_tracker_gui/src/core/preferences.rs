@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::time::Instant;
-use iced::{alignment::Horizontal, widget::{column, container, row, text, Row}, Alignment, Command, Element, Length};
+use iced::{alignment::Horizontal, widget::{column, container, row, text, toggler, Row}, Alignment, Command, Element, Length};
 use iced_aw::Bootstrap;
 use serde::{Serialize, Deserialize};
 use crate::{components::{dangerous_button, date_formatting_button, file_location, theme_mode_button, ErrorMsgModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
@@ -13,6 +13,8 @@ pub struct Preferences {
 	theme_mode: ThemeMode,
 
 	date_formatting: DateFormatting,
+
+	create_new_tasks_at_top: bool,
 
 	#[serde(default = "default_sidebar_dividor_position")]
 	sidebar_dividor_position: u16,
@@ -36,6 +38,7 @@ impl Default for Preferences {
 		Self {
 			theme_mode: ThemeMode::default(),
 			date_formatting: DateFormatting::default(),
+			create_new_tasks_at_top: true,
 			sidebar_dividor_position: default_sidebar_dividor_position(),
 			show_sidebar: default_show_sidebar(),
 			selected_content_page: SerializedContentPage::default(),
@@ -69,6 +72,7 @@ pub enum PreferenceMessage {
 	SetContentPage(SerializedContentPage),
 	SetSynchronizationFilepath(Option<PathBuf>),
 	SetDateFormatting(DateFormatting),
+	SetCreateNewTaskAtTop(bool),
 }
 
 impl From<PreferenceMessage> for UiMessage {
@@ -93,6 +97,7 @@ impl Preferences {
 	pub fn show_sidebar(&self) -> bool { self.show_sidebar }
 	pub fn sidebar_dividor_position(&self) -> u16 { self.sidebar_dividor_position }
 	pub fn date_formatting(&self) -> DateFormatting { self.date_formatting }
+	pub fn create_new_tasks_at_top(&self) -> bool { self.create_new_tasks_at_top }
 
 	pub fn modify(&mut self, f: impl FnOnce(&mut Preferences)) {
 		f(self);
@@ -169,6 +174,11 @@ impl Preferences {
 
 			PreferenceMessage::SetDateFormatting(date_formatting) => {
 				self.modify(|pref| pref.date_formatting = date_formatting);
+				Command::none()
+			},
+
+			PreferenceMessage::SetCreateNewTaskAtTop(create_at_top) => {
+				self.modify(|pref| pref.create_new_tasks_at_top = create_at_top);
 				Command::none()
 			},
 		}
@@ -284,6 +294,11 @@ impl Preferences {
 					date_formatting_button(&DateFormatting::DayMonthYear, &self.date_formatting, true),
 					date_formatting_button(&DateFormatting::MonthDayYear, &self.date_formatting, false),
 				]
+			),
+
+			Self::setting_item(
+				"Create new tasks at top:",
+				toggler(None, self.create_new_tasks_at_top, |create_at_top| PreferenceMessage::SetCreateNewTaskAtTop(create_at_top).into())
 			),
 
 			Self::setting_item(

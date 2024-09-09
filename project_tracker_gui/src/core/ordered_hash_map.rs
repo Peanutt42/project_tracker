@@ -127,6 +127,11 @@ impl<K, V> OrderedHashMap<K, V>
 		self.order.push(key);
 	}
 
+	pub fn insert_at_top(&mut self, key: K, value: V) {
+		self.hash_map.insert(key, value);
+		self.order.insert(0, key);
+	}
+
 	pub fn remove(&mut self, key: &K) -> Option<V> {
 		let value = self.hash_map.remove(key);
 		if let Some(index) = self.get_order(key) {

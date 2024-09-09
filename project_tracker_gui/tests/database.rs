@@ -10,7 +10,7 @@ async fn test_database_serialization() {
 		let mut project = Project::new(format!("Project Nr.{i}"), SerializableColor::default());
 
 		for j in 0..100 {
-			project.add_task(generate_task_id(), format!("Task Nr. {j}"), HashSet::new());
+			project.add_task(generate_task_id(), format!("Task Nr. {j}"), HashSet::new(), false);
 		}
 
 		database.modify(|projects| projects.insert(ProjectId::generate(), project));

@@ -6,7 +6,7 @@ use walkdir::WalkDir;
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use crate::{
 	components::{cancel_search_tasks_button, color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
-	core::{generate_task_id, Database, DatabaseMessage, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
+	core::{generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{HiddenSecondaryButtonStyle, TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
@@ -187,31 +187,40 @@ impl ProjectPage {
 }
 
 impl ProjectPage {
-	pub fn update(&mut self, message: ProjectPageMessage, database: &mut Option<Database>) -> Command<UiMessage> {
+	pub fn update(&mut self, message: ProjectPageMessage, database: &mut Option<Database>, preference: &Option<Preferences>) -> Command<UiMessage> {
 		let command = match message {
 			ProjectPageMessage::OpenCreateNewTask => {
 				self.create_new_task = Some((String::new(), HashSet::new()));
-				let create_new_task_element_relative_y_offset = if self.show_done_tasks {
+				let create_new_tasks_at_top = preference.as_ref().map(|pref| pref.create_new_tasks_at_top()).unwrap_or(true);
+				let create_new_task_element_relative_y_offset = if create_new_tasks_at_top {
+					0.0
+				}
+				else {
 					database
 						.as_ref()
 						.and_then(|db| db.projects().get(&self.project_id))
 						.map(|project| {
-							if project.total_tasks() == 0 {
+							let mut total_tasks_shown = project.todo_tasks.len();
+							if self.show_source_code_todos {
+								total_tasks_shown += project.source_code_todos.len()
+							}
+							if self.show_done_tasks {
+								total_tasks_shown += project.done_tasks.len();
+							}
+
+							if total_tasks_shown == 0 {
 								1.0
 							}
 							else {
-								project.tasks_todo() as f32 / project.total_tasks() as f32
+								project.todo_tasks.len() as f32 / total_tasks_shown as f32
 							}
 						})
 						.unwrap_or(1.0)
-				}
-				else {
-					1.0
 				};
 				Command::batch([
 					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
 					scrollable::snap_to(TASK_LIST_ID.clone(), RelativeOffset{ x: 0.0, y: create_new_task_element_relative_y_offset }),
-					self.update(ProjectPageMessage::StopEditingTask, database),
+					self.update(ProjectPageMessage::StopEditingTask, database, preference),
 				])
 			},
 			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task = None; Command::none() },
@@ -241,12 +250,16 @@ impl ProjectPage {
 								task_id: generate_task_id(),
 								task_name: std::mem::take(create_new_task_name),
 								task_tags: std::mem::take(create_new_task_tags),
+								create_at_top: preference
+									.as_ref()
+									.map(|pref| pref.create_new_tasks_at_top())
+									.unwrap_or(true),
 							}),
-							self.update(ProjectPageMessage::CloseCreateNewTask, database)
+							self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
 						]);
 					}
 				}
-				self.update(ProjectPageMessage::CloseCreateNewTask, database)
+				self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
 			},
 
 			ProjectPageMessage::OpenSearchTasks => {
@@ -335,11 +348,11 @@ impl ProjectPage {
 								project_id: self.project_id,
 								new_name: std::mem::take(edited_project_name)
 							}),
-							self.update(ProjectPageMessage::StopEditingProjectName, database)
+							self.update(ProjectPageMessage::StopEditingProjectName, database, preference)
 						]);
 					}
 				}
-				self.update(ProjectPageMessage::StopEditingProjectName, database)
+				self.update(ProjectPageMessage::StopEditingProjectName, database, preference)
 			},
 
 			ProjectPageMessage::EditTask(task_id) => {
@@ -351,7 +364,7 @@ impl ProjectPage {
 						)
 				}).unwrap_or_default();
 				self.edited_task = Some(EditTaskState::new(task_id, text_editor::Content::with_text(&task_name)));
-				self.update(ProjectPageMessage::CloseCreateNewTask, database)
+				self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
 			},
 			ProjectPageMessage::StopEditingTask => { self.edited_task = None; Command::none() },
 			ProjectPageMessage::TaskNameAction(action) => {
@@ -473,7 +486,7 @@ impl ProjectPage {
 			ProjectPageMessage::LeftClickReleased => {
 				let command = if self.just_minimal_dragging {
 					if let Some(pressed_task) = &self.pressed_task {
-						self.update(ProjectPageMessage::EditTask(*pressed_task), database)
+						self.update(ProjectPageMessage::EditTask(*pressed_task), database, preference)
 					}
 					else {
 						Command::none()
@@ -516,7 +529,8 @@ impl ProjectPage {
 						self.show_done_tasks,
 						self.show_source_code_todos,
 						&self.create_new_task,
-						app.preferences.as_ref().map(|pref| pref.date_formatting()).unwrap_or_default()
+						app.preferences.as_ref().map(|pref| pref.date_formatting()).unwrap_or_default(),
+						app.preferences.as_ref().map(|pref| pref.create_new_tasks_at_top()).unwrap_or(true),
 					),
 				]
 				// .spacing(SPACING_AMOUNT) this is not needed since every task in the list has a SPACING_AMOUNT height dropzone
@@ -665,7 +679,7 @@ impl ProjectPage {
 				text(
 					format!(
 						"{}/{} finished ({}%)",
-						project.tasks_done(),
+						project.done_tasks.len(),
 						project.total_tasks(),
 						(project.get_completion_percentage() * 100.0).round()
 					)
