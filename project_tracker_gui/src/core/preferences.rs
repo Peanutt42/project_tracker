@@ -299,6 +299,7 @@ impl Preferences {
 			Self::setting_item(
 				"Create new tasks at top:",
 				toggler(None, self.create_new_tasks_at_top, |create_at_top| PreferenceMessage::SetCreateNewTaskAtTop(create_at_top).into())
+					.size(27.5)
 			),
 
 			Self::setting_item(
