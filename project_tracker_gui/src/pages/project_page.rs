@@ -1,14 +1,14 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, time::Instant};
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{button, column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point};
 use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use crate::{
-	components::{cancel_search_tasks_button, color_palette, color_palette_item_button, completion_bar, create_new_task_button, delete_project_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
+	components::{cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, delete_project_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{HiddenSecondaryButtonStyle, TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	styles::{TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -562,17 +562,18 @@ impl ProjectPage {
 			.into()
 		}
 		else {
-			button(
-				text(&project.name).size(TITLE_TEXT_SIZE)
-			)
-			.on_press(ProjectPageMessage::EditProjectName.into())
-			.style(theme::Button::custom(HiddenSecondaryButtonStyle))
+			row![
+				text(&project.name)
+					.size(TITLE_TEXT_SIZE),
+				edit_project_name_button(),
+			]
+			.spacing(SMALL_SPACING_AMOUNT)
+			.align_items(Alignment::Center)
 			.into()
 		};
 
-		let show_color_picker_button = color_palette_item_button(
+		let show_color_picker_button = edit_color_palette_button(
 			project.color.into(),
-			false,
 			if self.show_color_picker {
 				ProjectPageMessage::HideColorPicker.into()
 			}

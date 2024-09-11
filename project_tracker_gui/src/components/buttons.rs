@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
 use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 fn icon_button(label: impl ToString, icon: Bootstrap) -> Button<'static, UiMessage> {
@@ -360,6 +360,17 @@ pub fn edit_due_date_button(due_date: &SerializableDate, date_formatting: DateFo
 	}))
 }
 
+pub fn edit_color_palette_button(color: Color, on_press: UiMessage) -> Element<'static, UiMessage> {
+	tooltip(
+		color_palette_item_button(color, false, on_press),
+		text("Edit color").size(SMALL_TEXT_SIZE),
+		Position::Bottom
+	)
+	.gap(GAP)
+	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
+	.into()
+}
+
 pub fn color_palette_item_button(color: Color, selected: bool, on_press: UiMessage) -> Button<'static, UiMessage> {
 	button(
 		Quad {
@@ -451,4 +462,21 @@ pub fn show_source_code_todos_button(show: bool, source_code_todos_len: usize) -
 	)
 	.on_press(ProjectPageMessage::ShowSourceCodeTodos(!show).into())
 	.style(theme::Button::custom(SecondaryButtonStyle::default()))
+}
+
+pub fn edit_project_name_button() -> Element<'static, UiMessage> {
+	tooltip(
+		button(
+			icon_to_text(Bootstrap::PencilSquare)
+		)
+		.on_press(ProjectPageMessage::EditProjectName.into())
+		.style(theme::Button::custom(HiddenSecondaryButtonStyle)),
+
+		text("Edit name").size(SMALL_TEXT_SIZE),
+
+		Position::Bottom
+	)
+	.gap(GAP)
+	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
+	.into()
 }
