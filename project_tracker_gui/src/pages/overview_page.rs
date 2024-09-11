@@ -1,5 +1,5 @@
 use iced::{theme, widget::{button, column, row, text, Column}, Element, Length, Padding};
-use crate::{components::{vertical_scrollable, colored_horizontal_seperator, horizontal_seperator, loading_screen}, core::{OrderedHashMap, Project, ProjectId}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{ProjectPreviewButtonStyle, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
+use crate::{components::{vertical_scrollable, horizontal_seperator_colored, horizontal_seperator, loading_screen}, core::{OrderedHashMap, Project, ProjectId}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{ProjectPreviewButtonStyle, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}};
 
 #[derive(Clone)]
 pub struct OverviewPage {
@@ -47,7 +47,7 @@ impl OverviewPage {
 					button(column![
 						text(&project.name).size(LARGE_TEXT_SIZE),
 
-						colored_horizontal_seperator(project.color.into()),
+						horizontal_seperator_colored(project.color.into()),
 
 						Self::todo_tasks_list(project),
 					])

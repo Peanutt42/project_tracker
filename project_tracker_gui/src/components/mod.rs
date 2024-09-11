@@ -26,7 +26,7 @@ mod project_preview;
 pub use project_preview::{project_preview, custom_project_preview};
 
 mod seperator;
-pub use seperator::{horizontal_seperator, colored_horizontal_seperator, vertical_seperator};
+pub use seperator::{horizontal_seperator, horizontal_seperator_colored, horizontal_seperator_padded, vertical_seperator};
 
 mod file_location;
 pub use file_location::{filepath_widget, file_location};

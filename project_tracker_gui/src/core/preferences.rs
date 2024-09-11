@@ -3,7 +3,7 @@ use std::time::Instant;
 use iced::{alignment::Horizontal, widget::{column, container, row, text, toggler, Row}, Alignment, Command, Element, Length};
 use iced_aw::Bootstrap;
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, date_formatting_button, file_location, theme_mode_button, ErrorMsgModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded, theme_mode_button, ErrorMsgModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
 fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }
@@ -304,34 +304,40 @@ impl Preferences {
 					.size(27.5)
 			),
 
+			horizontal_seperator_padded(),
+
 			Self::setting_item(
-				"File location:",
+				"Preferences file location:",
 				file_location(&Self::get_filepath())
 			),
 
-			row![
-				dangerous_button(
-					Bootstrap::Trash,
-					"Reset",
-					Some("Reset Preferences".to_string()),
-					PreferenceMessage::Reset
-				),
+			container(
+				row![
+					dangerous_button(
+						Bootstrap::Trash,
+						"Reset",
+						Some("Reset Preferences".to_string()),
+						PreferenceMessage::Reset
+					),
 
-				dangerous_button(
-					Bootstrap::Download,
-					"Import",
-					None,
-					PreferenceMessage::Import
-				),
+					dangerous_button(
+						Bootstrap::Download,
+						"Import",
+						None,
+						PreferenceMessage::Import
+					),
 
-				dangerous_button(
-					Bootstrap::Upload,
-					"Export",
-					None,
-					PreferenceMessage::Export
-				),
-			]
-			.spacing(SPACING_AMOUNT),
+					dangerous_button(
+						Bootstrap::Upload,
+						"Export",
+						None,
+						PreferenceMessage::Export
+					),
+				]
+				.spacing(SPACING_AMOUNT)
+			)
+			.width(Length::Fill)
+			.align_x(Horizontal::Right),
 		]
 		.spacing(SPACING_AMOUNT)
 		.into()

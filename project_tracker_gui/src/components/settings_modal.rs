@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, row, text, Space}, Alignment, Command, Element, Length, Padding};
 use iced_aw::{card, Bootstrap, CardStyles, ModalStyles};
-use crate::{components::{clear_synchronization_filepath_button, dangerous_button, file_location, filepath_widget, vertical_seperator, select_synchronization_filepath_button, settings_tab_button, sync_database_button}, styles::PADDING_AMOUNT};
+use crate::{components::{clear_synchronization_filepath_button, dangerous_button, file_location, filepath_widget, vertical_seperator, select_synchronization_filepath_button, settings_tab_button, sync_database_button, horizontal_seperator_padded}, styles::PADDING_AMOUNT};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT, ModalCardStyle, ModalStyle, RoundedContainerStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -27,7 +27,7 @@ impl From<SettingsModalMessage> for UiMessage {
 #[derive(Debug, Copy, Clone, Default, PartialEq)]
 pub enum SettingTab {
 	#[default]
-	Preferences,
+	General,
 	Database,
 	Shortcuts,
 }
@@ -35,16 +35,44 @@ pub enum SettingTab {
 impl SettingTab {
 	fn view<'a>(&'a self, app: &'a ProjectTrackerApp, preferences: &'a Preferences) -> Element<'a, UiMessage> {
 		match self {
-			SettingTab::Preferences => preferences.view(),
+			SettingTab::General => preferences.view(),
 			SettingTab::Database => {
 				column![
 					row![
-						text("File location: "),
+						text("Database file location: "),
 						container(file_location(&Database::get_filepath()))
 							.width(Length::Fill)
 							.align_x(Horizontal::Right),
 					]
 					.align_items(Alignment::Center),
+
+					container(
+						row![
+							dangerous_button(
+								Bootstrap::Trash,
+								"Clear",
+								Some("Clear Database".to_string()),
+								DatabaseMessage::Clear
+							),
+							dangerous_button(
+								Bootstrap::Download,
+								"Import",
+								None,
+								DatabaseMessage::ImportDialog
+							),
+							dangerous_button(
+								Bootstrap::Upload,
+								"Export",
+								None,
+								DatabaseMessage::ExportDialog
+							),
+						]
+						.spacing(SPACING_AMOUNT)
+					)
+					.width(Length::Fill)
+					.align_x(Horizontal::Right),
+
+					horizontal_seperator_padded(),
 
 					row![
 						text("Synchronization file location: "),
@@ -63,29 +91,11 @@ impl SettingTab {
 					.spacing(SPACING_AMOUNT)
 					.align_items(Alignment::Center),
 
-					sync_database_button(app.database.as_ref().map(|db| db.is_syncing()).unwrap_or(false), preferences.synchronization_filepath().clone()),
-
-					row![
-						dangerous_button(
-							Bootstrap::Trash,
-							"Clear",
-							Some("Clear Database".to_string()),
-							DatabaseMessage::Clear
-						),
-						dangerous_button(
-							Bootstrap::Download,
-							"Import",
-							None,
-							DatabaseMessage::ImportDialog
-						),
-						dangerous_button(
-							Bootstrap::Upload,
-							"Export",
-							None,
-							DatabaseMessage::ExportDialog
-						),
-					]
-					.spacing(SPACING_AMOUNT),
+					container(
+						sync_database_button(app.database.as_ref().map(|db| db.is_syncing()).unwrap_or(false), preferences.synchronization_filepath().clone())
+					)
+					.width(Length::Fill)
+					.align_x(Horizontal::Right),
 				]
 				.spacing(SPACING_AMOUNT)
 				.into()
@@ -182,7 +192,7 @@ impl SettingsModal {
 			SettingsModal::Opened{ tab } => {
 				if let Some(preferences) = &app.preferences {
 					let tabs = column![
-						settings_tab_button(SettingTab::Preferences, *tab),
+						settings_tab_button(SettingTab::General, *tab),
 						settings_tab_button(SettingTab::Database, *tab),
 						settings_tab_button(SettingTab::Shortcuts, *tab)
 					]
