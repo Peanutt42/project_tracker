@@ -1,5 +1,5 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, ColorPaletteButtonStyle, InvisibleButtonStyle, TaskTagButtonStyle, TaskButtonStyle, SettingsTabButtonStyle};
+pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, PrimaryButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, ColorPaletteButtonStyle, InvisibleButtonStyle, TaskTagButtonStyle, TaskButtonStyle, SettingsTabButtonStyle};
 
 mod container_styles;
 pub use container_styles::{RoundedContainerStyle, PaletteContainerStyle, ProjectPreviewBackgroundContainerStyle, TaskBackgroundContainerStyle, DropzoneContainerStyle, InBetweenDropzoneContainerStyle, TooltipContainerStyle, ShadowContainerStyle};
@@ -37,7 +37,7 @@ pub use constants::{
 };
 
 mod text;
-pub use text::{strikethrough_text, text_color, primary_text_color, disabled_primary_text_color};
+pub use text::{strikethrough_text, text_color};
 
 mod theme;
 pub use theme::ProjectTrackerTheme;

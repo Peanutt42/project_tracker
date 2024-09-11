@@ -1,18 +1,4 @@
 use iced::Color;
-use crate::styles::ProjectTrackerTheme;
-
-// TODO: replace this once we have a fully custom iced Theme!
-pub fn primary_text_color() -> Color {
-	ProjectTrackerTheme::Dark.get_theme().extended_palette().primary.base.color
-}
-
-// TODO: replace this once we have a fully custom iced Theme!
-pub fn disabled_primary_text_color() -> Color {
-	Color {
-		a: 0.5,
-		..ProjectTrackerTheme::Dark.get_theme().extended_palette().primary.base.color
-	}
-}
 
 pub fn text_color(background: Color) -> Color {
 	let brightness = 0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b;

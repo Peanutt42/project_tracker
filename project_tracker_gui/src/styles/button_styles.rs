@@ -168,6 +168,35 @@ impl StyleSheet for DeleteDoneTasksButtonStyle {
 	}
 }
 
+pub struct PrimaryButtonStyle;
+
+impl StyleSheet for PrimaryButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		let pair = style.extended_palette().primary.base;
+
+		Appearance {
+			background: Some(pair.color.into()),
+			text_color: pair.text,
+			border: Border::with_radius(BORDER_RADIUS),
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		Appearance {
+			background: Some(mix_color(style.extended_palette().primary.base.color, style.extended_palette().background.strong.color, 0.25).into()),
+			text_color: style.extended_palette().primary.base.text,
+			..self.active(style)
+		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		self.active(style)
+	}
+}
+
 pub struct SecondaryButtonStyle {
 	pub round_left_top: bool,
 	pub round_left_bottom: bool,
@@ -312,7 +341,7 @@ impl StyleSheet for SelectionListButtonStyle {
 				if self.round_left { BORDER_RADIUS } else { 0.0 },
 			]),
 			text_color: if self.selected {
-				style.extended_palette().primary.base.text
+				style.extended_palette().success.base.text
 			}
 			else {
 				style.extended_palette().secondary.base.text
@@ -544,7 +573,12 @@ impl StyleSheet for SettingsTabButtonStyle {
 			else {
 				None
 			},
-			text_color: style.palette().text,
+			text_color: if self.selected {
+				style.extended_palette().success.strong.text
+			}
+			else {
+				style.extended_palette().background.base.text
+			},
 			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}

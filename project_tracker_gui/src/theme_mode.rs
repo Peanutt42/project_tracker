@@ -11,7 +11,7 @@ pub enum ThemeMode {
 	Light
 }
 
-pub fn get_theme(dark_mode: bool) -> Theme {
+pub fn get_theme(dark_mode: bool) -> &'static Theme {
 	if dark_mode {
 		ProjectTrackerTheme::Dark.get_theme()
 	}

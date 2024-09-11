@@ -2,49 +2,44 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
 use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{disabled_primary_text_color, primary_text_color, ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
-pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
+fn icon_button(label: impl ToString, icon: Bootstrap) -> Button<'static, UiMessage> {
 	button(
 		row![
-			icon_to_text(Bootstrap::PlusSquareFill)
-				.style(if enabled { primary_text_color() } else { disabled_primary_text_color() }),
-			text("New project")
+			icon_to_text(icon),
+			text(label)
 		]
 		.align_items(Alignment::Center)
 		.spacing(SMALL_SPACING_AMOUNT)
 	)
-	.on_press_maybe(
-		if enabled {
-			Some(SidebarPageMessage::OpenCreateNewProject.into())
-		}
-		else {
-			None
-		}
-	)
-	.style(theme::Button::custom(SecondaryButtonStyle::default()))
+}
+
+pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
+	icon_button("New project", Bootstrap::PlusSquareFill)
+		.on_press_maybe(
+			if enabled {
+				Some(SidebarPageMessage::OpenCreateNewProject.into())
+			}
+			else {
+				None
+			}
+		)
+		.style(theme::Button::custom(PrimaryButtonStyle))
 }
 
 pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
-	button(
-		row![
-			icon_to_text(Bootstrap::PlusCircleFill)
-				.style(if enabled { primary_text_color() } else { disabled_primary_text_color() }),
-			text("New task")
-		]
-		.align_items(Alignment::Center)
-		.spacing(SMALL_SPACING_AMOUNT)
-	)
-	.on_press_maybe(
-		if enabled {
-			Some(ProjectPageMessage::OpenCreateNewTask.into())
-		}
-		else {
-			None
-		}
-	)
-	.style(theme::Button::custom(SecondaryButtonStyle::default()))
+	icon_button("New task", Bootstrap::PlusCircleFill)
+		.on_press_maybe(
+			if enabled {
+				Some(ProjectPageMessage::OpenCreateNewTask.into())
+			}
+			else {
+				None
+			}
+		)
+		.style(theme::Button::custom(PrimaryButtonStyle))
 }
 
 pub fn cancel_create_project_button() -> Button<'static, UiMessage> {
@@ -88,33 +83,23 @@ pub fn delete_all_done_tasks_button(project_id: ProjectId, project_name: &str) -
 }
 
 pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'static, UiMessage> {
-	button(
-		row![
-			icon_to_text(if show { Bootstrap::CaretDownFill } else { Bootstrap::CaretRightFill }),
-			text(format!("{} done ({done_task_len})", if show { "Hide" } else { "Show" })),
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
+	icon_button(
+		format!("{} done ({done_task_len})", if show { "Hide" } else { "Show" }),
+		if show { Bootstrap::CaretDownFill } else { Bootstrap::CaretRightFill }
 	)
 	.on_press(ProjectPageMessage::ShowDoneTasks(!show).into())
 	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn dangerous_button(icon: Bootstrap, text: &'static str, confirm_label: Option<String>, on_press: impl Into<UiMessage>) -> Button<'static, UiMessage> {
-	button(
-		row![
-			icon_to_text(icon),
-			iced::widget::text(text)
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
-		.align_items(Alignment::Center)
-	)
-	.style(theme::Button::custom(DangerousButtonStyle))
-	.on_press(if let Some(label) = confirm_label {
-		ConfirmModalMessage::open(label, on_press)
-	}
-	else {
-		on_press.into()
-	})
+	icon_button(text, icon)
+		.style(theme::Button::custom(DangerousButtonStyle))
+		.on_press(if let Some(label) = confirm_label {
+			ConfirmModalMessage::open(label, on_press)
+		}
+		else {
+			on_press.into()
+		})
 }
 
 pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode, round_left: bool, round_right: bool) -> Button<'static, UiMessage> {
@@ -298,31 +283,15 @@ pub fn task_tag_button(task_tag: &TaskTag, toggled: bool, round_bottom: bool, ta
 }
 
 pub fn manage_task_tags_button(project_id: ProjectId) -> Button<'static, UiMessage> {
-	button(
-		row![
-			icon_to_text(Bootstrap::BookmarkFill)
-				.style(primary_text_color()),
-			text("Manage")
-		]
-		.align_items(Alignment::Center)
-		.spacing(SMALL_SPACING_AMOUNT)
-	)
-	.on_press(ManageTaskTagsModalMessage::Open { project_id }.into())
-	.style(theme::Button::custom(SecondaryButtonStyle::default()))
+	icon_button("Manage", Bootstrap::BookmarkFill)
+		.on_press(ManageTaskTagsModalMessage::Open { project_id }.into())
+		.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn create_new_task_tags_button() -> Button<'static, UiMessage> {
-	button(
-		row![
-			icon_to_text(Bootstrap::BookmarkPlusFill)
-				.style(primary_text_color()),
-			text("Create new")
-		]
-		.align_items(Alignment::Center)
-		.spacing(SMALL_SPACING_AMOUNT)
-	)
-	.on_press(ManageTaskTagsModalMessage::OpenCreateNewTaskTag.into())
-	.style(theme::Button::custom(SecondaryButtonStyle::default()))
+	icon_button("Create new", Bootstrap::BookmarkPlusFill)
+		.on_press(ManageTaskTagsModalMessage::OpenCreateNewTaskTag.into())
+		.style(theme::Button::custom(PrimaryButtonStyle))
 }
 
 pub fn cancel_create_new_task_tag_button() -> Button<'static, UiMessage> {
@@ -470,24 +439,15 @@ pub fn import_source_code_todos_button() -> Element<'static, UiMessage> {
 }
 
 pub fn reimport_source_code_todos_button() -> Button<'static, UiMessage> {
-	button(
-		row![
-			icon_to_text(Bootstrap::FileEarmarkCode),
-			text("Reimport source code TODO's")
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
-	)
-	.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
-	.style(theme::Button::custom(SecondaryButtonStyle::default()))
+	icon_button("Reimport source code TODO's", Bootstrap::FileEarmarkCode)
+		.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
+		.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
 
 pub fn show_source_code_todos_button(show: bool, source_code_todos_len: usize) -> Button<'static, UiMessage> {
-	button(
-		row![
-			icon_to_text(if show { Bootstrap::CaretDownFill } else { Bootstrap::CaretRightFill }),
-			text(format!("{} source code todos ({source_code_todos_len})", if show { "Hide" } else { "Show" })),
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
+	icon_button(
+		format!("{} source code todos ({source_code_todos_len})", if show { "Hide" } else { "Show" }),
+		if show { Bootstrap::CaretDownFill } else { Bootstrap::CaretRightFill }
 	)
 	.on_press(ProjectPageMessage::ShowSourceCodeTodos(!show).into())
 	.style(theme::Button::custom(SecondaryButtonStyle::default()))

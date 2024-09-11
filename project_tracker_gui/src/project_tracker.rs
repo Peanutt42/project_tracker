@@ -69,6 +69,10 @@ impl ProjectTrackerApp {
 			self.is_system_theme_dark
 		}
 	}
+
+	pub fn get_theme(&self) -> &'static Theme {
+		get_theme(self.is_theme_dark())
+	}
 }
 
 impl Application for ProjectTrackerApp {
@@ -105,7 +109,7 @@ impl Application for ProjectTrackerApp {
 	}
 
 	fn theme(&self) -> Theme {
-		get_theme(self.is_theme_dark())
+		self.get_theme().clone()
 	}
 
 	fn subscription(&self) -> Subscription<Self::Message> {
