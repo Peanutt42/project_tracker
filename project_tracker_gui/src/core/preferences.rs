@@ -7,6 +7,7 @@ use crate::{components::{dangerous_button, date_formatting_button, file_location
 
 fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }
+fn default_create_new_tasks_at_top() -> bool { true }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
@@ -14,6 +15,7 @@ pub struct Preferences {
 
 	date_formatting: DateFormatting,
 
+	#[serde(default = "default_create_new_tasks_at_top")]
 	create_new_tasks_at_top: bool,
 
 	#[serde(default = "default_sidebar_dividor_position")]
@@ -38,7 +40,7 @@ impl Default for Preferences {
 		Self {
 			theme_mode: ThemeMode::default(),
 			date_formatting: DateFormatting::default(),
-			create_new_tasks_at_top: true,
+			create_new_tasks_at_top: default_create_new_tasks_at_top(),
 			sidebar_dividor_position: default_sidebar_dividor_position(),
 			show_sidebar: default_show_sidebar(),
 			selected_content_page: SerializedContentPage::default(),
