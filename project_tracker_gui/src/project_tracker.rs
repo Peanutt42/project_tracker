@@ -4,15 +4,15 @@ use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, Spli
 use crate::{
 	components::{invisible_toggle_sidebar_button, toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage},
-	pages::{ContentPage, OverviewPage, ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageMessage},
+	pages::{ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage},
 	styles::{SplitStyle, PADDING_AMOUNT},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
 
 pub struct ProjectTrackerApp {
-	pub selected_project_id: Option<ProjectId>,
 	pub sidebar_page: SidebarPage,
-	pub content_page: ContentPage,
+	pub stopwatch_page: StopwatchPage,
+	pub project_page: Option<ProjectPage>,
 	pub database: Option<Database>,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
@@ -45,7 +45,8 @@ pub enum UiMessage {
 	SwitchToLowerProject, // switches to lower project when using shortcuts
 	SwitchToProject{ order: usize }, // switches to project when using shortcuts
 	DeleteSelectedProject,
-	OpenOverview,
+	OpenStopwatch,
+	StopwatchPageMessage(StopwatchPageMessage),
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
 	SettingsModalMessage(SettingsModalMessage),
@@ -84,9 +85,9 @@ impl Application for ProjectTrackerApp {
 	fn new(_flags: ()) -> (Self, Command<UiMessage>) {
 		(
 			Self {
-				selected_project_id: None,
 				sidebar_page: SidebarPage::new(),
-				content_page: ContentPage::Overview(OverviewPage::new()),
+				stopwatch_page: StopwatchPage::default(),
+				project_page: None,
 				database: None,
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
@@ -126,13 +127,14 @@ impl Application for ProjectTrackerApp {
 					)
 				},
 				keyboard::Key::Character("b") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
-				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::OpenOverview),
+				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::OpenStopwatch),
 				keyboard::Key::Character("r") if modifiers.command() => Some(ProjectPageMessage::EditProjectName.into()),
 				keyboard::Key::Character("f") if modifiers.command() => Some(ProjectPageMessage::OpenSearchTasks.into()),
 				keyboard::Key::Character(",") if modifiers.command() => Some(SettingsModalMessage::Open.into()),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
 				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => Some(UiMessage::DeleteSelectedProject),
+				keyboard::Key::Named(keyboard::key::Named::Space) => Some(StopwatchPageMessage::Toggle.into()),
 				keyboard::Key::Named(keyboard::key::Named::Tab) if modifiers.command() => Some(
 					if modifiers.shift() {
 						UiMessage::SwitchToUpperProject
@@ -151,6 +153,8 @@ impl Application for ProjectTrackerApp {
 					_ => None,
 				}
 			}),
+
+			self.stopwatch_page.subscription(),
 
 			time::every(Duration::from_secs(1))
 				.map(|_| UiMessage::SaveChangedFiles),
@@ -245,10 +249,10 @@ impl Application for ProjectTrackerApp {
 						self.database = Some(database);
 						if let Some(preferences) = &self.preferences {
 							match preferences.selected_content_page() {
-								SerializedContentPage::Overview => self.update(UiMessage::OpenOverview),
+								SerializedContentPage::Stopwatch => self.update(UiMessage::OpenStopwatch),
 								SerializedContentPage::Project(project_id) => {
-									match self.selected_project_id {
-										Some(selected_project_id) => self.update(UiMessage::SelectProject(Some(selected_project_id))),
+									match &self.project_page {
+										Some(project_page) => self.update(UiMessage::SelectProject(Some(project_page.project_id))),
 										None => self.update(UiMessage::SelectProject(Some(*project_id))),
 									}
 								},
@@ -315,9 +319,9 @@ impl Application for ProjectTrackerApp {
 					let database_command = database.update(database_message.clone());
 					let command = match database_message {
 						DatabaseMessage::DeleteProject(project_id) => {
-							match self.selected_project_id {
-								Some(selected_project_id) if selected_project_id == project_id => {
-									self.update(UiMessage::OpenOverview)
+							match &self.project_page {
+								Some(project_page) if project_page.project_id == project_id => {
+									self.update(UiMessage::OpenStopwatch)
 								},
 								_ => Command::none(),
 							}
@@ -348,9 +352,12 @@ impl Application for ProjectTrackerApp {
 					Command::none()
 				}
 			},
-			UiMessage::OpenOverview => self.update(UiMessage::SelectProject(None)),
+			UiMessage::OpenStopwatch => self.update(UiMessage::SelectProject(None)),
+			UiMessage::StopwatchPageMessage(message) => {
+				self.stopwatch_page.update(message);
+				Command::none()
+			},
 			UiMessage::SelectProject(project_id) => {
-				self.selected_project_id = project_id;
 				let open_project_info = if let Some(database) = &self.database {
 					project_id.and_then(|project_id| {
 						database.projects()
@@ -362,18 +369,18 @@ impl Application for ProjectTrackerApp {
 					None
 				};
 				if let Some((project_id, project)) = open_project_info {
-					self.content_page = ContentPage::Project(Box::new(ProjectPage::new(project_id, project)));
+					self.project_page = Some(ProjectPage::new(project_id, project));
 					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into())
 				}
 				else {
-					self.content_page = ContentPage::Overview(OverviewPage::new());
-					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Overview).into())
+					self.project_page = None;
+					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Stopwatch).into())
 				}
 			},
 			UiMessage::SwitchToLowerProject => {
 				if let Some(database) = &self.database {
-					if let Some(selected_project_id) = self.selected_project_id {
-						if let Some(order) = database.projects().get_order(&selected_project_id) {
+					if let Some(project_page) = &self.project_page {
+						if let Some(order) = database.projects().get_order(&project_page.project_id) {
 							let lower_order = order + 1;
 							let order_to_switch_to = if lower_order < database.projects().len() {
 								lower_order
@@ -389,9 +396,9 @@ impl Application for ProjectTrackerApp {
 				Command::none()
 			},
 			UiMessage::SwitchToUpperProject => {
-				if let Some(selected_project_id) = self.selected_project_id {
+				if let Some(project_page) = &self.project_page {
 					if let Some(database) = &self.database {
-						if let Some(order) = database.projects().get_order(&selected_project_id) {
+						if let Some(order) = database.projects().get_order(&project_page.project_id) {
 							let order_to_switch_to = if order > 0 {
 								order - 1
 							}
@@ -421,20 +428,18 @@ impl Application for ProjectTrackerApp {
 				Command::none()
 			},
 			UiMessage::DeleteSelectedProject => {
-				if let Some(selected_project_id) = self.selected_project_id {
+				if let Some(project_page) = &self.project_page {
 					if let Some(database) = &self.database {
-						if let Some(project) = database.projects().get(&selected_project_id) {
-							return self.update(ConfirmModalMessage::open(format!("Delete Project '{}'?", project.name), DatabaseMessage::DeleteProject(selected_project_id)));
+						if let Some(project) = database.projects().get(&project_page.project_id) {
+							return self.update(ConfirmModalMessage::open(format!("Delete Project '{}'?", project.name), DatabaseMessage::DeleteProject(project_page.project_id)));
 						}
 					}
 				}
 				Command::none()
 			}
-			UiMessage::ProjectPageMessage(message) => {
-				match &mut self.content_page {
-					ContentPage::Project(project_page) => project_page.update(message, &mut self.database, &self.preferences),
-					_ => Command::none()
-				}
+			UiMessage::ProjectPageMessage(message) => match &mut self.project_page {
+				Some(project_page) => project_page.update(message, &mut self.database, &self.preferences),
+				None => Command::none()
 			},
 			UiMessage::SidebarPageMessage(message) => {
 				let is_theme_dark = self.is_theme_dark();
@@ -442,15 +447,15 @@ impl Application for ProjectTrackerApp {
 				let command = match message {
 					SidebarPageMessage::CreateNewProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
 					SidebarPageMessage::DragTask { task_id, point, .. } => {
-						match &mut self.content_page {
-							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::DragTask{ task_id, point }, &mut self.database, &self.preferences),
-							_ => Command::none()
+						match &mut self.project_page {
+							Some(project_page) => project_page.update(ProjectPageMessage::DragTask{ task_id, point }, &mut self.database, &self.preferences),
+							None => Command::none()
 						}
 					},
 					SidebarPageMessage::CancelDragTask => {
-						match &mut self.content_page {
-							ContentPage::Project(project_page) => project_page.update(ProjectPageMessage::CancelDragTask, &mut self.database, &self.preferences),
-							_ => Command::none()
+						match &mut self.project_page {
+							Some(project_page) => project_page.update(ProjectPageMessage::CancelDragTask, &mut self.database, &self.preferences),
+							None => Command::none()
 						}
 					},
 					_ => Command::none(),
@@ -472,8 +477,8 @@ impl Application for ProjectTrackerApp {
 				Command::batch([
 					self.manage_tags_modal.update(message, &mut self.database),
 					deleted_task_tag_id.and_then(|deleted_task_tag_id| {
-						self.content_page
-							.project_page_mut()
+						self.project_page
+        					.as_mut()
 							.map(|project_page| project_page.update(ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id), &mut self.database, &self.preferences))
 					})
 					.unwrap_or(Command::none())
@@ -491,6 +496,11 @@ impl Application for ProjectTrackerApp {
 				true
 			};
 
+		let content_view = self.project_page
+			.as_ref()
+			.map(|project_page| project_page.view(self))
+			.unwrap_or(self.stopwatch_page.view());
+
 		let underlay: Element<UiMessage> = if show_sidebar {
 			let sidebar_dividor_position =
 				if let Some(preferences) = &self.preferences {
@@ -502,7 +512,7 @@ impl Application for ProjectTrackerApp {
 
 			Split::new(
 				self.sidebar_page.view(self),
-				self.content_page.view(self),
+				content_view,
 				Some(sidebar_dividor_position),
 				Axis::Vertical,
 				|pos| PreferenceMessage::SetSidebarDividorPosition(pos).into()
@@ -515,7 +525,7 @@ impl Application for ProjectTrackerApp {
 				container(toggle_sidebar_button())
 					.padding(Padding { left: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
 
-				self.content_page.view(self),
+				content_view,
 
 				container(invisible_toggle_sidebar_button())
 					.padding(Padding { right: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),

@@ -115,7 +115,7 @@ impl SettingTab {
 
 				column![
 					shortcut("Open Settings:", "Ctrl + ,"),
-					shortcut("Open Overview:", "Ctrl + H"),
+					shortcut("Open Stopwatch:", "Ctrl + H"),
 					shortcut("New Project:", "Ctrl + Shift + N"),
 					shortcut("Rename Project:", "Ctrl + R"),
 					shortcut("Search Tasks:", "Ctrl + F"),
@@ -124,6 +124,7 @@ impl SettingTab {
 					shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
 					shortcut("New Task:", "Ctrl + N"),
 					shortcut("Toggle Sidebar:", "Ctrl + B"),
+					shortcut("Start/Stop Stopwatch:", "Space"),
 				]
 				.spacing(SPACING_AMOUNT)
 				.into()

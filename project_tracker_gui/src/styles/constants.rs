@@ -6,12 +6,14 @@ pub mod border_radius {
 pub mod blur_radius {
 	pub const SMALL_BLUR_RADIUS: f32 = 7.5;
 	pub const BLUR_RADIUS: f32 = 15.0;
+	pub const LARGE_BLUR_RADIUS: f32 = 25.0;
 }
 
 pub mod spacing {
 	pub const TINY_SPACING_AMOUNT: f32 = 2.5;
 	pub const SMALL_SPACING_AMOUNT: u16 = 5;
 	pub const SPACING_AMOUNT: u16 = 10;
+	pub const LARGE_SPACING_AMOUNT: u16 = 20;
 }
 
 pub mod size {

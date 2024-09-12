@@ -56,7 +56,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id
 							text(format!("({}/{})", tasks_done, task_len))
 								.size(SMALL_TEXT_SIZE)
 						)
-						.width(if project_id.is_some() { Length::Fill } else { Length::Shrink })
+						.width(Length::Fill)
 						.align_x(Horizontal::Right)
 					)
 				}
@@ -66,6 +66,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id
 			)
 			.width(Length::Fill)
 			.spacing(SMALL_SPACING_AMOUNT)
+			.align_items(Alignment::Center)
 		]
 		.align_items(Alignment::Center)
 		.spacing(TINY_SPACING_AMOUNT)

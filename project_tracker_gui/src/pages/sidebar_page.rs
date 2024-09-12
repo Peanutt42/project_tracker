@@ -2,7 +2,7 @@ use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, 
 use iced_drop::{find_zones, zones_on_point};
 use once_cell::sync::Lazy;
 use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
-use crate::components::{create_new_project_button, loading_screen, overview_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
+use crate::components::{create_new_project_button, loading_screen, stopwatch_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::core::{OrderedHashMap, ProjectId, Project};
@@ -341,8 +341,8 @@ impl SidebarPage {
 	fn project_preview_list<'a>(&'a self, projects: &'a OrderedHashMap<ProjectId, Project>, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
 		let mut list: Vec<Element<UiMessage>> = projects.iter()
 			.map(|(project_id, project)| {
-				let selected = match app.selected_project_id {
-					Some(selected_project_id) => project_id == selected_project_id,
+				let selected = match &app.project_page {
+					Some(project_page) => project_id == project_page.project_id,
 					None => false,
 				};
 				let project_dropzone_highlight = match self.project_dropzone_hovered {
@@ -410,7 +410,7 @@ impl SidebarPage {
 		column![
 			column![
 				row![
-					overview_button(app.content_page.is_overview_page()),
+					stopwatch_button(&app.stopwatch_page),
 					toggle_sidebar_button(),
 				]
 				.align_items(Alignment::Center)

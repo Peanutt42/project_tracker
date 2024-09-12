@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
 use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 fn icon_button(label: impl ToString, icon: Bootstrap) -> Button<'static, UiMessage> {
@@ -116,23 +116,47 @@ pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode, r
 	.on_press(PreferenceMessage::SetThemeMode(theme_mode).into())
 }
 
-pub fn overview_button(selected: bool) -> Button<'static, UiMessage> {
+pub fn stopwatch_button(stopwatch_page: &StopwatchPage) -> Button<'static, UiMessage> {
+	let stopwatch_timer_start = match stopwatch_page {
+		StopwatchPage::Ticking { timer_start } => Some(*timer_start),
+		_ => None
+	};
+
+	let stopwatch_ticking = matches!(stopwatch_page, StopwatchPage::Ticking { .. });
+
 	button(
 		row![
-			icon_to_text(Bootstrap::List)
+			icon_to_text(Bootstrap::Stopwatch)
 				.size(LARGE_TEXT_SIZE),
 
-			text("Overview")
+			text("Stopwatch")
 				.size(LARGE_TEXT_SIZE)
 				.width(Length::Fill)
 		]
-		.align_items(Alignment::Center)
-		.spacing(SPACING_AMOUNT)
+		.push_maybe(
+			stopwatch_timer_start.map(|timer_start| {
+				container(
+					text(format_stopwatch_duration(timer_start))
+						.size(SMALL_TEXT_SIZE)
+				)
+				.width(Length::Fill)
+				.align_x(Horizontal::Right)
+			})
+		)
 		.width(Length::Fill)
+		.spacing(SPACING_AMOUNT)
+		.align_items(Alignment::Center)
 	)
 	.width(Length::Fill)
-	.on_press(UiMessage::OpenOverview)
-	.style(theme::Button::custom(ProjectPreviewButtonStyle{ selected, project_color: None }))
+	.on_press(UiMessage::OpenStopwatch)
+	.style(theme::Button::custom(ProjectPreviewButtonStyle{
+		selected: stopwatch_ticking,
+		project_color: if stopwatch_ticking {
+			Some(Color::from_rgb(1.0, 0.0, 0.0))}
+		else {
+			None
+		}
+	}))
 }
 
 pub fn settings_button() -> Button<'static, UiMessage> {
@@ -141,7 +165,7 @@ pub fn settings_button() -> Button<'static, UiMessage> {
 		    .horizontal_alignment(Horizontal::Center)
 			.size(LARGE_TEXT_SIZE)
 	)
-	.width(Length::Fixed(35.0))
+	.width(Length::Fixed(1.75 * LARGE_TEXT_SIZE))
 	.on_press(SettingsModalMessage::Open.into())
 	.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }
@@ -479,4 +503,30 @@ pub fn edit_project_name_button() -> Element<'static, UiMessage> {
 	.gap(GAP)
 	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
 	.into()
+}
+
+pub fn start_timer_button() -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::PlayFill)
+			.size(45)
+			.horizontal_alignment(Horizontal::Center)
+			.vertical_alignment(Vertical::Center)
+	)
+	.width(Length::Fixed(1.75 * 45.0))
+	.height(Length::Fixed(1.75 * 45.0))
+	.on_press(StopwatchPageMessage::Start.into())
+	.style(theme::Button::custom(TimerButtonStyle{ timer_ticking: false }))
+}
+
+pub fn stop_timer_button() -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::PauseFill)
+			.size(45)
+			.horizontal_alignment(Horizontal::Center)
+			.vertical_alignment(Vertical::Center)
+	)
+	.width(Length::Fixed(1.75 * 45.0))
+	.height(Length::Fixed(1.75 * 45.0))
+	.on_press(StopwatchPageMessage::Stop.into())
+	.style(theme::Button::custom(TimerButtonStyle{ timer_ticking: true }))
 }

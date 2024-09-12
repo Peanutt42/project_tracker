@@ -1,5 +1,5 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Shadow, Theme};
-use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, SMALL_BLUR_RADIUS, BLUR_RADIUS, SELECTION_COLOR, color_average, mix_color, background_shadow_color, background_shadow_alpha, text_color};
+use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, SMALL_BLUR_RADIUS, BLUR_RADIUS, LARGE_BLUR_RADIUS, SELECTION_COLOR, color_average, mix_color, background_shadow_color, background_shadow_alpha, text_color};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -591,6 +591,57 @@ impl StyleSheet for SettingsTabButtonStyle {
 			}
 			else {
 				Some(style.extended_palette().secondary.base.color.into())
+			},
+			..self.active(style)
+		}
+	}
+
+	fn pressed(&self, style: &Self::Style) -> Appearance {
+		self.active(style)
+	}
+}
+
+pub struct TimerButtonStyle {
+	pub timer_ticking: bool,
+}
+
+impl StyleSheet for TimerButtonStyle {
+	type Style = Theme;
+
+	fn active(&self, style: &Self::Style) -> Appearance {
+		let pair = if self.timer_ticking {
+			style.extended_palette().danger.base
+		}
+		else {
+			style.extended_palette().primary.base
+		};
+
+		Appearance {
+			background: Some(pair.color.into()),
+			text_color: pair.text,
+			border: Border::with_radius(15.0),
+			..Default::default()
+		}
+	}
+
+	fn hovered(&self, style: &Self::Style) -> Appearance {
+		let pair = if self.timer_ticking {
+			style.extended_palette().danger.base
+		}
+		else {
+			style.extended_palette().primary.base
+		};
+		let color = mix_color(pair.color, style.extended_palette().background.strong.color, 0.25);
+		Appearance {
+			background: Some(color.into()),
+			text_color: pair.text,
+			shadow: Shadow {
+				color: Color {
+					a: 0.2,
+					..color
+				},
+				blur_radius: LARGE_BLUR_RADIUS,
+				..Default::default()
 			},
 			..self.active(style)
 		}
