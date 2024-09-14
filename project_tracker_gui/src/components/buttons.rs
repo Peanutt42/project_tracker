@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
 use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 fn icon_button(label: impl ToString, icon: Bootstrap) -> Button<'static, UiMessage> {
@@ -117,8 +117,8 @@ pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode, r
 }
 
 pub fn stopwatch_button(stopwatch_page: &StopwatchPage) -> Button<'static, UiMessage> {
-	let stopwatch_timer_start = match stopwatch_page {
-		StopwatchPage::Ticking { timer_start } => Some(*timer_start),
+	let stopwatch_label = match stopwatch_page {
+		StopwatchPage::Ticking { clock, .. } => Some(clock.label()),
 		_ => None
 	};
 
@@ -134,9 +134,9 @@ pub fn stopwatch_button(stopwatch_page: &StopwatchPage) -> Button<'static, UiMes
 				.width(Length::Fill)
 		]
 		.push_maybe(
-			stopwatch_timer_start.map(|timer_start| {
+			stopwatch_label.map(|stopwatch_label| {
 				container(
-					text(format_stopwatch_duration(timer_start))
+					text(stopwatch_label)
 						.size(SMALL_TEXT_SIZE)
 				)
 				.width(Length::Fill)
@@ -514,7 +514,7 @@ pub fn start_timer_button() -> Button<'static, UiMessage> {
 	)
 	.width(Length::Fixed(1.75 * 45.0))
 	.height(Length::Fixed(1.75 * 45.0))
-	.on_press(StopwatchPageMessage::Start.into())
+	.on_press(StopwatchPageMessage::Start{ task: None }.into())
 	.style(theme::Button::custom(TimerButtonStyle{ timer_ticking: false }))
 }
 
@@ -529,4 +529,31 @@ pub fn stop_timer_button() -> Button<'static, UiMessage> {
 	.height(Length::Fixed(1.75 * 45.0))
 	.on_press(StopwatchPageMessage::Stop.into())
 	.style(theme::Button::custom(TimerButtonStyle{ timer_ticking: true }))
+}
+
+pub fn start_task_timer_button(project_id: ProjectId, task_id: TaskId, round_top_left: bool) -> Element<'static, UiMessage> {
+	tooltip(
+		button(
+			icon_to_text(Bootstrap::Stopwatch)
+		)
+		.on_press(
+			StopwatchPageMessage::Start{
+				task: Some((project_id, task_id))
+			}
+			.into()
+		)
+		.style(theme::Button::custom(SecondaryButtonStyle {
+			round_left_top: round_top_left,
+			round_right_top: false,
+			round_right_bottom: false,
+			round_left_bottom: true,
+		})),
+
+		text("Start a timer for this task"),
+
+		Position::Bottom
+	)
+	.gap(GAP)
+	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
+	.into()
 }

@@ -354,8 +354,14 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::OpenStopwatch => self.update(UiMessage::SelectProject(None)),
 			UiMessage::StopwatchPageMessage(message) => {
-				self.stopwatch_page.update(message);
-				Command::none()
+				let should_open_stopwatch_page = matches!(message, StopwatchPageMessage::Start{ .. });
+				self.stopwatch_page.update(message, &self.database);
+				if should_open_stopwatch_page {
+					self.update(UiMessage::OpenStopwatch)
+				}
+				else {
+					Command::none()
+				}
 			},
 			UiMessage::SelectProject(project_id) => {
 				let open_project_info = if let Some(database) = &self.database {
@@ -499,7 +505,7 @@ impl Application for ProjectTrackerApp {
 		let content_view = self.project_page
 			.as_ref()
 			.map(|project_page| project_page.view(self))
-			.unwrap_or(self.stopwatch_page.view());
+			.unwrap_or(self.stopwatch_page.view(&self.database));
 
 		let underlay: Element<UiMessage> = if show_sidebar {
 			let sidebar_dividor_position =

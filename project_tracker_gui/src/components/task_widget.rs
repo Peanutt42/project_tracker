@@ -8,7 +8,7 @@ use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, T
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::styles::{TextEditorStyle, SMALL_PADDING_AMOUNT, GREY, GreenCheckboxStyle, strikethrough_text};
-use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, in_between_dropzone, add_due_date_button, edit_due_date_button, days_left_widget};
+use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, in_between_dropzone, add_due_date_button, edit_due_date_button, days_left_widget, start_task_timer_button};
 
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -21,14 +21,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, task_type: TaskType, pro
 				text_editor(&edit_task_state.new_name)
 					.on_action(|action| ProjectPageMessage::TaskNameAction(action).into())
 					.style(theme::TextEditor::Custom(Box::new(TextEditorStyle {
-						// is the first tag enabled?
-						round_top_left: task_tags
-							.iter()
-							.next()
-							.map(|(tag_id, _tag)|
-								!task.tags.contains(&tag_id)
-							)
-							.unwrap_or(true),
+						round_top_left: false,
 						round_top_right: false,
 						round_bottom_left: false,
 						round_bottom_right: edit_task_state.new_name.line_count() > 1 // multiline?
@@ -70,106 +63,119 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, task_type: TaskType, pro
 			),
 
 			row![
-				inner_text_element,
+				start_task_timer_button(
+					project_id,
+					task_id,
+					task_tags
+						.iter()
+						.next()
+						.map(|(tag_id, _tag)|
+							!task.tags.contains(&tag_id)
+						)
+						.unwrap_or(true)
+				),
+
+				column![
+					inner_text_element,
+					row![
+						if edit_task_state.edit_needed_time {
+							let stop_editing_task_message: UiMessage = ProjectPageMessage::StopEditingTask.into();
+
+							let edit_needed_time_element = unfocusable(
+								text_input(
+									"mins",
+									&match task.needed_time_minutes {
+										Some(needed_time_minutes) => format!("{needed_time_minutes}"),
+										None => String::new(),
+									}
+								)
+								.id(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone())
+								.width(Length::Fixed(50.0))
+								.on_input(move |input| {
+									let new_needed_time_minutes = match usize::from_str(&input) {
+										Ok(new_needed_time_minutes) => Some(Some(new_needed_time_minutes)),
+										Err(_) => {
+											if input.is_empty() {
+												Some(None)
+											}
+											else {
+												None
+											}
+										},
+									};
+									match new_needed_time_minutes {
+										Some(new_needed_time_minutes) => {
+											DatabaseMessage::ChangeTaskNeededTime {
+												project_id,
+												task_id,
+												new_needed_time_minutes,
+											}.into()
+										},
+										None => ProjectPageMessage::InvalidNeededTimeInput.into(),
+									}
+								})
+								.on_submit(ProjectPageMessage::StopEditingTaskNeededTime.into())
+								.style(theme::TextInput::Custom(Box::new(TextInputStyle{
+									round_left_top: false,
+									round_left_bottom: true,
+									round_right_top: false,
+									round_right_bottom: false
+								}))),
+
+								stop_editing_task_message
+							);
+
+							row![
+								edit_needed_time_element,
+								clear_task_needed_time_button(),
+							]
+							.into()
+						}
+						else {
+							Element::new(
+								button(
+									row![
+										icon_to_text(Bootstrap::Stopwatch),
+										if let Some(needed_duration_minutes) = &task.needed_time_minutes {
+											duration_text(Cow::Owned(Duration::from_secs(*needed_duration_minutes as u64 * 60)))
+										}
+										else {
+											text("Add needed time")
+										}
+									]
+									.spacing(SMALL_SPACING_AMOUNT)
+								)
+								.padding(SMALL_HORIZONTAL_PADDING)
+								.on_press(ProjectPageMessage::EditTaskNeededTime.into())
+								.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_BOTTOM))
+							)
+						},
+
+						if edit_task_state.edit_due_date {
+							Element::new(date_picker(
+								edit_task_state.edit_due_date,
+								task.due_date.unwrap_or(Date::today().into()),
+								text("Edit due date"),
+								ProjectPageMessage::StopEditingTaskDueDate.into(),
+								move |date| ProjectPageMessage::ChangeTaskDueDate(date.into()).into()
+							))
+						}
+						else if let Some(due_date) = &task.due_date {
+							row![
+								edit_due_date_button(due_date, date_formatting),
+								clear_task_due_date_button(),
+							]
+							.into()
+						}
+						else {
+							Element::new(add_due_date_button())
+						},
+					]
+					.spacing(SPACING_AMOUNT),
+				],
 				delete_task_button(project_id, task_id),
 			]
 			.align_items(Alignment::Start),
-
-			row![
-				if edit_task_state.edit_needed_time {
-					let stop_editing_task_message: UiMessage = ProjectPageMessage::StopEditingTask.into();
-
-					let edit_needed_time_element = unfocusable(
-						text_input(
-							"mins",
-							&match task.needed_time_minutes {
-								Some(needed_time_minutes) => format!("{needed_time_minutes}"),
-								None => String::new(),
-							}
-						)
-						.id(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone())
-						.width(Length::Fixed(50.0))
-						.on_input(move |input| {
-							let new_needed_time_minutes = match usize::from_str(&input) {
-								Ok(new_needed_time_minutes) => Some(Some(new_needed_time_minutes)),
-								Err(_) => {
-									if input.is_empty() {
-										Some(None)
-									}
-									else {
-										None
-									}
-								},
-							};
-							match new_needed_time_minutes {
-								Some(new_needed_time_minutes) => {
-									DatabaseMessage::ChangeTaskNeededTime {
-										project_id,
-										task_id,
-										new_needed_time_minutes,
-									}.into()
-								},
-								None => ProjectPageMessage::InvalidNeededTimeInput.into(),
-							}
-						})
-						.on_submit(ProjectPageMessage::StopEditingTaskNeededTime.into())
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle{
-							round_left_top: false,
-							round_left_bottom: true,
-							round_right_top: false,
-							round_right_bottom: false
-						}))),
-
-						stop_editing_task_message
-					);
-
-					row![
-						edit_needed_time_element,
-						clear_task_needed_time_button(),
-					]
-					.into()
-				}
-				else {
-					Element::new(
-						button(
-							row![
-								icon_to_text(Bootstrap::Stopwatch),
-								if let Some(needed_duration_minutes) = &task.needed_time_minutes {
-									duration_text(Cow::Owned(Duration::from_secs(*needed_duration_minutes as u64 * 60)))
-								}
-								else {
-									text("Add needed time")
-								}
-							]
-							.spacing(SMALL_SPACING_AMOUNT)
-						)
-						.padding(SMALL_HORIZONTAL_PADDING)
-						.on_press(ProjectPageMessage::EditTaskNeededTime.into())
-						.style(theme::Button::custom(SecondaryButtonStyle::ONLY_ROUND_BOTTOM))
-					)
-				},
-
-				if edit_task_state.edit_due_date {
-					Element::new(date_picker(
-						edit_task_state.edit_due_date,
-						task.due_date.unwrap_or(Date::today().into()),
-						text("Edit due date"),
-						ProjectPageMessage::StopEditingTaskDueDate.into(),
-						move |date| ProjectPageMessage::ChangeTaskDueDate(date.into()).into()
-					))
-				}
-				else if let Some(due_date) = &task.due_date {
-					row![
-						edit_due_date_button(due_date, date_formatting),
-						clear_task_due_date_button(),
-					]
-					.into()
-				}
-				else {
-					Element::new(add_due_date_button())
-				},
-			]
-			.spacing(SPACING_AMOUNT),
 		]
 		.into()
 	}
