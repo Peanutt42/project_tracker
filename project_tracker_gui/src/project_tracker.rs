@@ -397,13 +397,12 @@ impl Application for ProjectTrackerApp {
 							return self.update(UiMessage::SwitchToProject { order: order_to_switch_to });
 						}
 					}
-					return self.update(UiMessage::SwitchToProject { order: database.projects().len() - 1 });
 				}
-				Command::none()
+				self.update(UiMessage::SwitchToProject { order: 0 })
 			},
 			UiMessage::SwitchToUpperProject => {
-				if let Some(project_page) = &self.project_page {
-					if let Some(database) = &self.database {
+				if let Some(database) = &self.database {
+					if let Some(project_page) = &self.project_page {
 						if let Some(order) = database.projects().get_order(&project_page.project_id) {
 							let order_to_switch_to = if order > 0 {
 								order - 1
@@ -414,6 +413,7 @@ impl Application for ProjectTrackerApp {
 							return self.update(UiMessage::SwitchToProject { order: order_to_switch_to });
 						}
 					}
+					return self.update(UiMessage::SwitchToProject { order: database.projects().len() - 1 });
 				}
 				self.update(UiMessage::SwitchToProject { order: 0 })
 			},
