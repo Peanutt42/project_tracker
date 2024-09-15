@@ -30,6 +30,13 @@ impl From<StopwatchPageMessage> for UiMessage {
 }
 
 impl StopwatchPage {
+	pub fn clock(&self) -> Option<&StopwatchClock> {
+		match self {
+			StopwatchPage::Ticking { clock, .. } => Some(clock),
+			StopwatchPage::Idle => None,
+		}
+	}
+
 	pub fn subscription(&self) -> Subscription<UiMessage> {
 		match self {
 			StopwatchPage::Idle => Subscription::none(),

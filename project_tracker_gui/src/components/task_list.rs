@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
 use once_cell::sync::Lazy;
-use crate::{core::{DateFormatting, Project, TaskTagId, TaskType}, pages::{CachedTaskList, EditTaskState, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::PADDING_AMOUNT};
+use crate::{core::{DateFormatting, Project, TaskTagId, TaskType}, pages::{CachedTaskList, EditTaskState, StopwatchPage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::PADDING_AMOUNT};
 use crate::core::{Task, TaskId, ProjectId};
 use crate::components::{vertical_scrollable, show_done_tasks_button, show_source_code_todos_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button, reimport_source_code_todos_button, task_tags_buttons, in_between_dropzone};
 use crate::styles::{SPACING_AMOUNT, TextInputStyle};
@@ -11,7 +11,7 @@ pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_list: &'a CachedTaskList, edited_task: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, just_minimal_dragging: bool, hovered_task_dropzone: Option<TaskDropzone>, show_done_tasks: bool, show_source_code_todos: bool, create_new_task: &'a Option<(String, HashSet<TaskTagId>)>, date_formatting: DateFormatting, create_new_tasks_at_top: bool) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_list: &'a CachedTaskList, edited_task: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, just_minimal_dragging: bool, hovered_task_dropzone: Option<TaskDropzone>, show_done_tasks: bool, show_source_code_todos: bool, create_new_task: &'a Option<(String, HashSet<TaskTagId>)>, stopwatch_page: &'a StopwatchPage, date_formatting: DateFormatting, create_new_tasks_at_top: bool) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut source_code_todo_elements = Vec::new(); // only gets populated when 'show_source_code_todos'
@@ -29,7 +29,20 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 			Some(TaskDropzone::Task(hovered_task_id)) => hovered_task_id == task_id,
 			_ => false,
 		};
-		task_widget(task, task_id, task_type, project_id, &project.task_tags, edited_name, dragging, just_minimal_dragging, highlight, date_formatting)
+		let stopwatch_label = match stopwatch_page {
+			StopwatchPage::Idle => None,
+			StopwatchPage::Ticking { task, clock, .. } => {
+				task.as_ref().and_then(|(timed_project_id, timed_task_id)| {
+					if *timed_project_id == project_id && *timed_task_id == task_id {
+						Some(clock.label())
+					}
+					else {
+						None
+					}
+				})
+			},
+		};
+		task_widget(task, task_id, task_type, project_id, &project.task_tags, edited_name, dragging, just_minimal_dragging, highlight, stopwatch_label, date_formatting)
 	};
 
 	if create_new_tasks_at_top {

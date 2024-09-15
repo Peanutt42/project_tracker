@@ -1,11 +1,11 @@
 use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
 use iced_drop::{find_zones, zones_on_point};
 use once_cell::sync::Lazy;
-use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, PreferenceMessage, Preferences, SerializedContentPage, TaskId}, pages::StopwatchPageMessage, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
+use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, TaskId}, pages::StopwatchPageMessage, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
 use crate::components::{create_new_project_button, loading_screen, stopwatch_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
-use crate::pages::{StopwatchPage, ProjectPage};
+use crate::pages::StopwatchPage;
 use crate::core::{OrderedHashMap, ProjectId, Project};
 
 static SCROLLABLE_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
@@ -130,7 +130,7 @@ impl SidebarPage {
 		project_id_to_select
 	}
 
-	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>, stopwatch_page: &mut StopwatchPage, project_page: &mut Option<ProjectPage>, preferences: &mut Option<Preferences>, is_theme_dark: bool) -> Command<UiMessage> {
+	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>, stopwatch_page: &mut StopwatchPage, is_theme_dark: bool) -> Command<UiMessage> {
 		match message {
 			SidebarPageMessage::OpenCreateNewProject => {
 				self.create_new_project_name = Some(String::new());
@@ -150,11 +150,11 @@ impl SidebarPage {
 								name: std::mem::take(create_new_project_name),
 								color: get_new_project_color(is_theme_dark).into(),
 							}),
-							self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, project_page, preferences, is_theme_dark)
+							self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, is_theme_dark)
 						]);
 					}
 				}
-				self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, project_page, preferences, is_theme_dark)
+				self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, is_theme_dark)
 			},
 
 			SidebarPageMessage::DropTask { project_id, task_id, .. } => {
@@ -189,16 +189,13 @@ impl SidebarPage {
 									})
 							},
 							TaskDropzone::Stopwatch => {
-								*project_page = None;
 								stopwatch_page.update(
 									StopwatchPageMessage::Start{
 										task: Some((project_id, task_id)),
 									},
 									database
 								);
-								preferences.as_mut().map(|preferences|
-									preferences.update(PreferenceMessage::SetContentPage(SerializedContentPage::Stopwatch))
-								)
+								None
 							},
 						}
 					});

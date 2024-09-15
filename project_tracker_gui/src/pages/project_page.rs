@@ -549,6 +549,7 @@ impl ProjectPage {
 						self.show_done_tasks,
 						self.show_source_code_todos,
 						&self.create_new_task,
+						&app.stopwatch_page,
 						app.preferences.as_ref().map(|pref| pref.date_formatting()).unwrap_or_default(),
 						app.preferences.as_ref().map(|pref| pref.create_new_tasks_at_top()).unwrap_or(true),
 					),
