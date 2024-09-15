@@ -1,16 +1,18 @@
 use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
 use iced_drop::{find_zones, zones_on_point};
 use once_cell::sync::Lazy;
-use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, TaskId}, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
+use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, PreferenceMessage, Preferences, SerializedContentPage, TaskId}, pages::StopwatchPageMessage, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
 use crate::components::{create_new_project_button, loading_screen, stopwatch_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
 use crate::styles::{TextInputStyle, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
+use crate::pages::{StopwatchPage, ProjectPage};
 use crate::core::{OrderedHashMap, ProjectId, Project};
 
 static SCROLLABLE_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static BOTTOM_PROJECT_DROPZONE_ID: Lazy<container::Id> = Lazy::new(container::Id::unique);
 pub static BOTTOM_TODO_TASK_DROPZONE_ID: Lazy<container::Id> = Lazy::new(container::Id::unique);
+pub static STOPWATCH_TASK_DROPZONE_ID: Lazy<container::Id> = Lazy::new(container::Id::unique);
 
 #[derive(Clone, Debug)]
 pub enum SidebarPageMessage {
@@ -128,7 +130,7 @@ impl SidebarPage {
 		project_id_to_select
 	}
 
-	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>, is_theme_dark: bool) -> Command<UiMessage> {
+	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>, stopwatch_page: &mut StopwatchPage, project_page: &mut Option<ProjectPage>, preferences: &mut Option<Preferences>, is_theme_dark: bool) -> Command<UiMessage> {
 		match message {
 			SidebarPageMessage::OpenCreateNewProject => {
 				self.create_new_project_name = Some(String::new());
@@ -148,11 +150,11 @@ impl SidebarPage {
 								name: std::mem::take(create_new_project_name),
 								color: get_new_project_color(is_theme_dark).into(),
 							}),
-							self.update(SidebarPageMessage::CloseCreateNewProject, database, is_theme_dark)
+							self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, project_page, preferences, is_theme_dark)
 						]);
 					}
 				}
-				self.update(SidebarPageMessage::CloseCreateNewProject, database, is_theme_dark)
+				self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, project_page, preferences, is_theme_dark)
 			},
 
 			SidebarPageMessage::DropTask { project_id, task_id, .. } => {
@@ -186,6 +188,18 @@ impl SidebarPage {
 										Command::none()
 									})
 							},
+							TaskDropzone::Stopwatch => {
+								*project_page = None;
+								stopwatch_page.update(
+									StopwatchPageMessage::Start{
+										task: Some((project_id, task_id)),
+									},
+									database
+								);
+								preferences.as_mut().map(|preferences|
+									preferences.update(PreferenceMessage::SetContentPage(SerializedContentPage::Stopwatch))
+								)
+							},
 						}
 					});
 				self.task_dropzone_hovered = None;
@@ -198,15 +212,19 @@ impl SidebarPage {
 			SidebarPageMessage::HandleProjectZonesForTasks { zones, .. } => {
 				self.task_dropzone_hovered = None;
 				if let Some(projects) = database.as_ref().map(|db| db.projects()) {
-					for (dst_project_id, dst_project) in projects.iter() {
-						for (id, _bounds) in zones.iter() {
+					for (id, _bounds) in zones.iter() {
+						for (dst_project_id, dst_project) in projects.iter() {
 							if *id == dst_project.task_dropzone_id.clone().into() {
 								self.task_dropzone_hovered = Some(TaskDropzone::Project(dst_project_id));
 								break;
 							}
 						}
+						if *id == STOPWATCH_TASK_DROPZONE_ID.clone().into() {
+							self.task_dropzone_hovered = Some(TaskDropzone::Stopwatch);
+						}
 					}
 				}
+
 				Command::none()
 			},
 			SidebarPageMessage::HandleTaskZones{ zones, project_id, .. } => {
@@ -477,13 +495,14 @@ impl SidebarPage {
 					options.push(BOTTOM_PROJECT_DROPZONE_ID.clone().into());
 				}
 			}
+
 			options
 		})
 	}
 
 	fn project_dropzones_for_tasks_options(database: &Option<Database>, exception: ProjectId) -> Option<Vec<Id>> {
 		database.as_ref().map(|database| {
-			database.projects().iter().filter_map(|(project_id, project)| {
+			let mut options: Vec<Id> = database.projects().iter().filter_map(|(project_id, project)| {
 				if project_id == exception {
 					None
 				}
@@ -491,7 +510,11 @@ impl SidebarPage {
 					Some(project.task_dropzone_id.clone().into())
 				}
 			})
-			.collect()
+			.collect();
+
+			options.push(STOPWATCH_TASK_DROPZONE_ID.clone().into());
+
+			options
 		})
 	}
 
@@ -548,4 +571,5 @@ pub enum TaskDropzone {
 	Project(ProjectId),
 	Task(TaskId),
 	EndOfTodoTaskList,
+	Stopwatch,
 }

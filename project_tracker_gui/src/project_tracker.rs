@@ -449,7 +449,7 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::SidebarPageMessage(message) => {
 				let is_theme_dark = self.is_theme_dark();
-				let sidebar_command = self.sidebar_page.update(message.clone(), &mut self.database, is_theme_dark);
+				let sidebar_command = self.sidebar_page.update(message.clone(), &mut self.database, &mut self.stopwatch_page, &mut self.project_page, &mut self.preferences, is_theme_dark);
 				let command = match message {
 					SidebarPageMessage::CreateNewProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
 					SidebarPageMessage::DragTask { task_id, point, .. } => {

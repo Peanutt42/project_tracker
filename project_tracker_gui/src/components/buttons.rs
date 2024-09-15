@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
 use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SELECTION_COLOR, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SELECTION_COLOR, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 fn icon_button(label: impl ToString, icon: Bootstrap) -> Button<'static, UiMessage> {
@@ -116,7 +116,7 @@ pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode, r
 	.on_press(PreferenceMessage::SetThemeMode(theme_mode).into())
 }
 
-pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Button<'static, UiMessage> {
+pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Element<'static, UiMessage> {
 	let stopwatch_label = match stopwatch_page {
 		StopwatchPage::Ticking { clock, .. } => Some(clock.label()),
 		_ => None
@@ -124,42 +124,46 @@ pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Butto
 
 	let stopwatch_ticking = matches!(stopwatch_page, StopwatchPage::Ticking { .. });
 
-	button(
-		row![
-			icon_to_text(Bootstrap::Stopwatch)
-				.size(LARGE_TEXT_SIZE),
+	container(
+		button(
+			row![
+				icon_to_text(Bootstrap::Stopwatch)
+					.size(LARGE_TEXT_SIZE),
 
-			text("Stopwatch")
-				.size(LARGE_TEXT_SIZE)
-				.width(Length::Fill)
-		]
-		.push_maybe(
-			stopwatch_label.map(|stopwatch_label| {
-				container(
-					text(stopwatch_label)
-						.size(SMALL_TEXT_SIZE)
-				)
-				.width(Length::Fill)
-				.align_x(Horizontal::Right)
-			})
+				text("Stopwatch")
+					.size(LARGE_TEXT_SIZE)
+					.width(Length::Fill)
+			]
+			.push_maybe(
+				stopwatch_label.map(|stopwatch_label| {
+					container(
+						text(stopwatch_label)
+							.size(SMALL_TEXT_SIZE)
+					)
+					.width(Length::Fill)
+					.align_x(Horizontal::Right)
+				})
+			)
+			.width(Length::Fill)
+			.spacing(SPACING_AMOUNT)
+			.align_items(Alignment::Center)
 		)
 		.width(Length::Fill)
-		.spacing(SPACING_AMOUNT)
-		.align_items(Alignment::Center)
+		.on_press(UiMessage::OpenStopwatch)
+		.style(theme::Button::custom(ProjectPreviewButtonStyle{
+			selected: selected || stopwatch_ticking,
+			project_color: if stopwatch_ticking {
+				Some(Color::from_rgb(1.0, 0.0, 0.0))}
+			else if selected {
+				Some(SELECTION_COLOR)
+			}
+			else {
+				None
+			}
+		}))
 	)
-	.width(Length::Fill)
-	.on_press(UiMessage::OpenStopwatch)
-	.style(theme::Button::custom(ProjectPreviewButtonStyle{
-		selected,
-		project_color: if stopwatch_ticking {
-			Some(Color::from_rgb(1.0, 0.0, 0.0))}
-		else if selected {
-			Some(SELECTION_COLOR)
-		}
-		else {
-			None
-		}
-	}))
+	.id(STOPWATCH_TASK_DROPZONE_ID.clone())
+	.into()
 }
 
 pub fn settings_button() -> Button<'static, UiMessage> {
