@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
 use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SELECTION_COLOR, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 fn icon_button(label: impl ToString, icon: Bootstrap) -> Button<'static, UiMessage> {
@@ -116,7 +116,7 @@ pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode, r
 	.on_press(PreferenceMessage::SetThemeMode(theme_mode).into())
 }
 
-pub fn stopwatch_button(stopwatch_page: &StopwatchPage) -> Button<'static, UiMessage> {
+pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Button<'static, UiMessage> {
 	let stopwatch_label = match stopwatch_page {
 		StopwatchPage::Ticking { clock, .. } => Some(clock.label()),
 		_ => None
@@ -150,9 +150,12 @@ pub fn stopwatch_button(stopwatch_page: &StopwatchPage) -> Button<'static, UiMes
 	.width(Length::Fill)
 	.on_press(UiMessage::OpenStopwatch)
 	.style(theme::Button::custom(ProjectPreviewButtonStyle{
-		selected: stopwatch_ticking,
+		selected,
 		project_color: if stopwatch_ticking {
 			Some(Color::from_rgb(1.0, 0.0, 0.0))}
+		else if selected {
+			Some(SELECTION_COLOR)
+		}
 		else {
 			None
 		}
