@@ -107,8 +107,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, task_type: TaskType, pro
 										};
 										match new_needed_time_minutes {
 											Some(new_needed_time_minutes) => {
-												DatabaseMessage::ChangeTaskNeededTime {
-													project_id,
+												ProjectPageMessage::ChangeTaskNeededTime {
 													task_id,
 													new_needed_time_minutes,
 												}.into()

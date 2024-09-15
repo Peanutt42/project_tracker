@@ -51,6 +51,10 @@ pub enum ProjectPageMessage {
 	ToggleTaskTag(TaskTagId),
 	EditTaskNeededTime,
 	ClearTaskNeededTime,
+	ChangeTaskNeededTime {
+		task_id: TaskId,
+		new_needed_time_minutes: Option<usize>,
+	},
 	InvalidNeededTimeInput,
 	StopEditingTaskNeededTime,
 	EditTaskDueDate,
@@ -413,6 +417,22 @@ impl ProjectPage {
 					}
 				}
 				Command::none()
+			},
+			ProjectPageMessage::ChangeTaskNeededTime { task_id, new_needed_time_minutes } => {
+				if let Some(database) = database {
+					Command::batch([
+						text_input::focus(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone()),
+
+						database.update(DatabaseMessage::ChangeTaskNeededTime {
+							project_id: self.project_id,
+							task_id,
+							new_needed_time_minutes
+						})
+					])
+				}
+				else {
+					Command::none()
+				}
 			},
 			ProjectPageMessage::InvalidNeededTimeInput => Command::none(),
 			ProjectPageMessage::StopEditingTaskNeededTime => {
