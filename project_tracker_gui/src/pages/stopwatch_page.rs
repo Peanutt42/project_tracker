@@ -1,18 +1,20 @@
-use std::time::Instant;
-use iced::{alignment::Horizontal, widget::{canvas, column, container, text}, window, Alignment, Element, Font, Length, Subscription};
+use std::time::{Duration, Instant};
+use iced::{alignment::Horizontal, widget::{canvas, column, row, container, text}, window, Alignment, Element, Font, Length, Subscription};
 use notify_rust::{Hint, Notification};
-use crate::{components::{start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, ProjectId, TaskId}, project_tracker::UiMessage, styles::LARGE_SPACING_AMOUNT};
+use crate::{components::{pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, ProjectId, TaskId}, project_tracker::UiMessage, styles::LARGE_SPACING_AMOUNT};
 
 #[derive(Debug, Default)]
 pub enum StopwatchPage {
 	#[default]
 	Idle,
 	Ticking {
-		timer_start: Instant,
+		elapsed_time: Duration,
+		last_update: Instant,
+		paused: bool,
 		task: Option<(ProjectId, TaskId)>,
 		clock: StopwatchClock,
 		finished_notification_sent: bool,
-	}
+	},
 }
 
 #[derive(Clone, Debug)]
@@ -21,6 +23,8 @@ pub enum StopwatchPageMessage {
 		task: Option<(ProjectId, TaskId)>,
 	},
 	Stop,
+	Pause,
+	Resume,
 	Toggle,
 	RedrawClock,
 }
@@ -50,7 +54,9 @@ impl StopwatchPage {
 		match message {
 			StopwatchPageMessage::Start{ task } => {
 				*self = StopwatchPage::Ticking {
-					timer_start: Instant::now(),
+					elapsed_time: Duration::ZERO,
+					last_update: Instant::now(),
+					paused: false,
 					task,
 					clock: StopwatchClock::new(0.0, String::new(), String::new()),
 					finished_notification_sent: false
@@ -59,6 +65,16 @@ impl StopwatchPage {
 			StopwatchPageMessage::Stop => {
 				*self = StopwatchPage::Idle;
 			},
+			StopwatchPageMessage::Resume => {
+				if let StopwatchPage::Ticking { paused, .. } = self {
+					*paused = false;
+				}
+			},
+			StopwatchPageMessage::Pause => {
+				if let StopwatchPage::Ticking { paused, .. } = self {
+					*paused = true;
+				}
+			},
 			StopwatchPageMessage::Toggle => {
 				match self {
 					StopwatchPage::Idle => self.update(StopwatchPageMessage::Start{ task: None }, database),
@@ -66,7 +82,12 @@ impl StopwatchPage {
 				}
 			},
 			StopwatchPageMessage::RedrawClock => {
-				if let StopwatchPage::Ticking { clock, task, timer_start, finished_notification_sent } = self {
+				if let StopwatchPage::Ticking { clock, task, elapsed_time, finished_notification_sent, paused, last_update } = self {
+					if !*paused {
+						*elapsed_time += Instant::now().duration_since(*last_update);
+					}
+					*last_update = Instant::now();
+
 					let task = task.as_ref().and_then(|(project_id, task_id)|
 						database.as_ref().and_then(|db|
 							db.projects()
@@ -77,14 +98,14 @@ impl StopwatchPage {
 
 					if let Some(task) = task {
 						if let Some(needed_minutes) = task.needed_time_minutes {
-							let timer_seconds = Instant::now().duration_since(*timer_start).as_secs_f32();
+							let timer_seconds = elapsed_time.as_secs_f32();
 							let needed_seconds = needed_minutes as f32 * 60.0;
 							let seconds_left = needed_seconds - timer_seconds;
 							clock.set_percentage(timer_seconds / needed_seconds);
 							clock.set_label(format_stopwatch_duration(seconds_left.round_ties_even() as i64));
 							clock.set_sub_label(format_stopwatch_duration(needed_seconds.round_ties_even() as i64));
 
-							if seconds_left > 0.0 && !*finished_notification_sent {
+							if seconds_left <= 0.0 && !*finished_notification_sent {
 								let summary = format!("{} min. timer finished!", needed_minutes);
 								let body = &task.name;
 
@@ -125,7 +146,7 @@ impl StopwatchPage {
 					.align_items(Alignment::Center)
 					.spacing(LARGE_SPACING_AMOUNT)
 				},
-				StopwatchPage::Ticking { timer_start, task, clock, .. } => {
+				StopwatchPage::Ticking { elapsed_time, task, clock, paused, .. } => {
 					let task = task.as_ref().and_then(|(project_id, task_id)|
 						database.as_ref().and_then(|db|
 							db.projects()
@@ -141,7 +162,7 @@ impl StopwatchPage {
 							.into()
 					}
 					else {
-						text(format_stopwatch_duration(Instant::now().duration_since(*timer_start).as_secs_f64().round_ties_even() as i64))
+						text(format_stopwatch_duration(elapsed_time.as_secs_f64().round_ties_even() as i64))
 							.font(Font::DEFAULT)
 							.size(90)
 							.width(Length::Fill)
@@ -152,7 +173,16 @@ impl StopwatchPage {
 					column![
 						clock,
 
-						stop_timer_button()
+						row![
+							if *paused {
+								resume_timer_button()
+							}
+							else {
+								pause_timer_button()
+							},
+							stop_timer_button()
+						]
+						.spacing(LARGE_SPACING_AMOUNT)
 					]
 					.push_maybe(
 						task.map(|task| text(&task.name))

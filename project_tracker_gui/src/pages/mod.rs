@@ -5,4 +5,4 @@ mod project_page;
 pub use project_page::{ProjectPage, ProjectPageMessage, EditTaskState, CachedTaskList};
 
 mod stopwatch_page;
-pub use stopwatch_page::{StopwatchPage, StopwatchPageMessage};
+pub use stopwatch_page::{StopwatchPage, StopwatchPageMessage, format_stopwatch_duration};

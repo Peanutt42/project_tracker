@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
 use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SELECTION_COLOR, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SELECTION_COLOR, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 fn icon_button(label: impl ToString, icon: Bootstrap) -> Button<'static, UiMessage> {
@@ -118,7 +118,14 @@ pub fn theme_mode_button(theme_mode: ThemeMode, current_theme_mode: ThemeMode, r
 
 pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Element<'static, UiMessage> {
 	let stopwatch_label = match stopwatch_page {
-		StopwatchPage::Ticking { clock, .. } => Some(clock.label()),
+		StopwatchPage::Ticking { clock, elapsed_time, .. } => {
+			Some(if clock.label().is_empty() {
+				format_stopwatch_duration(elapsed_time.as_secs_f64().round_ties_even() as i64)
+			}
+			else {
+				clock.label().to_string()
+			})
+		},
 		_ => None
 	};
 
@@ -527,7 +534,7 @@ pub fn start_timer_button() -> Button<'static, UiMessage> {
 
 pub fn stop_timer_button() -> Button<'static, UiMessage> {
 	button(
-		icon_to_text(Bootstrap::PauseFill)
+		icon_to_text(Bootstrap::XLg)
 			.size(45)
 			.horizontal_alignment(Horizontal::Center)
 			.vertical_alignment(Vertical::Center)
@@ -535,6 +542,32 @@ pub fn stop_timer_button() -> Button<'static, UiMessage> {
 	.width(Length::Fixed(1.75 * 45.0))
 	.height(Length::Fixed(1.75 * 45.0))
 	.on_press(StopwatchPageMessage::Stop.into())
+	.style(theme::Button::custom(TimerButtonStyle{ timer_ticking: true }))
+}
+
+pub fn resume_timer_button() -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::PlayFill)
+			.size(45)
+			.horizontal_alignment(Horizontal::Center)
+			.vertical_alignment(Vertical::Center)
+	)
+	.width(Length::Fixed(1.75 * 45.0))
+	.height(Length::Fixed(1.75 * 45.0))
+	.on_press(StopwatchPageMessage::Resume.into())
+	.style(theme::Button::custom(TimerButtonStyle{ timer_ticking: true }))
+}
+
+pub fn pause_timer_button() -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::PauseFill)
+			.size(45)
+			.horizontal_alignment(Horizontal::Center)
+			.vertical_alignment(Vertical::Center)
+	)
+	.width(Length::Fixed(1.75 * 45.0))
+	.height(Length::Fixed(1.75 * 45.0))
+	.on_press(StopwatchPageMessage::Pause.into())
 	.style(theme::Button::custom(TimerButtonStyle{ timer_ticking: true }))
 }
 
