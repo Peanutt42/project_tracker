@@ -1,5 +1,6 @@
 use std::time::Instant;
 use iced::{alignment::Horizontal, widget::{canvas, column, container, text}, window, Alignment, Element, Font, Length, Subscription};
+use notify_rust::{Hint, Notification};
 use crate::{components::{start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, ProjectId, TaskId}, project_tracker::UiMessage, styles::LARGE_SPACING_AMOUNT};
 
 #[derive(Debug, Default)]
@@ -10,6 +11,7 @@ pub enum StopwatchPage {
 		timer_start: Instant,
 		task: Option<(ProjectId, TaskId)>,
 		clock: StopwatchClock,
+		finished_notification_sent: bool,
 	}
 }
 
@@ -47,7 +49,12 @@ impl StopwatchPage {
 	pub fn update(&mut self, message: StopwatchPageMessage, database: &Option<Database>) {
 		match message {
 			StopwatchPageMessage::Start{ task } => {
-				*self = StopwatchPage::Ticking { timer_start: Instant::now(), task, clock: StopwatchClock::new(0.0, String::new(), String::new()) };
+				*self = StopwatchPage::Ticking {
+					timer_start: Instant::now(),
+					task,
+					clock: StopwatchClock::new(0.0, String::new(), String::new()),
+					finished_notification_sent: false
+				};
 			},
 			StopwatchPageMessage::Stop => {
 				*self = StopwatchPage::Idle;
@@ -59,7 +66,7 @@ impl StopwatchPage {
 				}
 			},
 			StopwatchPageMessage::RedrawClock => {
-				if let StopwatchPage::Ticking { clock, task, timer_start } = self {
+				if let StopwatchPage::Ticking { clock, task, timer_start, finished_notification_sent } = self {
 					let task = task.as_ref().and_then(|(project_id, task_id)|
 						database.as_ref().and_then(|db|
 							db.projects()
@@ -76,6 +83,29 @@ impl StopwatchPage {
 							clock.set_percentage(timer_seconds / needed_seconds);
 							clock.set_label(format_stopwatch_duration(seconds_left.round_ties_even() as i64));
 							clock.set_sub_label(format_stopwatch_duration(needed_seconds.round_ties_even() as i64));
+
+							if seconds_left <= 0.0 && !*finished_notification_sent {
+								let summary = format!("{} min. timer finished!", needed_minutes);
+								let body = &task.name;
+
+								if cfg!(target_os = "linux") {
+									let _ = Notification::new()
+										.summary(&summary)
+										.body(body)
+										.appname("Project Tracker")
+										.icon("Project Tracker")
+										.hint(Hint::DesktopEntry("Project Tracker".to_string()))
+										.show();
+								}
+								else {
+									let _ = Notification::new()
+	            						.summary(&summary)
+										.body(body)
+										.show();
+								}
+
+								*finished_notification_sent = true;
+							}
 						}
 					}
 				}
@@ -95,7 +125,7 @@ impl StopwatchPage {
 					.align_items(Alignment::Center)
 					.spacing(LARGE_SPACING_AMOUNT)
 				},
-				StopwatchPage::Ticking { timer_start, task, clock } => {
+				StopwatchPage::Ticking { timer_start, task, clock, .. } => {
 					let task = task.as_ref().and_then(|(project_id, task_id)|
 						database.as_ref().and_then(|db|
 							db.projects()
