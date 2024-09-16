@@ -178,6 +178,7 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, task_type: TaskType, pro
 				.push(delete_task_button(project_id, task_id))
 				.align_items(Alignment::Start)
 		]
+		.padding(Padding{ top: SPACING_AMOUNT as f32, ..Padding::ZERO })
 		.into()
 	}
 	else {

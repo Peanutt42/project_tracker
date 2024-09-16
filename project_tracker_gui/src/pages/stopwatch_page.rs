@@ -84,7 +84,7 @@ impl StopwatchPage {
 							clock.set_label(format_stopwatch_duration(seconds_left.round_ties_even() as i64));
 							clock.set_sub_label(format_stopwatch_duration(needed_seconds.round_ties_even() as i64));
 
-							if seconds_left <= 0.0 && !*finished_notification_sent {
+							if seconds_left > 0.0 && !*finished_notification_sent {
 								let summary = format!("{} min. timer finished!", needed_minutes);
 								let body = &task.name;
 
