@@ -21,7 +21,8 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, task_type: TaskType, pro
 				text_editor(&edit_task_state.new_name)
 					.on_action(|action| ProjectPageMessage::TaskNameAction(action).into())
 					.style(theme::TextEditor::Custom(Box::new(TextEditorStyle {
-						round_top_left: false,
+						round_top_left: task.needed_time_minutes.is_none() &&
+										task_tags.get_key_at_order(0).map(|tag_id| !task.tags.contains(tag_id)).unwrap_or(true),
 						round_top_right: false,
 						round_bottom_left: false,
 						round_bottom_right: edit_task_state.new_name.line_count() > 1 // multiline?

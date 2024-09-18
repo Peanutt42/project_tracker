@@ -1,5 +1,5 @@
 use std::{path::PathBuf, time::Duration};
-use iced::{clipboard, event::Status, font, keyboard, mouse, time, widget::{container, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
+use iced::{clipboard, event::Status, font, keyboard, mouse, time, widget::{container, focus_next, focus_previous, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
 	components::{invisible_toggle_sidebar_button, toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage},
@@ -29,6 +29,8 @@ pub enum UiMessage {
 	EnterPressed,
 	LeftClickReleased,
 	CopyToClipboard(String),
+	FocusNext,
+	FocusPrevious,
 	SaveChangedFiles,
 	OpenFolderLocation(PathBuf),
 	FontLoaded(Result<(), font::Error>),
@@ -135,12 +137,20 @@ impl Application for ProjectTrackerApp {
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
 				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => Some(UiMessage::DeleteSelectedProject),
 				keyboard::Key::Named(keyboard::key::Named::Space) => Some(StopwatchPageMessage::Toggle.into()),
-				keyboard::Key::Named(keyboard::key::Named::Tab) if modifiers.command() => Some(
-					if modifiers.shift() {
-						UiMessage::SwitchToUpperProject
+				keyboard::Key::Named(keyboard::key::Named::Tab) => Some(
+					if modifiers.command() {
+						if modifiers.shift() {
+							UiMessage::SwitchToUpperProject
+						}
+						else {
+							UiMessage::SwitchToLowerProject
+						}
+					}
+					else if modifiers.shift() {
+						UiMessage::FocusPrevious
 					}
 					else {
-						UiMessage::SwitchToLowerProject
+						UiMessage::FocusNext
 					}
 				),
 				_ => None,
@@ -209,6 +219,8 @@ impl Application for ProjectTrackerApp {
 				])
 			},
 			UiMessage::CopyToClipboard(copied_text) => clipboard::write(copied_text),
+			UiMessage::FocusNext => focus_next(),
+			UiMessage::FocusPrevious => focus_previous(),
 			UiMessage::SaveChangedFiles => {
 				let mut commands = Vec::new();
 				if let Some(database) = &mut self.database {
