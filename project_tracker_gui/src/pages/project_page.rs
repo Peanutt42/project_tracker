@@ -268,9 +268,18 @@ impl ProjectPage {
 
 			ProjectPageMessage::OpenSearchTasks => {
 				self.search_tasks_filter = Some(String::new());
+				if let Some(database) = database {
+					self.generate_cached_task_list(database);
+				}
 				text_input::focus(SEARCH_TASKS_TEXT_INPUT_ID.clone())
 			},
-			ProjectPageMessage::CloseSearchTasks => { self.search_tasks_filter = None; Command::none() },
+			ProjectPageMessage::CloseSearchTasks => {
+				self.search_tasks_filter = None;
+				if let Some(database) = database {
+					self.generate_cached_task_list(database);
+				}
+				Command::none()
+			},
 			ProjectPageMessage::ChangeSearchTasksFilter(new_filter) => {
 				self.search_tasks_filter = Some(new_filter);
 				if let Some(database) = database {
