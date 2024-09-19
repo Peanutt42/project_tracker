@@ -1,5 +1,5 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, time::Instant};
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row}, window, Color, Command, Element, Length, Padding, Point, Subscription};
 use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
@@ -69,6 +69,12 @@ pub enum ProjectPageMessage {
 	CancelDragTask,
 	PressTask(TaskId),
 	LeftClickReleased,
+
+	StartProgressbarAnimation {
+		start_percentage: f32,
+		target_percentage: f32,
+	},
+	AnimateProgressbar(Instant),
 }
 
 impl From<ProjectPageMessage> for UiMessage {
@@ -165,6 +171,7 @@ pub struct ProjectPage {
 	dragged_task: Option<TaskId>,
 	start_dragging_point: Option<Point>,
 	just_minimal_dragging: bool,
+	progressbar_animation: Option<ProgressbarAnimation>,
 }
 
 impl ProjectPage {
@@ -186,6 +193,7 @@ impl ProjectPage {
 			dragged_task: None,
 			start_dragging_point: None,
 			just_minimal_dragging: true,
+			progressbar_animation: None,
 		}
 	}
 }
@@ -248,6 +256,9 @@ impl ProjectPage {
 			ProjectPageMessage::CreateNewTask => {
 				if let Some((create_new_task_name, create_new_task_tags)) = &mut self.create_new_task {
 					if let Some(db) = database {
+						let previous_project_progress = db.projects().get(&self.project_id).map(|project| {
+							project.get_completion_percentage()
+						});
 						return Command::batch([
 							db.update(DatabaseMessage::CreateTask {
 								project_id: self.project_id,
@@ -259,6 +270,12 @@ impl ProjectPage {
 									.map(|pref| pref.create_new_tasks_at_top())
 									.unwrap_or(true),
 							}),
+							self.update(ProjectPageMessage::StartProgressbarAnimation {
+								start_percentage: previous_project_progress.unwrap_or(0.0),
+								target_percentage: db.projects().get(&self.project_id).map(|project| {
+									project.get_completion_percentage()
+								}).unwrap_or(1.0)
+							}, database, preference),
 							self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
 						]);
 					}
@@ -530,6 +547,20 @@ impl ProjectPage {
 				self.just_minimal_dragging = true;
 				command
 			},
+
+			ProjectPageMessage::StartProgressbarAnimation { start_percentage, target_percentage } => {
+				self.progressbar_animation = Some(ProgressbarAnimation::new(start_percentage, target_percentage));
+				Command::none()
+			},
+			ProjectPageMessage::AnimateProgressbar(at) => {
+				if let Some(progressbar_animation) = &mut self.progressbar_animation {
+					progressbar_animation.animate(at);
+					if progressbar_animation.finished {
+						self.progressbar_animation = None;
+					}
+				}
+				Command::none()
+			},
 		};
 
 		if let Some(database) = database {
@@ -539,6 +570,15 @@ impl ProjectPage {
 		}
 
 		command
+	}
+
+	pub fn subscription(&self) -> Subscription<UiMessage> {
+		if self.progressbar_animation.is_some() {
+			window::frames().map(|at| ProjectPageMessage::AnimateProgressbar(at).into())
+		}
+		else {
+			Subscription::none()
+		}
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
@@ -724,7 +764,14 @@ impl ProjectPage {
 			.width(Length::Fill)
 			.align_items(Alignment::Center),
 
-			completion_bar(project.get_completion_percentage()),
+			completion_bar(
+				if let Some(progressbar_animation) = &self.progressbar_animation {
+					progressbar_animation.value
+				}
+				else {
+					project.get_completion_percentage()
+				}
+			),
 		]
 		.padding(Padding {
 			top: PADDING_AMOUNT,
@@ -800,5 +847,38 @@ impl ProjectPage {
 
 			todos
 		})
+	}
+}
+
+#[derive(Debug)]
+struct ProgressbarAnimation {
+	start: f32,
+	target: f32,
+	value: f32,
+	start_time: Instant,
+	finished: bool,
+}
+
+impl ProgressbarAnimation {
+	fn new(start: f32, target: f32) -> Self {
+		Self {
+			start,
+			target,
+			value: start,
+			start_time: Instant::now(),
+			finished: false
+		}
+	}
+
+	fn animate(&mut self, now: Instant) {
+		let time = now.duration_since(self.start_time).as_secs_f32();
+		let anim_percentage = time * 2.0; // animation takes 0.5s
+		if anim_percentage > 1.0 {
+			self.finished = true;
+			self.value = self.target;
+		}
+		else {
+			self.value = self.start + (self.target - self.start) * anim_percentage;
+		}
 	}
 }

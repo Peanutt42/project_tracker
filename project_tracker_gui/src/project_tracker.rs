@@ -166,6 +166,13 @@ impl Application for ProjectTrackerApp {
 
 			self.stopwatch_page.subscription(),
 
+			if let Some(project_page) = &self.project_page {
+				project_page.subscription()
+			}
+			else {
+				Subscription::none()
+			},
+
 			time::every(Duration::from_secs(1))
 				.map(|_| UiMessage::SaveChangedFiles),
 
@@ -328,6 +335,12 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::DatabaseMessage(database_message) => {
 				if let Some(database) = &mut self.database {
+					let previous_project_progress = self.project_page.as_ref().and_then(|project_page| {
+						database
+							.projects()
+							.get(&project_page.project_id)
+							.map(|project| project.get_completion_percentage())
+					});
 					let database_command = database.update(database_message.clone());
 					let command = match database_message {
 						DatabaseMessage::DeleteProject(project_id) => {
@@ -343,6 +356,30 @@ impl Application for ProjectTrackerApp {
 						},
 						DatabaseMessage::SyncFailed(error_msg) => {
 							self.show_error_msg(error_msg.clone())
+						},
+						DatabaseMessage::Clear |
+						DatabaseMessage::CreateTask { .. } |
+					 	DatabaseMessage::DeleteTask { .. } |
+						DatabaseMessage::SetTaskDone { .. } |
+						DatabaseMessage::SetTaskTodo { .. } |
+						DatabaseMessage::DeleteDoneTasks(_) |
+						DatabaseMessage::DeleteTaskTag { .. } |
+						DatabaseMessage::MoveTask { .. } => {
+							let new_project_progress = self.project_page.as_ref().and_then(|project_page| {
+								database
+									.projects()
+									.get(&project_page.project_id)
+									.map(|project| project.get_completion_percentage())
+							});
+							if let Some(previous_project_progress) = previous_project_progress {
+								if let Some(new_project_progress) = new_project_progress {
+									return self.update(ProjectPageMessage::StartProgressbarAnimation {
+										start_percentage: previous_project_progress,
+										target_percentage: new_project_progress
+									}.into());
+								}
+							}
+							Command::none()
 						},
 						_ => Command::none(),
 					};
