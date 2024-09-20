@@ -250,7 +250,17 @@ impl SidebarPage {
 				Command::none()
 			},
 			SidebarPageMessage::DragTask { project_id, task_id, task_is_todo, rect, point } => {
-				let project_options = Self::project_dropzones_for_tasks_options(database, project_id);
+				let task_has_needed_time = database.as_ref().and_then(|db|
+					db.projects()
+						.get(&project_id)
+						.and_then(|project|
+							project
+								.get_task(&task_id)
+								.map(|task| task.needed_time_minutes.is_some())
+						)
+				)
+				.unwrap_or(false);
+				let project_options = Self::project_dropzones_for_tasks_options(database, project_id, task_has_needed_time);
 				let mut commands = vec![
 					zones_on_point(
 						move |zones| SidebarPageMessage::HandleProjectZonesForTasks { project_id, task_id, zones }.into(),
@@ -497,7 +507,7 @@ impl SidebarPage {
 		})
 	}
 
-	fn project_dropzones_for_tasks_options(database: &Option<Database>, exception: ProjectId) -> Option<Vec<Id>> {
+	fn project_dropzones_for_tasks_options(database: &Option<Database>, exception: ProjectId, task_has_needed_time: bool) -> Option<Vec<Id>> {
 		database.as_ref().map(|database| {
 			let mut options: Vec<Id> = database.projects().iter().filter_map(|(project_id, project)| {
 				if project_id == exception {
@@ -509,7 +519,9 @@ impl SidebarPage {
 			})
 			.collect();
 
-			options.push(STOPWATCH_TASK_DROPZONE_ID.clone().into());
+			if task_has_needed_time {
+				options.push(STOPWATCH_TASK_DROPZONE_ID.clone().into());
+			}
 
 			options
 		})
