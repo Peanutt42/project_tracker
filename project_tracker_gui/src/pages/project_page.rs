@@ -1,11 +1,11 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, time::Instant};
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row}, window, Color, Command, Element, Length, Padding, Point, Subscription};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point, Subscription};
 use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use crate::{
-	components::{cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, delete_project_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
+	components::{cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, delete_project_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
@@ -74,7 +74,7 @@ pub enum ProjectPageMessage {
 		start_percentage: f32,
 		target_percentage: f32,
 	},
-	AnimateProgressbar(Instant),
+	AnimateProgressbar,
 }
 
 impl From<ProjectPageMessage> for UiMessage {
@@ -171,7 +171,7 @@ pub struct ProjectPage {
 	dragged_task: Option<TaskId>,
 	start_dragging_point: Option<Point>,
 	just_minimal_dragging: bool,
-	progressbar_animation: Option<ProgressbarAnimation>,
+	progressbar_animation: ScalarAnimation,
 }
 
 impl ProjectPage {
@@ -193,7 +193,7 @@ impl ProjectPage {
 			dragged_task: None,
 			start_dragging_point: None,
 			just_minimal_dragging: true,
-			progressbar_animation: None,
+			progressbar_animation: ScalarAnimation::Idle,
 		}
 	}
 }
@@ -549,16 +549,11 @@ impl ProjectPage {
 			},
 
 			ProjectPageMessage::StartProgressbarAnimation { start_percentage, target_percentage } => {
-				self.progressbar_animation = Some(ProgressbarAnimation::new(start_percentage, target_percentage));
+				self.progressbar_animation = ScalarAnimation::start(start_percentage, target_percentage, 0.125);
 				Command::none()
 			},
-			ProjectPageMessage::AnimateProgressbar(at) => {
-				if let Some(progressbar_animation) = &mut self.progressbar_animation {
-					progressbar_animation.animate(at);
-					if progressbar_animation.finished {
-						self.progressbar_animation = None;
-					}
-				}
+			ProjectPageMessage::AnimateProgressbar => {
+				self.progressbar_animation.update();
 				Command::none()
 			},
 		};
@@ -573,12 +568,7 @@ impl ProjectPage {
 	}
 
 	pub fn subscription(&self) -> Subscription<UiMessage> {
-		if self.progressbar_animation.is_some() {
-			window::frames().map(|at| ProjectPageMessage::AnimateProgressbar(at).into())
-		}
-		else {
-			Subscription::none()
-		}
+		self.progressbar_animation.subscription().map(|_| ProjectPageMessage::AnimateProgressbar.into())
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
@@ -765,12 +755,9 @@ impl ProjectPage {
 			.align_items(Alignment::Center),
 
 			completion_bar(
-				if let Some(progressbar_animation) = &self.progressbar_animation {
-					progressbar_animation.value
-				}
-				else {
-					project.get_completion_percentage()
-				}
+				self.progressbar_animation
+					.get_value()
+					.unwrap_or(project.get_completion_percentage())
 			),
 		]
 		.padding(Padding {
@@ -847,38 +834,5 @@ impl ProjectPage {
 
 			todos
 		})
-	}
-}
-
-#[derive(Debug)]
-struct ProgressbarAnimation {
-	start: f32,
-	target: f32,
-	value: f32,
-	start_time: Instant,
-	finished: bool,
-}
-
-impl ProgressbarAnimation {
-	fn new(start: f32, target: f32) -> Self {
-		Self {
-			start,
-			target,
-			value: start,
-			start_time: Instant::now(),
-			finished: false
-		}
-	}
-
-	fn animate(&mut self, now: Instant) {
-		let time = now.duration_since(self.start_time).as_secs_f32();
-		let anim_percentage = time * 2.0; // animation takes 0.5s
-		if anim_percentage > 1.0 {
-			self.finished = true;
-			self.value = self.target;
-		}
-		else {
-			self.value = self.start + (self.target - self.start) * anim_percentage;
-		}
 	}
 }

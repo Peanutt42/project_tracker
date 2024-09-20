@@ -54,3 +54,6 @@ pub use dropzone::in_between_dropzone;
 
 mod stopwatch_clock;
 pub use stopwatch_clock::StopwatchClock;
+
+mod animation;
+pub use animation::ScalarAnimation;
