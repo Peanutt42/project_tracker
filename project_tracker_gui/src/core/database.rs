@@ -171,6 +171,15 @@ impl Database {
 
 	pub fn projects(&self) -> &OrderedHashMap<ProjectId, Project> { &self.projects }
 
+	pub fn get_project(&self, project_id: &ProjectId) -> Option<&Project> {
+		self.projects.get(project_id)
+	}
+
+	pub fn get_task(&self, project_id: &ProjectId, task_id: &TaskId) -> Option<&Task> {
+		self.projects.get(project_id)
+			.and_then(|project| project.get_task(task_id))
+	}
+
 	pub fn last_changed_time(&self) -> &Instant { &self.last_changed_time }
 
 	pub fn modify(&mut self, f: impl FnOnce(&mut OrderedHashMap<ProjectId, Project>)) {

@@ -90,9 +90,7 @@ impl StopwatchPage {
 
 					let task = task.as_ref().and_then(|(project_id, task_id)|
 						database.as_ref().and_then(|db|
-							db.projects()
-								.get(project_id)
-								.and_then(|project| project.get_task(task_id))
+							db.get_task(project_id, task_id)
 						)
 					);
 
@@ -149,9 +147,7 @@ impl StopwatchPage {
 				StopwatchPage::Ticking { elapsed_time, task, clock, paused, .. } => {
 					let task = task.as_ref().and_then(|(project_id, task_id)|
 						database.as_ref().and_then(|db|
-							db.projects()
-								.get(project_id)
-								.and_then(|project| project.get_task(task_id))
+							db.get_task(project_id, task_id)
 						)
 					);
 

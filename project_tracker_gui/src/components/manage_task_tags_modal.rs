@@ -85,8 +85,7 @@ impl ManageTaskTagsModal {
 				if let ManageTaskTagsModal::Opened { edit_task_tag_name_id, project_id, .. } = self {
 					let task_tag_name = database.as_ref().and_then(|database| {
 						database
-							.projects()
-							.get(project_id)
+							.get_project(project_id)
 							.and_then(|project| {
 								project.task_tags.get(&task_tag_id).map(|task_tag| task_tag.name.clone())
 							})
@@ -179,7 +178,7 @@ impl ManageTaskTagsModal {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<(Element<UiMessage>, ModalStyles)> {
 		match self {
 			ManageTaskTagsModal::Opened { project_id, create_new_task_tag, edit_task_tag_color_id, edit_task_tag_name_id } => {
-				app.database.as_ref().and_then(|db| db.projects().get(project_id)).map(|project| {
+				app.database.as_ref().and_then(|db| db.get_project(project_id)).map(|project| {
 					let view = card(
 						text(format!("Manage project '{}' task tags", project.name))
 							.size(LARGE_TEXT_SIZE),

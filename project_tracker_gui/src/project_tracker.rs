@@ -337,8 +337,7 @@ impl Application for ProjectTrackerApp {
 				if let Some(database) = &mut self.database {
 					let previous_project_progress = self.project_page.as_ref().and_then(|project_page| {
 						database
-							.projects()
-							.get(&project_page.project_id)
+							.get_project(&project_page.project_id)
 							.map(|project| project.get_completion_percentage())
 					});
 					let database_command = database.update(database_message.clone());
@@ -367,8 +366,7 @@ impl Application for ProjectTrackerApp {
 						DatabaseMessage::MoveTask { .. } => {
 							let new_project_progress = self.project_page.as_ref().and_then(|project_page| {
 								database
-									.projects()
-									.get(&project_page.project_id)
+									.get_project(&project_page.project_id)
 									.map(|project| project.get_completion_percentage())
 							});
 							if let Some(previous_project_progress) = previous_project_progress {
@@ -415,8 +413,7 @@ impl Application for ProjectTrackerApp {
 			UiMessage::SelectProject(project_id) => {
 				let open_project_info = if let Some(database) = &self.database {
 					project_id.and_then(|project_id| {
-						database.projects()
-							.get(&project_id)
+						database.get_project(&project_id)
 							.map(|project| (project_id, project))
 					})
 				}
@@ -485,7 +482,7 @@ impl Application for ProjectTrackerApp {
 			UiMessage::DeleteSelectedProject => {
 				if let Some(project_page) = &self.project_page {
 					if let Some(database) = &self.database {
-						if let Some(project) = database.projects().get(&project_page.project_id) {
+						if let Some(project) = database.get_project(&project_page.project_id) {
 							return self.update(ConfirmModalMessage::open(format!("Delete Project '{}'?", project.name), DatabaseMessage::DeleteProject(project_page.project_id)));
 						}
 					}

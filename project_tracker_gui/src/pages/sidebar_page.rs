@@ -235,7 +235,7 @@ impl SidebarPage {
 						}
 						false
 					};
-					if let Some(project) = database.as_ref().and_then(|db| db.projects().get(&project_id)) {
+					if let Some(project) = database.as_ref().and_then(|db| db.get_project(&project_id)) {
 						for (task_id, task) in project.todo_tasks.iter() {
 							if is_hovered(task.dropzone_id.clone().into()) {
 								self.task_dropzone_hovered = Some(TaskDropzone::Task(task_id));

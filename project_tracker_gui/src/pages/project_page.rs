@@ -210,7 +210,7 @@ impl ProjectPage {
 				else {
 					database
 						.as_ref()
-						.and_then(|db| db.projects().get(&self.project_id))
+						.and_then(|db| db.get_project(&self.project_id))
 						.map(|project| {
 							let mut total_tasks_shown = project.todo_tasks.len();
 							if self.show_source_code_todos {
@@ -256,9 +256,9 @@ impl ProjectPage {
 			ProjectPageMessage::CreateNewTask => {
 				if let Some((create_new_task_name, create_new_task_tags)) = &mut self.create_new_task {
 					if let Some(db) = database {
-						let previous_project_progress = db.projects().get(&self.project_id).map(|project| {
-							project.get_completion_percentage()
-						});
+						let previous_project_progress = db
+							.get_project(&self.project_id)
+							.map(Project::get_completion_percentage);
 						return Command::batch([
 							db.update(DatabaseMessage::CreateTask {
 								project_id: self.project_id,
@@ -272,9 +272,10 @@ impl ProjectPage {
 							}),
 							self.update(ProjectPageMessage::StartProgressbarAnimation {
 								start_percentage: previous_project_progress.unwrap_or(0.0),
-								target_percentage: db.projects().get(&self.project_id).map(|project| {
-									project.get_completion_percentage()
-								}).unwrap_or(1.0)
+								target_percentage: db
+									.get_project(&self.project_id)
+									.map(Project::get_completion_percentage)
+									.unwrap_or(1.0)
 							}, database, preference),
 							self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
 						]);
@@ -360,8 +361,7 @@ impl ProjectPage {
 			ProjectPageMessage::EditProjectName => {
 				let project_name = database.as_ref()
 					.and_then(|db|
-						db.projects()
-							.get(&self.project_id)
+						db.get_project(&self.project_id)
 							.map(|project| project.name.clone())
 					)
 					.unwrap_or_default();
@@ -387,12 +387,10 @@ impl ProjectPage {
 
 			ProjectPageMessage::EditTask(task_id) => {
 				let task_name = database.as_ref().and_then(|db| {
-					db.projects().get(&self.project_id)
-						.and_then(|project|
-							project.get_task(&task_id)
-								.map(|task| task.name.clone())
-						)
-				}).unwrap_or_default();
+					db.get_task(&self.project_id, &task_id)
+						.map(|task| task.name.clone())
+				})
+				.unwrap_or_default();
 				self.edited_task = Some(EditTaskState::new(task_id, text_editor::Content::with_text(&task_name)));
 				self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
 			},
@@ -573,7 +571,7 @@ impl ProjectPage {
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
 		if let Some(database) = &app.database {
-			if let Some(project) = database.projects().get(&self.project_id) {
+			if let Some(project) = database.get_project(&self.project_id) {
 				column![
 					self.project_details_view(self.project_id, project),
 
@@ -771,7 +769,7 @@ impl ProjectPage {
 	}
 
 	fn generate_cached_task_list(&mut self, database: &Database) {
-		if let Some(project) = database.projects().get(&self.project_id) {
+		if let Some(project) = database.get_project(&self.project_id) {
 			self.cached_task_list = CachedTaskList::generate(project, &self.filter_task_tags, &self.search_tasks_filter)
 		}
 	}
