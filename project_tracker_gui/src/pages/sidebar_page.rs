@@ -193,7 +193,8 @@ impl SidebarPage {
 									StopwatchPageMessage::Start{
 										task: Some((project_id, task_id)),
 									},
-									database
+									database,
+									true
 								);
 								None
 							},

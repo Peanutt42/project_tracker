@@ -124,7 +124,8 @@ impl SettingTab {
 					shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
 					shortcut("New Task:", "Ctrl + N"),
 					shortcut("Toggle Sidebar:", "Ctrl + B"),
-					shortcut("Start/Stop Stopwatch:", "Space"),
+					shortcut("Start/Pause/Resume Stopwatch:", "Space"),
+					shortcut("Stop Stopwatch:", "Esc"),
 				]
 				.spacing(SPACING_AMOUNT)
 				.into()
@@ -219,7 +220,7 @@ impl SettingsModal {
 							]
 						)
 						.max_width(900.0)
-						.max_height(350.0)
+						.max_height(400.0)
 						.close_size(LARGE_TEXT_SIZE)
 						.style(CardStyles::custom(ModalCardStyle))
 						.on_close(SettingsModalMessage::Close.into())

@@ -202,7 +202,12 @@ impl Application for ProjectTrackerApp {
 				if matches!(self.manage_tags_modal, ManageTaskTagsModal::Opened { .. }) {
 					return self.update(ManageTaskTagsModalMessage::Close.into());
 				}
-				self.update(ProjectPageMessage::HideColorPicker.into())
+				if self.project_page.is_some() {
+					self.update(ProjectPageMessage::HideColorPicker.into())
+				}
+				else {
+					self.update(StopwatchPageMessage::Stop.into())
+				}
 			},
 			UiMessage::EnterPressed => {
 				self.error_msg_modal = ErrorMsgModal::Closed;
@@ -402,13 +407,11 @@ impl Application for ProjectTrackerApp {
 			UiMessage::OpenStopwatch => self.update(UiMessage::SelectProject(None)),
 			UiMessage::StopwatchPageMessage(message) => {
 				let should_open_stopwatch_page = matches!(message, StopwatchPageMessage::Start{ .. });
-				self.stopwatch_page.update(message, &self.database);
+				self.stopwatch_page.update(message, &self.database, self.project_page.is_none());
 				if should_open_stopwatch_page {
-					self.update(UiMessage::OpenStopwatch)
+					return self.update(UiMessage::OpenStopwatch);
 				}
-				else {
-					Command::none()
-				}
+				Command::none()
 			},
 			UiMessage::SelectProject(project_id) => {
 				let open_project_info = if let Some(database) = &self.database {

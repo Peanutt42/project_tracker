@@ -50,7 +50,7 @@ impl StopwatchPage {
 		}
 	}
 
-	pub fn update(&mut self, message: StopwatchPageMessage, database: &Option<Database>) {
+	pub fn update(&mut self, message: StopwatchPageMessage, database: &Option<Database>, opened: bool) {
 		match message {
 			StopwatchPageMessage::Start{ task } => {
 				*self = StopwatchPage::Ticking {
@@ -75,10 +75,15 @@ impl StopwatchPage {
 					*paused = true;
 				}
 			},
-			StopwatchPageMessage::Toggle => {
+			StopwatchPageMessage::Toggle => if opened {
 				match self {
-					StopwatchPage::Idle => self.update(StopwatchPageMessage::Start{ task: None }, database),
-					StopwatchPage::Ticking { .. } => self.update(StopwatchPageMessage::Stop, database),
+					StopwatchPage::Idle => self.update(StopwatchPageMessage::Start{ task: None }, database, opened),
+					StopwatchPage::Ticking { paused, .. } => if *paused {
+						self.update(StopwatchPageMessage::Resume, database, opened)
+					}
+					else {
+						self.update(StopwatchPageMessage::Pause, database, opened)
+					},
 				}
 			},
 			StopwatchPageMessage::RedrawClock => {
