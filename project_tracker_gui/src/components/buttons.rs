@@ -272,6 +272,76 @@ pub fn invisible_toggle_sidebar_button() -> Button<'static, UiMessage> {
 	.style(theme::Button::custom(InvisibleButtonStyle))
 }
 
+pub fn import_database_button(importing: bool) -> Element<'static, UiMessage> {
+	button(
+		row![
+			container(
+				if importing {
+					Element::new(
+						Spinner::new()
+							.width(Length::Fixed(16.0))
+							.height(Length::Fixed(16.0))
+							.circle_radius(2.0)
+					)
+				}
+				else {
+					icon_to_text(Bootstrap::Download)
+						.vertical_alignment(Vertical::Center)
+						.into()
+				}
+			)
+			.center_y(),
+
+			text("Import")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_items(Alignment::Center)
+	)
+	.on_press_maybe(if importing {
+		None
+	}
+	else {
+		Some(DatabaseMessage::ImportDialog.into())
+	})
+	.style(theme::Button::custom(DangerousButtonStyle))
+	.into()
+}
+
+pub fn export_database_button(importing: bool) -> Element<'static, UiMessage> {
+	button(
+		row![
+			container(
+				if importing {
+					Element::new(
+						Spinner::new()
+							.width(Length::Fixed(16.0))
+							.height(Length::Fixed(16.0))
+							.circle_radius(2.0)
+					)
+				}
+				else {
+					icon_to_text(Bootstrap::Upload)
+						.vertical_alignment(Vertical::Center)
+						.into()
+				}
+			)
+			.center_y(),
+
+			text("Export")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_items(Alignment::Center)
+	)
+	.on_press_maybe(if importing {
+		None
+	}
+	else {
+		Some(DatabaseMessage::ExportDialog.into())
+	})
+	.style(theme::Button::custom(DangerousButtonStyle))
+	.into()
+}
+
 pub fn sync_database_button(synchronizing: bool, synchronization_filepath: Option<PathBuf>) -> Element<'static, UiMessage> {
 	button(
 		row![

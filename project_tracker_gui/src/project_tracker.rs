@@ -286,14 +286,20 @@ impl Application for ProjectTrackerApp {
 							Command::none()
 						}
 					},
-					LoadDatabaseResult::FailedToOpenFile(_) => {
-						if self.database.is_none() {
-							self.database = Some(Database::default());
-							self.update(DatabaseMessage::Save.into())
-						}
-						else {
+					LoadDatabaseResult::FailedToOpenFile(filepath) => {
+						let command = if let Some(database) = &mut self.database {
+							database.reset_importing();
 							Command::none()
 						}
+						else {
+							self.database = Some(Database::default());
+							self.update(DatabaseMessage::Save.into())
+						};
+
+						Command::batch([
+							command,
+							self.show_error_msg(format!("Failed to open database file:\n{}", filepath.display()))
+						])
 					},
 					LoadDatabaseResult::FailedToParse(filepath) => {
 						// saves the corrupted database, just so we don't lose the progress and can correct it afterwards

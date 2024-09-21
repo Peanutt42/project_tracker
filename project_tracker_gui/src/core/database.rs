@@ -14,6 +14,12 @@ pub struct Database {
 	projects: OrderedHashMap<ProjectId, Project>,
 
 	#[serde(skip, default = "default_false")]
+	importing: bool,
+
+	#[serde(skip, default = "default_false")]
+	exporting: bool,
+
+	#[serde(skip, default = "default_false")]
 	syncing: bool,
 
 	#[serde(skip, default = "Instant::now")]
@@ -161,13 +167,19 @@ impl Database {
 	pub fn new(projects: OrderedHashMap<ProjectId, Project>) -> Self {
 		Self {
 			projects,
+			importing: false,
+			exporting: false,
 			syncing: false,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
 	}
 
+	pub fn is_importing(&self) -> bool { self.importing }
+	pub fn is_exporting(&self) -> bool { self.exporting }
 	pub fn is_syncing(&self) -> bool { self.syncing }
+
+	pub fn reset_importing(&mut self) { self.importing = false; }
 
 	pub fn projects(&self) -> &OrderedHashMap<ProjectId, Project> { &self.projects }
 
@@ -227,10 +239,16 @@ impl Database {
 			),
 			DatabaseMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
 			DatabaseMessage::Clear => { *self = Self::default(); self.modified(); Command::none() },
-			DatabaseMessage::Export(filepath) => Command::perform(
-				Self::save_to(filepath, self.to_json()),
-				|_| DatabaseMessage::Exported.into()
-			),
+			DatabaseMessage::Export(filepath) => {
+				self.exporting = true;
+				Command::perform(
+					Self::save_to(filepath, self.to_json()),
+					|result| match result {
+						Ok(_) => DatabaseMessage::Exported.into(),
+						Err(e) => ErrorMsgModalMessage::open(e),
+					}
+				)
+			},
 			DatabaseMessage::ExportDialog => Command::perform(
 				Self::export_file_dialog(),
 				|filepath| {
@@ -240,8 +258,11 @@ impl Database {
 					}
 				}
 			),
-			DatabaseMessage::Exported => Command::none(),
-			DatabaseMessage::Import(filepath) => Command::perform(Self::load_from(filepath), UiMessage::LoadedDatabase),
+			DatabaseMessage::Exported => { self.exporting = false; Command::none() },
+			DatabaseMessage::Import(filepath) => {
+				self.importing = true;
+				Command::perform(Self::load_from(filepath), UiMessage::LoadedDatabase)
+			},
 			DatabaseMessage::ImportDialog => Command::perform(
 				Self::import_file_dialog(),
 				|filepath| {
@@ -253,7 +274,8 @@ impl Database {
 					}
 				}
 			),
-			DatabaseMessage::ImportDialogCanceled | DatabaseMessage::ExportDialogCanceled => Command::none(),
+			DatabaseMessage::ImportDialogCanceled => { self.importing = false; Command::none() },
+			DatabaseMessage::ExportDialogCanceled => { self.exporting = false; Command::none() },
 			DatabaseMessage::Sync(filepath) => {
 				self.syncing = true;
 				Command::perform(Self::sync(filepath.clone()), |result| {

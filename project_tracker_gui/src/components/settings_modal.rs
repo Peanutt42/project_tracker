@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, row, text, Space}, Alignment, Command, Element, Length, Padding};
 use iced_aw::{card, Bootstrap, CardStyles, ModalStyles};
-use crate::{components::{clear_synchronization_filepath_button, dangerous_button, file_location, filepath_widget, vertical_seperator, select_synchronization_filepath_button, settings_tab_button, sync_database_button, horizontal_seperator_padded}, styles::PADDING_AMOUNT};
+use crate::{components::{clear_synchronization_filepath_button, dangerous_button, import_database_button, export_database_button, file_location, filepath_widget, vertical_seperator, select_synchronization_filepath_button, settings_tab_button, sync_database_button, horizontal_seperator_padded}, styles::PADDING_AMOUNT};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT, ModalCardStyle, ModalStyle, RoundedContainerStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -54,18 +54,8 @@ impl SettingTab {
 								Some("Clear Database".to_string()),
 								DatabaseMessage::Clear
 							),
-							dangerous_button(
-								Bootstrap::Download,
-								"Import",
-								None,
-								DatabaseMessage::ImportDialog
-							),
-							dangerous_button(
-								Bootstrap::Upload,
-								"Export",
-								None,
-								DatabaseMessage::ExportDialog
-							),
+							import_database_button(app.database.as_ref().map(|db| db.is_importing()).unwrap_or(false)),
+							export_database_button(app.database.as_ref().map(|db| db.is_exporting()).unwrap_or(false)),
 						]
 						.spacing(SPACING_AMOUNT)
 					)
