@@ -7,20 +7,9 @@ use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskType, TaskTagId, TaskTag, SerializableDate};
 
-fn default_false() -> bool { false }
-
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Database {
 	projects: OrderedHashMap<ProjectId, Project>,
-
-	#[serde(skip, default = "default_false")]
-	importing: bool,
-
-	#[serde(skip, default = "default_false")]
-	exporting: bool,
-
-	#[serde(skip, default = "default_false")]
-	syncing: bool,
 
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
@@ -34,17 +23,8 @@ pub enum DatabaseMessage {
 	Save,
 	Saved(Instant), // begin_time since saving
 	Clear,
-	Export(PathBuf),
-	ExportDialog,
-	ExportDialogCanceled,
-	Exported,
-	Import(PathBuf),
-	ImportDialog,
-	ImportDialogCanceled,
-	Sync(PathBuf),
-	SyncUpload(PathBuf),
-	SyncUploaded,
-	SyncFailed(String), // error_msg
+
+
 
 	CreateProject {
 		project_id: ProjectId,
@@ -155,7 +135,7 @@ pub enum LoadDatabaseResult {
 }
 
 #[derive(Clone, Debug)]
-enum SyncDatabaseResult {
+pub enum SyncDatabaseResult {
 	InvalidSynchronizationFilepath,
 	Upload,
 	Download
@@ -167,19 +147,10 @@ impl Database {
 	pub fn new(projects: OrderedHashMap<ProjectId, Project>) -> Self {
 		Self {
 			projects,
-			importing: false,
-			exporting: false,
-			syncing: false,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
 	}
-
-	pub fn is_importing(&self) -> bool { self.importing }
-	pub fn is_exporting(&self) -> bool { self.exporting }
-	pub fn is_syncing(&self) -> bool { self.syncing }
-
-	pub fn reset_importing(&mut self) { self.importing = false; }
 
 	pub fn projects(&self) -> &OrderedHashMap<ProjectId, Project> { &self.projects }
 
@@ -239,58 +210,6 @@ impl Database {
 			),
 			DatabaseMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
 			DatabaseMessage::Clear => { *self = Self::default(); self.modified(); Command::none() },
-			DatabaseMessage::Export(filepath) => {
-				self.exporting = true;
-				Command::perform(
-					Self::save_to(filepath, self.to_json()),
-					|result| match result {
-						Ok(_) => DatabaseMessage::Exported.into(),
-						Err(e) => ErrorMsgModalMessage::open(e),
-					}
-				)
-			},
-			DatabaseMessage::ExportDialog => Command::perform(
-				Self::export_file_dialog(),
-				|filepath| {
-					match filepath {
-						Some(filepath) => DatabaseMessage::Export(filepath).into(),
-						None => DatabaseMessage::ExportDialogCanceled.into(),
-					}
-				}
-			),
-			DatabaseMessage::Exported => { self.exporting = false; Command::none() },
-			DatabaseMessage::Import(filepath) => {
-				self.importing = true;
-				Command::perform(Self::load_from(filepath), UiMessage::LoadedDatabase)
-			},
-			DatabaseMessage::ImportDialog => Command::perform(
-				Self::import_file_dialog(),
-				|filepath| {
-					if let Some(filepath) = filepath {
-						DatabaseMessage::Import(filepath).into()
-					}
-					else {
-						DatabaseMessage::ImportDialogCanceled.into()
-					}
-				}
-			),
-			DatabaseMessage::ImportDialogCanceled => { self.importing = false; Command::none() },
-			DatabaseMessage::ExportDialogCanceled => { self.exporting = false; Command::none() },
-			DatabaseMessage::Sync(filepath) => {
-				self.syncing = true;
-				Command::perform(Self::sync(filepath.clone()), |result| {
-					match result {
-						SyncDatabaseResult::InvalidSynchronizationFilepath => DatabaseMessage::SyncFailed(format!("Failed to open synchronization file in\n\"{}\"", filepath.display())).into(),
-						SyncDatabaseResult::Upload => DatabaseMessage::SyncUpload(filepath).into(),
-						SyncDatabaseResult::Download => DatabaseMessage::Import(filepath).into(),
-					}
-				})
-			},
-			DatabaseMessage::SyncUpload(filepath) => Command::perform(
-				Self::save_to(filepath, self.to_json()),
-				|_| DatabaseMessage::SyncUploaded.into()
-			),
-			DatabaseMessage::SyncUploaded | DatabaseMessage::SyncFailed(_) => { self.syncing = false; Command::none() },
 
 			DatabaseMessage::CreateProject { project_id, name, color } => {
 				self.modify(|projects| {
@@ -566,7 +485,7 @@ impl Database {
 		Ok(begin_time)
 	}
 
-	async fn sync(synchronization_filepath: PathBuf) -> SyncDatabaseResult {
+	pub async fn sync(synchronization_filepath: PathBuf) -> SyncDatabaseResult {
 		use filetime::FileTime;
 
 		let synchronization_filepath_metadata = match synchronization_filepath.metadata() {

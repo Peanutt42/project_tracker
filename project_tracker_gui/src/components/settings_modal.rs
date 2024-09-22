@@ -54,8 +54,8 @@ impl SettingTab {
 								Some("Clear Database".to_string()),
 								DatabaseMessage::Clear
 							),
-							import_database_button(app.database.as_ref().map(|db| db.is_importing()).unwrap_or(false)),
-							export_database_button(app.database.as_ref().map(|db| db.is_exporting()).unwrap_or(false)),
+							import_database_button(app.importing_database),
+							export_database_button(app.exporting_database),
 						]
 						.spacing(SPACING_AMOUNT)
 					)
@@ -82,7 +82,7 @@ impl SettingTab {
 					.align_items(Alignment::Center),
 
 					container(
-						sync_database_button(app.database.as_ref().map(|db| db.is_syncing()).unwrap_or(false), preferences.synchronization_filepath().clone())
+						sync_database_button(app.syncing_database, preferences.synchronization_filepath().clone())
 					)
 					.width(Length::Fill)
 					.align_x(Horizontal::Right),

@@ -3,7 +3,7 @@ use iced::{clipboard, event::Status, font, keyboard, mouse, time, widget::{conta
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
 	components::{invisible_toggle_sidebar_button, toggle_sidebar_button, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage},
-	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage},
+	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult},
 	pages::{ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage},
 	styles::{SplitStyle, PADDING_AMOUNT},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
@@ -14,6 +14,9 @@ pub struct ProjectTrackerApp {
 	pub stopwatch_page: StopwatchPage,
 	pub project_page: Option<ProjectPage>,
 	pub database: Option<Database>,
+	pub importing_database: bool,
+	pub exporting_database: bool,
+	pub syncing_database: bool,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
 	pub error_msg_modal: ErrorMsgModal,
@@ -38,6 +41,18 @@ pub enum UiMessage {
 	ConfirmModalMessage(ConfirmModalMessage),
 	ConfirmModalConfirmed(Box<UiMessage>),
 	ErrorMsgModalMessage(ErrorMsgModalMessage),
+	ExportDatabase(PathBuf),
+	ExportDatabaseDialog,
+	ExportDatabaseFailed(String),
+	ExportDatabaseDialogCanceled,
+	DatabaseExported,
+	ImportDatabase(PathBuf),
+	ImportDatabaseDialog,
+	ImportDatabaseDialogCanceled,
+	SyncDatabase(PathBuf),
+	SyncDatabaseUpload(PathBuf),
+	SyncDatabaseUploaded,
+	SyncDatabaseFailed(String), // error_msg
 	LoadedDatabase(LoadDatabaseResult),
 	LoadedPreferences(LoadPreferencesResult),
 	DatabaseMessage(DatabaseMessage),
@@ -91,6 +106,9 @@ impl Application for ProjectTrackerApp {
 				stopwatch_page: StopwatchPage::default(),
 				project_page: None,
 				database: None,
+				importing_database: false,
+				exporting_database: false,
+				syncing_database: false,
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
 				error_msg_modal: ErrorMsgModal::Closed,
@@ -267,10 +285,78 @@ impl Application for ProjectTrackerApp {
 				self.error_msg_modal.update(message);
 				Command::none()
 			},
+			UiMessage::ExportDatabaseDialog => Command::perform(
+				Database::export_file_dialog(),
+				|filepath| {
+					match filepath {
+						Some(filepath) => UiMessage::ExportDatabase(filepath),
+						None => UiMessage::ExportDatabaseDialogCanceled,
+					}
+				}
+			),
+			UiMessage::ExportDatabaseDialogCanceled => { self.exporting_database = false; Command::none() },
+			UiMessage::ExportDatabase(filepath) => {
+				if let Some(database) = &self.database {
+					self.exporting_database = true;
+					Command::perform(
+						Database::save_to(filepath, database.to_json()),
+						|result| match result {
+							Ok(_) => UiMessage::DatabaseExported,
+							Err(e) => UiMessage::ExportDatabaseFailed(e),
+						}
+					)
+				}
+				else {
+					Command::none()
+				}
+			},
+			UiMessage::ExportDatabaseFailed(error_msg) => { self.exporting_database = false; self.show_error_msg(error_msg) }
+			UiMessage::DatabaseExported => { self.exporting_database = false; Command::none() },
+			UiMessage::ImportDatabaseDialog => Command::perform(
+				Database::import_file_dialog(),
+				|filepath| {
+					if let Some(filepath) = filepath {
+						UiMessage::ImportDatabase(filepath)
+					}
+					else {
+						UiMessage::ImportDatabaseDialogCanceled
+					}
+				}
+			),
+			UiMessage::ImportDatabaseDialogCanceled => { self.importing_database = false; Command::none() },
+			UiMessage::ImportDatabase(filepath) => {
+				self.importing_database = true;
+				Command::perform(Database::load_from(filepath), UiMessage::LoadedDatabase)
+			},
+			UiMessage::SyncDatabase(filepath) => {
+				self.syncing_database = true;
+				Command::perform(Database::sync(filepath.clone()), |result| {
+					match result {
+						SyncDatabaseResult::InvalidSynchronizationFilepath => UiMessage::SyncDatabaseFailed(format!("Failed to open synchronization file in\n\"{}\"", filepath.display())),
+						SyncDatabaseResult::Upload => UiMessage::SyncDatabaseUpload(filepath),
+						SyncDatabaseResult::Download => UiMessage::ImportDatabase(filepath),
+					}
+				})
+			},
+			UiMessage::SyncDatabaseUpload(filepath) => {
+				if let Some(database) = &self.database {
+					Command::perform(
+						Database::save_to(filepath, database.to_json()),
+						|_| UiMessage::SyncDatabaseUploaded
+					)
+				}
+				else {
+					Command::none()
+				}
+			},
+			UiMessage::SyncDatabaseUploaded => { self.syncing_database = false; Command::none() },
+			UiMessage::SyncDatabaseFailed(error_msg) => { self.syncing_database = false; self.show_error_msg(error_msg) },
 			UiMessage::LoadedDatabase(load_database_result) => {
 				match load_database_result {
 					LoadDatabaseResult::Ok(database) => {
 						self.database = Some(database);
+						self.importing_database = false;
+						self.syncing_database = false;
 						if let Some(preferences) = &self.preferences {
 							match preferences.selected_content_page() {
 								SerializedContentPage::Stopwatch => self.update(UiMessage::OpenStopwatch),
@@ -287,13 +373,14 @@ impl Application for ProjectTrackerApp {
 						}
 					},
 					LoadDatabaseResult::FailedToOpenFile(filepath) => {
-						let command = if let Some(database) = &mut self.database {
-							database.reset_importing();
-							Command::none()
-						}
-						else {
+						self.importing_database = false;
+						self.syncing_database = false;
+						let command = if self.database.is_none() {
 							self.database = Some(Database::default());
 							self.update(DatabaseMessage::Save.into())
+						}
+						else {
+							Command::none()
 						};
 
 						Command::batch([
@@ -363,9 +450,6 @@ impl Application for ProjectTrackerApp {
 						},
 						DatabaseMessage::ChangeProjectColor { .. } => {
 							self.update(ProjectPageMessage::HideColorPicker.into())
-						},
-						DatabaseMessage::SyncFailed(error_msg) => {
-							self.show_error_msg(error_msg.clone())
 						},
 						DatabaseMessage::Clear |
 						DatabaseMessage::CreateTask { .. } |

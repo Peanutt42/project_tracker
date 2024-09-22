@@ -301,7 +301,7 @@ pub fn import_database_button(importing: bool) -> Element<'static, UiMessage> {
 		None
 	}
 	else {
-		Some(DatabaseMessage::ImportDialog.into())
+		Some(UiMessage::ImportDatabaseDialog)
 	})
 	.style(theme::Button::custom(DangerousButtonStyle))
 	.into()
@@ -336,7 +336,7 @@ pub fn export_database_button(importing: bool) -> Element<'static, UiMessage> {
 		None
 	}
 	else {
-		Some(DatabaseMessage::ExportDialog.into())
+		Some(UiMessage::ExportDatabaseDialog)
 	})
 	.style(theme::Button::custom(DangerousButtonStyle))
 	.into()
@@ -367,7 +367,7 @@ pub fn sync_database_button(synchronizing: bool, synchronization_filepath: Optio
 		.spacing(SMALL_SPACING_AMOUNT)
 		.align_items(Alignment::Center)
 	)
-	.on_press_maybe(synchronization_filepath.map(|filepath| DatabaseMessage::Sync(filepath).into()))
+	.on_press_maybe(synchronization_filepath.map(UiMessage::SyncDatabase))
 	.style(theme::Button::custom(DangerousButtonStyle))
 	.into()
 }

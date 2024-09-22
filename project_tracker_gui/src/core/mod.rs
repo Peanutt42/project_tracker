@@ -1,5 +1,5 @@
 mod database;
-pub use database::{Database, DatabaseMessage, LoadDatabaseResult};
+pub use database::{Database, DatabaseMessage, LoadDatabaseResult, SyncDatabaseResult};
 
 mod preferences;
 pub use preferences::{Preferences, LoadPreferencesResult, PreferenceMessage, SerializedContentPage, DateFormatting};
