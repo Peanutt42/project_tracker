@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use std::time::Instant;
 use iced::Command;
 use serde::{Deserialize, Serialize};
-use crate::components::ErrorMsgModalMessage;
 use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskType, TaskTagId, TaskTag, SerializableDate};
 
@@ -15,16 +14,12 @@ pub struct Database {
 	last_changed_time: Instant,
 
 	#[serde(skip, default = "Instant::now")]
-	last_saved_time: Instant,
+	pub last_saved_time: Instant,
 }
 
 #[derive(Clone, Debug)]
 pub enum DatabaseMessage {
-	Save,
-	Saved(Instant), // begin_time since saving
 	Clear,
-
-
 
 	CreateProject {
 		project_id: ProjectId,
@@ -199,16 +194,6 @@ impl Database {
 
 	pub fn update(&mut self, message: DatabaseMessage) -> Command<UiMessage> {
 		match message {
-			DatabaseMessage::Save => Command::perform(
-				Self::save(self.to_json()),
-				|result| {
-					match result {
-						Ok(begin_time) => DatabaseMessage::Saved(begin_time).into(),
-						Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
-					}
-				}
-			),
-			DatabaseMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
 			DatabaseMessage::Clear => { *self = Self::default(); self.modified(); Command::none() },
 
 			DatabaseMessage::CreateProject { project_id, name, color } => {
@@ -479,7 +464,7 @@ impl Database {
 	}
 
 	// returns begin time of saving
-	async fn save(json: String) -> Result<Instant, String> {
+	pub async fn save(json: String) -> Result<Instant, String> {
 		let begin_time = Instant::now();
 		Self::save_to(Self::get_and_ensure_filepath().await, json).await?;
 		Ok(begin_time)

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, time::Duration};
+use std::{path::PathBuf, time::{Duration, Instant}};
 use iced::{clipboard, event::Status, font, keyboard, mouse, time, widget::{container, focus_next, focus_previous, row}, window, Application, Command, Element, Event, Padding, Subscription, Theme};
 use iced_aw::{core::icons::BOOTSTRAP_FONT_BYTES, split::Axis, modal, Split, SplitStyles};
 use crate::{
@@ -41,6 +41,8 @@ pub enum UiMessage {
 	ConfirmModalMessage(ConfirmModalMessage),
 	ConfirmModalConfirmed(Box<UiMessage>),
 	ErrorMsgModalMessage(ErrorMsgModalMessage),
+	SaveDatabase,
+	DatabaseSaved(Instant), // begin_time since saving
 	ExportDatabase(PathBuf),
 	ExportDatabaseDialog,
 	ExportDatabaseFailed(String),
@@ -202,7 +204,7 @@ impl Application for ProjectTrackerApp {
 		match message {
 			UiMessage::CloseWindowRequested(id) => {
 				Command::batch([
-					self.update(DatabaseMessage::Save.into()),
+					self.update(UiMessage::SaveDatabase),
 					self.update(PreferenceMessage::Save.into()),
 					window::close(id),
 				])
@@ -255,7 +257,7 @@ impl Application for ProjectTrackerApp {
 				let mut commands = Vec::new();
 				if let Some(database) = &mut self.database {
 					if database.has_unsaved_changes() {
-						commands.push(database.update(DatabaseMessage::Save));
+						commands.push(self.update(UiMessage::SaveDatabase));
 					}
 				}
 				if let Some(preferences) = &mut self.preferences {
@@ -283,6 +285,26 @@ impl Application for ProjectTrackerApp {
 			},
 			UiMessage::ErrorMsgModalMessage(message) => {
 				self.error_msg_modal.update(message);
+				Command::none()
+			},
+			UiMessage::SaveDatabase => if let Some(database) = &self.database {
+				Command::perform(
+					Database::save(database.to_json()),
+					|result| {
+						match result {
+							Ok(begin_time) => UiMessage::DatabaseSaved(begin_time),
+							Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
+						}
+					}
+				)
+			}
+			else {
+				Command::none()
+			},
+			UiMessage::DatabaseSaved(saved_time) => {
+				if let Some(database) = &mut self.database {
+					database.last_saved_time = saved_time;
+				}
 				Command::none()
 			},
 			UiMessage::ExportDatabaseDialog => Command::perform(
@@ -377,7 +399,7 @@ impl Application for ProjectTrackerApp {
 						self.syncing_database = false;
 						let command = if self.database.is_none() {
 							self.database = Some(Database::default());
-							self.update(DatabaseMessage::Save.into())
+							self.update(UiMessage::SaveDatabase)
 						}
 						else {
 							Command::none()
@@ -396,7 +418,7 @@ impl Application for ProjectTrackerApp {
 							self.database = Some(Database::default());
 						}
 						Command::batch([
-							self.update(DatabaseMessage::Save.into()),
+							self.update(UiMessage::SaveDatabase),
 							self.show_error_msg(format!("Parsing Error:\nFailed to load previous projects in\n\"{}\"\n\nOld corrupted database saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
 						])
 					},
