@@ -1,5 +1,5 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Shadow, Theme};
-use crate::styles::{BORDER_RADIUS, LARGE_BORDER_RADIUS, SMALL_BLUR_RADIUS, BLUR_RADIUS, LARGE_BLUR_RADIUS, SELECTION_COLOR, color_average, mix_color, background_shadow_color, background_shadow_alpha, text_color};
+use crate::{components::PROJECT_COLOR_BLOCK_WIDTH, styles::{background_shadow_alpha, background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS, LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS, SELECTION_COLOR, SMALL_BLUR_RADIUS}};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -23,20 +23,7 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 			border: Border {
 				radius: BORDER_RADIUS.into(),
 				color: self.project_color.unwrap_or(SELECTION_COLOR),
-				width: if self.selected { 2.0 } else { 0.0 },
-			},
-			shadow: if self.selected {
-				Shadow {
-					color: Color {
-						a: background_shadow_alpha(style.extended_palette()),
-						..self.project_color.unwrap_or(SELECTION_COLOR)
-					},
-					blur_radius: SMALL_BLUR_RADIUS,
-					..Default::default()
-				}
-			}
-			else {
-				Shadow::default()
+				width: if self.selected { PROJECT_COLOR_BLOCK_WIDTH } else { 0.0 },
 			},
 			..Default::default()
 		}
@@ -52,14 +39,6 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 					color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
 				}
 			),
-			shadow: Shadow {
-				color: Color {
-					a: background_shadow_alpha(style.extended_palette()),
-					..self.project_color.unwrap_or(SELECTION_COLOR)
-				},
-				blur_radius: SMALL_BLUR_RADIUS,
-				..Default::default()
-			},
 			..self.active(style)
 		}
 	}

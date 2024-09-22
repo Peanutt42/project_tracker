@@ -154,6 +154,7 @@ pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Eleme
 			.width(Length::Fill)
 			.spacing(SPACING_AMOUNT)
 			.align_items(Alignment::Center)
+			.padding(SMALL_HORIZONTAL_PADDING)
 		)
 		.width(Length::Fill)
 		.on_press(UiMessage::OpenStopwatch)

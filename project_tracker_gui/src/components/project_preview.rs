@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, theme, widget::{column, container, container::Id, row, text}, Alignment, Border, Color, Element, Length, Padding};
+use iced::{alignment::Horizontal, theme, widget::{column, container, container::Id, row, text, Space}, Alignment, Border, Color, Element, Length, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use iced_drop::droppable;
 use crate::{pages::SidebarPageMessage, project_tracker::UiMessage, styles::DropzoneContainerStyle};
@@ -6,13 +6,13 @@ use crate::styles::{ProjectPreviewButtonStyle, ProjectPreviewBackgroundContainer
 use crate::core::{Project, ProjectId};
 use crate::components::{cancel_create_project_button, in_between_dropzone};
 
-pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
-const DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT: f32 = 35.0;
+pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 3.0;
+const PROJECT_COLOR_BLOCK_HEIGHT: f32 = 35.0;
 
-pub fn project_color_block(color: Color, height: f32) -> Element<'static, UiMessage> {
+fn project_color_block(color: Color) -> Element<'static, UiMessage> {
 	Quad {
 		width: Length::Fixed(PROJECT_COLOR_BLOCK_WIDTH),
-		height: Length::Fixed(height),
+		height: Length::Fixed(PROJECT_COLOR_BLOCK_HEIGHT),
 		inner_bounds: InnerBounds::Ratio(1.0, 1.0),
 		quad_color: color.into(),
 		quad_border: Border::with_radius(f32::MAX),
@@ -44,7 +44,12 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool,
 pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id: Option<Id>, task_dropzone_id: Option<Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, project_dropzone_highlight: bool, task_dropzone_highlight: bool, dragging: bool, just_minimal_dragging: bool) -> Element<UiMessage> {
 	let inner = container(
 		row![
-			project_color_block(project_color, DEFAULT_PROJECT_COLOR_BLOCK_HEIGHT),
+			if selected {
+				Space::new(PROJECT_COLOR_BLOCK_WIDTH, PROJECT_COLOR_BLOCK_HEIGHT).into()
+			}
+			else {
+				project_color_block(project_color)
+			},
 
 			row![
 				inner_text_element,
@@ -58,6 +63,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id
 						)
 						.width(Length::Fill)
 						.align_x(Horizontal::Right)
+						.padding(Padding{ right: SMALL_PADDING_AMOUNT, ..Padding::ZERO })
 					)
 				}
 				else {
