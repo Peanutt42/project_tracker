@@ -44,7 +44,7 @@ pub fn project_preview(project: &Project, project_id: ProjectId, selected: bool,
 pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id: Option<Id>, task_dropzone_id: Option<Id>, project_color: Color, tasks_done: usize, task_len: usize, inner_text_element: Element<UiMessage>, selected: bool, project_dropzone_highlight: bool, task_dropzone_highlight: bool, dragging: bool, just_minimal_dragging: bool) -> Element<UiMessage> {
 	let inner = container(
 		row![
-			if selected {
+			if selected && project_id.is_some() {
 				Space::new(PROJECT_COLOR_BLOCK_WIDTH, PROJECT_COLOR_BLOCK_HEIGHT).into()
 			}
 			else {
