@@ -3,13 +3,17 @@ use crate::{project_tracker::UiMessage, styles::{ScrollableStyle, SMALL_PADDING_
 
 pub const SCROLLBAR_WIDTH: f32 = SMALL_PADDING_AMOUNT;
 
+pub const HORIZONTAL_SCROLLABLE_PADDING: Padding = Padding {
+	bottom: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
+	..Padding::ZERO
+};
+
 pub fn horizontal_scrollable<'a>(content: impl Into<Element<'a, UiMessage>>) -> Scrollable<'a, UiMessage> {
 	scrollable(
 		container(
 			content
 		)
 		.padding(Padding{
-			top: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
 			bottom: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
 			..Padding::ZERO
 		})

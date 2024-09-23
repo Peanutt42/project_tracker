@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 use std::time::Instant;
-use iced::{alignment::Horizontal, widget::{column, container, row, text, toggler, Row}, Alignment, Command, Element, Length};
+use iced::{alignment::Horizontal, widget::{column, container, row, toggler, Row}, Alignment, Command, Element, Length};
 use iced_aw::Bootstrap;
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded, theme_mode_button, ErrorMsgModalMessage}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded, theme_mode_button, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 
 fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }
@@ -269,9 +269,9 @@ impl Preferences {
 		}
 	}
 
-	fn setting_item(label: &'static str, content: impl Into<Element<'static, UiMessage>>) -> Row<'static, UiMessage> {
+	fn setting_item(label: impl Into<Element<'static, UiMessage>>, content: impl Into<Element<'static, UiMessage>>) -> Row<'static, UiMessage> {
 		row![
-			text(label),
+			label.into(),
 			container(content)
 				.width(Length::Fill)
 				.align_x(Horizontal::Right),
@@ -307,7 +307,7 @@ impl Preferences {
 			horizontal_seperator_padded(),
 
 			Self::setting_item(
-				"Preferences file location:",
+				container("Preferences file location:").padding(HORIZONTAL_SCROLLABLE_PADDING),
 				file_location(&Self::get_filepath())
 			),
 

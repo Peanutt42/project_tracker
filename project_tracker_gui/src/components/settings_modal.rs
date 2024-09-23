@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, row, text, Space}, Alignment, Command, Element, Length, Padding};
 use iced_aw::{card, Bootstrap, CardStyles, ModalStyles};
-use crate::{components::{clear_synchronization_filepath_button, dangerous_button, import_database_button, export_database_button, file_location, filepath_widget, vertical_seperator, select_synchronization_filepath_button, settings_tab_button, sync_database_button, horizontal_seperator_padded}, styles::PADDING_AMOUNT};
+use crate::{components::{clear_synchronization_filepath_button, dangerous_button, import_database_button, export_database_button, file_location, filepath_widget, vertical_seperator, select_synchronization_filepath_button, settings_tab_button, sync_database_button, horizontal_seperator_padded, HORIZONTAL_SCROLLABLE_PADDING}, styles::PADDING_AMOUNT};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT, ModalCardStyle, ModalStyle, RoundedContainerStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -39,7 +39,7 @@ impl SettingTab {
 			SettingTab::Database => {
 				column![
 					row![
-						text("Database file location: "),
+						container("Database file location: ").padding(HORIZONTAL_SCROLLABLE_PADDING),
 						container(file_location(&Database::get_filepath()))
 							.width(Length::Fill)
 							.align_x(Horizontal::Right),
@@ -65,7 +65,8 @@ impl SettingTab {
 					horizontal_seperator_padded(),
 
 					row![
-						text("Synchronization file location: "),
+						container("Synchronization file location: ")
+							.padding(HORIZONTAL_SCROLLABLE_PADDING),
 
 						if let Some(filepath) = preferences.synchronization_filepath() {
 							Element::new(filepath_widget(filepath).width(Length::Fill))
@@ -74,9 +75,11 @@ impl SettingTab {
 							"not specified".into()
 						},
 
-						clear_synchronization_filepath_button(),
+						container(clear_synchronization_filepath_button())
+							.padding(HORIZONTAL_SCROLLABLE_PADDING),
 
-						select_synchronization_filepath_button(),
+						container(select_synchronization_filepath_button())
+							.padding(HORIZONTAL_SCROLLABLE_PADDING),
 					]
 					.spacing(SPACING_AMOUNT)
 					.align_items(Alignment::Center),
@@ -96,7 +99,7 @@ impl SettingTab {
 						text(name),
 						Space::new(Length::Fill, 0.0),
 						container(
-							container(text(shortcut)).padding(SMALL_HORIZONTAL_PADDING)
+							container(shortcut).padding(SMALL_HORIZONTAL_PADDING)
 						)
 						.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
 					]

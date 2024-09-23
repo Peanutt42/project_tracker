@@ -4,7 +4,6 @@ pub mod border_radius {
 }
 
 pub mod blur_radius {
-	pub const SMALL_BLUR_RADIUS: f32 = 7.5;
 	pub const BLUR_RADIUS: f32 = 15.0;
 	pub const LARGE_BLUR_RADIUS: f32 = 25.0;
 }
@@ -41,15 +40,6 @@ pub mod colors {
 			g: background.g - amount,
 			b: background.b - amount,
 			a: background.a,
-		}
-	}
-
-	pub fn background_shadow_alpha(palette: &palette::Extended) -> f32 {
-		if palette.is_dark {
-			0.25
-		}
-		else {
-			1.0
 		}
 	}
 

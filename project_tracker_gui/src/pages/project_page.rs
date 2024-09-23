@@ -1,11 +1,11 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, time::Instant};
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row}, Color, Command, Element, Length, Padding, Point, Subscription};
+use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row, Space}, Color, Command, Element, Length, Padding, Point, Subscription};
 use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use crate::{
-	components::{cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, delete_project_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
+	components::{cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, delete_project_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
 	styles::{TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
@@ -692,6 +692,8 @@ impl ProjectPage {
 		.spacing(SPACING_AMOUNT)
 		.into();
 
+		let spacer = || { Space::new(Length::Fill, SPACING_AMOUNT) };
+
 		column![
 			column![
 				row![
@@ -720,9 +722,11 @@ impl ProjectPage {
 			})
 			.width(Length::Fill),
 
+			spacer(),
 
 			row![
-				text("Tags:"),
+				container("Tags:")
+					.padding(HORIZONTAL_SCROLLABLE_PADDING),
 
 				horizontal_scrollable(
 					Row::with_children(task_tags_list)
@@ -751,6 +755,8 @@ impl ProjectPage {
 			.width(Length::Fill)
 			.align_items(Alignment::Center),
 
+			spacer(),
+
 			completion_bar(
 				self.progressbar_animation
 					.get_value()
@@ -763,7 +769,6 @@ impl ProjectPage {
 			left: PADDING_AMOUNT,
 			right: PADDING_AMOUNT,
 		})
-		.spacing(SPACING_AMOUNT)
 		.into()
 	}
 

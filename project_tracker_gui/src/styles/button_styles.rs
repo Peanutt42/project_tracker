@@ -1,5 +1,5 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Shadow, Theme};
-use crate::styles::{background_shadow_alpha, background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS, LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS, SMALL_BLUR_RADIUS};
+use crate::styles::{background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS, LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
