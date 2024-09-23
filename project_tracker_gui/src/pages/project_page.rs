@@ -8,7 +8,7 @@ use crate::{
 	components::{cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, delete_project_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	styles::{TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -625,7 +625,7 @@ impl ProjectPage {
 					.size(TITLE_TEXT_SIZE),
 				edit_project_name_button(),
 			]
-			.spacing(SMALL_SPACING_AMOUNT)
+			.spacing(SPACING_AMOUNT)
 			.align_items(Alignment::Center)
 			.into()
 		};
@@ -685,6 +685,7 @@ impl ProjectPage {
 
 		let quick_actions: Element<UiMessage> = row![
 			search_tasks_element,
+			manage_task_tags_button(self.project_id),
 			import_source_code_todos_button(),
 			delete_project_button_element,
 		]
@@ -708,7 +709,7 @@ impl ProjectPage {
 						.into()
 					}
 				]
-				.spacing(TINY_SPACING_AMOUNT)
+				.spacing(SPACING_AMOUNT)
 				.align_items(Alignment::Center)
 			]
 			.push_maybe(if self.show_color_picker {
@@ -728,8 +729,6 @@ impl ProjectPage {
 						.spacing(SPACING_AMOUNT)
 				)
 				.width(Length::Fill),
-
-				manage_task_tags_button(self.project_id),
 			]
 			.spacing(SPACING_AMOUNT)
 			.align_items(Alignment::Center),

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, theme, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Border, Color, Element, Length};
 use iced_aw::{core::icons::bootstrap::{icon_to_text, Bootstrap}, quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SELECTION_COLOR, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{ColorPaletteButtonStyle, DangerousButtonStyle, DeleteButtonStyle, DeleteDoneTasksButtonStyle, HiddenSecondaryButtonStyle, InvisibleButtonStyle, PrimaryButtonStyle, ProjectPreviewButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, SettingsTabButtonStyle, TaskTagButtonStyle, TimerButtonStyle, TooltipContainerStyle, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 fn icon_button(label: impl ToString, icon: Bootstrap) -> Button<'static, UiMessage> {
@@ -162,9 +162,6 @@ pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Eleme
 			selected: selected || stopwatch_ticking,
 			project_color: if stopwatch_ticking {
 				Some(Color::from_rgb(1.0, 0.0, 0.0))}
-			else if selected {
-				Some(SELECTION_COLOR)
-			}
 			else {
 				None
 			}
@@ -391,10 +388,19 @@ pub fn task_tag_button(task_tag: &TaskTag, toggled: bool, round_bottom: bool, ta
 	}
 }
 
-pub fn manage_task_tags_button(project_id: ProjectId) -> Button<'static, UiMessage> {
-	icon_button("Manage", Bootstrap::BookmarkFill)
-		.on_press(ManageTaskTagsModalMessage::Open { project_id }.into())
-		.style(theme::Button::custom(SecondaryButtonStyle::default()))
+pub fn manage_task_tags_button(project_id: ProjectId) -> Element<'static, UiMessage> {
+	tooltip(
+		button(icon_to_text(Bootstrap::Bookmark))
+			.on_press(ManageTaskTagsModalMessage::Open { project_id }.into())
+			.style(theme::Button::custom(SecondaryButtonStyle::default())),
+
+		text("Manage tags").size(SMALL_TEXT_SIZE),
+
+		Position::Bottom
+	)
+	.gap(GAP)
+	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
+	.into()
 }
 
 pub fn create_new_task_tags_button() -> Button<'static, UiMessage> {
@@ -549,7 +555,7 @@ pub fn import_source_code_todos_button() -> Element<'static, UiMessage> {
 		.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
 		.style(theme::Button::custom(SecondaryButtonStyle::default())),
 
-		text("Import source code TODO's").size(SMALL_TEXT_SIZE),
+		text("Import TODO's").size(SMALL_TEXT_SIZE),
 
 		Position::Bottom
 	)
@@ -559,7 +565,7 @@ pub fn import_source_code_todos_button() -> Element<'static, UiMessage> {
 }
 
 pub fn reimport_source_code_todos_button() -> Button<'static, UiMessage> {
-	icon_button("Reimport source code TODO's", Bootstrap::FileEarmarkCode)
+	icon_button("Reimport TODO's", Bootstrap::FileEarmarkCode)
 		.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
 		.style(theme::Button::custom(SecondaryButtonStyle::default()))
 }

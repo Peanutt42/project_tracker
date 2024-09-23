@@ -6,7 +6,7 @@ use crate::styles::{ProjectPreviewButtonStyle, ProjectPreviewBackgroundContainer
 use crate::core::{Project, ProjectId};
 use crate::components::{cancel_create_project_button, in_between_dropzone};
 
-pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 3.0;
+pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
 const PROJECT_COLOR_BLOCK_HEIGHT: f32 = 35.0;
 
 fn project_color_block(color: Color) -> Element<'static, UiMessage> {

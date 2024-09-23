@@ -1,5 +1,5 @@
 use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Shadow, Theme};
-use crate::{components::PROJECT_COLOR_BLOCK_WIDTH, styles::{background_shadow_alpha, background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS, LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS, SELECTION_COLOR, SMALL_BLUR_RADIUS}};
+use crate::styles::{background_shadow_alpha, background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS, LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS, SMALL_BLUR_RADIUS};
 
 pub struct ProjectPreviewButtonStyle {
 	pub selected: bool,
@@ -10,35 +10,32 @@ impl StyleSheet for ProjectPreviewButtonStyle {
 	type Style = Theme;
 
 	fn active(&self, style: &Self::Style) -> Appearance {
+		let background_color = if self.selected {
+			self.project_color.unwrap_or(style.extended_palette().primary.base.color)
+		}
+		else {
+			mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color, 0.75)
+		};
+
 		Appearance {
-			background: Some(
-				if self.selected {
-					style.extended_palette().background.weak.color.into()
-				}
-				else {
-					mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color, 0.75).into()
-				}
-			),
-			text_color: style.extended_palette().background.base.text,
-			border: Border {
-				radius: BORDER_RADIUS.into(),
-				color: self.project_color.unwrap_or(SELECTION_COLOR),
-				width: if self.selected { PROJECT_COLOR_BLOCK_WIDTH } else { 0.0 },
-			},
+			background: Some(background_color.into()),
+			text_color: text_color(background_color),
+			border: Border::with_radius(BORDER_RADIUS),
 			..Default::default()
 		}
 	}
 
 	fn hovered(&self, style: &Self::Style) -> Appearance {
+		let background_color = if self.selected {
+			self.project_color.unwrap_or(style.extended_palette().primary.weak.color)
+		}
+		else {
+			color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color)
+		};
+
 		Appearance {
-			background: Some(
-				if self.selected {
-					style.extended_palette().background.weak.color.into()
-				}
-				else {
-					color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
-				}
-			),
+			background: Some(background_color.into()),
+			text_color: text_color(background_color),
 			..self.active(style)
 		}
 	}
@@ -93,11 +90,6 @@ impl StyleSheet for DangerousButtonStyle {
 
 		Appearance {
 			background: Some(color.into()),
-			shadow: Shadow {
-				color: Color { a: background_shadow_alpha(style.extended_palette()), ..color },
-				blur_radius: SMALL_BLUR_RADIUS,
-				..Default::default()
-			},
 			..self.active(style)
 		}
 	}
@@ -130,11 +122,6 @@ impl StyleSheet for DeleteDoneTasksButtonStyle {
 		Appearance {
 			background: Some(color.into()),
 			text_color: style.extended_palette().danger.base.text,
-			shadow: Shadow {
-				color: Color { a: 0.25, ..color },
-				blur_radius: SMALL_BLUR_RADIUS,
-				..Default::default()
-			},
 			..self.active(style)
 		}
 	}
@@ -274,14 +261,6 @@ impl StyleSheet for DeleteButtonStyle {
 	fn hovered(&self, style: &Self::Style) -> Appearance {
 		Appearance {
 			background: Some(style.extended_palette().danger.base.color.into()),
-			shadow: Shadow {
-				color: Color {
-					a: background_shadow_alpha(style.extended_palette()),
-					..style.extended_palette().danger.base.color
-				},
-				blur_radius: SMALL_BLUR_RADIUS,
-				..Default::default()
-			},
 			..self.active(style)
 		}
 	}
@@ -486,14 +465,6 @@ impl StyleSheet for TaskTagButtonStyle {
 					color_average(self.color, style.extended_palette().background.base.color).into()
 				}
 			),
-			shadow: Shadow {
-				color: Color {
-					a: background_shadow_alpha(style.extended_palette()),
-					..self.color
-				},
-				blur_radius: SMALL_BLUR_RADIUS,
-				..Default::default()
-			},
 			..self.active(style)
 		}
 	}
