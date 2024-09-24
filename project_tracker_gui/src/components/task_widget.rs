@@ -81,13 +81,13 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, task_type: TaskType, pro
 					column![
 						inner_text_element,
 						row![
-							if edit_task_state.edit_needed_time {
+							if let Some(new_task_needed_minutes) = &edit_task_state.new_needed_time_minutes {
 								let stop_editing_task_message: UiMessage = ProjectPageMessage::StopEditingTask.into();
 
 								let edit_needed_time_element = unfocusable(
 									text_input(
 										"mins",
-										&match task.needed_time_minutes {
+										&match new_task_needed_minutes {
 											Some(needed_time_minutes) => format!("{needed_time_minutes}"),
 											None => String::new(),
 										}
@@ -108,15 +108,12 @@ pub fn task_widget<'a>(task: &'a Task, task_id: TaskId, task_type: TaskType, pro
 										};
 										match new_needed_time_minutes {
 											Some(new_needed_time_minutes) => {
-												ProjectPageMessage::ChangeTaskNeededTime {
-													task_id,
-													new_needed_time_minutes,
-												}.into()
+												ProjectPageMessage::ChangeNewTaskNeededTimeInput(new_needed_time_minutes).into()
 											},
 											None => ProjectPageMessage::InvalidNeededTimeInput.into(),
 										}
 									})
-									.on_submit(ProjectPageMessage::StopEditingTaskNeededTime.into())
+									.on_submit(ProjectPageMessage::ChangeTaskNeededTime.into())
 									.style(theme::TextInput::Custom(Box::new(TextInputStyle{
 										round_left_top: false,
 										round_left_bottom: true,

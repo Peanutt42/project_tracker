@@ -51,12 +51,9 @@ pub enum ProjectPageMessage {
 	ToggleTaskTag(TaskTagId),
 	EditTaskNeededTime,
 	ClearTaskNeededTime,
-	ChangeTaskNeededTime {
-		task_id: TaskId,
-		new_needed_time_minutes: Option<usize>,
-	},
+	ChangeNewTaskNeededTimeInput(Option<usize>),
 	InvalidNeededTimeInput,
-	StopEditingTaskNeededTime,
+	ChangeTaskNeededTime,
 	EditTaskDueDate,
 	ChangeTaskDueDate(SerializableDate),
 	ClearTaskDueDate,
@@ -87,7 +84,7 @@ impl From<ProjectPageMessage> for UiMessage {
 pub struct EditTaskState {
 	pub task_id: TaskId,
 	pub new_name: text_editor::Content,
-	pub edit_needed_time: bool,
+	pub new_needed_time_minutes: Option<Option<usize>>, // first option is if editing, second is if any time is enterered
 	pub edit_due_date: bool,
 }
 
@@ -96,7 +93,7 @@ impl EditTaskState {
 		Self {
 			task_id,
 			new_name,
-			edit_needed_time: false,
+			new_needed_time_minutes: None,
 			edit_due_date: false,
 		}
 	}
@@ -425,13 +422,18 @@ impl ProjectPage {
 			},
 			ProjectPageMessage::EditTaskNeededTime => {
 				if let Some(edit_task_state) = &mut self.edited_task {
-					edit_task_state.edit_needed_time = true;
+					let previous_task_needed_minutes = database.as_ref().and_then(|db|
+						db.get_task(&self.project_id, &edit_task_state.task_id)
+							.and_then(|task| task.needed_time_minutes)
+					);
+
+					edit_task_state.new_needed_time_minutes = Some(previous_task_needed_minutes);
 				}
 				text_input::focus(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone())
 			},
 			ProjectPageMessage::ClearTaskNeededTime => {
 				if let Some(edit_task_state) = &mut self.edited_task {
-					edit_task_state.edit_needed_time = false;
+					edit_task_state.new_needed_time_minutes = None;
 					if let Some(database) = database {
 						return database.update(DatabaseMessage::ChangeTaskNeededTime {
 							project_id: self.project_id,
@@ -442,26 +444,27 @@ impl ProjectPage {
 				}
 				Command::none()
 			},
-			ProjectPageMessage::ChangeTaskNeededTime { task_id, new_needed_time_minutes } => {
-				if let Some(database) = database {
-					Command::batch([
-						text_input::focus(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone()),
-
-						database.update(DatabaseMessage::ChangeTaskNeededTime {
-							project_id: self.project_id,
-							task_id,
-							new_needed_time_minutes
-						})
-					])
+			ProjectPageMessage::ChangeNewTaskNeededTimeInput(new_needed_time_minutes) => {
+				if let Some(edit_task_state) = &mut self.edited_task {
+					edit_task_state.new_needed_time_minutes = Some(new_needed_time_minutes);
 				}
-				else {
-					Command::none()
-				}
+				Command::none()
 			},
 			ProjectPageMessage::InvalidNeededTimeInput => Command::none(),
-			ProjectPageMessage::StopEditingTaskNeededTime => {
+			ProjectPageMessage::ChangeTaskNeededTime => {
 				if let Some(edit_task_state) = &mut self.edited_task {
-					edit_task_state.edit_needed_time = false;
+					if let Some(new_needed_time_minutes) = edit_task_state.new_needed_time_minutes {
+						if let Some(database) = database {
+							database.modify(|projects| {
+								if let Some(project) = projects.get_mut(&self.project_id) {
+									if let Some(task) = project.get_task_mut(&edit_task_state.task_id) {
+										task.needed_time_minutes = new_needed_time_minutes;
+									}
+								}
+							});
+						}
+					}
+					edit_task_state.new_needed_time_minutes = None;
 				}
 				Command::none()
 			},
