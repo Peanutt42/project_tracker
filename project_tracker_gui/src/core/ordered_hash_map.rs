@@ -28,6 +28,11 @@ impl<K, V> OrderedHashMap<K, V>
 		}
 	}
 
+	pub fn reserve(&mut self, additional: usize) {
+		self.order.reserve(additional);
+		self.hash_map.reserve(additional);
+	}
+
 	pub fn get_order(&self, key: &K) -> Option<usize> {
 		for (i, other_key) in self.order.iter().enumerate() {
 			if other_key == key {

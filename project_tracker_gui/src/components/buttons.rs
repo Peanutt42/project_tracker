@@ -674,3 +674,9 @@ pub fn start_task_timer_button(project_id: ProjectId, task_id: TaskId, round_top
 	.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
 	.into()
 }
+
+pub fn import_google_tasks_button() -> Button<'static, UiMessage> {
+	button("Import")
+		.on_press(SettingsModalMessage::ImportGoogleTasksFileDialog.into())
+		.style(theme::Button::custom(DangerousButtonStyle))
+}

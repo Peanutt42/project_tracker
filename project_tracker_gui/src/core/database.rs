@@ -21,6 +21,8 @@ pub struct Database {
 pub enum DatabaseMessage {
 	Clear,
 
+	ImportProjects(Vec<Project>),
+
 	CreateProject {
 		project_id: ProjectId,
 		name: String,
@@ -195,6 +197,16 @@ impl Database {
 	pub fn update(&mut self, message: DatabaseMessage) -> Command<UiMessage> {
 		match message {
 			DatabaseMessage::Clear => { *self = Self::default(); self.modified(); Command::none() },
+
+			DatabaseMessage::ImportProjects(new_projects) => {
+				self.modify(|projects| {
+					projects.reserve(new_projects.len());
+					for new_project in new_projects {
+						projects.insert(ProjectId::generate(), new_project);
+					}
+				});
+				Command::none()
+			},
 
 			DatabaseMessage::CreateProject { project_id, name, color } => {
 				self.modify(|projects| {

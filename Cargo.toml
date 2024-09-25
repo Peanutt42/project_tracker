@@ -8,8 +8,11 @@ members = ["project_tracker_gui", "iced_drop"]
 
 [dependencies]
 project_tracker_gui = { path = "project_tracker_gui" }
-iced = { version = "0.12.0", features = ["image", "tokio"] }
+iced = { workspace = true }
 image = "0.24"
+
+[workspace.dependencies]
+iced = { version = "0.12.0", features = ["image", "tokio", "canvas", "advanced"] }
 
 [build-dependencies]
 winresource = "0.1.17"

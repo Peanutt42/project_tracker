@@ -1,6 +1,6 @@
 use iced::{alignment::Horizontal, theme, widget::{column, container, row, text, Space}, Alignment, Command, Element, Length, Padding};
 use iced_aw::{card, Bootstrap, CardStyles, ModalStyles};
-use crate::{components::{clear_synchronization_filepath_button, dangerous_button, import_database_button, export_database_button, file_location, filepath_widget, vertical_seperator, select_synchronization_filepath_button, settings_tab_button, sync_database_button, horizontal_seperator_padded, HORIZONTAL_SCROLLABLE_PADDING}, styles::PADDING_AMOUNT};
+use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{GREY, PADDING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT, ModalCardStyle, ModalStyle, RoundedContainerStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -9,13 +9,15 @@ use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 pub enum SettingsModalMessage {
 	Open,
 	Close,
+	SwitchSettingsTab(SettingTab),
+
+	SetDateFormatting(DateFormatting),
 
 	BrowseSynchronizationFilepath,
 	BrowseSynchronizationFilepathCanceled,
 
-	SetDateFormatting(DateFormatting),
-
-	SwitchSettingsTab(SettingTab),
+	ImportGoogleTasksFileDialog,
+	ImportGoogleTasksFileDialogCanceled,
 }
 
 impl From<SettingsModalMessage> for UiMessage {
@@ -89,6 +91,29 @@ impl SettingTab {
 					)
 					.width(Length::Fill)
 					.align_x(Horizontal::Right),
+
+					horizontal_seperator_padded(),
+
+					column![
+						row![
+							"Import Google Tasks:",
+
+							container(
+								import_google_tasks_button()
+							)
+							.width(Length::Fill)
+							.align_x(Horizontal::Right),
+						]
+						.spacing(SPACING_AMOUNT)
+						.align_items(Alignment::Center),
+
+						container(
+							text("Go to https://myaccount.google.com/dashboard and download the Tasks data.\nThen extract the Takeout.zip and import the \"Tasks.json\" file inside under the \"Tasks\" folder.")
+								.style(theme::Text::Color(GREY))
+						)
+						.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
+					]
+					.spacing(SPACING_AMOUNT),
 				]
 				.spacing(SPACING_AMOUNT)
 				.into()
@@ -162,6 +187,27 @@ impl SettingsModal {
 				}
 			),
 			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => Command::none(),
+
+			SettingsModalMessage::ImportGoogleTasksFileDialog => Command::perform(
+				import_google_tasks_dialog(),
+				move |result| {
+					match result {
+						Some((result, filepath)) => match result {
+							Ok(projects) => DatabaseMessage::ImportProjects(projects).into(),
+							Err(import_error) => match import_error {
+								ImportGoogleTasksError::IoError(io_error) => ErrorMsgModalMessage::open(
+									format!("Failed to open google tasks takeout .json file\nLocation: {}\nError: {io_error}", filepath.display())
+								),
+								ImportGoogleTasksError::ParseError(parse_error) => ErrorMsgModalMessage::open(
+									format!("Failed to parse google tasks takeout .json file\nLocation: {}\nError: {parse_error}", filepath.display())
+								),
+							}
+						},
+						None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
+					}
+				}
+			),
+			SettingsModalMessage::ImportGoogleTasksFileDialogCanceled => Command::none(),
 
 			SettingsModalMessage::SetDateFormatting(date_formatting) => {
 				if let Some(preferences) = preferences {
