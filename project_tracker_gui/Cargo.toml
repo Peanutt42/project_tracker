@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 iced = { workspace = true }
-iced_aw = { version = "0.9.3", default-features = false, features = ["spinner", "modal", "card", "split", "quad", "icons", "date_picker"] }
+iced_aw = { workspace = true }
 iced_drop = { path = "../iced_drop" }
 notify-rust = "4"
 tokio = { version = "1.0", features = ["fs"] }

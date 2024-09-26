@@ -4,7 +4,7 @@ use std::vec;
 
 use iced::advanced::widget::{Operation, Tree, Widget};
 use iced::advanced::{self, layout, mouse, overlay, renderer, Layout};
-use iced::event::Status;
+use iced::widget::button::{Style, StyleFn, Status, Catalog};
 use iced::{Color, Element, Point, Rectangle, Size, Vector};
 
 /// An element that can be dragged and dropped on a [`DropZone`]
@@ -12,10 +12,10 @@ pub struct Droppable<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer
 where
     Message: Clone,
     Renderer: renderer::Renderer,
-    Theme: iced::widget::button::StyleSheet,
+    Theme: Catalog,
 {
     content: Element<'a, Message, Theme, Renderer>,
-    style: Option<Theme::Style>,
+    class: Theme::Class<'a>,
     id: Option<iced::advanced::widget::Id>,
     on_click: Option<Message>,
     on_drop: Option<Box<dyn Fn(Point, Rectangle) -> Message + 'a>>,
@@ -33,13 +33,13 @@ impl<'a, Message, Theme, Renderer> Droppable<'a, Message, Theme, Renderer>
 where
     Message: Clone,
     Renderer: renderer::Renderer,
-    Theme: iced::widget::button::StyleSheet,
+    Theme: Catalog,
 {
     /// Creates a new [`Droppable`].
     pub fn new(content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
         Self {
             content: content.into(),
-            style: None,
+            class: Theme::default(),
             id: None,
             on_click: None,
             on_drop: None,
@@ -55,8 +55,11 @@ where
     }
 
     /// Sets the button style of the [`Droppable`] (only the not dragged one)
-    pub fn style(mut self, style: Theme::Style) -> Self {
-    	self.style = Some(style);
+    pub fn style(mut self, style: impl Fn(&Theme, Status) -> Style + 'a) -> Self
+    where
+        Theme::Class<'a>: From<StyleFn<'a, Theme>>,
+    {
+    	self.class = (Box::new(style) as StyleFn<'a, Theme>).into();
      	self
     }
 
@@ -148,7 +151,7 @@ impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
 where
     Message: Clone,
     Renderer: renderer::Renderer,
-    Theme: iced::widget::button::StyleSheet,
+    Theme: Catalog,
 {
     fn state(&self) -> iced::advanced::widget::tree::State {
         advanced::widget::tree::State::new(State::default())
@@ -194,7 +197,7 @@ where
         );
         // this should really only be captured if the droppable is nested or it contains some other
         // widget that captures the event
-        if status == Status::Captured {
+        if status == iced::event::Status::Captured {
             return status;
         };
 
@@ -214,7 +217,7 @@ where
                             if let Some(on_click) = self.on_click.clone() {
                                 shell.publish(on_click);
                             }
-                            return Status::Captured;
+                            return iced::event::Status::Captured;
                         } else if btn == mouse::Button::Right {
                             if let Action::Drag(_, _) = state.action {
                                 shell.invalidate_layout();
@@ -278,7 +281,7 @@ where
                 }
             }
         }
-        Status::Ignored
+        iced::event::Status::Ignored
     }
 
     fn layout(
@@ -325,7 +328,7 @@ where
         tree: &mut Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
-        operation: &mut dyn Operation<Message>,
+        operation: &mut dyn Operation,
     ) {
         let state = tree.state.downcast_mut::<State>();
         operation.custom(state, self.id.as_ref());
@@ -356,28 +359,26 @@ where
         let bounds = layout.bounds();
         let is_mouse_over = cursor.is_over(bounds);
 
-        let default_style = Theme::Style::default();
-        let style = self.style.as_ref().unwrap_or(&default_style);
-
-        // todo: add pressed
-        let styling = if is_mouse_over {
-        	theme.hovered(style)
+        let status = if is_mouse_over {
+        	Status::Hovered
         }
         else {
-        	theme.active(style)
+        	Status::Active
         };
 
-        if styling.background.is_some() ||
-        	styling.border.width > 0.0 ||
-         	styling.shadow.color.a > 0.0
+        let style = theme.style(&self.class, status);
+
+        if style.background.is_some() ||
+        	style.border.width > 0.0 ||
+         	style.shadow.color.a > 0.0
         {
 	        renderer.fill_quad(
 	        	renderer::Quad {
 					bounds,
-	         		border: styling.border,
-	          		shadow: styling.shadow
+	         		border: style.border,
+	          		shadow: style.shadow
 	         	},
-	          	styling.background.unwrap_or(Color::TRANSPARENT.into())
+	          	style.background.unwrap_or(Color::TRANSPARENT.into())
 	        );
         }
 
@@ -386,7 +387,7 @@ where
             renderer,
             theme,
             &renderer::Style {
-            	text_color: styling.text_color
+            	text_color: style.text_color
             },
             layout,
             cursor,
@@ -460,7 +461,7 @@ where
     Message: 'a + Clone,
     Theme: 'a,
     Renderer: 'a + renderer::Renderer,
-    Theme: iced::widget::button::StyleSheet,
+    Theme: Catalog,
 {
     fn from(
         droppable: Droppable<'a, Message, Theme, Renderer>,

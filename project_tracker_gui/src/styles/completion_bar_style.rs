@@ -1,20 +1,14 @@
-use iced::{widget::progress_bar::{StyleSheet, Appearance}, Theme};
+use iced::{border::rounded, widget::progress_bar::Style, Theme};
 use crate::styles::color_average;
 
-pub struct CompletionBarStyle;
-
-impl StyleSheet for CompletionBarStyle {
-	type Style = Theme;
-
-	fn appearance(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: color_average(
-				style.extended_palette().background.weak.color,
-				style.extended_palette().background.base.color
-			)
-			.into(),
-			bar: style.extended_palette().primary.base.color.into(),
-			border_radius: 2.5.into(),
-		}
+pub fn completion_bar_style(theme: &Theme) -> Style {
+	Style {
+		background: color_average(
+			theme.extended_palette().background.weak.color,
+			theme.extended_palette().background.base.color
+		)
+		.into(),
+		bar: theme.extended_palette().primary.base.color.into(),
+		border: rounded(2.5)
 	}
 }

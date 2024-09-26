@@ -16,7 +16,7 @@ pub static DARK_THEME: Lazy<Theme> = Lazy::new(|| {
 		text: Color::from_rgb(0.9, 0.9, 0.9),
 		primary: Color::from_rgb8(0, 41, 229),
 		success: Color::from_rgb8(0, 41, 229),
-		danger: Color::from_rgb(1.0, 0.0, 0.0),
+		danger: Color::from_rgb(0.9, 0.0, 0.0),
 	};
 
 	Theme::Custom(Arc::new(Custom::with_fn("Dark".to_string(), palette, |p| {
@@ -33,7 +33,7 @@ pub static LIGHT_THEME: Lazy<Theme> = Lazy::new(|| {
 		text: Color::from_rgb(0.1, 0.1, 0.1),
 		primary: Color::from_rgb8(0, 40, 219),
 		success: Color::from_rgb8(0, 40, 219),
-		danger: Color::from_rgb(1.0, 0.0, 0.0),
+		danger: Color::from_rgb(0.9, 0.0, 0.0),
 	};
 
 	Theme::Custom(Arc::new(Custom::with_fn("Light".to_string(), palette, |p| {

@@ -1,76 +1,41 @@
-use iced::{widget::text_editor::{Appearance, StyleSheet}, Border, Color, Theme};
+use iced::{border::Radius, color, widget::text_editor::{Status, Style}, Border, Theme};
+use crate::styles::BORDER_RADIUS;
 
-use super::BORDER_RADIUS;
+pub fn text_editor_style(theme: &Theme, status: Status, round_top_left: bool, round_top_right: bool, round_bottom_left: bool, round_bottom_right: bool) -> Style {
+	let placeholder = theme.extended_palette().background.strong.color;
+	let value = theme.extended_palette().background.base.text;
+	let selection = color!(0x3367d1);
 
-pub struct TextEditorStyle {
-	pub round_top_left: bool,
-	pub round_top_right: bool,
-	pub round_bottom_left: bool,
-	pub round_bottom_right: bool,
-}
+	let border = Border {
+		radius: Radius::default()
+			.top_left(if round_top_left { BORDER_RADIUS } else { 0.0 })
+			.top_right(if round_top_right { BORDER_RADIUS } else { 0.0 })
+			.bottom_left(if round_bottom_left { BORDER_RADIUS } else { 0.0 })
+			.bottom_right(if round_bottom_right { BORDER_RADIUS } else { 0.0 }),
+		width: 1.0,
+		color: theme.extended_palette().background.strong.color,
+	};
 
-impl StyleSheet for TextEditorStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		let palette = style.extended_palette();
-
-		Appearance {
-			background: palette.background.base.color.into(),
-			border: Border {
-				radius: [
-					if self.round_top_left { BORDER_RADIUS } else { 0.0 },
-					if self.round_top_right { BORDER_RADIUS } else { 0.0 },
-					if self.round_bottom_right { BORDER_RADIUS } else { 0.0 },
-					if self.round_bottom_left { BORDER_RADIUS } else { 0.0 },
-				].into(),
-				width: 1.0,
-				color: palette.background.strong.color,
-			},
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		let palette = style.extended_palette();
-
-		Appearance {
-			background: palette.background.base.color.into(),
-			..self.active(style)
-		}
-	}
-
-	fn focused(&self, style: &Self::Style) -> Appearance {
-		let palette = style.extended_palette();
-
-		Appearance {
-			background: palette.background.base.color.into(),
-			..self.active(style)
-		}
-	}
-
-	fn disabled(&self, style: &Self::Style) -> Appearance {
-		let palette = style.extended_palette();
-
-		Appearance {
-			background: palette.background.weak.color.into(),
-			..self.active(style)
-		}
-	}
-
-	fn placeholder_color(&self, style: &Self::Style) -> Color {
-		style.extended_palette().background.strong.color
-	}
-
-	fn value_color(&self, style: &Self::Style) -> Color {
-		style.extended_palette().background.base.text
-	}
-
-	fn selection_color(&self, _style: &Self::Style) -> Color {
-		use iced::color;
-		color!(0x3367d1)
-	}
-
-	fn disabled_color(&self, style: &Self::Style) -> Color {
-		self.placeholder_color(style)
+	match status {
+		Status::Active | Status::Hovered | Status::Focused => {
+			Style {
+				background: theme.extended_palette().background.base.color.into(),
+				icon: theme.extended_palette().background.weak.text,
+				border,
+				placeholder,
+				value,
+				selection
+			}
+		},
+		Status::Disabled => {
+			Style {
+				background: theme.extended_palette().background.weak.color.into(),
+				icon: theme.extended_palette().background.strong.text,
+				border,
+				placeholder,
+				value,
+				selection
+			}
+		},
 	}
 }

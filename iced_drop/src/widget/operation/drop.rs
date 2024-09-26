@@ -17,7 +17,7 @@ pub fn find_zones<F>(
     depth: Option<usize>,
 ) -> impl Operation<Vec<(Id, Rectangle)>>
 where
-    F: Fn(&Rectangle) -> bool + 'static,
+    F: Fn(&Rectangle) -> bool + Send + 'static,
 {
     struct FindDropZone<F> {
         filter: F,
@@ -30,7 +30,7 @@ where
 
     impl<F> Operation<Vec<(Id, Rectangle)>> for FindDropZone<F>
     where
-        F: Fn(&Rectangle) -> bool + 'static,
+        F: Fn(&Rectangle) -> bool + Send + 'static,
     {
         fn container(
             &mut self,
@@ -67,8 +67,10 @@ where
             _state: &mut dyn Scrollable,
             _id: Option<&Id>,
             bounds: Rectangle,
+            _content_bounds: Rectangle,
             translation: Vector,
         ) {
+        	// TODO: maybe content_bounds is better for this
             if (self.filter)(&bounds) {
                 self.offset = self.offset + translation;
             }

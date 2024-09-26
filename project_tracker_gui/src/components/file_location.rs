@@ -1,18 +1,18 @@
-use std::path::Path;
-use iced::{theme, widget::{button, container, text, tooltip, tooltip::Position, Scrollable}, Element};
-use crate::{project_tracker::UiMessage, components::horizontal_scrollable, styles::{RoundedContainerStyle, TooltipContainerStyle, SecondaryButtonStyle, GAP, SMALL_HORIZONTAL_PADDING, SMALL_TEXT_SIZE}};
+use std::path::{Path, PathBuf};
+use iced::{widget::{button, container, text, tooltip, tooltip::Position, Scrollable}, Element};
+use crate::{components::horizontal_scrollable, project_tracker::UiMessage, styles::{rounded_container_style, secondary_button_style_default, tooltip_container_style, GAP, SMALL_HORIZONTAL_PADDING, SMALL_TEXT_SIZE}};
 
-pub fn filepath_widget(filepath: &Path) -> Scrollable<'static, UiMessage> {
+pub fn filepath_widget<'a>(filepath: PathBuf) -> Scrollable<'a, UiMessage> {
 	horizontal_scrollable(
 		container(
-			text(filepath.display())
+			text(filepath.to_string_lossy().to_string())
 		)
-		.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+		.style(rounded_container_style)
 		.padding(SMALL_HORIZONTAL_PADDING)
 	)
 }
 
-pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
+pub fn file_location<'a>(filepath: PathBuf) -> Element<'a, UiMessage> {
 	let parent_filepath = filepath
 		.parent()
 		.map(Path::to_path_buf);
@@ -20,11 +20,11 @@ pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
 	horizontal_scrollable(
 		tooltip(
 			button(
-				text(filepath.display())
+				text(filepath.to_string_lossy().to_string())
 			)
 			.on_press_maybe(parent_filepath.map(UiMessage::OpenFolderLocation))
 			.padding(SMALL_HORIZONTAL_PADDING)
-			.style(theme::Button::custom(SecondaryButtonStyle::default())),
+			.style(secondary_button_style_default),
 
 			text("Open folder location")
 				.size(SMALL_TEXT_SIZE),
@@ -32,7 +32,7 @@ pub fn file_location(filepath: &Path) -> Element<'static, UiMessage> {
 			Position::Bottom
 		)
 		.gap(GAP)
-		.style(theme::Container::Custom(Box::new(TooltipContainerStyle)))
+		.style(tooltip_container_style)
 	)
 	.into()
 }

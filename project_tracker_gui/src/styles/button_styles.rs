@@ -1,603 +1,391 @@
-use iced::{widget::button::{Appearance, StyleSheet}, Border, Color, Shadow, Theme};
+use iced::{border::{rounded, Radius}, widget::button::{Status, Style}, Border, Color, Shadow, Theme};
 use crate::styles::{background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS, LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS};
 
-pub struct ProjectPreviewButtonStyle {
-	pub selected: bool,
-	pub project_color: Option<Color>,
-}
+pub fn project_preview_style(theme: &Theme, status: Status, selected: bool, project_color: Option<Color>) -> Style {
+	let border = rounded(BORDER_RADIUS);
 
-impl StyleSheet for ProjectPreviewButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		let background_color = if self.selected {
-			self.project_color.unwrap_or(style.extended_palette().primary.base.color)
-		}
-		else {
-			mix_color(style.extended_palette().background.weak.color, style.extended_palette().background.base.color, 0.75)
-		};
-
-		Appearance {
-			background: Some(background_color.into()),
-			text_color: text_color(background_color),
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		let background_color = if self.selected {
-			self.project_color.unwrap_or(style.extended_palette().primary.weak.color)
-		}
-		else {
-			color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color)
-		};
-
-		Appearance {
-			background: Some(background_color.into()),
-			text_color: text_color(background_color),
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		self.hovered(style)
-	}
-}
-
-pub struct HiddenSecondaryButtonStyle;
-
-impl StyleSheet for HiddenSecondaryButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: None,
-			text_color: style.palette().text,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()),
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		self.hovered(style)
-	}
-}
-
-pub struct DangerousButtonStyle;
-
-impl StyleSheet for DangerousButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(style.extended_palette().danger.base.color.into()),
-			text_color: style.extended_palette().danger.base.text,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		let color = Color::from_rgb(0.8, 0.0, 0.0);
-
-		Appearance {
-			background: Some(color.into()),
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(Color::from_rgb(0.6, 0.0, 0.0).into()),
-			..self.active(style)
-		}
-	}
-}
-
-pub struct DeleteDoneTasksButtonStyle;
-
-impl StyleSheet for DeleteDoneTasksButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(style.extended_palette().secondary.base.color.into()),
-			text_color: style.extended_palette().secondary.base.text,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		let color = Color::from_rgb(0.8, 0.0, 0.0);
-
-		Appearance {
-			background: Some(color.into()),
-			text_color: style.extended_palette().danger.base.text,
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(Color::from_rgb(0.6, 0.0, 0.0).into()),
-			..self.hovered(style)
-		}
-	}
-}
-
-pub struct PrimaryButtonStyle;
-
-impl StyleSheet for PrimaryButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		let pair = style.extended_palette().primary.base;
-
-		Appearance {
-			background: Some(pair.color.into()),
-			text_color: pair.text,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(mix_color(style.extended_palette().primary.base.color, style.extended_palette().background.strong.color, 0.25).into()),
-			text_color: style.extended_palette().primary.base.text,
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		self.active(style)
-	}
-}
-
-pub struct SecondaryButtonStyle {
-	pub round_left_top: bool,
-	pub round_left_bottom: bool,
-	pub round_right_top: bool,
-	pub round_right_bottom: bool,
-}
-
-impl SecondaryButtonStyle {
-	pub const ONLY_ROUND_RIGHT: Self = Self {
-		round_left_top: false,
-		round_right_top: true,
-		round_right_bottom: true,
-		round_left_bottom: false,
-	};
-
-	pub const ONLY_ROUND_BOTTOM: Self = Self {
-		round_left_top: false,
-		round_left_bottom: true,
-		round_right_top: false,
-		round_right_bottom: true,
-	};
-
-	pub const NO_ROUNDING: Self = Self {
-		round_left_top: false,
-		round_left_bottom: false,
-		round_right_top: false,
-		round_right_bottom: false,
-	};
-}
-
-impl Default for SecondaryButtonStyle {
-	fn default() -> Self {
-		Self {
-			round_left_top: true,
-			round_left_bottom: true,
-			round_right_top: true,
-			round_right_bottom: true,
-		}
-	}
-}
-
-impl StyleSheet for SecondaryButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		let pair = style.extended_palette().secondary.base;
-
-		Appearance {
-			background: Some(pair.color.into()),
-			text_color: pair.text,
-			border: Border::with_radius([
-				if self.round_left_top { BORDER_RADIUS } else { 0.0 },
-				if self.round_right_top { BORDER_RADIUS } else { 0.0 },
-				if self.round_right_bottom { BORDER_RADIUS } else { 0.0 },
-				if self.round_left_bottom { BORDER_RADIUS } else { 0.0 }
-			]),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(style.extended_palette().background.strong.color.into()),
-			text_color: style.extended_palette().secondary.base.text,
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		self.active(style)
-	}
-}
-
-pub struct DeleteButtonStyle {
-	pub round_left: bool,
-	pub round_right: bool,
-}
-
-impl StyleSheet for DeleteButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(style.extended_palette().secondary.base.color.into()),
-			text_color: style.extended_palette().secondary.base.text,
-			border: Border::with_radius([
-				if self.round_left { BORDER_RADIUS } else { 0.0 },
-				if self.round_right { BORDER_RADIUS } else { 0.0 },
-				if self.round_right { BORDER_RADIUS } else { 0.0 },
-				if self.round_left { BORDER_RADIUS } else { 0.0 }
-			]),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(style.extended_palette().danger.base.color.into()),
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(color_average(style.extended_palette().background.base.color, style.extended_palette().danger.weak.color).into()),
-			..self.active(style)
-		}
-	}
-}
-
-pub struct SelectionListButtonStyle {
-	pub selected: bool,
-	pub round_left: bool,
-	pub round_right: bool,
-}
-
-impl StyleSheet for SelectionListButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(
-				if self.selected {
-					style.extended_palette().success.strong.color.into()
-				}
-				else {
-					style.extended_palette().secondary.base.color.into()
-				}
-			),
-			border: Border::with_radius([
-				if self.round_left { BORDER_RADIUS } else { 0.0 },
-				if self.round_right { BORDER_RADIUS } else { 0.0 },
-				if self.round_right { BORDER_RADIUS } else { 0.0 },
-				if self.round_left { BORDER_RADIUS } else { 0.0 },
-			]),
-			text_color: if self.selected {
-				style.extended_palette().success.base.text
+	match status {
+		Status::Active => {
+			let background_color = if selected {
+				project_color.unwrap_or(theme.extended_palette().primary.base.color)
 			}
 			else {
-				style.extended_palette().secondary.base.text
-			},
-			..Default::default()
-		}
-	}
+				mix_color(theme.extended_palette().background.weak.color, theme.extended_palette().background.base.color, 0.75)
+			};
 
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(
-				if self.selected {
-					style.extended_palette().success.strong.color.into()
-				}
-				else {
-					style.extended_palette().background.strong.color.into()
-				}
-			),
-			..self.active(style)
-		}
-	}
-}
-
-
-pub struct PaletteItemButtonStyle {
-	pub selected: bool,
-}
-
-impl StyleSheet for PaletteItemButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: if self.selected {
-				Some(style.extended_palette().background.weak.color.into())
-			}
-			else {
-				None
-			},
-			text_color: style.extended_palette().background.base.text,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(
-				if self.selected {
-					style.extended_palette().background.weak.color.into()
-				}
-				else {
-					color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
-				}
-			),
-			..self.active(style)
-		}
-	}
-}
-
-
-pub struct ColorPaletteButtonStyle {
-	pub selected: bool,
-}
-
-impl StyleSheet for ColorPaletteButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: if self.selected {
-				Some(style.extended_palette().background.weak.color.into())
-		 	}
-			else {
-				None
-			},
-			text_color: style.palette().text,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(if self.selected {
-				style.extended_palette().background.weak.color.into()
-			}
-			else {
-				color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()
-			}),
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		self.hovered(style)
-	}
-}
-
-pub struct InvisibleButtonStyle;
-
-impl StyleSheet for InvisibleButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, _style: &Self::Style) -> Appearance {
-		Appearance {
-			background: None,
-			text_color: Color::TRANSPARENT,
-			..Default::default()
-		}
-	}
-}
-
-pub struct TaskTagButtonStyle {
-	pub color: Color,
-	pub toggled: bool,
-	pub round_bottom: bool,
-}
-
-impl StyleSheet for TaskTagButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(if self.toggled {
-				self.color.into()
-			}
-			else {
-				style.extended_palette().background.base.color.into()
-			}),
-			text_color: if self.toggled {
-				text_color(self.color)
-			}
-			else {
-				style.extended_palette().background.base.text
-			},
-			border: Border {
-				color: self.color,
-				width: 1.0,
-				radius: if self.round_bottom {
-					LARGE_BORDER_RADIUS.into()
-				}
-				else {
-					[
-						LARGE_BORDER_RADIUS,
-						LARGE_BORDER_RADIUS,
-						0.0,
-						0.0
-					].into()
-				},
-			},
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(
-				if self.toggled {
-					self.color.into()
-				}
-				else {
-					color_average(self.color, style.extended_palette().background.base.color).into()
-				}
-			),
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(self.color.into()),
-			..self.active(style)
-		}
-	}
-}
-
-pub struct TaskButtonStyle;
-
-impl StyleSheet for TaskButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: None,
-			text_color: style.palette().text,
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: Some(color_average(style.extended_palette().background.weak.color, style.extended_palette().background.base.color).into()),
-			shadow: Shadow {
-				color: background_shadow_color(style.extended_palette()),
-				blur_radius: BLUR_RADIUS,
+			Style {
+				background: Some(background_color.into()),
+				text_color: text_color(background_color),
+				border,
 				..Default::default()
-			},
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		self.hovered(style)
-	}
-}
-
-pub struct SettingsTabButtonStyle {
-	pub selected: bool,
-}
-
-impl StyleSheet for SettingsTabButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: if self.selected {
-				Some(style.extended_palette().success.strong.color.into())
+			}
+		},
+		Status::Hovered | Status::Pressed | Status::Disabled => {
+			let background_color = if selected {
+				project_color.unwrap_or(theme.extended_palette().primary.weak.color)
 			}
 			else {
-				None
-			},
-			text_color: if self.selected {
-				style.extended_palette().success.strong.text
-			}
-			else {
-				style.extended_palette().background.base.text
-			},
-			border: Border::with_radius(BORDER_RADIUS),
-			..Default::default()
-		}
-	}
+				color_average(theme.extended_palette().background.weak.color, theme.extended_palette().background.base.color)
+			};
 
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			background: if self.selected {
-				Some(style.extended_palette().success.strong.color.into())
-			}
-			else {
-				Some(style.extended_palette().secondary.base.color.into())
-			},
-			..self.active(style)
-		}
-	}
-
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		self.active(style)
-	}
-}
-
-pub struct TimerButtonStyle {
-	pub timer_ticking: bool,
-}
-
-impl StyleSheet for TimerButtonStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		let pair = if self.timer_ticking {
-			style.extended_palette().danger.base
-		}
-		else {
-			style.extended_palette().primary.base
-		};
-
-		Appearance {
-			background: Some(pair.color.into()),
-			text_color: pair.text,
-			border: Border::with_radius(15.0),
-			..Default::default()
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style) -> Appearance {
-		let pair = if self.timer_ticking {
-			style.extended_palette().danger.base
-		}
-		else {
-			style.extended_palette().primary.base
-		};
-		let color = mix_color(pair.color, style.extended_palette().background.strong.color, 0.25);
-		Appearance {
-			background: Some(color.into()),
-			text_color: pair.text,
-			shadow: Shadow {
-				color: Color {
-					a: 0.2,
-					..color
-				},
-				blur_radius: LARGE_BLUR_RADIUS,
+			Style {
+				background: Some(background_color.into()),
+				text_color: text_color(background_color),
+				border,
 				..Default::default()
-			},
-			..self.active(style)
-		}
+			}
+		},
 	}
+}
 
-	fn pressed(&self, style: &Self::Style) -> Appearance {
-		self.active(style)
-	}
+pub fn hidden_secondary_button_style(theme: &Theme, status: Status) -> Style {
+    match status {
+        Status::Active => Style {
+            background: None,
+            text_color: theme.palette().text,
+            border: rounded(BORDER_RADIUS),
+            ..Style::default()
+        },
+        Status::Hovered => Style {
+            background: Some(color_average(theme.extended_palette().background.weak.color, theme.extended_palette().background.base.color).into()),
+            ..hidden_secondary_button_style(theme, Status::Active)
+        },
+        Status::Pressed => hidden_secondary_button_style(theme, Status::Hovered),
+        Status::Disabled => Style::default(),
+    }
+}
+
+pub fn dangerous_button_style(theme: &Theme, status: Status) -> Style {
+    match status {
+        Status::Active => Style {
+            background: Some(theme.extended_palette().danger.base.color.into()),
+            text_color: theme.extended_palette().danger.base.text,
+            border: rounded(BORDER_RADIUS),
+            ..Style::default()
+        },
+        Status::Hovered => Style {
+            background: Some(Color::from_rgb(0.8, 0.0, 0.0).into()),
+            ..dangerous_button_style(theme, Status::Active)
+        },
+        Status::Pressed => Style {
+            background: Some(Color::from_rgb(0.6, 0.0, 0.0).into()),
+            ..dangerous_button_style(theme, Status::Active)
+        },
+        Status::Disabled => Style::default(),
+    }
+}
+
+pub fn delete_done_tasks_button_style(theme: &Theme, status: Status) -> Style {
+    match status {
+        Status::Active => Style {
+            background: Some(theme.extended_palette().secondary.base.color.into()),
+            text_color: theme.extended_palette().secondary.base.text,
+            border: rounded(BORDER_RADIUS),
+            ..Style::default()
+        },
+        Status::Hovered => Style {
+            background: Some(Color::from_rgb(0.8, 0.0, 0.0).into()),
+            text_color: theme.extended_palette().danger.base.text,
+            ..delete_done_tasks_button_style(theme, Status::Active)
+        },
+        Status::Pressed => Style {
+            background: Some(Color::from_rgb(0.6, 0.0, 0.0).into()),
+            ..delete_done_tasks_button_style(theme, Status::Hovered)
+        },
+        Status::Disabled => Style::default(),
+    }
+}
+
+pub fn primary_button_style(theme: &Theme, status: Status) -> Style {
+    let pair = theme.extended_palette().primary.base;
+    match status {
+        Status::Active => Style {
+            background: Some(pair.color.into()),
+            text_color: pair.text,
+            border: rounded(BORDER_RADIUS),
+            ..Style::default()
+        },
+        Status::Hovered => Style {
+            background: Some(mix_color(pair.color, theme.extended_palette().background.strong.color, 0.25).into()),
+            text_color: pair.text,
+            ..primary_button_style(theme, Status::Active)
+        },
+        Status::Pressed => primary_button_style(theme, Status::Active),
+        Status::Disabled => Style {
+            background: Some(color_average(pair.color, theme.extended_palette().background.strong.color).into()),
+            text_color: pair.text,
+            ..primary_button_style(theme, Status::Active)
+        },
+    }
+}
+
+pub fn secondary_button_style_default(theme: &Theme, status: Status) -> Style {
+	secondary_button_style(theme, status, true, true, true, true)
+}
+
+pub fn secondary_button_style_only_round_right(theme: &Theme, status: Status) -> Style {
+	secondary_button_style(theme, status, false, false, true, true)
+}
+
+pub fn secondary_button_style_only_round_bottom(theme: &Theme, status: Status) -> Style {
+	secondary_button_style(theme, status, false, true, false, true)
+}
+
+pub fn secondary_button_style(
+    theme: &Theme,
+    status: Status,
+    round_left_top: bool,
+    round_left_bottom: bool,
+    round_right_top: bool,
+    round_right_bottom: bool
+) -> Style {
+    let border_radius = Radius::default()
+        .top_left(if round_left_top { BORDER_RADIUS } else { 0.0 })
+        .top_right(if round_right_top { BORDER_RADIUS } else { 0.0 })
+        .bottom_right(if round_right_bottom { BORDER_RADIUS } else { 0.0 })
+        .bottom_left(if round_left_bottom { BORDER_RADIUS } else { 0.0 });
+
+    match status {
+        Status::Active => Style {
+            background: Some(theme.extended_palette().secondary.base.color.into()),
+            text_color: theme.extended_palette().secondary.base.text,
+            border: rounded(border_radius),
+            ..Style::default()
+        },
+        Status::Hovered => Style {
+            background: Some(theme.extended_palette().background.strong.color.into()),
+            text_color: theme.extended_palette().secondary.base.text,
+            ..secondary_button_style(theme, Status::Active, round_left_top, round_left_bottom, round_right_top, round_right_bottom)
+        },
+        Status::Pressed => secondary_button_style(theme, Status::Active, round_left_top, round_left_bottom, round_right_top, round_right_bottom),
+        Status::Disabled => Style::default(),
+    }
+}
+
+pub fn delete_button_style(theme: &Theme, status: Status, round_left: bool, round_right: bool) -> Style {
+    let active_style = Style {
+        background: Some(theme.extended_palette().secondary.base.color.into()),
+        text_color: theme.extended_palette().secondary.base.text,
+        border: rounded(
+	        Radius::default()
+	            .left(if round_left { BORDER_RADIUS } else { 0.0 })
+	            .right(if round_right { BORDER_RADIUS } else { 0.0 })
+        ),
+        ..Default::default()
+    };
+
+    match status {
+        Status::Active => active_style,
+        Status::Hovered => Style {
+            background: Some(theme.extended_palette().danger.base.color.into()),
+            ..active_style
+        },
+        Status::Pressed => Style {
+            background: Some(color_average(
+                theme.extended_palette().background.base.color,
+                theme.extended_palette().danger.weak.color
+            ).into()),
+            ..active_style
+        },
+        Status::Disabled => active_style, // No disabled state defined, fallback to active
+    }
+}
+
+pub fn selection_list_button_style(theme: &Theme, status: Status, selected: bool, round_left: bool, round_right: bool) -> Style {
+    let active_style = Style {
+        background: Some(if selected {
+            theme.extended_palette().success.strong.color.into()
+        } else {
+            theme.extended_palette().secondary.base.color.into()
+        }),
+        border: rounded(
+        	Radius::default()
+	            .left(if round_left { BORDER_RADIUS } else { 0.0 })
+	            .right(if round_right { BORDER_RADIUS } else { 0.0 })
+        ),
+        text_color: if selected {
+            theme.extended_palette().success.base.text
+        } else {
+            theme.extended_palette().secondary.base.text
+        },
+        ..Default::default()
+    };
+
+    match status {
+        Status::Active => active_style,
+        Status::Hovered => Style {
+            background: Some(if selected {
+                theme.extended_palette().success.strong.color.into()
+            } else {
+                theme.extended_palette().background.strong.color.into()
+            }),
+            ..active_style
+        },
+        Status::Pressed => active_style,
+        Status::Disabled => active_style, // No disabled state defined
+    }
+}
+
+pub fn color_palette_button_style(theme: &Theme, status: Status, selected: bool) -> Style {
+    let active_style = Style {
+        background: if selected {
+            Some(theme.extended_palette().background.weak.color.into())
+        } else {
+            None
+        },
+        text_color: theme.palette().text,
+        border: rounded(BORDER_RADIUS),
+        ..Default::default()
+    };
+
+    match status {
+        Status::Active => active_style,
+        Status::Hovered => Style {
+            background: Some(if selected {
+                theme.extended_palette().background.weak.color.into()
+            } else {
+                color_average(
+                    theme.extended_palette().background.weak.color,
+                    theme.extended_palette().background.base.color
+                ).into()
+            }),
+            ..active_style
+        },
+        Status::Pressed => active_style,
+        Status::Disabled => active_style,
+    }
+}
+
+pub fn invisible_button_style(_theme: &Theme, _status: Status) -> Style {
+    Style {
+        background: None,
+        text_color: Color::TRANSPARENT,
+        ..Default::default()
+    }
+}
+
+pub fn task_tag_button_style(theme: &Theme, status: Status, color: Color, toggled: bool, round_bottom: bool) -> Style {
+    let active_style = Style {
+        background: Some(if toggled { color.into() } else { theme.extended_palette().background.base.color.into() }),
+        text_color: if toggled { text_color(color) } else { theme.extended_palette().background.base.text },
+        border: Border {
+            color,
+            width: 1.0,
+            radius: if round_bottom {
+                LARGE_BORDER_RADIUS.into()
+            } else {
+                Radius::default().top(LARGE_BORDER_RADIUS).bottom(0.0)
+            },
+        },
+        ..Default::default()
+    };
+
+    match status {
+        Status::Active => active_style,
+        Status::Hovered => Style {
+            background: Some(if toggled {
+                color.into()
+            } else {
+                color_average(color, theme.extended_palette().background.base.color).into()
+            }),
+            ..active_style
+        },
+        Status::Pressed => Style {
+            background: Some(color.into()),
+            ..active_style
+        },
+        Status::Disabled => active_style,
+    }
+}
+
+pub fn task_button_style(theme: &Theme, status: Status) -> Style {
+    let active_style = Style {
+        background: None,
+        text_color: theme.palette().text,
+        border: rounded(BORDER_RADIUS),
+        ..Default::default()
+    };
+
+    match status {
+        Status::Active => active_style,
+        Status::Hovered => Style {
+            background: Some(color_average(
+                theme.extended_palette().background.weak.color,
+                theme.extended_palette().background.base.color
+            ).into()),
+            shadow: Shadow {
+                color: background_shadow_color(theme.extended_palette()),
+                blur_radius: BLUR_RADIUS,
+                ..Default::default()
+            },
+            ..active_style
+        },
+        Status::Pressed => active_style,
+        Status::Disabled => active_style,
+    }
+}
+
+pub fn settings_tab_button_style(theme: &Theme, status: Status, selected: bool) -> Style {
+    let active_style = Style {
+        background: if selected {
+            Some(theme.extended_palette().success.strong.color.into())
+        } else {
+            None
+        },
+        text_color: if selected {
+            theme.extended_palette().success.strong.text
+        } else {
+            theme.extended_palette().background.base.text
+        },
+        border: rounded(BORDER_RADIUS),
+        ..Default::default()
+    };
+
+    match status {
+        Status::Active => active_style,
+        Status::Hovered => Style {
+            background: if selected {
+                Some(theme.extended_palette().success.strong.color.into())
+            } else {
+                Some(theme.extended_palette().secondary.base.color.into())
+            },
+            ..active_style
+        },
+        Status::Pressed => active_style,
+        Status::Disabled => active_style,
+    }
+}
+
+pub fn timer_button_style(theme: &Theme, status: Status, timer_ticking: bool) -> Style {
+    let pair = if timer_ticking {
+        theme.extended_palette().danger.base
+    } else {
+        theme.extended_palette().primary.base
+    };
+
+    let active_style = Style {
+        background: Some(pair.color.into()),
+        text_color: pair.text,
+        border: rounded(15.0),
+        ..Default::default()
+    };
+
+    match status {
+        Status::Active => active_style,
+        Status::Hovered => {
+            let color = mix_color(pair.color, theme.extended_palette().background.strong.color, 0.25);
+            Style {
+                background: Some(color.into()),
+                text_color: pair.text,
+                shadow: Shadow {
+                    color: Color { a: 0.2, ..color },
+                    blur_radius: LARGE_BLUR_RADIUS,
+                    ..Default::default()
+                },
+                ..active_style
+            }
+        },
+        Status::Pressed => active_style,
+        Status::Disabled => active_style,
+    }
 }

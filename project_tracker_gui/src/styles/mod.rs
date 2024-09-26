@@ -1,29 +1,30 @@
 mod button_styles;
-pub use button_styles::{ProjectPreviewButtonStyle, HiddenSecondaryButtonStyle, DangerousButtonStyle, DeleteDoneTasksButtonStyle, DeleteButtonStyle, PrimaryButtonStyle, SecondaryButtonStyle, SelectionListButtonStyle, ColorPaletteButtonStyle, InvisibleButtonStyle, TaskTagButtonStyle, TaskButtonStyle, SettingsTabButtonStyle, TimerButtonStyle};
+pub use button_styles::{project_preview_style, hidden_secondary_button_style, dangerous_button_style, delete_done_tasks_button_style, delete_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_only_round_right, secondary_button_style_only_round_bottom, selection_list_button_style, color_palette_button_style, invisible_button_style, task_tag_button_style, task_button_style, settings_tab_button_style, timer_button_style};
 
 mod container_styles;
-pub use container_styles::{RoundedContainerStyle, PaletteContainerStyle, ProjectPreviewBackgroundContainerStyle, TaskBackgroundContainerStyle, DropzoneContainerStyle, InBetweenDropzoneContainerStyle, TooltipContainerStyle, ShadowContainerStyle};
+pub use container_styles::{rounded_container_style, palette_container_style, project_preview_background_container_style, task_background_container_style, dropzone_container_style, in_between_dropzone_container_style, tooltip_container_style, shadow_container_style};
 
 mod completion_bar_style;
-pub use completion_bar_style::CompletionBarStyle;
+pub use completion_bar_style::completion_bar_style;
 
-mod split_style;
-pub use split_style::SplitStyle;
+// TODO: pane_grid replacement
+/*mod split_style;
+pub use split_style::SplitStyle;*/
 
 mod checkbox_style;
-pub use checkbox_style::GreenCheckboxStyle;
+pub use checkbox_style::checkbox_style;
 
 mod text_input;
-pub use text_input::TextInputStyle;
+pub use text_input::{text_input_style, text_input_style_default, text_input_style_only_round_left};
 
 mod text_editor;
-pub use text_editor::TextEditorStyle;
+pub use text_editor::text_editor_style;
 
 mod scrollable;
-pub use scrollable::ScrollableStyle;
+pub use scrollable::scrollable_style;
 
-mod modal_style;
-pub use modal_style::{ModalStyle, ModalCardStyle};
+mod card_style;
+pub use card_style::card_style;
 
 mod constants;
 pub use constants::{

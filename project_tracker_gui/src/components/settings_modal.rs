@@ -1,8 +1,8 @@
-use iced::{alignment::Horizontal, theme, widget::{column, container, row, text, Space}, Alignment, Command, Element, Length, Padding};
-use iced_aw::{card, Bootstrap, CardStyles, ModalStyles};
-use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{GREY, PADDING_AMOUNT}};
+use iced::{alignment::Horizontal, widget::{column, container, row, text, Space}, Alignment, Task, Element, Length::{self, Fill}, Padding};
+use iced_aw::{card, Bootstrap};
+use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{card_style, GREY, PADDING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
-use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT, ModalCardStyle, ModalStyle, RoundedContainerStyle, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
+use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT, rounded_container_style, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 
 #[derive(Debug, Clone)]
@@ -42,11 +42,11 @@ impl SettingTab {
 				column![
 					row![
 						container("Database file location: ").padding(HORIZONTAL_SCROLLABLE_PADDING),
-						container(file_location(&Database::get_filepath()))
+						container(file_location(Database::get_filepath()))
 							.width(Length::Fill)
 							.align_x(Horizontal::Right),
 					]
-					.align_items(Alignment::Center),
+					.align_y(Alignment::Center),
 
 					container(
 						row![
@@ -71,7 +71,7 @@ impl SettingTab {
 							.padding(HORIZONTAL_SCROLLABLE_PADDING),
 
 						if let Some(filepath) = preferences.synchronization_filepath() {
-							Element::new(filepath_widget(filepath).width(Length::Fill))
+							Element::new(filepath_widget(filepath.clone()).width(Length::Fill))
 						}
 						else {
 							"not specified".into()
@@ -84,7 +84,7 @@ impl SettingTab {
 							.padding(HORIZONTAL_SCROLLABLE_PADDING),
 					]
 					.spacing(SPACING_AMOUNT)
-					.align_items(Alignment::Center),
+					.align_y(Alignment::Center),
 
 					container(
 						sync_database_button(app.syncing_database, preferences.synchronization_filepath().clone())
@@ -105,11 +105,11 @@ impl SettingTab {
 							.align_x(Horizontal::Right),
 						]
 						.spacing(SPACING_AMOUNT)
-						.align_items(Alignment::Center),
+						.align_y(Alignment::Center),
 
 						container(
 							text("Go to https://myaccount.google.com/dashboard and download the Tasks data.\nThen extract the Takeout.zip and import the \"Tasks.json\" file inside under the \"Tasks\" folder.")
-								.style(theme::Text::Color(GREY))
+								.style(|_theme| text::Style{ color: Some(GREY) })
 						)
 						.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
 					]
@@ -126,7 +126,7 @@ impl SettingTab {
 						container(
 							container(shortcut).padding(SMALL_HORIZONTAL_PADDING)
 						)
-						.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+						.style(rounded_container_style)
 					]
 					.spacing(SMALL_SPACING_AMOUNT)
 				};
@@ -166,18 +166,18 @@ impl SettingsModal {
 		matches!(self, SettingsModal::Opened{ .. })
 	}
 
-	pub fn update(&mut self, message: SettingsModalMessage, preferences: &mut Option<Preferences>) -> Command<UiMessage> {
+	pub fn update(&mut self, message: SettingsModalMessage, preferences: &mut Option<Preferences>) -> Task<UiMessage> {
 		match message {
 			SettingsModalMessage::Open => {
 				*self = SettingsModal::Opened{ tab: SettingTab::default() };
-				Command::none()
+				Task::none()
 			},
 			SettingsModalMessage::Close => {
 				*self = SettingsModal::Closed;
-				Command::none()
+				Task::none()
 			},
 
-			SettingsModalMessage::BrowseSynchronizationFilepath => Command::perform(
+			SettingsModalMessage::BrowseSynchronizationFilepath => Task::perform(
 				Database::export_file_dialog(),
 				|filepath| {
 					match filepath {
@@ -186,9 +186,9 @@ impl SettingsModal {
 					}
 				}
 			),
-			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => Command::none(),
+			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => Task::none(),
 
-			SettingsModalMessage::ImportGoogleTasksFileDialog => Command::perform(
+			SettingsModalMessage::ImportGoogleTasksFileDialog => Task::perform(
 				import_google_tasks_dialog(),
 				move |result| {
 					match result {
@@ -207,14 +207,14 @@ impl SettingsModal {
 					}
 				}
 			),
-			SettingsModalMessage::ImportGoogleTasksFileDialogCanceled => Command::none(),
+			SettingsModalMessage::ImportGoogleTasksFileDialogCanceled => Task::none(),
 
 			SettingsModalMessage::SetDateFormatting(date_formatting) => {
 				if let Some(preferences) = preferences {
 					preferences.update(PreferenceMessage::SetDateFormatting(date_formatting))
 				}
 				else {
-					Command::none()
+					Task::none()
 				}
 			},
 
@@ -222,12 +222,12 @@ impl SettingsModal {
 				if let SettingsModal::Opened { tab } = self {
 					*tab = new_tab;
 				}
-				Command::none()
+				Task::none()
 			},
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<(Element<UiMessage>, ModalStyles)> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<UiMessage>> {
 		match self {
 			SettingsModal::Closed => None,
 			SettingsModal::Opened{ tab } => {
@@ -240,7 +240,7 @@ impl SettingsModal {
 					.spacing(SMALL_SPACING_AMOUNT)
 					.padding(Padding{ right: PADDING_AMOUNT, ..Padding::ZERO });
 
-					Some((
+					Some(
 						card(
 							text("Settings").size(HEADING_TEXT_SIZE),
 
@@ -253,20 +253,18 @@ impl SettingsModal {
 								container(
 									tab.view(app, preferences)
 								)
-								.width(Length::Fill)
-								.center_x()
+								.width(Fill)
+								.center_x(Fill)
 								.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
 							]
 						)
 						.max_width(900.0)
 						.max_height(400.0)
 						.close_size(LARGE_TEXT_SIZE)
-						.style(CardStyles::custom(ModalCardStyle))
+						.style(card_style)
 						.on_close(SettingsModalMessage::Close.into())
-						.into(),
-
-						ModalStyles::custom(ModalStyle)
-					))
+						.into()
+					)
 				}
 				else {
 					None

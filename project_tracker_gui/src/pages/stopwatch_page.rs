@@ -1,5 +1,5 @@
 use std::time::{Duration, Instant};
-use iced::{alignment::Horizontal, widget::{canvas, column, row, container, text}, window, Alignment, Element, Font, Length, Subscription};
+use iced::{alignment::Horizontal, widget::{canvas, column, container, row, text}, window, Alignment, Element, Font, Length::{self, Fill}, Subscription};
 use notify_rust::{Hint, Notification};
 use crate::{components::{pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, ProjectId, TaskId}, project_tracker::UiMessage, styles::LARGE_SPACING_AMOUNT};
 
@@ -137,7 +137,7 @@ impl StopwatchPage {
 		}
 	}
 
-	pub fn view(&self, database: &Option<Database>) -> Element<UiMessage> {
+	pub fn view<'a>(&'a self, database: &'a Option<Database>) -> Element<'a, UiMessage> {
 		container(
 			match self {
 				StopwatchPage::Idle => {
@@ -146,7 +146,7 @@ impl StopwatchPage {
 
 						start_timer_button()
 					]
-					.align_items(Alignment::Center)
+					.align_x(Alignment::Center)
 					.spacing(LARGE_SPACING_AMOUNT)
 				},
 				StopwatchPage::Ticking { elapsed_time, task, clock, paused, .. } => {
@@ -167,7 +167,7 @@ impl StopwatchPage {
 							.font(Font::DEFAULT)
 							.size(90)
 							.width(Length::Fill)
-							.horizontal_alignment(Horizontal::Center)
+							.align_x(Horizontal::Center)
 							.into()
 					};
 
@@ -188,15 +188,15 @@ impl StopwatchPage {
 					.push_maybe(
 						task.map(|task| text(&task.name))
 					)
-					.align_items(Alignment::Center)
+					.align_x(Alignment::Center)
 					.spacing(LARGE_SPACING_AMOUNT)
 				},
 			}
 		)
-		.width(Length::Fill)
-		.height(Length::Fill)
-		.center_x()
-		.center_y()
+		.width(Fill)
+		.height(Fill)
+		.center_x(Fill)
+		.center_y(Fill)
 		.into()
 	}
 }

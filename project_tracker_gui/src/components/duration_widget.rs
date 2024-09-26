@@ -1,7 +1,7 @@
 use std::{borrow::Cow, time::Duration};
 use pretty_duration::{pretty_duration, PrettyDurationLabels, PrettyDurationOptions};
-use iced::{theme, widget::{container, text, Text}, Element};
-use crate::{project_tracker::UiMessage, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING}};
+use iced::{widget::{container, text, Text}, Element};
+use crate::{project_tracker::UiMessage, styles::{rounded_container_style, SMALL_HORIZONTAL_PADDING}};
 
 pub fn duration_text(duration: Cow<'_, Duration>) -> Text {
 	text(
@@ -34,6 +34,6 @@ pub fn duration_widget(duration: Cow<'_, Duration>) -> Element<'_, UiMessage> {
 		duration_text(duration)
 	)
 	.padding(SMALL_HORIZONTAL_PADDING)
-	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+	.style(rounded_container_style)
 	.into()
 }

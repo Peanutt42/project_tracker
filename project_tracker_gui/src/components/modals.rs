@@ -1,6 +1,6 @@
-use iced::{alignment::Horizontal, theme, widget::{button, row, text}, Element, Length};
-use iced_aw::{card, CardStyles, ModalStyles};
-use crate::{components::{copy_to_clipboard_button, confirm_ok_button, confirm_cancel_button}, project_tracker::UiMessage, styles::{DangerousButtonStyle, ModalCardStyle, ModalStyle, SPACING_AMOUNT}};
+use iced::{alignment::Horizontal, widget::{button, row, text}, Element, Length};
+use iced_aw::card;
+use crate::{components::{confirm_cancel_button, confirm_ok_button, copy_to_clipboard_button}, project_tracker::UiMessage, styles::{card_style, dangerous_button_style, SPACING_AMOUNT}};
 
 #[derive(Clone, Debug)]
 pub enum ConfirmModalMessage {
@@ -46,11 +46,11 @@ impl ConfirmModal {
 		}
 	}
 
-	pub fn view(&self) -> Option<(Element<'static, UiMessage>, ModalStyles)> {
+	pub fn view(&self) -> Option<Element<UiMessage>> {
 		match self {
 			ConfirmModal::Closed => None,
 			ConfirmModal::Opened { title, on_confirmed } => {
-				Some((
+				Some(
 					card(
 						text(title),
 						row![
@@ -60,11 +60,9 @@ impl ConfirmModal {
 						.spacing(SPACING_AMOUNT)
 					)
 					.max_width(300.0)
-					.style(CardStyles::custom(ModalCardStyle))
-					.into(),
-
-					ModalStyles::custom(ModalStyle)
-				))
+					.style(card_style)
+					.into()
+				)
 			},
 		}
 	}
@@ -108,31 +106,29 @@ impl ErrorMsgModal {
 		}
 	}
 
-	pub fn view(&self) -> Option<(Element<'static, UiMessage>, ModalStyles)> {
+	pub fn view(&self) -> Option<Element<UiMessage>> {
 		match self {
 			ErrorMsgModal::Open { error_msg } => {
-				Some((
+				Some(
 					card(
 						text(error_msg),
 						row![
 							button(
 								text("Ok")
-									.horizontal_alignment(Horizontal::Center)
+									.align_x(Horizontal::Center)
 									.width(Length::Fill)
 							)
 							.width(Length::Fill)
-							.style(theme::Button::custom(DangerousButtonStyle))
+							.style(dangerous_button_style)
 							.on_press(ErrorMsgModalMessage::Close.into()),
 
 							copy_to_clipboard_button(error_msg.clone()),
 						]
 					)
 					.max_width(500.0)
-					.style(CardStyles::custom(ModalCardStyle))
-					.into(),
-
-					ModalStyles::custom(ModalStyle)
-				))
+					.style(card_style)
+					.into()
+				)
 			},
 			ErrorMsgModal::Closed => None,
 		}

@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
-use iced::{theme, widget::{container, text, Text}, Element};
+use iced::{widget::{container, text, Text}, Element};
 use iced_aw::date_picker::Date;
-use crate::{core::{DateFormatting, SerializableDate}, project_tracker::UiMessage, styles::{RoundedContainerStyle, SMALL_HORIZONTAL_PADDING}};
+use crate::{core::{DateFormatting, SerializableDate}, project_tracker::UiMessage, styles::{rounded_container_style, SMALL_HORIZONTAL_PADDING}};
 
 pub fn date_text(date: &SerializableDate, formatting: DateFormatting) -> Text<'static> {
 	text(formatting.format(date))
@@ -29,6 +29,6 @@ pub fn days_left_widget(date: SerializableDate) -> Element<'static, UiMessage> {
 		}
 	)
 	.padding(SMALL_HORIZONTAL_PADDING)
-	.style(theme::Container::Custom(Box::new(RoundedContainerStyle)))
+	.style(rounded_container_style)
 	.into()
 }

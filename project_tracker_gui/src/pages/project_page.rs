@@ -1,5 +1,5 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, time::Instant};
-use iced::{alignment::{Alignment, Horizontal}, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row, Space}, Color, Command, Element, Length, Padding, Point, Subscription};
+use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row, Space}, Color, Element, Length, Padding, Point, Subscription};
 use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
@@ -8,7 +8,7 @@ use crate::{
 	components::{cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, delete_project_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING, TASK_LIST_ID},
 	core::{generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
 	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{TextInputStyle, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	styles::{text_input_style_default, text_input_style_only_round_left, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -196,7 +196,7 @@ impl ProjectPage {
 }
 
 impl ProjectPage {
-	pub fn update(&mut self, message: ProjectPageMessage, database: &mut Option<Database>, preference: &Option<Preferences>) -> Command<UiMessage> {
+	pub fn update(&mut self, message: ProjectPageMessage, database: &mut Option<Database>, preference: &Option<Preferences>) -> iced::Task<UiMessage> {
 		let command = match message {
 			ProjectPageMessage::OpenCreateNewTask => {
 				self.create_new_task = Some((String::new(), HashSet::new()));
@@ -226,18 +226,18 @@ impl ProjectPage {
 						})
 						.unwrap_or(1.0)
 				};
-				Command::batch([
+				iced::Task::batch([
 					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
 					scrollable::snap_to(TASK_LIST_ID.clone(), RelativeOffset{ x: 0.0, y: create_new_task_element_relative_y_offset }),
 					self.update(ProjectPageMessage::StopEditingTask, database, preference),
 				])
 			},
-			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task = None; Command::none() },
+			ProjectPageMessage::CloseCreateNewTask => { self.create_new_task = None; iced::Task::none() },
 			ProjectPageMessage::ChangeCreateNewTaskName(new_task_name) => {
 				if let Some((create_new_task_name, _create_new_task_tags)) = &mut self.create_new_task {
 					*create_new_task_name = new_task_name;
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::ToggleCreateNewTaskTag(tag_id) => {
 				if let Some((_create_new_task_name, create_new_task_tags)) = &mut self.create_new_task {
@@ -248,7 +248,7 @@ impl ProjectPage {
 						create_new_task_tags.insert(tag_id);
 					}
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::CreateNewTask => {
 				if let Some((create_new_task_name, create_new_task_tags)) = &mut self.create_new_task {
@@ -256,17 +256,17 @@ impl ProjectPage {
 						let previous_project_progress = db
 							.get_project(&self.project_id)
 							.map(Project::get_completion_percentage);
-						return Command::batch([
-							db.update(DatabaseMessage::CreateTask {
-								project_id: self.project_id,
-								task_id: generate_task_id(),
-								task_name: std::mem::take(create_new_task_name),
-								task_tags: std::mem::take(create_new_task_tags),
-								create_at_top: preference
-									.as_ref()
-									.map(|pref| pref.create_new_tasks_at_top())
-									.unwrap_or(true),
-							}),
+						db.update(DatabaseMessage::CreateTask {
+							project_id: self.project_id,
+							task_id: generate_task_id(),
+							task_name: std::mem::take(create_new_task_name),
+							task_tags: std::mem::take(create_new_task_tags),
+							create_at_top: preference
+								.as_ref()
+								.map(|pref| pref.create_new_tasks_at_top())
+								.unwrap_or(true),
+						});
+						return iced::Task::batch([
 							self.update(ProjectPageMessage::StartProgressbarAnimation {
 								start_percentage: previous_project_progress.unwrap_or(0.0),
 								target_percentage: db
@@ -293,17 +293,17 @@ impl ProjectPage {
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::ChangeSearchTasksFilter(new_filter) => {
 				self.search_tasks_filter = Some(new_filter);
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}
-				Command::none()
+				iced::Task::none()
 			},
 
-			ProjectPageMessage::ImportSourceCodeTodosDialog => Command::perform(
+			ProjectPageMessage::ImportSourceCodeTodosDialog => iced::Task::perform(
 				Self::pick_todo_source_folders_dialog(),
 				|folders| {
 					if let Some(folders) = folders {
@@ -313,7 +313,7 @@ impl ProjectPage {
 						ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into()
 					}
 				}),
-			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => Command::none(),
+			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => iced::Task::none(),
 			ProjectPageMessage::ImportSourceCodeTodos(todos) => {
 				if let Some(database) = database {
 					database.modify(|projects| {
@@ -325,12 +325,12 @@ impl ProjectPage {
 						}
 					})
 				}
-				Command::none()
+				iced::Task::none()
 			},
 
-			ProjectPageMessage::ShowSourceCodeTodos(show) => { self.show_source_code_todos = show; Command::none() },
+			ProjectPageMessage::ShowSourceCodeTodos(show) => { self.show_source_code_todos = show; iced::Task::none() },
 
-			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; Command::none() },
+			ProjectPageMessage::ShowDoneTasks(show) => { self.show_done_tasks = show; iced::Task::none() },
 
 			ProjectPageMessage::ToggleFilterTaskTag(task_tag_id) => {
 				if self.filter_task_tags.contains(&task_tag_id) {
@@ -342,18 +342,18 @@ impl ProjectPage {
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::UnsetFilterTaskTag(task_tag_id) => {
 				self.filter_task_tags.remove(&task_tag_id);
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}
-				Command::none()
+				iced::Task::none()
 			},
 
-			ProjectPageMessage::ShowColorPicker => { self.show_color_picker = true; Command::none() },
-			ProjectPageMessage::HideColorPicker => { self.show_color_picker = false; Command::none() },
+			ProjectPageMessage::ShowColorPicker => { self.show_color_picker = true; iced::Task::none() },
+			ProjectPageMessage::HideColorPicker => { self.show_color_picker = false; iced::Task::none() },
 
 			ProjectPageMessage::EditProjectName => {
 				let project_name = database.as_ref()
@@ -365,18 +365,16 @@ impl ProjectPage {
 				self.edited_project_name = Some(project_name);
 				text_input::focus(PROJECT_NAME_TEXT_INPUT_ID.clone())
 			},
-			ProjectPageMessage::ChangeEditedProjectName(edited_name) => { self.edited_project_name = Some(edited_name); Command::none() },
-			ProjectPageMessage::StopEditingProjectName => { self.edited_project_name = None; Command::none() },
+			ProjectPageMessage::ChangeEditedProjectName(edited_name) => { self.edited_project_name = Some(edited_name); iced::Task::none() },
+			ProjectPageMessage::StopEditingProjectName => { self.edited_project_name = None; iced::Task::none() },
 			ProjectPageMessage::ChangeProjectName => {
 				if let Some(db) = database {
 					if let Some(edited_project_name) = &mut self.edited_project_name {
-						return Command::batch([
-							db.update(DatabaseMessage::ChangeProjectName {
-								project_id: self.project_id,
-								new_name: std::mem::take(edited_project_name)
-							}),
-							self.update(ProjectPageMessage::StopEditingProjectName, database, preference)
-						]);
+						db.update(DatabaseMessage::ChangeProjectName {
+							project_id: self.project_id,
+							new_name: std::mem::take(edited_project_name)
+						});
+						return self.update(ProjectPageMessage::StopEditingProjectName, database, preference);
 					}
 				}
 				self.update(ProjectPageMessage::StopEditingProjectName, database, preference)
@@ -391,14 +389,17 @@ impl ProjectPage {
 				self.edited_task = Some(EditTaskState::new(task_id, text_editor::Content::with_text(&task_name)));
 				self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
 			},
-			ProjectPageMessage::StopEditingTask => { self.edited_task = None; Command::none() },
+			ProjectPageMessage::StopEditingTask => {
+				self.edited_task = None;
+				iced::Task::none()
+			},
 			ProjectPageMessage::TaskNameAction(action) => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					let is_edit = action.is_edit();
 					edit_task_state.new_name.perform(action);
 					if is_edit {
 						if let Some(database) = database {
-							return database.update(DatabaseMessage::ChangeTaskName {
+							database.update(DatabaseMessage::ChangeTaskName {
 								project_id: self.project_id,
 								task_id: edit_task_state.task_id,
 								new_task_name: edit_task_state.new_name.text()
@@ -406,19 +407,19 @@ impl ProjectPage {
 						}
 					}
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::ToggleTaskTag(task_tag_id) => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					if let Some(database) = database {
-						return database.update(DatabaseMessage::ToggleTaskTag {
+						database.update(DatabaseMessage::ToggleTaskTag {
 							project_id: self.project_id,
 							task_id: edit_task_state.task_id,
 							task_tag_id
 						});
 					}
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::EditTaskNeededTime => {
 				if let Some(edit_task_state) = &mut self.edited_task {
@@ -435,22 +436,22 @@ impl ProjectPage {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					edit_task_state.new_needed_time_minutes = None;
 					if let Some(database) = database {
-						return database.update(DatabaseMessage::ChangeTaskNeededTime {
+						database.update(DatabaseMessage::ChangeTaskNeededTime {
 							project_id: self.project_id,
 							task_id: edit_task_state.task_id,
 							new_needed_time_minutes: None,
 						});
 					}
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::ChangeNewTaskNeededTimeInput(new_needed_time_minutes) => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					edit_task_state.new_needed_time_minutes = Some(new_needed_time_minutes);
 				}
-				Command::none()
+				iced::Task::none()
 			},
-			ProjectPageMessage::InvalidNeededTimeInput => Command::none(),
+			ProjectPageMessage::InvalidNeededTimeInput => iced::Task::none(),
 			ProjectPageMessage::ChangeTaskNeededTime => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					if let Some(new_needed_time_minutes) = edit_task_state.new_needed_time_minutes {
@@ -466,7 +467,7 @@ impl ProjectPage {
 					}
 					edit_task_state.new_needed_time_minutes = None;
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::EditTaskDueDate => {
 				if let Some(edit_task_state) = &mut self.edited_task {
@@ -478,33 +479,33 @@ impl ProjectPage {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					edit_task_state.edit_due_date = false;
 					if let Some(database) = database {
-						return database.update(DatabaseMessage::ChangeTaskDueDate {
+						database.update(DatabaseMessage::ChangeTaskDueDate {
 							project_id: self.project_id,
 							task_id: edit_task_state.task_id,
 							new_due_date: new_due_date.into()
 						});
 					}
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::ClearTaskDueDate => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					edit_task_state.edit_due_date = false;
 					if let Some(database) = database {
-						return database.update(DatabaseMessage::ChangeTaskDueDate {
+						database.update(DatabaseMessage::ChangeTaskDueDate {
 							project_id: self.project_id,
 							task_id: edit_task_state.task_id,
 							new_due_date: None,
 						});
 					}
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::StopEditingTaskDueDate => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					edit_task_state.edit_due_date = false;
 				}
-				Command::none()
+				iced::Task::none()
 			},
 
 			ProjectPageMessage::DragTask{ task_id, point } => {
@@ -518,17 +519,17 @@ impl ProjectPage {
 					self.start_dragging_point = Some(point);
 					self.just_minimal_dragging = true;
 				}
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::CancelDragTask => {
 				self.dragged_task = None;
 				self.start_dragging_point = None;
 				self.just_minimal_dragging = true;
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::PressTask(task_id) => {
 				self.pressed_task = Some(task_id);
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::LeftClickReleased => {
 				let command = if self.just_minimal_dragging {
@@ -536,11 +537,11 @@ impl ProjectPage {
 						self.update(ProjectPageMessage::EditTask(*pressed_task), database, preference)
 					}
 					else {
-						Command::none()
+						iced::Task::none()
 					}
 				}
 				else {
-					Command::none()
+					iced::Task::none()
 				};
 				self.pressed_task = None;
 				self.dragged_task = None;
@@ -551,11 +552,11 @@ impl ProjectPage {
 
 			ProjectPageMessage::StartProgressbarAnimation { start_percentage, target_percentage } => {
 				self.progressbar_animation = ScalarAnimation::start(start_percentage, target_percentage, 0.125);
-				Command::none()
+				iced::Task::none()
 			},
 			ProjectPageMessage::AnimateProgressbar => {
 				self.progressbar_animation.update();
-				Command::none()
+				iced::Task::none()
 			},
 		};
 
@@ -608,7 +609,7 @@ impl ProjectPage {
 		}
 	}
 
-	fn project_details_view(&self, project_id: ProjectId, project: &Project) -> Element<UiMessage> {
+	fn project_details_view<'a>(&'a self, project_id: ProjectId, project: &'a Project) -> Element<'a, UiMessage> {
 		let project_name : Element<UiMessage> = if let Some(edited_project_name) = &self.edited_project_name {
 			unfocusable(
 				text_input("New project name", edited_project_name)
@@ -616,7 +617,7 @@ impl ProjectPage {
 					.size(TITLE_TEXT_SIZE)
 					.on_input(|edited_name| ProjectPageMessage::ChangeEditedProjectName(edited_name).into())
 					.on_submit(ProjectPageMessage::ChangeProjectName.into())
-					.style(theme::TextInput::Custom(Box::new(TextInputStyle::default()))),
+					.style(text_input_style_default),
 
 				ProjectPageMessage::StopEditingProjectName.into()
 			)
@@ -629,7 +630,7 @@ impl ProjectPage {
 				edit_project_name_button(),
 			]
 			.spacing(SPACING_AMOUNT)
-			.align_items(Alignment::Center)
+			.align_y(Alignment::Center)
 			.into()
 		};
 
@@ -668,7 +669,7 @@ impl ProjectPage {
 						side: text_input::Side::Left,
 					})
 					.on_input(|new_search_filter| ProjectPageMessage::ChangeSearchTasksFilter(new_search_filter).into())
-					.style(theme::TextInput::Custom(Box::new(TextInputStyle::ONLY_ROUND_LEFT))),
+					.style(text_input_style_only_round_left),
 
 					ProjectPageMessage::CloseSearchTasks.into()
 				),
@@ -715,7 +716,7 @@ impl ProjectPage {
 					}
 				]
 				.spacing(SPACING_AMOUNT)
-				.align_items(Alignment::Center)
+				.align_y(Alignment::Center)
 			]
 			.push_maybe(if self.show_color_picker {
 				Some(color_palette(project.color.into(), move |c: Color| DatabaseMessage::ChangeProjectColor{ project_id, new_color: c.into() }.into()))
@@ -738,7 +739,7 @@ impl ProjectPage {
 				.width(Length::Fill),
 			]
 			.spacing(SPACING_AMOUNT)
-			.align_items(Alignment::Center),
+			.align_y(Alignment::Center),
 
 			row![
 				text(
@@ -756,7 +757,7 @@ impl ProjectPage {
 					.align_x(Horizontal::Right),
 			]
 			.width(Length::Fill)
-			.align_items(Alignment::Center),
+			.align_y(Alignment::Center),
 
 			spacer(),
 

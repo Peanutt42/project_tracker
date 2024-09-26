@@ -1,7 +1,6 @@
 use std::collections::{HashSet, HashMap};
 use std::path::PathBuf;
 use std::time::Instant;
-use iced::Command;
 use serde::{Deserialize, Serialize};
 use crate::project_tracker::UiMessage;
 use crate::core::{OrderedHashMap, ProjectId, Project, SerializableColor, TaskId, Task, TaskType, TaskTagId, TaskTag, SerializableDate};
@@ -194,237 +193,165 @@ impl Database {
 		self.last_changed_time > self.last_saved_time
 	}
 
-	pub fn update(&mut self, message: DatabaseMessage) -> Command<UiMessage> {
+	pub fn update(&mut self, message: DatabaseMessage) {
 		match message {
-			DatabaseMessage::Clear => { *self = Self::default(); self.modified(); Command::none() },
+			DatabaseMessage::Clear => { *self = Self::default(); self.modified(); },
 
-			DatabaseMessage::ImportProjects(new_projects) => {
-				self.modify(|projects| {
-					projects.reserve(new_projects.len());
-					for new_project in new_projects {
-						projects.insert(ProjectId::generate(), new_project);
-					}
-				});
-				Command::none()
-			},
+			DatabaseMessage::ImportProjects(new_projects) => self.modify(|projects| {
+				projects.reserve(new_projects.len());
+				for new_project in new_projects {
+					projects.insert(ProjectId::generate(), new_project);
+				}
+			}),
 
-			DatabaseMessage::CreateProject { project_id, name, color } => {
-				self.modify(|projects| {
-					projects.insert(project_id, Project::new(name, color));
-				});
-				Command::none()
-			},
-			DatabaseMessage::ChangeProjectName { project_id, new_name } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.name = new_name;
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::ChangeProjectColor { project_id, new_color } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.color = new_color;
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::MoveProjectUp(project_id) => {
-				self.modify(|projects| projects.move_up(&project_id));
-				Command::none()
-			},
-			DatabaseMessage::MoveProjectDown(project_id) => {
-				self.modify(|projects| projects.move_down(&project_id));
-				Command::none()
-			},
-			DatabaseMessage::MoveTaskBeforeOtherTask { project_id, task_id, other_task_id } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.todo_tasks.move_before_other(task_id, other_task_id);
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::MoveProjectBeforeOtherProject { project_id, other_project_id } => {
-				self.modify(|projects| {
-					projects.move_before_other(project_id, other_project_id);
-				});
-				Command::none()
-			},
-			DatabaseMessage::MoveProjectToEnd(project_id) => {
-				self.modify(|projects| {
-					projects.move_to_end(&project_id);
-				});
-				Command::none()
-			}
-			DatabaseMessage::DeleteProject(project_id) => {
-				self.modify(|projects| { projects.remove(&project_id); });
-				Command::none()
-			},
-			DatabaseMessage::DeleteDoneTasks(project_id) => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.done_tasks.clear();
-					}
-				});
-				Command::none()
-			},
+			DatabaseMessage::CreateProject { project_id, name, color } => self.modify(|projects| {
+				projects.insert(project_id, Project::new(name, color));
+			}),
+			DatabaseMessage::ChangeProjectName { project_id, new_name } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.name = new_name;
+				}
+			}),
+			DatabaseMessage::ChangeProjectColor { project_id, new_color } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.color = new_color;
+				}
+			}),
+			DatabaseMessage::MoveProjectUp(project_id) => self.modify(|projects| projects.move_up(&project_id)),
+			DatabaseMessage::MoveProjectDown(project_id) => self.modify(|projects| projects.move_down(&project_id)),
+			DatabaseMessage::MoveTaskBeforeOtherTask { project_id, task_id, other_task_id } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.todo_tasks.move_before_other(task_id, other_task_id);
+				}
+			}),
+			DatabaseMessage::MoveProjectBeforeOtherProject { project_id, other_project_id } => self.modify(|projects| {
+				projects.move_before_other(project_id, other_project_id);
+			}),
+			DatabaseMessage::MoveProjectToEnd(project_id) => self.modify(|projects| {
+				projects.move_to_end(&project_id);
+			}),
+			DatabaseMessage::DeleteProject(project_id) => self.modify(|projects| { projects.remove(&project_id); }),
+			DatabaseMessage::DeleteDoneTasks(project_id) => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.done_tasks.clear();
+				}
+			}),
 
-			DatabaseMessage::MoveTask { task_id, src_project_id, dst_project_id } => {
-				self.modify(|projects| {
-					let removed_task: Option<(TaskType, Task)> = projects
-						.get_mut(&src_project_id)
-						.map(|src_project| src_project.remove_task(&task_id))
-						.unwrap_or(None);
+			DatabaseMessage::MoveTask { task_id, src_project_id, dst_project_id } => self.modify(|projects| {
+				let removed_task: Option<(TaskType, Task)> = projects
+					.get_mut(&src_project_id)
+					.map(|src_project| src_project.remove_task(&task_id))
+					.unwrap_or(None);
 
-					if let Some((task_type, task)) = removed_task {
-						let missing_tags = projects
-							.get(&dst_project_id)
-							.and_then(|dst_project| {
-								projects.get(&src_project_id)
-									.map(|src_project| {
-										let mut missing_tag_ids = HashMap::new();
-										for tag_id in task.tags.iter() {
-											if !dst_project.task_tags.contains_key(tag_id) {
-												if let Some(tag) = src_project.task_tags.get(tag_id) {
-													missing_tag_ids.insert(*tag_id, tag.clone());
-												}
+				if let Some((task_type, task)) = removed_task {
+					let missing_tags = projects
+						.get(&dst_project_id)
+						.and_then(|dst_project| {
+							projects.get(&src_project_id)
+								.map(|src_project| {
+									let mut missing_tag_ids = HashMap::new();
+									for tag_id in task.tags.iter() {
+										if !dst_project.task_tags.contains_key(tag_id) {
+											if let Some(tag) = src_project.task_tags.get(tag_id) {
+												missing_tag_ids.insert(*tag_id, tag.clone());
 											}
 										}
-										missing_tag_ids
-									})
-							}
-						)
-						.unwrap_or_default();
+									}
+									missing_tag_ids
+								})
+						}
+					)
+					.unwrap_or_default();
 
-						if let Some(dst_project) = projects.get_mut(&dst_project_id) {
-							for (tag_id, tag) in missing_tags {
-								dst_project.task_tags.insert(tag_id, tag);
-							}
+					if let Some(dst_project) = projects.get_mut(&dst_project_id) {
+						for (tag_id, tag) in missing_tags {
+							dst_project.task_tags.insert(tag_id, tag);
+						}
 
-							match task_type {
-								TaskType::Todo => dst_project.todo_tasks.insert(task_id, task),
-								TaskType::Done => { let _ = dst_project.done_tasks.insert(task_id, task); },
-								TaskType::SourceCodeTodo => { let _ = dst_project.source_code_todos.insert(task_id, task); },
-							}
+						match task_type {
+							TaskType::Todo => dst_project.todo_tasks.insert(task_id, task),
+							TaskType::Done => { let _ = dst_project.done_tasks.insert(task_id, task); },
+							TaskType::SourceCodeTodo => { let _ = dst_project.source_code_todos.insert(task_id, task); },
 						}
 					}
-				});
-				Command::none()
-			},
+				}
+			}),
 
-			DatabaseMessage::CreateTask { project_id, task_id, task_name, task_tags, create_at_top } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.add_task(task_id, task_name, task_tags, create_at_top);
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::ChangeTaskName { project_id, task_id, new_task_name } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.set_task_name(task_id, new_task_name);
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::SetTaskTodo { project_id, task_id } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.set_task_todo(task_id);
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::SetTaskDone { project_id, task_id } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.set_task_done(task_id);
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::ChangeTaskNeededTime { project_id, task_id, new_needed_time_minutes } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.set_task_needed_time(task_id, new_needed_time_minutes);
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::ChangeTaskDueDate { project_id, task_id, new_due_date } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.set_task_due_date(task_id, new_due_date);
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::ToggleTaskTag { project_id, task_id, task_tag_id } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.toggle_task_tag(task_id, task_tag_id);
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::DeleteTask { project_id, task_id } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.remove_task(&task_id);
-					}
-				});
-				Command::none()
-			},
+			DatabaseMessage::CreateTask { project_id, task_id, task_name, task_tags, create_at_top } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.add_task(task_id, task_name, task_tags, create_at_top);
+				}
+			}),
+			DatabaseMessage::ChangeTaskName { project_id, task_id, new_task_name } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.set_task_name(task_id, new_task_name);
+				}
+			}),
+			DatabaseMessage::SetTaskTodo { project_id, task_id } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.set_task_todo(task_id);
+				}
+			}),
+			DatabaseMessage::SetTaskDone { project_id, task_id } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.set_task_done(task_id);
+				}
+			}),
+			DatabaseMessage::ChangeTaskNeededTime { project_id, task_id, new_needed_time_minutes } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.set_task_needed_time(task_id, new_needed_time_minutes);
+				}
+			}),
+			DatabaseMessage::ChangeTaskDueDate { project_id, task_id, new_due_date } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.set_task_due_date(task_id, new_due_date);
+				}
+			}),
+			DatabaseMessage::ToggleTaskTag { project_id, task_id, task_tag_id } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.toggle_task_tag(task_id, task_tag_id);
+				}
+			}),
+			DatabaseMessage::DeleteTask { project_id, task_id } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.remove_task(&task_id);
+				}
+			}),
 
-			DatabaseMessage::CreateTaskTag { project_id, task_tag_id, task_tag } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.task_tags.insert(task_tag_id, task_tag);
+			DatabaseMessage::CreateTaskTag { project_id, task_tag_id, task_tag } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.task_tags.insert(task_tag_id, task_tag);
+				}
+			}),
+			DatabaseMessage::ChangeTaskTagColor { project_id, task_tag_id, new_color } => self.modify(|projects| {
+				if let Some(tag) = projects.get_mut(&project_id)
+					.and_then(|project| {
+						project.task_tags.get_mut(&task_tag_id)
+					})
+				{
+					tag.color = new_color;
+				}
+			}),
+			DatabaseMessage::ChangeTaskTagName { project_id, task_tag_id, new_name } => self.modify(|projects| {
+				if let Some(tag) = projects.get_mut(&project_id)
+					.and_then(|project| {
+						project.task_tags.get_mut(&task_tag_id)
+					})
+				{
+					tag.name = new_name;
+				}
+			}),
+			DatabaseMessage::DeleteTaskTag { project_id, task_tag_id } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.task_tags.remove(&task_tag_id);
+					for task in project.todo_tasks.values_mut() {
+						task.tags.remove(&task_tag_id);
 					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::ChangeTaskTagColor { project_id, task_tag_id, new_color } => {
-				self.modify(|projects| {
-					if let Some(tag) = projects.get_mut(&project_id)
-						.and_then(|project| {
-							project.task_tags.get_mut(&task_tag_id)
-						})
-					{
-						tag.color = new_color;
+					for task in project.done_tasks.values_mut() {
+						task.tags.remove(&task_tag_id);
 					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::ChangeTaskTagName { project_id, task_tag_id, new_name } => {
-				self.modify(|projects| {
-					if let Some(tag) = projects.get_mut(&project_id)
-						.and_then(|project| {
-							project.task_tags.get_mut(&task_tag_id)
-						})
-					{
-						tag.name = new_name;
-					}
-				});
-				Command::none()
-			},
-			DatabaseMessage::DeleteTaskTag { project_id, task_tag_id } => {
-				self.modify(|projects| {
-					if let Some(project) = projects.get_mut(&project_id) {
-						project.task_tags.remove(&task_tag_id);
-						for task in project.todo_tasks.values_mut() {
-							task.tags.remove(&task_tag_id);
-						}
-						for task in project.done_tasks.values_mut() {
-							task.tags.remove(&task_tag_id);
-						}
-					}
-				});
-				Command::none()
-			},
+				}
+			}),
 		}
 	}
 

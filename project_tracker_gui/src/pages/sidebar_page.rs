@@ -1,9 +1,9 @@
-use iced::{advanced::widget::Id, alignment::Horizontal, theme, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Command, Element, Length, Padding, Point, Rectangle};
+use iced::{advanced::widget::Id, alignment::Horizontal, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Task, Element, Length, Padding, Point, Rectangle};
 use iced_drop::{find_zones, zones_on_point};
 use once_cell::sync::Lazy;
-use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, TaskId}, pages::StopwatchPageMessage, project_tracker::UiMessage, styles::{MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
+use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, TaskId}, pages::StopwatchPageMessage, project_tracker::UiMessage, styles::{text_input_style_default, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
 use crate::components::{create_new_project_button, loading_screen, stopwatch_button, project_preview, custom_project_preview, settings_button, toggle_sidebar_button};
-use crate::styles::{TextInputStyle, LARGE_TEXT_SIZE, SPACING_AMOUNT};
+use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::pages::StopwatchPage;
 use crate::core::{OrderedHashMap, ProjectId, Project};
@@ -104,7 +104,7 @@ impl SidebarPage {
 		}
 	}
 
-	pub fn snap_to_project(&mut self, project_order: usize, database: &Database) -> Command<UiMessage> {
+	pub fn snap_to_project(&mut self, project_order: usize, database: &Database) -> Task<UiMessage> {
 		scrollable::snap_to(
 			SCROLLABLE_ID.clone(),
 			RelativeOffset {
@@ -130,82 +130,79 @@ impl SidebarPage {
 		project_id_to_select
 	}
 
-	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>, stopwatch_page: &mut StopwatchPage, is_theme_dark: bool) -> Command<UiMessage> {
+	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>, stopwatch_page: &mut StopwatchPage, is_theme_dark: bool) -> Task<UiMessage> {
 		match message {
 			SidebarPageMessage::OpenCreateNewProject => {
 				self.create_new_project_name = Some(String::new());
-				Command::batch([
+				Task::batch([
 					text_input::focus(TEXT_INPUT_ID.clone()),
 					scrollable::snap_to(SCROLLABLE_ID.clone(), RelativeOffset::END),
 				])
 			},
-			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; Command::none() },
-			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Command::none() },
+			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; Task::none() },
+			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Task::none() },
 			SidebarPageMessage::CreateNewProject(project_id) => {
 				if let Some(db) = database {
 					if let Some(create_new_project_name) = &mut self.create_new_project_name {
-						return Command::batch([
-							db.update(DatabaseMessage::CreateProject {
-								project_id,
-								name: std::mem::take(create_new_project_name),
-								color: get_new_project_color(is_theme_dark).into(),
-							}),
-							self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, is_theme_dark)
-						]);
+						db.update(DatabaseMessage::CreateProject {
+							project_id,
+							name: std::mem::take(create_new_project_name),
+							color: get_new_project_color(is_theme_dark).into(),
+						});
+						return self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, is_theme_dark);
 					}
 				}
 				self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, is_theme_dark)
 			},
 
 			SidebarPageMessage::DropTask { project_id, task_id, .. } => {
-				let command = self.task_dropzone_hovered
-					.and_then(|hovered_task_dropzone| {
-						match hovered_task_dropzone {
-							TaskDropzone::Project(hovered_project_id) => {
-								let src_project_id = project_id;
-								database.as_mut().map(|db| db.update(DatabaseMessage::MoveTask {
+				if let Some(hovered_task_dropzone) = self.task_dropzone_hovered {
+					match hovered_task_dropzone {
+						TaskDropzone::Project(hovered_project_id) => {
+							let src_project_id = project_id;
+							if let Some(database) = database {
+								database.update(DatabaseMessage::MoveTask {
 									task_id,
 									src_project_id,
 									dst_project_id: hovered_project_id
-								}))
-							},
-							TaskDropzone::Task(hovered_task_id) => {
-								database.as_mut().map(|db| db.update(DatabaseMessage::MoveTaskBeforeOtherTask {
+								});
+							}
+						},
+						TaskDropzone::Task(hovered_task_id) => {
+							if let Some(database) = database {
+								database.update(DatabaseMessage::MoveTaskBeforeOtherTask {
 									project_id,
 									task_id,
 									other_task_id: hovered_task_id
-								}))
-							},
-							TaskDropzone::EndOfTodoTaskList => {
-								database
-									.as_mut()
-									.map(|db| {
-										db.modify(|projects| {
-											if let Some(project) = projects.get_mut(&project_id) {
-												project.todo_tasks.move_to_end(&task_id);
-											}
-										});
-										Command::none()
-									})
-							},
-							TaskDropzone::Stopwatch => {
-								stopwatch_page.update(
-									StopwatchPageMessage::Start{
-										task: Some((project_id, task_id)),
-									},
-									database,
-									true
-								);
-								None
-							},
-						}
-					});
+								});
+							}
+						},
+						TaskDropzone::EndOfTodoTaskList => {
+							if let Some(database) = database {
+								database.modify(|projects| {
+									if let Some(project) = projects.get_mut(&project_id) {
+										project.todo_tasks.move_to_end(&task_id);
+									}
+								});
+							}
+						},
+						TaskDropzone::Stopwatch => {
+							stopwatch_page.update(
+								StopwatchPageMessage::Start{
+									task: Some((project_id, task_id)),
+								},
+								database,
+								true
+							);
+						},
+					}
+				}
 				self.task_dropzone_hovered = None;
-				command.unwrap_or(Command::none())
+				Task::none()
 			},
 			SidebarPageMessage::CancelDragTask => {
 				self.task_dropzone_hovered = None;
-				Command::none()
+				Task::none()
 			},
 			SidebarPageMessage::HandleProjectZonesForTasks { zones, .. } => {
 				self.task_dropzone_hovered = None;
@@ -223,7 +220,7 @@ impl SidebarPage {
 					}
 				}
 
-				Command::none()
+				Task::none()
 			},
 			SidebarPageMessage::HandleTaskZones{ zones, project_id, .. } => {
 				if !zones.is_empty() && !matches!(self.task_dropzone_hovered, Some(TaskDropzone::Project(_))) {
@@ -248,7 +245,7 @@ impl SidebarPage {
 						}
 					}
 				}
-				Command::none()
+				Task::none()
 			},
 			SidebarPageMessage::DragTask { project_id, task_id, task_is_todo, rect, point } => {
 				let task_has_needed_time = database.as_ref().and_then(|db|
@@ -281,7 +278,7 @@ impl SidebarPage {
 						)
 					);
 				}
-				Command::batch(commands)
+				Task::batch(commands)
 			},
 
 			SidebarPageMessage::DropProject { .. } => {
@@ -292,20 +289,20 @@ impl SidebarPage {
 						if let Some(database) = database {
 							match project_dropzone_hovered {
 								ProjectDropzone::Project(hovered_project_id) => {
-									return database.update(DatabaseMessage::MoveProjectBeforeOtherProject{
+									database.update(DatabaseMessage::MoveProjectBeforeOtherProject{
 										project_id: dragged_project_id,
 						 				other_project_id: hovered_project_id,
 									});
 								},
 								ProjectDropzone::EndOfList => {
-									return database.update(DatabaseMessage::MoveProjectToEnd(dragged_project_id));
+									database.update(DatabaseMessage::MoveProjectToEnd(dragged_project_id));
 								},
 							}
 						}
 					}
 				}
 				self.project_dropzone_hovered = None;
-				Command::none()
+				Task::none()
 			},
 			SidebarPageMessage::DragProject { project_id, point, rect } => {
 				self.dragged_project_id = Some(project_id);
@@ -347,11 +344,11 @@ impl SidebarPage {
 						}
 					}
 				}
-				Command::none()
+				Task::none()
 			},
 			SidebarPageMessage::ClickProject(project_id) => {
 				self.pressed_project_id = Some(project_id);
-				Command::none()
+				Task::none()
 			},
 			SidebarPageMessage::CancelDragProject => {
 				self.dragged_project_id = None;
@@ -359,7 +356,7 @@ impl SidebarPage {
 				self.just_minimal_dragging = true;
 				self.pressed_project_id = None;
 				self.project_dropzone_hovered = None;
-				Command::none()
+				Task::none()
 			},
 		}
 	}
@@ -404,7 +401,7 @@ impl SidebarPage {
 						.size(LARGE_TEXT_SIZE)
 						.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
 						.on_submit(SidebarPageMessage::CreateNewProject(ProjectId::generate()).into())
-						.style(theme::TextInput::Custom(Box::new(TextInputStyle::default()))),
+						.style(text_input_style_default),
 
 					SidebarPageMessage::CloseCreateNewProject.into()
 				)
@@ -439,7 +436,7 @@ impl SidebarPage {
 					stopwatch_button(&app.stopwatch_page, app.project_page.is_none()),
 					toggle_sidebar_button(),
 				]
-				.align_items(Alignment::Center)
+				.align_y(Alignment::Center)
 				.spacing(SMALL_SPACING_AMOUNT),
 
 				horizontal_seperator(),
@@ -461,7 +458,7 @@ impl SidebarPage {
 					.width(Length::Fill)
 					.align_x(Horizontal::Right),
 			]
-			.align_items(Alignment::Center)
+			.align_y(Alignment::Center)
 			.padding(Padding::new(PADDING_AMOUNT)),
 		]
 		.width(Length::Fill)

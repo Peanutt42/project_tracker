@@ -1,14 +1,21 @@
 // only enables the 'windows' subsystem when compiling in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use iced::{window::{self, icon}, Application, Font, Settings, Size};
+use iced::{window::{self, icon}, Font, Size};
 #[cfg(target_os = "linux")]
 use iced::window::settings::PlatformSpecific;
+use iced_aw::BOOTSTRAP_FONT_BYTES;
 use project_tracker_gui::ProjectTrackerApp;
 
 fn main() -> Result<(), iced::Error> {
-	ProjectTrackerApp::run(Settings {
-		window: window::Settings {
+	iced::application("Project Tracker", ProjectTrackerApp::update, ProjectTrackerApp::view)
+		.theme(ProjectTrackerApp::theme)
+		.subscription(ProjectTrackerApp::subscription)
+		.font(BOOTSTRAP_FONT_BYTES)
+		.font(include_bytes!("../assets/FiraSans-Regular.ttf"))
+		.default_font(Font::with_name("Fira Sans"))
+		.antialiasing(true)
+		.window(window::Settings {
 			icon: icon::from_file_data(
 				include_bytes!("../assets/icon.png"),
 				Some(image::ImageFormat::Png)
@@ -16,11 +23,8 @@ fn main() -> Result<(), iced::Error> {
 			exit_on_close_request: false,
 			size: Size::new(1200.0, 900.0),
 			#[cfg(target_os = "linux")]
-			platform_specific: PlatformSpecific { application_id: "Project Tracker".to_string() },
+			platform_specific: PlatformSpecific { application_id: "Project Tracker".to_string(), ..Default::default() },
 			..Default::default()
-		},
-		antialiasing: true,
-		default_font: Font::with_name("Fira Sans"),
-		..Default::default()
-	})
+		})
+		.run_with(ProjectTrackerApp::new)
 }

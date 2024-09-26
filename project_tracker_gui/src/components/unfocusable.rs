@@ -49,7 +49,7 @@ impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'
 		state: &mut iced::advanced::widget::Tree,
 		layout: iced::advanced::Layout<'_>,
 		renderer: &Renderer,
-		operation: &mut dyn iced::advanced::widget::Operation<Message>,
+		operation: &mut dyn iced::advanced::widget::Operation,
 	) {
 		operation.container(None, layout.bounds(), &mut |operation| {
 			self.content.as_widget().operate(state, layout, renderer, operation)

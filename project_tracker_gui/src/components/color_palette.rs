@@ -1,5 +1,5 @@
-use iced::{theme, widget::{container, row}, Color, Element};
-use crate::{project_tracker::UiMessage, styles::PaletteContainerStyle, components::color_palette_item_button};
+use iced::{widget::{container, row}, Color, Element};
+use crate::{project_tracker::UiMessage, styles::palette_container_style, components::color_palette_item_button};
 
 pub const COLOR_PALETTE_BLACK: Color = Color {
 	r: 0.04,
@@ -32,6 +32,6 @@ pub fn color_palette(selected_color: Color, on_submit: impl Fn(Color) -> UiMessa
 			color_item(Color::from_rgb8(161, 79, 195)), // pink
 		]
 	)
-	.style(theme::Container::Custom(Box::new(PaletteContainerStyle)))
+	.style(palette_container_style)
 	.into()
 }

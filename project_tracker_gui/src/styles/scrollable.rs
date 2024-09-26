@@ -1,56 +1,67 @@
-use iced::{widget::{container, scrollable::{self, Appearance, StyleSheet}}, Border, Theme};
+use iced::{widget::{container, scrollable::{self, Rail, Status, Style}}, border::{Border, rounded}, Theme};
 
-pub struct ScrollableStyle;
+pub fn scrollable_style(theme: &Theme, status: Status) -> Style {
+	let active_rail = Rail {
+		background: None,
+		border: Border::default(),
+		scroller: scrollable::Scroller {
+			color: theme.extended_palette().background.weak.color,
+			border: rounded(f32::MAX),
+		},
+	};
 
-impl StyleSheet for ScrollableStyle {
-	type Style = Theme;
-
-	fn active(&self, style: &Self::Style) -> Appearance {
-		Appearance {
-			container: container::Appearance::default(),
-			gap: None,
-			scrollbar: scrollable::Scrollbar {
-				background: None,
-				border: Border::default(),
-				scroller: scrollable::Scroller {
-					color: style.extended_palette().background.weak.color,
-					border: Border::with_radius(f32::MAX),
-				},
-			},
-		}
-	}
-
-	fn hovered(&self, style: &Self::Style, is_mouse_over_scrollbar: bool) -> Appearance {
-		if is_mouse_over_scrollbar {
-			scrollable::Appearance {
-				container: container::Appearance::default(),
+	match status {
+		Status::Active => {
+			Style {
+				container: container::Style::default(),
 				gap: None,
-				scrollbar: scrollable::Scrollbar {
-					background: None,
-					border: Border::default(),
-					scroller: scrollable::Scroller {
-						color: style.extended_palette().background.strong.color,
-						border: Border::with_radius(f32::MAX),
-					},
-				},
+				horizontal_rail: active_rail,
+				vertical_rail: active_rail,
 			}
-		} else {
-			self.active(style)
-		}
-	}
-
-	fn dragging(&self, style: &Self::Style) -> Appearance {
-		scrollable::Appearance {
-			container: container::Appearance::default(),
-			gap: None,
-			scrollbar: scrollable::Scrollbar {
+		},
+		Status::Hovered { is_horizontal_scrollbar_hovered, is_vertical_scrollbar_hovered } => {
+			let hovered_rail = Rail {
 				background: None,
 				border: Border::default(),
 				scroller: scrollable::Scroller {
-					color: style.extended_palette().success.base.color,
-					border: Border::with_radius(f32::MAX),
+					color: theme.extended_palette().background.strong.color,
+					border: rounded(f32::MAX),
 				},
-			},
-		}
+			};
+
+			Style {
+				container: container::Style::default(),
+				gap: None,
+				horizontal_rail: if is_horizontal_scrollbar_hovered {
+					hovered_rail
+				}
+				else {
+					active_rail
+				},
+				vertical_rail: if is_vertical_scrollbar_hovered {
+					hovered_rail
+				}
+				else {
+					active_rail
+				}
+			}
+		},
+		Status::Dragged { is_horizontal_scrollbar_dragged, is_vertical_scrollbar_dragged } => {
+			let rail = Rail {
+				background: None,
+				border: Border::default(),
+				scroller: scrollable::Scroller {
+					color: theme.extended_palette().success.base.color,
+					border: rounded(f32::MAX),
+				},
+			};
+
+			Style {
+				container: container::Style::default(),
+				gap: None,
+				horizontal_rail: if is_horizontal_scrollbar_dragged { rail } else { active_rail },
+				vertical_rail: if is_vertical_scrollbar_dragged { rail } else { active_rail },
+			}
+		},
 	}
 }

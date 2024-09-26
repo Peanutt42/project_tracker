@@ -10,6 +10,7 @@ pub fn generate_task_id() -> TaskId {
 	rand::random()
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TaskType {
 	Todo,
 	Done,

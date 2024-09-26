@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::time::Instant;
-use iced::{alignment::Horizontal, widget::{column, container, row, toggler, Row}, Alignment, Command, Element, Length};
+use iced::{alignment::Horizontal, widget::{column, container, row, toggler, Row}, Alignment, Task, Element, Length};
 use iced_aw::Bootstrap;
 use serde::{Serialize, Deserialize};
 use crate::{components::{dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded, theme_mode_button, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
@@ -114,9 +114,9 @@ impl Preferences {
 		self.last_changed_time > self.last_saved_time
 	}
 
-	pub fn update(&mut self, message: PreferenceMessage) -> Command<UiMessage> {
+	pub fn update(&mut self, message: PreferenceMessage) -> Task<UiMessage> {
 		match message {
-			PreferenceMessage::Save => Command::perform(
+			PreferenceMessage::Save => Task::perform(
 				Self::save(self.to_json()),
 				|result| {
 					match result {
@@ -125,9 +125,9 @@ impl Preferences {
 					}
 				}
 			),
-			PreferenceMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Command::none() },
-			PreferenceMessage::Reset => { *self = Preferences::default(); self.modified(); Command::none() },
-			PreferenceMessage::Export => Command::perform(
+			PreferenceMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Task::none() },
+			PreferenceMessage::Reset => { *self = Preferences::default(); self.modified(); Task::none() },
+			PreferenceMessage::Export => Task::perform(
 				Self::export_file_dialog(self.to_json()),
 				|result| {
 					match result {
@@ -136,8 +136,8 @@ impl Preferences {
 					}
 				}
 			),
-			PreferenceMessage::Exported => Command::none(),
-			PreferenceMessage::Import => Command::perform(
+			PreferenceMessage::Exported => Task::none(),
+			PreferenceMessage::Import => Task::perform(
 				Preferences::import_file_dialog(),
 				|result| {
 					if let Some(load_preference_result) = result {
@@ -148,40 +148,40 @@ impl Preferences {
 					}
 				}
 			),
-			PreferenceMessage::ImportFailed => Command::none(),
+			PreferenceMessage::ImportFailed => Task::none(),
 
 			PreferenceMessage::SetThemeMode(theme_mode) => {
 				self.modify(|pref| pref.theme_mode = theme_mode);
-				Command::none()
+				Task::none()
 			},
 			PreferenceMessage::SetSidebarDividorPosition(dividor_position) => {
 				self.modify(|pref| pref.sidebar_dividor_position = dividor_position);
-				Command::none()
+				Task::none()
 			},
 
 			PreferenceMessage::ToggleShowSidebar => {
 				self.modify(|pref| pref.show_sidebar = !pref.show_sidebar);
-				Command::none()
+				Task::none()
 			},
 
 			PreferenceMessage::SetContentPage(content_page) => {
 				self.modify(|pref| pref.selected_content_page = content_page);
-				Command::none()
+				Task::none()
 			},
 
 			PreferenceMessage::SetSynchronizationFilepath(filepath) => {
 				self.modify(|pref| pref.synchronization_filepath = filepath);
-				Command::none()
+				Task::none()
 			},
 
 			PreferenceMessage::SetDateFormatting(date_formatting) => {
 				self.modify(|pref| pref.date_formatting = date_formatting);
-				Command::none()
+				Task::none()
 			},
 
 			PreferenceMessage::SetCreateNewTaskAtTop(create_at_top) => {
 				self.modify(|pref| pref.create_new_tasks_at_top = create_at_top);
-				Command::none()
+				Task::none()
 			},
 		}
 	}
@@ -269,14 +269,14 @@ impl Preferences {
 		}
 	}
 
-	fn setting_item(label: impl Into<Element<'static, UiMessage>>, content: impl Into<Element<'static, UiMessage>>) -> Row<'static, UiMessage> {
+	fn setting_item<'a>(label: impl Into<Element<'a, UiMessage>>, content: impl Into<Element<'a, UiMessage>>) -> Row<'a, UiMessage> {
 		row![
 			label.into(),
 			container(content)
 				.width(Length::Fill)
 				.align_x(Horizontal::Right),
 		]
-		.align_items(Alignment::Center)
+		.align_y(Alignment::Center)
 	}
 
 	pub fn view(&self) -> Element<UiMessage> {
@@ -300,7 +300,8 @@ impl Preferences {
 
 			Self::setting_item(
 				"Create new tasks at top:",
-				toggler(None, self.create_new_tasks_at_top, |create_at_top| PreferenceMessage::SetCreateNewTaskAtTop(create_at_top).into())
+				toggler(self.create_new_tasks_at_top)
+					.on_toggle(|create_at_top| PreferenceMessage::SetCreateNewTaskAtTop(create_at_top).into())
 					.size(27.5)
 			),
 
@@ -308,7 +309,7 @@ impl Preferences {
 
 			Self::setting_item(
 				container("Preferences file location:").padding(HORIZONTAL_SCROLLABLE_PADDING),
-				file_location(&Self::get_filepath())
+				file_location(Self::get_filepath())
 			),
 
 			container(
