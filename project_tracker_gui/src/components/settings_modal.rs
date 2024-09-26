@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, widget::{column, container, row, text, Space}, Alignment, Task, Element, Length::{self, Fill}, Padding};
+use iced::{alignment::Horizontal, widget::{column, container, row, text, Space}, Alignment, Task, Element, Length::Fill, Padding};
 use iced_aw::{card, Bootstrap};
 use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{card_style, GREY, PADDING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
@@ -43,7 +43,7 @@ impl SettingTab {
 					row![
 						container("Database file location: ").padding(HORIZONTAL_SCROLLABLE_PADDING),
 						container(file_location(Database::get_filepath()))
-							.width(Length::Fill)
+							.width(Fill)
 							.align_x(Horizontal::Right),
 					]
 					.align_y(Alignment::Center),
@@ -61,7 +61,7 @@ impl SettingTab {
 						]
 						.spacing(SPACING_AMOUNT)
 					)
-					.width(Length::Fill)
+					.width(Fill)
 					.align_x(Horizontal::Right),
 
 					horizontal_seperator_padded(),
@@ -71,7 +71,7 @@ impl SettingTab {
 							.padding(HORIZONTAL_SCROLLABLE_PADDING),
 
 						if let Some(filepath) = preferences.synchronization_filepath() {
-							Element::new(filepath_widget(filepath.clone()).width(Length::Fill))
+							Element::new(filepath_widget(filepath.clone()).width(Fill))
 						}
 						else {
 							"not specified".into()
@@ -89,7 +89,7 @@ impl SettingTab {
 					container(
 						sync_database_button(app.syncing_database, preferences.synchronization_filepath().clone())
 					)
-					.width(Length::Fill)
+					.width(Fill)
 					.align_x(Horizontal::Right),
 
 					horizontal_seperator_padded(),
@@ -101,7 +101,7 @@ impl SettingTab {
 							container(
 								import_google_tasks_button()
 							)
-							.width(Length::Fill)
+							.width(Fill)
 							.align_x(Horizontal::Right),
 						]
 						.spacing(SPACING_AMOUNT)
@@ -122,7 +122,7 @@ impl SettingTab {
 				let shortcut = |name, shortcut| {
 					row![
 						text(name),
-						Space::new(Length::Fill, 0.0),
+						Space::new(Fill, 0.0),
 						container(
 							container(shortcut).padding(SMALL_HORIZONTAL_PADDING)
 						)
@@ -253,7 +253,6 @@ impl SettingsModal {
 								container(
 									tab.view(app, preferences)
 								)
-								.width(Fill)
 								.center_x(Fill)
 								.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
 							]

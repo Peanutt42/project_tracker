@@ -1,4 +1,4 @@
-use iced::{widget::{container, container::Id, Space}, Element, Length, Padding};
+use iced::{widget::{container, container::Id, Space}, Element, Length::Fill, Padding};
 use crate::{project_tracker::UiMessage, styles::{in_between_dropzone_container_style, SPACING_AMOUNT}};
 
 const DROPZONE_HEIGHT: f32 = 2.0;
@@ -8,7 +8,7 @@ pub fn in_between_dropzone(id: Id, highlight: bool) -> Element<'static, UiMessag
 	container(
 		container(
 			container(
-				Space::new(Length::Fill, DROPZONE_HEIGHT)
+				Space::new(Fill, DROPZONE_HEIGHT)
 			)
 			.style(move |t| in_between_dropzone_container_style(t, highlight))
 		)

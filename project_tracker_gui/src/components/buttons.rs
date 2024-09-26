@@ -135,7 +135,7 @@ pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Eleme
 
 				text("Stopwatch")
 					.size(LARGE_TEXT_SIZE)
-					.width(Length::Fill)
+					.width(Fill)
 			]
 			.push_maybe(
 				stopwatch_label.map(|stopwatch_label| {
@@ -143,16 +143,16 @@ pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Eleme
 						text(stopwatch_label)
 							.size(SMALL_TEXT_SIZE)
 					)
-					.width(Length::Fill)
+					.width(Fill)
 					.align_x(Horizontal::Right)
 				})
 			)
-			.width(Length::Fill)
+			.width(Fill)
 			.spacing(SPACING_AMOUNT)
 			.align_y(Alignment::Center)
 			.padding(SMALL_HORIZONTAL_PADDING)
 		)
-		.width(Length::Fill)
+		.width(Fill)
 		.on_press(UiMessage::OpenStopwatch)
 		.style(move |t, s| project_preview_style(
 			t,
@@ -488,7 +488,7 @@ pub fn confirm_ok_button(on_confirmed: &UiMessage) -> Button<'static, UiMessage>
 		text("Ok")
 			.align_x(Horizontal::Center)
 	)
-	.width(Length::Fill)
+	.width(Fill)
 	.style(dangerous_button_style)
 	.on_press(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())))
 }
@@ -498,7 +498,7 @@ pub fn confirm_cancel_button() -> Button<'static, UiMessage> {
 		text("Cancel")
 			.align_x(Horizontal::Center)
 	)
-	.width(Length::Fill)
+	.width(Fill)
 	.style(secondary_button_style_default)
 	.on_press(ConfirmModalMessage::Close.into())
 }
@@ -523,7 +523,7 @@ pub fn settings_tab_button(tab: SettingTab, selected_tab: SettingTab) -> Button<
 	button(
 		text(format!("{tab:?}"))
 	)
-	.width(Length::Fill)
+	.width(Fill)
 	.style(move |t, s| settings_tab_button_style(t, s, tab == selected_tab))
 	.on_press(SettingsModalMessage::SwitchSettingsTab(tab).into())
 }

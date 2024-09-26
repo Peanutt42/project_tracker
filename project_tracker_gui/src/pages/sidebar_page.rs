@@ -1,4 +1,4 @@
-use iced::{advanced::widget::Id, alignment::Horizontal, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Task, Element, Length, Padding, Point, Rectangle};
+use iced::{advanced::widget::Id, alignment::Horizontal, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Element, Length::Fill, Padding, Point, Rectangle, Task};
 use iced_drop::{find_zones, zones_on_point};
 use once_cell::sync::Lazy;
 use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, TaskId}, pages::StopwatchPageMessage, project_tracker::UiMessage, styles::{text_input_style_default, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
@@ -406,7 +406,7 @@ impl SidebarPage {
 					SidebarPageMessage::CloseCreateNewProject.into()
 				)
 			)
-			.width(Length::Fill)
+			.width(Fill)
 			.align_x(Horizontal::Center)
 			.into();
 
@@ -415,10 +415,10 @@ impl SidebarPage {
 
 		vertical_scrollable(
 			Column::from_vec(list)
-				.width(Length::Fill)
+				.width(Fill)
 		)
 		.id(SCROLLABLE_ID.clone())
-		.height(Length::Fill)
+		.height(Fill)
 		.into()
 	}
 
@@ -455,14 +455,14 @@ impl SidebarPage {
 				settings_button(),
 
 				container(create_new_project_button(self.create_new_project_name.is_none()))
-					.width(Length::Fill)
+					.width(Fill)
 					.align_x(Horizontal::Right),
 			]
 			.align_y(Alignment::Center)
 			.padding(Padding::new(PADDING_AMOUNT)),
 		]
-		.width(Length::Fill)
-		.height(Length::Fill)
+		.width(Fill)
+		.height(Fill)
 		// .spacing(SPACING_AMOUNT) this is not needed since every project in the list has a SPACING_AMOUNT height dropzone
 		.into()
 	}

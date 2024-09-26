@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length, Padding};
+use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length::Fill, Padding};
 use once_cell::sync::Lazy;
 use crate::{core::{DateFormatting, Project, TaskTagId, TaskType}, pages::{CachedTaskList, EditTaskState, StopwatchPage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::PADDING_AMOUNT};
 use crate::core::{Task, TaskId, ProjectId};
@@ -95,7 +95,7 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 						else {
 							Some(
 								container(reimport_source_code_todos_button())
-									.width(Length::Fill)
+									.width(Fill)
 									.align_x(Horizontal::Right)
 							)
 						}
@@ -126,7 +126,7 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 					else {
 						Some(
 							container(delete_all_done_tasks_button(project_id, &project.name))
-								.width(Length::Fill)
+								.width(Fill)
 								.align_x(Horizontal::Right)
 						)
 					}
@@ -160,7 +160,7 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 		]
 	)
 	.id(TASK_LIST_ID.clone())
-	.height(Length::Fill)
+	.height(Fill)
 	.into()
 }
 

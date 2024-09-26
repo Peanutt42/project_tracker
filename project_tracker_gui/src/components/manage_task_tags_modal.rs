@@ -1,4 +1,4 @@
-use iced::{widget::{button, column, row, text, text_input, Column}, Alignment, Color, Task, Element, Length};
+use iced::{widget::{button, column, row, text, text_input, Column}, Alignment, Color, Element, Length::Fill, Task};
 use iced_aw::card;
 use once_cell::sync::Lazy;
 use crate::{components::{cancel_create_new_task_tag_button, color_palette, color_palette_item_button, create_new_task_tags_button, delete_task_tag_button, unfocusable}, core::{Database, DatabaseMessage, Project, ProjectId, TaskTag, TaskTagId}, project_tracker::UiMessage, styles::{card_style, hidden_secondary_button_style, text_input_style_only_round_left, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT}, ProjectTrackerApp};
@@ -215,7 +215,7 @@ impl ManageTaskTagsModal {
 			else {
 				button(
 					text(&tag.name)
-            			.width(Length::Fill)
+            			.width(Fill)
 				)
 				.on_press(ManageTaskTagsModalMessage::EditTaskTagName(tag_id).into())
 				.style(hidden_secondary_button_style)

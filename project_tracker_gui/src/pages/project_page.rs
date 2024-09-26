@@ -1,5 +1,5 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, time::Instant};
-use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable, scrollable::RelativeOffset, text, text_editor, text_input, Row, Space}, Color, Element, Length, Padding, Point, Subscription};
+use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row, Space}, Color, Element, Length::Fill, Padding, Point, Subscription};
 use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
@@ -596,8 +596,8 @@ impl ProjectPage {
 					),
 				]
 				// .spacing(SPACING_AMOUNT) this is not needed since every task in the list has a SPACING_AMOUNT height dropzone
-				.width(Length::Fill)
-				.height(Length::Fill)
+				.width(Fill)
+				.height(Fill)
 				.into()
 			}
 			else {
@@ -696,7 +696,7 @@ impl ProjectPage {
 		.spacing(SPACING_AMOUNT)
 		.into();
 
-		let spacer = || { Space::new(Length::Fill, SPACING_AMOUNT) };
+		let spacer = || { Space::new(Fill, SPACING_AMOUNT) };
 
 		column![
 			column![
@@ -710,7 +710,7 @@ impl ProjectPage {
 						container(
 							quick_actions
 						)
-						.width(Length::Fill)
+						.width(Fill)
 						.align_x(Horizontal::Right)
 						.into()
 					}
@@ -724,7 +724,7 @@ impl ProjectPage {
 			else {
 				None
 			})
-			.width(Length::Fill),
+			.width(Fill),
 
 			spacer(),
 
@@ -736,7 +736,7 @@ impl ProjectPage {
 					Row::with_children(task_tags_list)
 						.spacing(SPACING_AMOUNT)
 				)
-				.width(Length::Fill),
+				.width(Fill),
 			]
 			.spacing(SPACING_AMOUNT)
 			.align_y(Alignment::Center),
@@ -750,13 +750,13 @@ impl ProjectPage {
 						(project.get_completion_percentage() * 100.0).round()
 					)
 				)
-				.width(Length::Fill),
+				.width(Fill),
 
 				container(create_new_task_button(self.create_new_task.is_none()))
-					.width(Length::Fill)
+					.width(Fill)
 					.align_x(Horizontal::Right),
 			]
-			.width(Length::Fill)
+			.width(Fill)
 			.align_y(Alignment::Center),
 
 			spacer(),

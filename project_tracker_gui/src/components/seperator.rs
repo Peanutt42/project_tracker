@@ -1,4 +1,4 @@
-use iced::{widget::container, Color, Element, Length, Padding};
+use iced::{widget::container, Color, Element, Length::{self, Fill}, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use crate::{project_tracker::UiMessage, styles::{GREY, PADDING_AMOUNT}};
 
@@ -16,7 +16,7 @@ pub fn horizontal_seperator() -> Quad {
 
 pub fn horizontal_seperator_colored(color: Color) -> Quad {
 	Quad {
-		width: Length::Fill,
+		width: Fill,
 		height: Length::Fixed(1.0),
 		inner_bounds: InnerBounds::Ratio(1.0, 1.0),
 		quad_color: color.into(),
@@ -27,7 +27,7 @@ pub fn horizontal_seperator_colored(color: Color) -> Quad {
 pub fn vertical_seperator() -> Quad {
 	Quad {
 		width: Length::Fixed(1.0),
-		height: Length::Fill,
+		height: Fill,
 		inner_bounds: InnerBounds::Ratio(1.0, 1.0),
 		quad_color: GREY.into(),
 		..Default::default()

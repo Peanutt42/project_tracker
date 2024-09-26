@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, border::rounded, widget::{column, container, container::Id, row, text, Space}, Alignment, Color, Element, Length, Padding};
+use iced::{alignment::Horizontal, border::rounded, widget::{column, container, container::Id, row, text, Space}, Alignment, Color, Element, Length::{self, Fill}, Padding};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use iced_drop::droppable;
 use crate::{pages::SidebarPageMessage, project_tracker::UiMessage, styles::{dropzone_container_style, project_preview_style}};
@@ -61,7 +61,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id
 							text(format!("({}/{})", tasks_done, task_len))
 								.size(SMALL_TEXT_SIZE)
 						)
-						.width(Length::Fill)
+						.width(Fill)
 						.align_x(Horizontal::Right)
 						.padding(Padding{ right: SMALL_PADDING_AMOUNT, ..Padding::ZERO })
 					)
@@ -70,7 +70,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id
 					None
 				}
 			)
-			.width(Length::Fill)
+			.width(Fill)
 			.spacing(SMALL_SPACING_AMOUNT)
 			.align_y(Alignment::Center)
 		]
@@ -107,7 +107,7 @@ pub fn custom_project_preview(project_id: Option<ProjectId>, project_dropzone_id
 			cancel_create_project_button()
 		]
 		.align_y(Alignment::Center)
-		.width(Length::Fill)
+		.width(Fill)
    		.into()
 	}
 }

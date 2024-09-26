@@ -166,7 +166,7 @@ impl StopwatchPage {
 						text(format_stopwatch_duration(elapsed_time.as_secs_f64().round_ties_even() as i64))
 							.font(Font::DEFAULT)
 							.size(90)
-							.width(Length::Fill)
+							.width(Fill)
 							.align_x(Horizontal::Center)
 							.into()
 					};
@@ -193,8 +193,6 @@ impl StopwatchPage {
 				},
 			}
 		)
-		.width(Fill)
-		.height(Fill)
 		.center_x(Fill)
 		.center_y(Fill)
 		.into()

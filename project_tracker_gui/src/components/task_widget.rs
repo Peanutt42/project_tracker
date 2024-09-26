@@ -270,7 +270,7 @@ fn task_widget_view<'a>(task: &'a Task, task_type: TaskType, project_id: Project
 				}
 			)
 	]
-	.width(Length::Fill)
+	.width(Fill)
 	.align_y(Alignment::Start)
 	.into();
 
