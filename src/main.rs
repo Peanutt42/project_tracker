@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use iced::{window::{self, icon}, Font, Size};
+use iced_fonts::REQUIRED_FONT_BYTES;
 #[cfg(target_os = "linux")]
 use iced::window::settings::PlatformSpecific;
 use project_tracker_gui::{ProjectTrackerApp, icons::BOOTSTRAP_FONT_BYTES};
@@ -11,6 +12,7 @@ fn main() -> Result<(), iced::Error> {
 		.theme(ProjectTrackerApp::theme)
 		.subscription(ProjectTrackerApp::subscription)
 		.font(BOOTSTRAP_FONT_BYTES)
+		.font(REQUIRED_FONT_BYTES)
 		.font(include_bytes!("../assets/FiraSans-Regular.ttf"))
 		.default_font(Font::with_name("Fira Sans"))
 		.antialiasing(true)

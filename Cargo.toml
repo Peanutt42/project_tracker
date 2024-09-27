@@ -10,6 +10,7 @@ members = ["project_tracker_gui", "iced_drop"]
 project_tracker_gui = { path = "project_tracker_gui" }
 iced = { workspace = true }
 iced_aw = { workspace = true }
+iced_fonts = "0.1.1"
 image = "0.24"
 
 [workspace.dependencies]

@@ -2900,6 +2900,7 @@ version = "0.1.0"
 dependencies = [
  "iced",
  "iced_aw",
+ "iced_fonts",
  "image",
  "project_tracker_gui",
  "winresource",
