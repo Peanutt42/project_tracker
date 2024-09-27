@@ -1,14 +1,10 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, time::Instant};
 use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row, Space}, Color, Element, Length::Fill, Padding, Point, Subscription};
-use iced_aw::BOOTSTRAP_FONT;
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use crate::{
-	components::{cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, delete_project_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING, TASK_LIST_ID},
-	core::{generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId},
-	project_tracker::{ProjectTrackerApp, UiMessage},
-	styles::{text_input_style_default, text_input_style_only_round_left, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE},
+	components::{cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, delete_project_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING, TASK_LIST_ID}, core::{generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId, SerializableDate, Task, TaskId, TaskTagId}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, project_tracker::{ProjectTrackerApp, UiMessage}, styles::{text_input_style_default, text_input_style_only_round_left, LARGE_PADDING_AMOUNT, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE}
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -663,7 +659,7 @@ impl ProjectPage {
 					.id(SEARCH_TASKS_TEXT_INPUT_ID.clone())
 					.icon(text_input::Icon {
 						font: BOOTSTRAP_FONT,
-						code_point: '\u{F52A}', // Search icon, see Bootstrap::Search
+						code_point: icon_to_char(Bootstrap::Search),
 						size: None,
 						spacing: SMALL_SPACING_AMOUNT as f32,
 						side: text_input::Side::Left,

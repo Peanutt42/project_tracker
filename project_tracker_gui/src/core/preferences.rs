@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 use std::time::Instant;
 use iced::{alignment::Horizontal, widget::{column, container, row, toggler, Row}, Alignment, Element, Length::Fill, Task};
-use iced_aw::Bootstrap;
 use serde::{Serialize, Deserialize};
 use crate::{components::{dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded, theme_mode_button, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
+use crate::icons::Bootstrap;
 
 fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }

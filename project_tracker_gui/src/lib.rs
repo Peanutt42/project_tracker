@@ -6,3 +6,4 @@ mod project_tracker;
 pub use project_tracker::ProjectTrackerApp;
 mod theme_mode;
 pub mod integrations;
+pub mod icons;

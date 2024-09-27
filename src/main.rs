@@ -4,8 +4,7 @@
 use iced::{window::{self, icon}, Font, Size};
 #[cfg(target_os = "linux")]
 use iced::window::settings::PlatformSpecific;
-use iced_aw::BOOTSTRAP_FONT_BYTES;
-use project_tracker_gui::ProjectTrackerApp;
+use project_tracker_gui::{ProjectTrackerApp, icons::BOOTSTRAP_FONT_BYTES};
 
 fn main() -> Result<(), iced::Error> {
 	iced::application("Project Tracker", ProjectTrackerApp::update, ProjectTrackerApp::view)

@@ -1,9 +1,10 @@
 use iced::{alignment::Horizontal, widget::{column, container, row, text, Space}, Alignment, Task, Element, Length::Fill, Padding};
-use iced_aw::{card, Bootstrap};
+use iced_aw::card;
 use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{card_style, GREY, PADDING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT, rounded_container_style, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
+use crate::icons::Bootstrap;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {

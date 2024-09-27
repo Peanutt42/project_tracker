@@ -1,6 +1,5 @@
 use std::{borrow::Cow, str::FromStr, time::Duration};
 use iced::{widget::{button, checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length::{self, Fill}, Padding, Theme};
-use iced_aw::{Bootstrap, core::icons::bootstrap::icon_to_text};
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
@@ -8,6 +7,7 @@ use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, T
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, in_between_dropzone, add_due_date_button, edit_due_date_button, days_left_widget, start_task_timer_button};
+use crate::icons::{Bootstrap, icon_to_text};
 
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
