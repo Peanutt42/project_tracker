@@ -6,10 +6,22 @@ use crate::{
 	icons::{icon_to_text, Bootstrap}
 };
 
-fn icon_button(label: impl text::IntoFragment<'static>, icon: Bootstrap) -> Button<'static, UiMessage> {
+const ICON_FONT_SIZE: f32 = 18.0;
+
+fn icon_button(icon: Bootstrap) -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(icon)
+			.size(ICON_FONT_SIZE)
+			.align_x(Horizontal::Center)
+			.align_y(Vertical::Center)
+	)
+   	.width(ICON_FONT_SIZE * 1.8)
+}
+
+fn icon_label_button(label: impl text::IntoFragment<'static>, icon: Bootstrap) -> Button<'static, UiMessage> {
 	button(
 		row![
-			icon_to_text(icon),
+			icon_to_text(icon).size(ICON_FONT_SIZE),
 			text(label)
 		]
 		.align_y(Alignment::Center)
@@ -18,7 +30,7 @@ fn icon_button(label: impl text::IntoFragment<'static>, icon: Bootstrap) -> Butt
 }
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
-	icon_button("New project", Bootstrap::PlusSquareFill)
+	icon_label_button("New project", Bootstrap::PlusSquareFill)
 		.on_press_maybe(
 			if enabled {
 				Some(SidebarPageMessage::OpenCreateNewProject.into())
@@ -31,7 +43,7 @@ pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
 }
 
 pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
-	icon_button("New task", Bootstrap::PlusCircleFill)
+	icon_label_button("New task", Bootstrap::PlusCircleFill)
 		.on_press_maybe(
 			if enabled {
 				Some(ProjectPageMessage::OpenCreateNewTask.into())
@@ -44,31 +56,27 @@ pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
 }
 
 pub fn cancel_create_project_button() -> Button<'static, UiMessage> {
-	button(icon_to_text(Bootstrap::XLg))
+	icon_button(Bootstrap::XLg)
 		.on_press(SidebarPageMessage::CloseCreateNewProject.into())
 		.style(secondary_button_style_default)
 }
 
 pub fn cancel_create_task_button() -> Button<'static, UiMessage> {
-	button(icon_to_text(Bootstrap::XLg))
+	icon_button(Bootstrap::XLg)
 		.on_press(ProjectPageMessage::CloseCreateNewTask.into())
 		.style(secondary_button_style_only_round_right)
 }
 
 pub fn delete_project_button(project_id: ProjectId, project_name: &str) -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::Trash)
-	)
-	.on_press(ConfirmModalMessage::open(format!("Delete Project '{project_name}'?"), DatabaseMessage::DeleteProject(project_id)))
-	.style(move |t, s| delete_button_style(t, s, true, true))
+	icon_button(Bootstrap::Trash)
+		.on_press(ConfirmModalMessage::open(format!("Delete Project '{project_name}'?"), DatabaseMessage::DeleteProject(project_id)))
+		.style(move |t, s| delete_button_style(t, s, true, true))
 }
 
 pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::Trash)
-	)
-	.on_press(DatabaseMessage::DeleteTask { project_id, task_id }.into())
-	.style(move |t, s| delete_button_style(t, s, false, true))
+	icon_button(Bootstrap::Trash)
+		.on_press(DatabaseMessage::DeleteTask { project_id, task_id }.into())
+		.style(move |t, s| delete_button_style(t, s, false, true))
 }
 
 pub fn delete_all_done_tasks_button(project_id: ProjectId, project_name: &str) -> Button<'static, UiMessage> {
@@ -84,7 +92,7 @@ pub fn delete_all_done_tasks_button(project_id: ProjectId, project_name: &str) -
 }
 
 pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'static, UiMessage> {
-	icon_button(
+	icon_label_button(
 		format!("{} done ({done_task_len})", if show { "Hide" } else { "Show" }),
 		if show { Bootstrap::CaretDownFill } else { Bootstrap::CaretRightFill }
 	)
@@ -93,7 +101,7 @@ pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'stati
 }
 
 pub fn dangerous_button(icon: Bootstrap, text: &'static str, confirm_label: Option<String>, on_press: impl Into<UiMessage>) -> Button<'static, UiMessage> {
-	icon_button(text, icon)
+	icon_label_button(text, icon)
 		.style(dangerous_button_style)
 		.on_press(if let Some(label) = confirm_label {
 			ConfirmModalMessage::open(label, on_press)
@@ -171,23 +179,16 @@ pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Eleme
 }
 
 pub fn settings_button() -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::Gear)
-		    .align_x(Horizontal::Center)
-			.size(LARGE_TEXT_SIZE)
-	)
-	.width(Length::Fixed(1.75 * LARGE_TEXT_SIZE))
-	.on_press(SettingsModalMessage::Open.into())
-	.style(secondary_button_style_default)
+	icon_button(Bootstrap::Gear)
+		.on_press(SettingsModalMessage::Open.into())
+		.style(secondary_button_style_default)
 }
 
 pub fn select_synchronization_filepath_button() -> Element<'static, UiMessage> {
 	tooltip(
-		button(
-			icon_to_text(Bootstrap::Folder)
-		)
-		.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
-		.style(secondary_button_style_default),
+		icon_button(Bootstrap::Folder)
+			.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
+			.style(secondary_button_style_default),
 
 		text("Select file").size(SMALL_TEXT_SIZE),
 
@@ -200,7 +201,7 @@ pub fn select_synchronization_filepath_button() -> Element<'static, UiMessage> {
 
 pub fn clear_synchronization_filepath_button() -> Element<'static, UiMessage> {
 	tooltip(
-		button(icon_to_text(Bootstrap::XLg))
+		icon_button(Bootstrap::XLg)
 			.on_press(PreferenceMessage::SetSynchronizationFilepath(None).into())
 			.style(secondary_button_style_default),
 
@@ -242,11 +243,9 @@ pub fn copy_to_clipboard_button(copied_text: String) -> Element<'static, UiMessa
 
 pub fn toggle_sidebar_button() -> Element<'static, UiMessage> {
 	tooltip(
-		button(
-			icon_to_text(Bootstrap::LayoutSidebar)
-		)
-		.on_press(PreferenceMessage::ToggleShowSidebar.into())
-		.style(secondary_button_style_default),
+		icon_button(Bootstrap::LayoutSidebar)
+			.on_press(PreferenceMessage::ToggleShowSidebar.into())
+			.style(secondary_button_style_default),
 
 		text("Toggle sidebar (Ctrl + B)").size(SMALL_TEXT_SIZE),
 
@@ -259,10 +258,8 @@ pub fn toggle_sidebar_button() -> Element<'static, UiMessage> {
 
 // only for layout purposes
 pub fn invisible_toggle_sidebar_button() -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::LayoutSidebar)
-	)
-	.style(invisible_button_style)
+	icon_button(Bootstrap::LayoutSidebar)
+		.style(invisible_button_style)
 }
 
 pub fn import_database_button(importing: bool) -> Element<'static, UiMessage> {
@@ -381,7 +378,7 @@ pub fn task_tag_button(task_tag: &TaskTag, toggled: bool, round_bottom: bool, ta
 
 pub fn manage_task_tags_button(project_id: ProjectId) -> Element<'static, UiMessage> {
 	tooltip(
-		button(icon_to_text(Bootstrap::Bookmark))
+		icon_button(Bootstrap::Bookmark)
 			.on_press(ManageTaskTagsModalMessage::Open { project_id }.into())
 			.style(secondary_button_style_default),
 
@@ -395,40 +392,34 @@ pub fn manage_task_tags_button(project_id: ProjectId) -> Element<'static, UiMess
 }
 
 pub fn create_new_task_tags_button() -> Button<'static, UiMessage> {
-	icon_button("Create new", Bootstrap::BookmarkPlusFill)
+	icon_label_button("Create new", Bootstrap::BookmarkPlusFill)
 		.on_press(ManageTaskTagsModalMessage::OpenCreateNewTaskTag.into())
 		.style(primary_button_style)
 }
 
 pub fn cancel_create_new_task_tag_button() -> Button<'static, UiMessage> {
-	button(icon_to_text(Bootstrap::XLg))
-			.on_press(ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into())
-			.style(secondary_button_style_only_round_right)
+	icon_button(Bootstrap::XLg)
+		.on_press(ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into())
+		.style(secondary_button_style_only_round_right)
 }
 
 pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::Trash)
-	)
-	.on_press(ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id).into())
-	.style(move |t, s| delete_button_style(t, s, true, true))
+	icon_button(Bootstrap::Trash)
+		.on_press(ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id).into())
+		.style(move |t, s| delete_button_style(t, s, true, true))
 }
 
 pub fn clear_task_needed_time_button() -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::XLg)
-	)
-	.on_press(ProjectPageMessage::ClearTaskNeededTime.into())
-	.style(move |t, s| secondary_button_style(t, s, false, false, false, true))
+	icon_button(Bootstrap::XLg)
+		.on_press(ProjectPageMessage::ClearTaskNeededTime.into())
+		.style(move |t, s| secondary_button_style(t, s, false, false, false, true))
 }
 
 pub fn clear_task_due_date_button() -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::XLg)
-	)
-	.padding(SMALL_HORIZONTAL_PADDING)
-	.on_press(ProjectPageMessage::ClearTaskDueDate.into())
-	.style(move |t, s| secondary_button_style(t, s, false, false, false, true))
+	icon_button(Bootstrap::XLg)
+		.padding(SMALL_HORIZONTAL_PADDING)
+		.on_press(ProjectPageMessage::ClearTaskDueDate.into())
+		.style(move |t, s| secondary_button_style(t, s, false, false, false, true))
 }
 
 pub fn add_due_date_button() -> Button<'static, UiMessage> {
@@ -505,19 +496,15 @@ pub fn confirm_cancel_button() -> Button<'static, UiMessage> {
 }
 
 pub fn search_tasks_button() -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::Search)
-	)
-	.style(secondary_button_style_default)
-	.on_press(ProjectPageMessage::OpenSearchTasks.into())
+	icon_button(Bootstrap::Search)
+		.style(secondary_button_style_default)
+		.on_press(ProjectPageMessage::OpenSearchTasks.into())
 }
 
 pub fn cancel_search_tasks_button() -> Button<'static, UiMessage> {
-	button(
-		icon_to_text(Bootstrap::XLg)
-	)
-	.style(secondary_button_style_only_round_right)
-	.on_press(ProjectPageMessage::CloseSearchTasks.into())
+	icon_button(Bootstrap::XLg)
+		.style(secondary_button_style_only_round_right)
+		.on_press(ProjectPageMessage::CloseSearchTasks.into())
 }
 
 pub fn settings_tab_button(tab: SettingTab, selected_tab: SettingTab) -> Button<'static, UiMessage> {
@@ -531,11 +518,9 @@ pub fn settings_tab_button(tab: SettingTab, selected_tab: SettingTab) -> Button<
 
 pub fn import_source_code_todos_button() -> Element<'static, UiMessage> {
 	tooltip(
-		button(
-			icon_to_text(Bootstrap::FileEarmarkCode)
-		)
-		.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
-		.style(secondary_button_style_default),
+		icon_button(Bootstrap::FileEarmarkCode)
+			.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
+			.style(secondary_button_style_default),
 
 		text("Import TODO's").size(SMALL_TEXT_SIZE),
 
@@ -547,13 +532,13 @@ pub fn import_source_code_todos_button() -> Element<'static, UiMessage> {
 }
 
 pub fn reimport_source_code_todos_button() -> Button<'static, UiMessage> {
-	icon_button("Reimport TODO's", Bootstrap::FileEarmarkCode)
+	icon_label_button("Reimport TODO's", Bootstrap::FileEarmarkCode)
 		.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
 		.style(secondary_button_style_default)
 }
 
 pub fn show_source_code_todos_button(show: bool, source_code_todos_len: usize) -> Button<'static, UiMessage> {
-	icon_button(
+	icon_label_button(
 		format!("{} source code todos ({source_code_todos_len})", if show { "Hide" } else { "Show" }),
 		if show { Bootstrap::CaretDownFill } else { Bootstrap::CaretRightFill }
 	)
@@ -563,11 +548,9 @@ pub fn show_source_code_todos_button(show: bool, source_code_todos_len: usize) -
 
 pub fn edit_project_name_button() -> Element<'static, UiMessage> {
 	tooltip(
-		button(
-			icon_to_text(Bootstrap::PencilSquare)
-		)
-		.on_press(ProjectPageMessage::EditProjectName.into())
-		.style(hidden_secondary_button_style),
+		icon_button(Bootstrap::PencilSquare)
+			.on_press(ProjectPageMessage::EditProjectName.into())
+			.style(hidden_secondary_button_style),
 
 		text("Edit name").size(SMALL_TEXT_SIZE),
 
@@ -632,16 +615,14 @@ pub fn pause_timer_button() -> Button<'static, UiMessage> {
 
 pub fn start_task_timer_button<'a>(project_id: ProjectId, task_id: TaskId, round_top_left: bool) -> Element<'a, UiMessage> {
 	tooltip(
-		button(
-			icon_to_text(Bootstrap::Stopwatch)
-		)
-		.on_press(
-			StopwatchPageMessage::Start{
-				task: Some((project_id, task_id))
-			}
-			.into()
-		)
-		.style(move |t, s| secondary_button_style(t, s, round_top_left, true, false, false)),
+		icon_button(Bootstrap::Stopwatch)
+			.on_press(
+				StopwatchPageMessage::Start{
+					task: Some((project_id, task_id))
+				}
+				.into()
+			)
+			.style(move |t, s| secondary_button_style(t, s, round_top_left, true, false, false)),
 
 		text("Start a timer for this task"),
 
