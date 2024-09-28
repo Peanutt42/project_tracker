@@ -23,7 +23,7 @@ mod loading_screen;
 pub use loading_screen::loading_screen;
 
 mod project_preview;
-pub use project_preview::{project_preview, custom_project_preview};
+pub use project_preview::{project_preview, custom_project_preview, project_color_block};
 
 mod seperator;
 pub use seperator::{horizontal_seperator, horizontal_seperator_padded, vertical_seperator};

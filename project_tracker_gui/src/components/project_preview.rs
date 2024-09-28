@@ -9,7 +9,7 @@ use crate::components::{cancel_create_project_button, in_between_dropzone};
 pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
 const PROJECT_COLOR_BLOCK_HEIGHT: f32 = 35.0;
 
-fn project_color_block(color: Color) -> Element<'static, UiMessage> {
+pub fn project_color_block(color: Color) -> Element<'static, UiMessage> {
 	Quad {
 		width: Length::Fixed(PROJECT_COLOR_BLOCK_WIDTH),
 		height: Length::Fixed(PROJECT_COLOR_BLOCK_HEIGHT),
