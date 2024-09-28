@@ -367,7 +367,16 @@ impl ProjectTrackerApp {
 						self.syncing_database = false;
 						if let Some(preferences) = &self.preferences {
 							match preferences.selected_content_page() {
-								SerializedContentPage::Stopwatch => self.update(UiMessage::OpenStopwatch),
+								SerializedContentPage::Stopwatch => match *preferences.stopwatch_progress() {
+									Some(progress) => self.update(UiMessage::StopwatchPageMessage(
+										StopwatchPageMessage::StartupAgain {
+											task: progress.task,
+											elapsed_time: Duration::from_secs(progress.elapsed_time_seconds),
+											paused: progress.paused,
+										}
+									)),
+									None => self.update(UiMessage::OpenStopwatch),
+								},
 								SerializedContentPage::Project(project_id) => {
 									match &self.project_page {
 										Some(project_page) => self.update(UiMessage::SelectProject(Some(project_page.project_id))),
@@ -499,12 +508,14 @@ impl ProjectTrackerApp {
 			},
 			UiMessage::OpenStopwatch => self.update(UiMessage::SelectProject(None)),
 			UiMessage::StopwatchPageMessage(message) => {
-				let should_open_stopwatch_page = matches!(message, StopwatchPageMessage::Start{ .. });
-				self.stopwatch_page.update(message, &self.database, self.project_page.is_none());
-				if should_open_stopwatch_page {
-					return self.update(UiMessage::OpenStopwatch);
+				let messages = self.stopwatch_page.update(message, &self.database, self.project_page.is_none());
+				if let Some(messages) = messages {
+					let tasks: Vec<Task<UiMessage>> = messages.into_iter().map(|msg| self.update(msg)).collect();
+					Task::batch(tasks)
 				}
-				Task::none()
+				else {
+					Task::none()
+				}
 			},
 			UiMessage::SelectProject(project_id) => {
 				let open_project_info = if let Some(database) = &self.database {
@@ -669,14 +680,6 @@ impl ProjectTrackerApp {
 			.unwrap_or(self.stopwatch_page.view(&self.database));
 
 		let underlay: Element<UiMessage> = if show_sidebar {
-			let _sidebar_dividor_position =
-				if let Some(preferences) = &self.preferences {
-					preferences.sidebar_dividor_position()
-				}
-				else {
-					300
-				};
-
 			let sidebar_page_view = self.sidebar_page.view(self);
 
 			row![

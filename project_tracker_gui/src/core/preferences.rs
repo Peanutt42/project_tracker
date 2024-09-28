@@ -2,10 +2,9 @@ use std::path::PathBuf;
 use std::time::Instant;
 use iced::{alignment::Horizontal, widget::{column, container, row, toggler, Row}, Alignment, Element, Length::Fill, Task};
 use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded, theme_mode_button, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, core::{ProjectId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
+use crate::{components::{dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded, theme_mode_button, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, core::{ProjectId, TaskId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
 use crate::icons::Bootstrap;
 
-fn default_sidebar_dividor_position() -> u16 { 300 }
 fn default_show_sidebar() -> bool { true }
 fn default_create_new_tasks_at_top() -> bool { true }
 
@@ -18,13 +17,12 @@ pub struct Preferences {
 	#[serde(default = "default_create_new_tasks_at_top")]
 	create_new_tasks_at_top: bool,
 
-	#[serde(default = "default_sidebar_dividor_position")]
-	sidebar_dividor_position: u16,
-
 	#[serde(default = "default_show_sidebar")]
 	show_sidebar: bool,
 
 	selected_content_page: SerializedContentPage,
+
+	stopwatch_progress: Option<StopwatchProgress>,
 
 	synchronization_filepath: Option<PathBuf>,
 
@@ -41,14 +39,21 @@ impl Default for Preferences {
 			theme_mode: ThemeMode::default(),
 			date_formatting: DateFormatting::default(),
 			create_new_tasks_at_top: default_create_new_tasks_at_top(),
-			sidebar_dividor_position: default_sidebar_dividor_position(),
 			show_sidebar: default_show_sidebar(),
 			selected_content_page: SerializedContentPage::default(),
+			stopwatch_progress: None,
 			synchronization_filepath: None,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
 	}
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct StopwatchProgress {
+	pub task: Option<(ProjectId, TaskId)>,
+	pub elapsed_time_seconds: u64,
+	pub paused: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
@@ -69,9 +74,9 @@ pub enum PreferenceMessage {
 	ImportFailed,
 
 	SetThemeMode(ThemeMode),
-	SetSidebarDividorPosition(u16),
 	ToggleShowSidebar,
 	SetContentPage(SerializedContentPage),
+	SetStopwatchProgress(Option<StopwatchProgress>),
 	SetSynchronizationFilepath(Option<PathBuf>),
 	SetDateFormatting(DateFormatting),
 	SetCreateNewTaskAtTop(bool),
@@ -96,8 +101,8 @@ impl Preferences {
 	pub fn synchronization_filepath(&self) -> &Option<PathBuf> { &self.synchronization_filepath }
 	pub fn theme_mode(&self) -> &ThemeMode { &self.theme_mode }
 	pub fn selected_content_page(&self) -> &SerializedContentPage { &self.selected_content_page }
+	pub fn stopwatch_progress(&self) -> &Option<StopwatchProgress> { &self.stopwatch_progress }
 	pub fn show_sidebar(&self) -> bool { self.show_sidebar }
-	pub fn sidebar_dividor_position(&self) -> u16 { self.sidebar_dividor_position }
 	pub fn date_formatting(&self) -> DateFormatting { self.date_formatting }
 	pub fn create_new_tasks_at_top(&self) -> bool { self.create_new_tasks_at_top }
 
@@ -154,10 +159,6 @@ impl Preferences {
 				self.modify(|pref| pref.theme_mode = theme_mode);
 				Task::none()
 			},
-			PreferenceMessage::SetSidebarDividorPosition(dividor_position) => {
-				self.modify(|pref| pref.sidebar_dividor_position = dividor_position);
-				Task::none()
-			},
 
 			PreferenceMessage::ToggleShowSidebar => {
 				self.modify(|pref| pref.show_sidebar = !pref.show_sidebar);
@@ -166,6 +167,11 @@ impl Preferences {
 
 			PreferenceMessage::SetContentPage(content_page) => {
 				self.modify(|pref| pref.selected_content_page = content_page);
+				Task::none()
+			},
+
+			PreferenceMessage::SetStopwatchProgress(progress) => {
+				self.modify(|pref| pref.stopwatch_progress = progress);
 				Task::none()
 			},
 
