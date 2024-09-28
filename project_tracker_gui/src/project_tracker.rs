@@ -366,24 +366,38 @@ impl ProjectTrackerApp {
 						self.importing_database = false;
 						self.syncing_database = false;
 						if let Some(preferences) = &self.preferences {
-							match preferences.selected_content_page() {
-								SerializedContentPage::Stopwatch => match *preferences.stopwatch_progress() {
-									Some(progress) => self.update(UiMessage::StopwatchPageMessage(
-										StopwatchPageMessage::StartupAgain {
-											task: progress.task,
-											elapsed_time: Duration::from_secs(progress.elapsed_time_seconds),
-											paused: progress.paused,
-										}
-									)),
-									None => self.update(UiMessage::OpenStopwatch),
-								},
-								SerializedContentPage::Project(project_id) => {
-									match &self.project_page {
-										Some(project_page) => self.update(UiMessage::SelectProject(Some(project_page.project_id))),
-										None => self.update(UiMessage::SelectProject(Some(*project_id))),
+							let stopwatch_progress_message: Option<UiMessage> = preferences
+								.stopwatch_progress()
+								.as_ref()
+								.map(|progress|
+									StopwatchPageMessage::StartupAgain {
+										task: progress.task,
+										elapsed_time: Duration::from_secs(progress.elapsed_time_seconds),
+										paused: progress.paused,
 									}
+									.into()
+								);
+
+							let selected_content_page = *preferences.selected_content_page();
+
+							Task::batch([
+								if let Some(stopwatch_progress_message) = stopwatch_progress_message {
+									self.update(stopwatch_progress_message)
+								}
+								else {
+									Task::none()
 								},
-							}
+
+								match selected_content_page {
+									SerializedContentPage::Stopwatch => self.update(UiMessage::OpenStopwatch),
+									SerializedContentPage::Project(project_id) => {
+										match &self.project_page {
+											Some(project_page) => self.update(UiMessage::SelectProject(Some(project_page.project_id))),
+											None => self.update(UiMessage::SelectProject(Some(project_id))),
+										}
+									},
+								},
+							])
 						}
 						else {
 							Task::none()
