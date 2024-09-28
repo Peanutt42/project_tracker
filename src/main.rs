@@ -8,7 +8,7 @@ use iced::window::settings::PlatformSpecific;
 use project_tracker_gui::{ProjectTrackerApp, icons::BOOTSTRAP_FONT_BYTES};
 
 fn main() -> Result<(), iced::Error> {
-	iced::application(ProjectTrackerApp::title, ProjectTrackerApp::update, ProjectTrackerApp::view)
+	iced::application("Project Tracker", ProjectTrackerApp::update, ProjectTrackerApp::view)
 		.theme(ProjectTrackerApp::theme)
 		.subscription(ProjectTrackerApp::subscription)
 		.font(BOOTSTRAP_FONT_BYTES)

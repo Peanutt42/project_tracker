@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 use iced::{alignment::{Horizontal, Vertical}, padding::{left, top}, widget::{canvas, column, container, row, text, Column, Row}, window, Alignment, Element, Font, Length::{self, Fill}, Subscription};
-use notify_rust::{Hint, Notification};
+use notify_rust::Notification;
 use crate::{components::{complete_task_timer_button, days_left_widget, pause_timer_button, project_color_block, resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, DatabaseMessage, PreferenceMessage, ProjectId, StopwatchProgress, TaskId}, project_tracker::UiMessage, styles::{task_tag_container_style, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 
 #[derive(Debug, Default)]
@@ -188,7 +188,10 @@ impl StopwatchPage {
 								let summary = format!("{} min. timer finished!", needed_minutes);
 								let body = &task.name;
 
-								if cfg!(target_os = "linux") {
+								#[cfg(target_os = "linux")]
+								{
+									use notify_rust::Hint;
+
 									let _ = Notification::new()
 										.summary(&summary)
 										.body(body)
@@ -197,7 +200,9 @@ impl StopwatchPage {
 										.hint(Hint::DesktopEntry("Project Tracker".to_string()))
 										.show();
 								}
-								else {
+
+								#[cfg(not(target_os = "linux"))]
+								{
 									let _ = Notification::new()
 	            						.summary(&summary)
 										.body(body)

@@ -27,10 +27,6 @@ pub struct ProjectTrackerApp {
 #[derive(Clone, Debug)]
 pub enum UiMessage {
 	CloseWindowRequested(window::Id),
-	#[cfg(feature = "hot_reload")]
-	HotReload,
-	#[cfg(feature = "hot_reload")]
-	HotReloadFinish,
 	EscapePressed,
 	EnterPressed,
 	LeftClickReleased,
@@ -126,15 +122,6 @@ impl ProjectTrackerApp {
 		self.get_theme().clone()
 	}
 
-	pub fn title(&self) -> String {
-		if cfg!(feature = "hot_reload") {
-			"Project Tracker [HOT RELOAD]".to_string()
-		}
-		else {
-			"Project Tracker".to_string()
-		}
-	}
-
 	pub fn subscription(&self) -> Subscription<UiMessage> {
 		Subscription::batch([
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
@@ -173,8 +160,6 @@ impl ProjectTrackerApp {
 						UiMessage::FocusNext
 					}
 				),
-				#[cfg(feature = "hot_reload")]
-				keyboard::Key::Named(keyboard::key::Named::F5) => Some(UiMessage::HotReload),
 				_ => None,
 			}),
 
@@ -210,19 +195,6 @@ impl ProjectTrackerApp {
 					self.update(PreferenceMessage::Save.into()),
 					window::close(id),
 				])
-			},
-			#[cfg(feature = "hot_reload")]
-			UiMessage::HotReload => Task::batch([
-				self.update(UiMessage::SaveDatabase),
-				self.update(PreferenceMessage::Save.into()),
-			])
-			.chain(self.update(UiMessage::HotReloadFinish)),
-			#[cfg(feature = "hot_reload")]
-			UiMessage::HotReloadFinish => {
-				if crate::hot_reload::spawn_cargo_run_process() {
-					std::process::exit(0);
-				}
-				Task::none()
 			},
 			UiMessage::EscapePressed => {
 				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
@@ -393,7 +365,7 @@ impl ProjectTrackerApp {
 						self.database = Some(database);
 						self.importing_database = false;
 						self.syncing_database = false;
-						if let Some(preferences) = &self.preferences {
+						let task = if let Some(preferences) = &self.preferences {
 							let stopwatch_progress_message: Option<UiMessage> = preferences
 								.stopwatch_progress()
 								.as_ref()
@@ -430,7 +402,12 @@ impl ProjectTrackerApp {
 						}
 						else {
 							Task::none()
-						}
+						};
+
+						Task::batch([
+							task,
+							self.update(UiMessage::SaveDatabase),
+						])
 					},
 					LoadDatabaseResult::FailedToOpenFile(filepath) => {
 						self.importing_database = false;
