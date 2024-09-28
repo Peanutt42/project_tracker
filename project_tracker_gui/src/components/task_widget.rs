@@ -3,7 +3,7 @@ use iced::{widget::{button, checkbox, column, container, container::Id, row, tex
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
-use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TaskType, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{checkbox_style, secondary_button_style_default, secondary_button_style_only_round_bottom, shadow_container_style, strikethrough_text, task_background_container_style, task_button_style, text_editor_style, text_input_style, GREY, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
+use crate::{core::{DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag, TaskTagId, TaskType, TASK_TAG_QUAD_HEIGHT}, pages::{EditTaskState, SidebarPageMessage}, styles::{checkbox_style, secondary_button_style_default, secondary_button_style_only_round_bottom, shadow_container_style, task_background_container_style, task_button_style, text_editor_style, text_input_style, GREY, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::UiMessage;
 use crate::components::{delete_task_button, clear_task_needed_time_button, clear_task_due_date_button, unfocusable, duration_widget, duration_text, task_tags_buttons, in_between_dropzone, add_due_date_button, edit_due_date_button, days_left_widget, start_task_timer_button};
@@ -188,18 +188,10 @@ fn task_widget_view<'a>(task: &'a Task, task_type: TaskType, project_id: Project
 			text::Style::default()
 		};
 
-		if matches!(task_type, TaskType::Done) {
-			text(strikethrough_text(&task.name))
-				.width(Fill)
-				.style(move |_theme| text_style)
-				.into()
-		}
-		else {
-			text(task.name.clone())
-				.width(Fill)
-				.style(move |_theme| text_style)
-				.into()
-		}
+		text(&task.name)
+			.width(Fill)
+			.style(move |_theme| text_style)
+			.into()
 	};
 
 	let inner: Element<UiMessage> = row![

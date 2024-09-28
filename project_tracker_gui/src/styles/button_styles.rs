@@ -96,6 +96,29 @@ pub fn delete_done_tasks_button_style(theme: &Theme, status: Status) -> Style {
     }
 }
 
+pub fn circle_button_style(theme: &Theme, status: Status) -> Style {
+	let pair = theme.extended_palette().primary.base;
+	match status {
+		Status::Active => Style {
+			background: Some(pair.color.into()),
+			text_color: pair.text,
+			border: rounded(f32::MAX),
+			..Default::default()
+		},
+		Status::Hovered => Style {
+            background: Some(mix_color(pair.color, theme.extended_palette().background.strong.color, 0.25).into()),
+            text_color: pair.text,
+            ..circle_button_style(theme, Status::Active)
+        },
+        Status::Pressed => circle_button_style(theme, Status::Active),
+        Status::Disabled => Style {
+            background: Some(color_average(pair.color, theme.extended_palette().background.strong.color).into()),
+            text_color: pair.text,
+            ..circle_button_style(theme, Status::Active)
+        },
+	}
+}
+
 pub fn primary_button_style(theme: &Theme, status: Status) -> Style {
     let pair = theme.extended_palette().primary.base;
     match status {

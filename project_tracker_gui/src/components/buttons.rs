@@ -2,11 +2,10 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, border::rounded, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Color, Element, Length::{self, Fill}};
 use iced_aw::{quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{color_palette_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, hidden_secondary_button_style, invisible_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode,
-	icons::{icon_to_text, Bootstrap}
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, icons::{icon_to_text, Bootstrap}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{circle_button_style, color_palette_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, hidden_secondary_button_style, invisible_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
-const ICON_FONT_SIZE: f32 = 18.0;
+const ICON_FONT_SIZE: f32 = 16.0;
 
 fn icon_button(icon: Bootstrap) -> Button<'static, UiMessage> {
 	button(
@@ -16,6 +15,16 @@ fn icon_button(icon: Bootstrap) -> Button<'static, UiMessage> {
 			.align_y(Vertical::Center)
 	)
    	.width(ICON_FONT_SIZE * 1.8)
+}
+
+fn large_icon_button(icon: Bootstrap) -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(icon)
+			.size(LARGE_TEXT_SIZE)
+			.align_x(Horizontal::Center)
+			.align_y(Vertical::Center)
+	)
+	.width(LARGE_TEXT_SIZE * 1.8)
 }
 
 fn icon_label_button(label: impl text::IntoFragment<'static>, icon: Bootstrap) -> Button<'static, UiMessage> {
@@ -30,20 +39,18 @@ fn icon_label_button(label: impl text::IntoFragment<'static>, icon: Bootstrap) -
 }
 
 pub fn create_new_project_button(enabled: bool) -> Button<'static, UiMessage> {
-	icon_label_button("New project", Bootstrap::PlusSquareFill)
-		.on_press_maybe(
-			if enabled {
-				Some(SidebarPageMessage::OpenCreateNewProject.into())
-			}
-			else {
-				None
-			}
-		)
+	large_icon_button(Bootstrap::PlusLg)
+		.on_press_maybe(if enabled {
+			Some(SidebarPageMessage::OpenCreateNewProject.into())
+		}
+		else {
+			None
+		})
 		.style(primary_button_style)
 }
 
 pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
-	icon_label_button("New task", Bootstrap::PlusCircleFill)
+	large_icon_button(Bootstrap::PlusLg)
 		.on_press_maybe(
 			if enabled {
 				Some(ProjectPageMessage::OpenCreateNewTask.into())
@@ -52,7 +59,7 @@ pub fn create_new_task_button(enabled: bool) -> Button<'static, UiMessage> {
 				None
 			}
 		)
-		.style(primary_button_style)
+		.style(circle_button_style)
 }
 
 pub fn cancel_create_project_button() -> Button<'static, UiMessage> {
@@ -179,7 +186,7 @@ pub fn stopwatch_button(stopwatch_page: &StopwatchPage, selected: bool) -> Eleme
 }
 
 pub fn settings_button() -> Button<'static, UiMessage> {
-	icon_button(Bootstrap::Gear)
+	large_icon_button(Bootstrap::Gear)
 		.on_press(SettingsModalMessage::Open.into())
 		.style(secondary_button_style_default)
 }
@@ -225,11 +232,9 @@ pub fn date_formatting_button<'a>(format: &'a DateFormatting, selected_format: &
 
 pub fn copy_to_clipboard_button(copied_text: String) -> Element<'static, UiMessage> {
 	tooltip(
-		button(
-			icon_to_text(Bootstrap::Clipboard)
-		)
-		.on_press(UiMessage::CopyToClipboard(copied_text))
-		.style(secondary_button_style_default),
+		icon_button(Bootstrap::Clipboard)
+			.on_press(UiMessage::CopyToClipboard(copied_text))
+			.style(secondary_button_style_default),
 
 		text("Copy to clipboard")
 			.size(SMALL_TEXT_SIZE),

@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, widget::{column, container, row, text, Space}, Alignment, Task, Element, Length::Fill, Padding};
+use iced::{alignment::Horizontal, padding::{left, right}, widget::{column, container, row, text, Space}, Alignment, Element, Length::Fill, Padding, Task};
 use iced_aw::card;
 use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{card_style, GREY, PADDING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
@@ -132,21 +132,24 @@ impl SettingTab {
 					.spacing(SMALL_SPACING_AMOUNT)
 				};
 
-				column![
-					shortcut("Open Settings:", "Ctrl + ,"),
-					shortcut("Open Stopwatch:", "Ctrl + H"),
-					shortcut("New Project:", "Ctrl + Shift + N"),
-					shortcut("Rename Project:", "Ctrl + R"),
-					shortcut("Search Tasks:", "Ctrl + F"),
-					shortcut("Delete Project:", "Ctrl + Del"),
-					shortcut("Switch to lower Project:", "Ctrl + Tab"),
-					shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
-					shortcut("New Task:", "Ctrl + N"),
-					shortcut("Toggle Sidebar:", "Ctrl + B"),
-					shortcut("Start/Pause/Resume Stopwatch:", "Space"),
-					shortcut("Stop Stopwatch:", "Esc"),
-				]
-				.spacing(SPACING_AMOUNT)
+				container(
+					column![
+						shortcut("Open Settings:", "Ctrl + ,"),
+						shortcut("Open Stopwatch:", "Ctrl + H"),
+						shortcut("New Project:", "Ctrl + Shift + N"),
+						shortcut("Rename Project:", "Ctrl + R"),
+						shortcut("Search Tasks:", "Ctrl + F"),
+						shortcut("Delete Project:", "Ctrl + Del"),
+						shortcut("Switch to lower Project:", "Ctrl + Tab"),
+						shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
+						shortcut("New Task:", "Ctrl + N"),
+						shortcut("Toggle Sidebar:", "Ctrl + B"),
+						shortcut("Start/Pause/Resume Stopwatch:", "Space"),
+						shortcut("Stop Stopwatch:", "Esc"),
+					]
+					.spacing(SPACING_AMOUNT)
+				)
+				.center_y(Fill)
 				.into()
 			},
 		}
@@ -232,43 +235,36 @@ impl SettingsModal {
 		match self {
 			SettingsModal::Closed => None,
 			SettingsModal::Opened{ tab } => {
-				if let Some(preferences) = &app.preferences {
-					let tabs = column![
-						settings_tab_button(SettingTab::General, *tab),
-						settings_tab_button(SettingTab::Database, *tab),
-						settings_tab_button(SettingTab::Shortcuts, *tab)
-					]
-					.spacing(SMALL_SPACING_AMOUNT)
-					.padding(Padding{ right: PADDING_AMOUNT, ..Padding::ZERO });
+				app.preferences.as_ref().map(|preferences| {
+					card(
+						text("Settings").size(HEADING_TEXT_SIZE),
 
-					Some(
-						card(
-							text("Settings").size(HEADING_TEXT_SIZE),
-
-							row![
-								container(tabs)
-									.width(150.0),
-
-								vertical_seperator(),
-
-								container(
-									tab.view(app, preferences)
-								)
-								.center_x(Fill)
-								.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
+						row![
+							column![
+								settings_tab_button(SettingTab::General, *tab),
+								settings_tab_button(SettingTab::Database, *tab),
+								settings_tab_button(SettingTab::Shortcuts, *tab)
 							]
-						)
-						.max_width(900.0)
-						.max_height(400.0)
-						.close_size(LARGE_TEXT_SIZE)
-						.style(card_style)
-						.on_close(SettingsModalMessage::Close.into())
-						.into()
+							.width(150.0)
+							.spacing(SMALL_SPACING_AMOUNT)
+							.padding(right(PADDING_AMOUNT)),
+
+							vertical_seperator(),
+
+							container(
+								tab.view(app, preferences)
+							)
+							.width(Fill)
+							.padding(left(PADDING_AMOUNT))
+						]
 					)
-				}
-				else {
-					None
-				}
+					.max_width(900.0)
+					.max_height(400.0)
+					.close_size(LARGE_TEXT_SIZE)
+					.style(card_style)
+					.on_close(SettingsModalMessage::Close.into())
+					.into()
+				})
 			},
 		}
 	}
