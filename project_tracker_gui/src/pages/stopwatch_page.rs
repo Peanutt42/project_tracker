@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 use iced::{alignment::Horizontal, padding::top, widget::{canvas, column, container, row, text, Column, Row}, window, Alignment, Element, Font, Length::{self, Fill}, Subscription};
 use notify_rust::{Hint, Notification};
-use crate::{components::{days_left_widget, pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, PreferenceMessage, ProjectId, StopwatchProgress, TaskId}, project_tracker::UiMessage, styles::{task_tag_container_style, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}};
+use crate::{components::{complete_task_timer_button, days_left_widget, pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, DatabaseMessage, PreferenceMessage, ProjectId, StopwatchProgress, TaskId}, project_tracker::UiMessage, styles::{task_tag_container_style, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}};
 
 #[derive(Debug, Default)]
 pub enum StopwatchPage {
@@ -31,6 +31,7 @@ pub enum StopwatchPageMessage {
 	Pause,
 	Resume,
 	Toggle,
+	CompleteTask,
 	RedrawClock,
 }
 
@@ -138,6 +139,25 @@ impl StopwatchPage {
 				}
 				else {
 					None
+				}
+			},
+			StopwatchPageMessage::CompleteTask => {
+				let database_action: Option<UiMessage> = if let StopwatchPage::Ticking { task: Some((project_id, task_id)), .. } = self {
+					Some(DatabaseMessage::SetTaskDone { project_id: *project_id, task_id: *task_id }.into())
+				}
+				else {
+					None
+				};
+				let actions = self.update(StopwatchPageMessage::Stop, database, opened);
+
+				if let Some(mut actions) = actions {
+					if let Some(database_action) = database_action {
+						actions.push(database_action);
+					}
+					Some(actions)
+				}
+				else {
+					database_action.map(|db_action| vec![db_action])
 				}
 			},
 			StopwatchPageMessage::RedrawClock => {
@@ -248,6 +268,9 @@ impl StopwatchPage {
 							},
 							stop_timer_button()
 						]
+						.push_maybe(task.map(|_| {
+							complete_task_timer_button()
+						}))
 						.spacing(LARGE_SPACING_AMOUNT)
 					]
 					.push_maybe(

@@ -618,6 +618,19 @@ pub fn pause_timer_button() -> Button<'static, UiMessage> {
 	.style(move |t, s| timer_button_style(t, s, true))
 }
 
+pub fn complete_task_timer_button() -> Button<'static, UiMessage> {
+	button(
+		icon_to_text(Bootstrap::CheckLg)
+			.size(45)
+			.align_x(Horizontal::Center)
+			.align_y(Vertical::Center)
+	)
+	.width(Length::Fixed(1.75 * 45.0))
+	.height(Length::Fixed(1.75 * 45.0))
+	.on_press(StopwatchPageMessage::CompleteTask.into())
+	.style(move |t, s| timer_button_style(t, s, true))
+}
+
 pub fn start_task_timer_button<'a>(project_id: ProjectId, task_id: TaskId, round_top_left: bool) -> Element<'a, UiMessage> {
 	tooltip(
 		icon_button(Bootstrap::Stopwatch)
