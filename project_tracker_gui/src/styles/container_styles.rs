@@ -1,5 +1,5 @@
 use iced::{widget::container::Style, Border, border::rounded, Color, Shadow, Theme, Vector};
-use crate::styles::{BLUR_RADIUS, BORDER_RADIUS, LARGE_BORDER_RADIUS, SELECTION_COLOR, mix_color, background_shadow_color, color_average};
+use crate::styles::{BLUR_RADIUS, BORDER_RADIUS, LARGE_BORDER_RADIUS, SELECTION_COLOR, mix_color, text_color, background_shadow_color, color_average};
 
 pub fn rounded_container_style(theme: &Theme) -> Style {
 	Style {
@@ -103,6 +103,19 @@ pub fn shadow_container_style(theme: &Theme) -> Style {
             color: background_shadow_color(theme.extended_palette()),
             blur_radius: BLUR_RADIUS,
             ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+pub fn task_tag_container_style(_theme: &Theme, color: Color) -> Style {
+	Style {
+        background: Some(color.into()),
+        text_color: Some(text_color(color)),
+        border: Border {
+            color,
+            width: 1.0,
+            radius: LARGE_BORDER_RADIUS.into(),
         },
         ..Default::default()
     }

@@ -233,8 +233,8 @@ fn task_widget_view<'a>(task: &'a Task, task_type: TaskType, project_id: Project
 				if task.needed_time_minutes.is_some() || task.due_date.is_some() {
 					Some(
 						Column::new()
-							.push_maybe(task.due_date.as_ref().map(|due_date| days_left_widget(*due_date)))
 							.push_maybe(task.needed_time_minutes.map(|duration_minutes| duration_widget(Cow::Owned(Duration::from_secs(duration_minutes as u64 * 60)))))
+							.push_maybe(task.due_date.as_ref().map(|due_date| days_left_widget(*due_date)))
 							.push_maybe(
 								stopwatch_label.map(|label| -> Element<UiMessage> {
 									button(

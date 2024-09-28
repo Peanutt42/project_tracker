@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
-use iced::{alignment::Horizontal, widget::{canvas, column, container, row, text}, window, Alignment, Element, Font, Length::{self, Fill}, Subscription};
+use iced::{alignment::Horizontal, padding::top, widget::{canvas, column, container, row, text, Column, Row}, window, Alignment, Element, Font, Length::{self, Fill}, Subscription};
 use notify_rust::{Hint, Notification};
-use crate::{components::{pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, ProjectId, TaskId}, project_tracker::UiMessage, styles::LARGE_SPACING_AMOUNT};
+use crate::{components::{days_left_widget, pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, ProjectId, TaskId}, project_tracker::UiMessage, styles::{task_tag_container_style, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}};
 
 #[derive(Debug, Default)]
 pub enum StopwatchPage {
@@ -150,13 +150,18 @@ impl StopwatchPage {
 					.spacing(LARGE_SPACING_AMOUNT)
 				},
 				StopwatchPage::Ticking { elapsed_time, task, clock, paused, .. } => {
-					let task = task.as_ref().and_then(|(project_id, task_id)|
-						database.as_ref().and_then(|db|
-							db.get_task(project_id, task_id)
-						)
-					);
+					let mut task_ref = None;
+					let mut project_task_tags = None;
+					if let Some((project_id, task_id)) = &task {
+						if let Some(database) = database {
+							if let Some(project) = database.get_project(project_id) {
+								task_ref = project.get_task(task_id);
+								project_task_tags = Some(&project.task_tags);
+							}
+						}
+					}
 
-					let clock: Element<UiMessage> = if task.is_some() {
+					let clock: Element<UiMessage> = if task_ref.is_some() {
 						canvas(clock)
 							.width(Length::Fixed(300.0))
 							.height(Length::Fixed(300.0))
@@ -186,7 +191,36 @@ impl StopwatchPage {
 						.spacing(LARGE_SPACING_AMOUNT)
 					]
 					.push_maybe(
-						task.map(|task| text(&task.name))
+						task_ref.map(|task| {
+							Column::new()
+								.push_maybe(if task.tags.is_empty() {
+									None
+								}
+								else {
+									project_task_tags.map(|project_task_tags| {
+										Row::with_children(
+											task.tags.iter().map(|tag_id| {
+												if let Some(tag) = project_task_tags.get(tag_id) {
+													container(text(&tag.name))
+                										.style(|t| task_tag_container_style(t, tag.color.into()))
+                          								.padding(SMALL_PADDING_AMOUNT)
+														.into()
+												}
+												else {
+													"<invalid tag id>".into()
+												}
+											})
+										)
+										.spacing(SPACING_AMOUNT)
+									})
+								})
+								.push(text(&task.name).size(LARGE_TEXT_SIZE))
+								.push_maybe(task.due_date.map(|due_date| {
+									days_left_widget(due_date)
+								}))
+								.spacing(SPACING_AMOUNT)
+								.padding(top(LARGE_PADDING_AMOUNT))
+						})
 					)
 					.align_x(Alignment::Center)
 					.spacing(LARGE_SPACING_AMOUNT)
