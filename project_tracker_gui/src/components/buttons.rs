@@ -581,7 +581,7 @@ pub fn start_timer_button() -> Button<'static, UiMessage> {
 
 pub fn stop_timer_button() -> Button<'static, UiMessage> {
 	button(
-		icon_to_text(Bootstrap::XLg)
+		icon_to_text(Bootstrap::X)
 			.size(45)
 			.align_x(Horizontal::Center)
 			.align_y(Vertical::Center)

@@ -27,6 +27,10 @@ pub struct ProjectTrackerApp {
 #[derive(Clone, Debug)]
 pub enum UiMessage {
 	CloseWindowRequested(window::Id),
+	#[cfg(feature = "hot_reload")]
+	HotReload,
+	#[cfg(feature = "hot_reload")]
+	HotReloadFinish,
 	EscapePressed,
 	EnterPressed,
 	LeftClickReleased,
@@ -122,6 +126,15 @@ impl ProjectTrackerApp {
 		self.get_theme().clone()
 	}
 
+	pub fn title(&self) -> String {
+		if cfg!(feature = "hot_reload") {
+			"Project Tracker [HOT RELOAD]".to_string()
+		}
+		else {
+			"Project Tracker".to_string()
+		}
+	}
+
 	pub fn subscription(&self) -> Subscription<UiMessage> {
 		Subscription::batch([
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
@@ -160,6 +173,8 @@ impl ProjectTrackerApp {
 						UiMessage::FocusNext
 					}
 				),
+				#[cfg(feature = "hot_reload")]
+				keyboard::Key::Named(keyboard::key::Named::F5) => Some(UiMessage::HotReload),
 				_ => None,
 			}),
 
@@ -195,6 +210,19 @@ impl ProjectTrackerApp {
 					self.update(PreferenceMessage::Save.into()),
 					window::close(id),
 				])
+			},
+			#[cfg(feature = "hot_reload")]
+			UiMessage::HotReload => Task::batch([
+				self.update(UiMessage::SaveDatabase),
+				self.update(PreferenceMessage::Save.into()),
+			])
+			.chain(self.update(UiMessage::HotReloadFinish)),
+			#[cfg(feature = "hot_reload")]
+			UiMessage::HotReloadFinish => {
+				if crate::hot_reload::spawn_cargo_run_process() {
+					std::process::exit(0);
+				}
+				Task::none()
 			},
 			UiMessage::EscapePressed => {
 				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
@@ -374,6 +402,7 @@ impl ProjectTrackerApp {
 										task: progress.task,
 										elapsed_time: Duration::from_secs(progress.elapsed_time_seconds),
 										paused: progress.paused,
+										finished_notification_sent: progress.finished_notification_sent,
 									}
 									.into()
 								);

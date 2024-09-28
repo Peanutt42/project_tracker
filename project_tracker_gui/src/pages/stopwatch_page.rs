@@ -26,6 +26,7 @@ pub enum StopwatchPageMessage {
 		task: Option<(ProjectId, TaskId)>,
 		elapsed_time: Duration,
 		paused: bool,
+		finished_notification_sent: bool,
 	},
 	Stop,
 	Pause,
@@ -59,12 +60,13 @@ impl StopwatchPage {
 	fn get_progress(&self) -> Option<StopwatchProgress> {
 		match self {
 			StopwatchPage::Idle => None,
-			StopwatchPage::Ticking { elapsed_time, paused, task, .. } => {
+			StopwatchPage::Ticking { elapsed_time, paused, task, finished_notification_sent, .. } => {
 				Some(
 					StopwatchProgress {
 						task: *task,
 						elapsed_time_seconds: elapsed_time.as_secs(),
 						paused: *paused,
+						finished_notification_sent: *finished_notification_sent,
 					}
 				)
 			},
@@ -87,14 +89,14 @@ impl StopwatchPage {
 					PreferenceMessage::SetStopwatchProgress(self.get_progress()).into()
 				])
 			},
-			StopwatchPageMessage::StartupAgain { task, elapsed_time, paused } => {
+			StopwatchPageMessage::StartupAgain { task, elapsed_time, paused, finished_notification_sent } => {
 				*self = StopwatchPage::Ticking {
 					elapsed_time,
 					last_update: Instant::now(),
 					paused,
 					task,
 					clock: StopwatchClock::new(0.0, String::new(), String::new()),
-					finished_notification_sent: false
+					finished_notification_sent
 				};
 				Some(vec![
 					UiMessage::OpenStopwatch

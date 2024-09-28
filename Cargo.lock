@@ -2919,6 +2919,7 @@ dependencies = [
  "iced_aw",
  "iced_drop",
  "indexmap",
+ "libc",
  "notify-rust",
  "once_cell",
  "open",

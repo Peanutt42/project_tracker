@@ -54,6 +54,7 @@ pub struct StopwatchProgress {
 	pub task: Option<(ProjectId, TaskId)>,
 	pub elapsed_time_seconds: u64,
 	pub paused: bool,
+	pub finished_notification_sent: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]

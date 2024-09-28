@@ -1,5 +1,5 @@
 use std::{borrow::Cow, str::FromStr, time::Duration};
-use iced::{widget::{button, checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length::{self, Fill}, Padding, Theme};
+use iced::{alignment::Vertical, widget::{button, checkbox, column, container, container::Id, row, text, text_editor, text_input, Column, Row}, Alignment, Element, Length::{self, Fill}, Padding, Theme};
 use iced_drop::droppable;
 use iced_aw::{date_picker, date_picker::Date};
 use once_cell::sync::Lazy;
@@ -244,6 +244,7 @@ fn task_widget_view<'a>(task: &'a Task, task_type: TaskType, project_id: Project
 												color: Some(theme.extended_palette().danger.base.color)
 											})
 										]
+										.align_y(Vertical::Center)
 										.spacing(TINY_SPACING_AMOUNT)
 									)
 									.padding(SMALL_HORIZONTAL_PADDING)
