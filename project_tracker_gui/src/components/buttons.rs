@@ -270,22 +270,19 @@ pub fn invisible_toggle_sidebar_button() -> Button<'static, UiMessage> {
 pub fn import_database_button(importing: bool) -> Element<'static, UiMessage> {
 	button(
 		row![
-			container(
-				if importing {
-					Element::new(
-						Spinner::new()
-							.width(Length::Fixed(16.0))
-							.height(Length::Fixed(16.0))
-							.circle_radius(2.0)
-					)
-				}
-				else {
-					icon_to_text(Bootstrap::Download)
-						.align_y(Vertical::Center)
-						.into()
-				}
-			)
-			.center_y(Fill),
+			if importing {
+				Element::new(
+					Spinner::new()
+						.width(Length::Fixed(16.0))
+						.height(Length::Fixed(16.0))
+						.circle_radius(2.0)
+				)
+			}
+			else {
+				icon_to_text(Bootstrap::Download)
+					.align_y(Vertical::Center)
+					.into()
+			},
 
 			text("Import")
 		]
@@ -305,22 +302,19 @@ pub fn import_database_button(importing: bool) -> Element<'static, UiMessage> {
 pub fn export_database_button(importing: bool) -> Element<'static, UiMessage> {
 	button(
 		row![
-			container(
-				if importing {
-					Element::new(
-						Spinner::new()
-							.width(Length::Fixed(16.0))
-							.height(Length::Fixed(16.0))
-							.circle_radius(2.0)
-					)
-				}
-				else {
-					icon_to_text(Bootstrap::Upload)
-						.align_y(Vertical::Center)
-						.into()
-				}
-			)
-			.center_y(Fill),
+			if importing {
+				Element::new(
+					Spinner::new()
+						.width(Length::Fixed(16.0))
+						.height(Length::Fixed(16.0))
+						.circle_radius(2.0)
+				)
+			}
+			else {
+				icon_to_text(Bootstrap::Upload)
+					.align_y(Vertical::Center)
+					.into()
+			},
 
 			text("Export")
 		]
@@ -340,22 +334,19 @@ pub fn export_database_button(importing: bool) -> Element<'static, UiMessage> {
 pub fn sync_database_button(synchronizing: bool, synchronization_filepath: Option<PathBuf>) -> Element<'static, UiMessage> {
 	button(
 		row![
-			container(
-				if synchronizing {
-					Element::new(
-						Spinner::new()
-							.width(Length::Fixed(16.0))
-							.height(Length::Fixed(16.0))
-							.circle_radius(2.0)
-					)
-				}
-				else {
-					icon_to_text(Bootstrap::ArrowClockwise)
-						.align_y(Vertical::Center)
-						.into()
-				}
-			)
-			.center_y(Fill),
+			if synchronizing {
+				Element::new(
+					Spinner::new()
+						.width(Length::Fixed(16.0))
+						.height(Length::Fixed(16.0))
+						.circle_radius(2.0)
+				)
+			}
+			else {
+				icon_to_text(Bootstrap::ArrowClockwise)
+					.align_y(Vertical::Center)
+					.into()
+			},
 
 			text("Synchronize")
 		]
