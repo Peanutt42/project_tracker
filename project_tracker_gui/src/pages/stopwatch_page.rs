@@ -1,5 +1,5 @@
 use std::time::{Duration, Instant};
-use iced::{alignment::{Horizontal, Vertical}, padding::{left, top}, widget::{canvas, column, container, row, text, Column, Row}, window, Alignment, Element, Font, Length::{self, Fill}, Subscription};
+use iced::{advanced::graphics::futures::backend::default::time, alignment::{Horizontal, Vertical}, padding::{left, top}, widget::{canvas, column, container, row, text, Column, Row}, window, Alignment, Element, Font, Length::{self, Fill}, Subscription};
 use notify_rust::Notification;
 use crate::{components::{complete_task_timer_button, days_left_widget, pause_timer_button, project_color_block, resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock}, core::{Database, DatabaseMessage, PreferenceMessage, ProjectId, StopwatchProgress, TaskId}, project_tracker::UiMessage, styles::{task_tag_container_style, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}};
 
@@ -50,10 +50,17 @@ impl StopwatchPage {
 		}
 	}
 
-	pub fn subscription(&self) -> Subscription<UiMessage> {
+	pub fn subscription(&self, opened: bool) -> Subscription<UiMessage> {
 		match self {
 			StopwatchPage::Idle => Subscription::none(),
-			StopwatchPage::Ticking { .. } => window::frames().map(|_| StopwatchPageMessage::RedrawClock.into()),
+			StopwatchPage::Ticking { .. } => if opened {
+				window::frames()
+					.map(|_| StopwatchPageMessage::RedrawClock.into())
+			}
+			else {
+				time::every(Duration::from_secs(1))
+					.map(|_| StopwatchPageMessage::RedrawClock.into())
+			},
 		}
 	}
 

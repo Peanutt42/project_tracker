@@ -171,7 +171,7 @@ impl ProjectTrackerApp {
 				}
 			}),
 
-			self.stopwatch_page.subscription(),
+			self.stopwatch_page.subscription(self.project_page.is_none()),
 
 			if let Some(project_page) = &self.project_page {
 				project_page.subscription()
