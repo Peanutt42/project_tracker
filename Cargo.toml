@@ -2,6 +2,7 @@
 name = "project_tracker"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/Peanutt42/project_tracker"
 
 [workspace]
 members = ["project_tracker_gui", "iced_drop"]

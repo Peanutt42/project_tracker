@@ -2,6 +2,7 @@
 name = "project_tracker_gui"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/Peanutt42/project_tracker"
 
 [dependencies]
 iced = { workspace = true }
@@ -18,6 +19,7 @@ dark-light = "1.1.1"
 rand = "0.8.5"
 rfd = "0.14.1"
 open = "5.1.4"
+webbrowser = "1.0.2"
 walkdir = "2.5"
 filetime = "0.2"
 pretty-duration = "0.1.1"

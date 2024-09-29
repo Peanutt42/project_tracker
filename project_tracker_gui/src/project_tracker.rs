@@ -31,6 +31,7 @@ pub enum UiMessage {
 	EnterPressed,
 	LeftClickReleased,
 	CopyToClipboard(String),
+	OpenUrl(String),
 	FocusNext,
 	FocusPrevious,
 	SaveChangedFiles,
@@ -238,6 +239,7 @@ impl ProjectTrackerApp {
 				])
 			},
 			UiMessage::CopyToClipboard(copied_text) => clipboard::write(copied_text),
+			UiMessage::OpenUrl(url) => { let _ = webbrowser::open(url.as_str()); Task::none() },
 			UiMessage::FocusNext => focus_next(),
 			UiMessage::FocusPrevious => focus_previous(),
 			UiMessage::SaveChangedFiles => {

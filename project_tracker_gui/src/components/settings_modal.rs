@@ -1,6 +1,6 @@
-use iced::{alignment::Horizontal, padding::{left, right}, widget::{column, container, row, text, Space}, Alignment, Element, Length::Fill, Padding, Task};
+use iced::{alignment::Horizontal, padding::{left, right}, widget::{button, column, container, row, text, Column, Space}, Alignment, Element, Length::Fill, Padding, Task};
 use iced_aw::card;
-use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{card_style, GREY, PADDING_AMOUNT}};
+use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{card_style, secondary_button_style_default, GREY, PADDING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT, rounded_container_style, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
 use crate::project_tracker::{ProjectTrackerApp, UiMessage};
@@ -33,9 +33,17 @@ pub enum SettingTab {
 	General,
 	Database,
 	Shortcuts,
+	About,
 }
 
 impl SettingTab {
+	const ALL: [SettingTab; 4] = [
+		SettingTab::General,
+		SettingTab::Database,
+		SettingTab::Shortcuts,
+		SettingTab::About
+	];
+
 	fn view<'a>(&'a self, app: &'a ProjectTrackerApp, preferences: &'a Preferences) -> Element<'a, UiMessage> {
 		match self {
 			SettingTab::General => preferences.view(),
@@ -152,6 +160,37 @@ impl SettingTab {
 				.center_y(Fill)
 				.into()
 			},
+			SettingTab::About => {
+				let item = |label: &'static str, content: Element<'static, UiMessage>| {
+					row![
+						label,
+						Space::new(Fill, 0.0),
+						content,
+					]
+					.spacing(SMALL_SPACING_AMOUNT)
+				};
+
+				let repository = env!("CARGO_PKG_REPOSITORY");
+
+				column![
+					item("Project Tracker:", text("Project Todo Tracker for personal programming projects").into()),
+
+					item("Author:", text("P3anutt42 (github)").into()),
+
+					item("Version:", text(env!("CARGO_PKG_VERSION")).into()),
+
+					item(
+						"Repository:",
+						button(repository)
+							.on_press(UiMessage::OpenUrl(repository.to_string()))
+							.style(secondary_button_style_default)
+							.into()
+					),
+				]
+				.spacing(SPACING_AMOUNT)
+				.width(Fill)
+				.into()
+			},
 		}
 	}
 }
@@ -159,7 +198,7 @@ impl SettingTab {
 #[derive(Debug, Clone, Default)]
 pub enum SettingsModal {
 	Opened {
-		tab: SettingTab,
+		selected_tab: SettingTab,
 	},
 	#[default]
 	Closed,
@@ -173,7 +212,7 @@ impl SettingsModal {
 	pub fn update(&mut self, message: SettingsModalMessage, preferences: &mut Option<Preferences>) -> Task<UiMessage> {
 		match message {
 			SettingsModalMessage::Open => {
-				*self = SettingsModal::Opened{ tab: SettingTab::default() };
+				*self = SettingsModal::Opened{ selected_tab: SettingTab::default() };
 				Task::none()
 			},
 			SettingsModalMessage::Close => {
@@ -223,8 +262,8 @@ impl SettingsModal {
 			},
 
 			SettingsModalMessage::SwitchSettingsTab(new_tab) => {
-				if let SettingsModal::Opened { tab } = self {
-					*tab = new_tab;
+				if let SettingsModal::Opened { selected_tab } = self {
+					*selected_tab = new_tab;
 				}
 				Task::none()
 			},
@@ -234,25 +273,26 @@ impl SettingsModal {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<UiMessage>> {
 		match self {
 			SettingsModal::Closed => None,
-			SettingsModal::Opened{ tab } => {
+			SettingsModal::Opened{ selected_tab } => {
 				app.preferences.as_ref().map(|preferences| {
+					let tabs: Vec<Element<UiMessage>> = SettingTab::ALL.iter().map(|tab| {
+						settings_tab_button(*tab, *selected_tab).into()
+					})
+					.collect();
+
 					card(
 						text("Settings").size(HEADING_TEXT_SIZE),
 
 						row![
-							column![
-								settings_tab_button(SettingTab::General, *tab),
-								settings_tab_button(SettingTab::Database, *tab),
-								settings_tab_button(SettingTab::Shortcuts, *tab)
-							]
-							.width(150.0)
-							.spacing(SMALL_SPACING_AMOUNT)
-							.padding(right(PADDING_AMOUNT)),
+							Column::with_children(tabs)
+								.width(150.0)
+								.spacing(SMALL_SPACING_AMOUNT)
+								.padding(right(PADDING_AMOUNT)),
 
 							vertical_seperator(),
 
 							container(
-								tab.view(app, preferences)
+								selected_tab.view(app, preferences)
 							)
 							.width(Fill)
 							.padding(left(PADDING_AMOUNT))
