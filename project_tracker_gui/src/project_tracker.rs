@@ -1,15 +1,15 @@
-use std::{path::PathBuf, time::{Duration, Instant}};
-use iced::{clipboard, event::Status, keyboard, mouse, time, widget::{center, container, focus_next, focus_previous, mouse_area, opaque, row, Stack}, window, Color, Element, Event, Length::FillPortion, Padding, Subscription, Task, Theme};
+use std::{path::PathBuf, rc::Rc, time::{Duration, Instant}};
+use iced::{clipboard, event::Status, keyboard, mouse, time, widget::{center, container, focus_next, focus_previous, mouse_area, opaque, responsive, row, stack, Space, Stack}, window, Color, Element, Event, Length::Fill, Padding, Subscription, Task, Theme};
 use crate::{
-	components::{invisible_toggle_sidebar_button, toggle_sidebar_button, vertical_seperator, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage},
+	components::{toggle_sidebar_button, vertical_seperator, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, ScalarAnimation, SettingsModal, SettingsModalMessage, ICON_BUTTON_WIDTH},
 	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult},
 	pages::{ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage},
-	styles::PADDING_AMOUNT,
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
 
 pub struct ProjectTrackerApp {
 	pub sidebar_page: SidebarPage,
+	pub sidebar_animation: ScalarAnimation,
 	pub stopwatch_page: StopwatchPage,
 	pub project_page: Option<ProjectPage>,
 	pub database: Option<Database>,
@@ -67,6 +67,8 @@ pub enum UiMessage {
 	StopwatchPageMessage(StopwatchPageMessage),
 	ProjectPageMessage(ProjectPageMessage),
 	SidebarPageMessage(SidebarPageMessage),
+	ToggleSidebar,
+	AnimateSidebar,
 	SettingsModalMessage(SettingsModalMessage),
 	ManageTaskTagsModalMessage(ManageTaskTagsModalMessage),
 }
@@ -99,6 +101,7 @@ impl ProjectTrackerApp {
 		(
 			Self {
 				sidebar_page: SidebarPage::new(),
+				sidebar_animation: ScalarAnimation::Idle,
 				stopwatch_page: StopwatchPage::default(),
 				project_page: None,
 				database: None,
@@ -136,7 +139,7 @@ impl ProjectTrackerApp {
 						}
 					)
 				},
-				keyboard::Key::Character("b") if modifiers.command() => Some(PreferenceMessage::ToggleShowSidebar.into()),
+				keyboard::Key::Character("b") if modifiers.command() => Some(UiMessage::ToggleSidebar),
 				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::OpenStopwatch),
 				keyboard::Key::Character("r") if modifiers.command() => Some(ProjectPageMessage::EditProjectName.into()),
 				keyboard::Key::Character("f") if modifiers.command() => Some(ProjectPageMessage::OpenSearchTasks.into()),
@@ -180,6 +183,8 @@ impl ProjectTrackerApp {
 			else {
 				Subscription::none()
 			},
+
+			self.sidebar_animation.subscription().map(|_| UiMessage::AnimateSidebar),
 
 			time::every(Duration::from_secs(1))
 				.map(|_| UiMessage::SaveChangedFiles),
@@ -646,6 +651,18 @@ impl ProjectTrackerApp {
 					command
 				])
 			},
+			UiMessage::ToggleSidebar => {
+				let old_show_sidebar = self.preferences.as_ref().map(|pref| pref.show_sidebar()).unwrap_or(true);
+				self.sidebar_animation = if old_show_sidebar {
+					ScalarAnimation::start(SidebarPage::SPLIT_LAYOUT_PERCENTAGE, 0.0, 0.15)
+				}
+				else {
+					ScalarAnimation::start(0.0, SidebarPage::SPLIT_LAYOUT_PERCENTAGE, 0.15)
+				};
+
+				self.update(PreferenceMessage::ToggleShowSidebar.into())
+			},
+			UiMessage::AnimateSidebar => { self.sidebar_animation.update(); Task::none() },
 			UiMessage::SettingsModalMessage(message) => self.settings_modal.update(message, &mut self.preferences),
 			UiMessage::ManageTaskTagsModalMessage(message) => {
 				let deleted_task_tag_id = if let ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) = &message {
@@ -696,40 +713,60 @@ impl ProjectTrackerApp {
 				true
 			};
 
-		let content_view = self.project_page
-			.as_ref()
-			.map(|project_page| project_page.view(self))
-			.unwrap_or(self.stopwatch_page.view(&self.database));
+		let sidebar_animation_value = self.sidebar_animation.get_value();
+		// 0.0..1.0
+		let sidebar_animation_percentage = sidebar_animation_value.map(|value| (1.0 - value / SidebarPage::SPLIT_LAYOUT_PERCENTAGE));
 
-		let underlay: Element<UiMessage> = if show_sidebar {
-			let sidebar_page_view = self.sidebar_page.view(self);
+		let underlay: Element<UiMessage> = if show_sidebar || sidebar_animation_value.is_some() {
+			let sidebar_layout_percentage = sidebar_animation_value.unwrap_or(SidebarPage::SPLIT_LAYOUT_PERCENTAGE);
+			// 0.0..1.0
+			let sidebar_animation_percentage = sidebar_animation_percentage.unwrap_or(0.0);
 
-			row![
-				container(sidebar_page_view).width(FillPortion(1)),
-				vertical_seperator(),
-				container(content_view).width(FillPortion(2))
-			]
+			let arc_self = Rc::new(self);
+
+			responsive(move |size| {
+				let empty_toggle_sidebar_button_layout_width = ICON_BUTTON_WIDTH * sidebar_animation_percentage;
+
+				stack![
+					container(
+						arc_self.sidebar_page.view(*arc_self)
+					)
+					.width(Fill)
+					.padding(Padding::default().right(size.width * (1.0 - SidebarPage::SPLIT_LAYOUT_PERCENTAGE))),
+
+					container(
+						container(
+							row![
+								vertical_seperator(),
+
+								row![
+									Space::with_width(empty_toggle_sidebar_button_layout_width),
+
+									arc_self.content_view(),
+
+									Space::with_width(empty_toggle_sidebar_button_layout_width),
+								]
+							]
+						)
+						.style(|t| container::Style {
+							background: Some(t.extended_palette().background.base.color.into()),
+							..Default::default()
+						})
+					)
+					.width(Fill)
+					.padding(Padding::default().left(size.width * sidebar_layout_percentage))
+				]
+				.into()
+			})
 			.into()
-			/*
-			Split::new(
-				self.sidebar_page.view(self),
-				content_view,
-				Some(sidebar_dividor_position),
-				Axis::Vertical,
-				|pos| PreferenceMessage::SetSidebarDividorPosition(pos).into()
-			)
-			.style(SplitStyles::custom(SplitStyle))
-			.into()*/
 		}
 		else {
 			row![
-				container(toggle_sidebar_button())
-					.padding(Padding { left: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
+				toggle_sidebar_button(),
 
-				content_view,
+				self.content_view(),
 
-				container(invisible_toggle_sidebar_button())
-					.padding(Padding { right: PADDING_AMOUNT, top: PADDING_AMOUNT, ..Padding::ZERO }),
+				Space::with_width(ICON_BUTTON_WIDTH)
 			]
 			.into()
 		};
@@ -741,5 +778,12 @@ impl ProjectTrackerApp {
 			.push_maybe(Self::modal(self.confirm_modal.view(), ConfirmModalMessage::Close.into()))
 			.push_maybe(Self::modal(self.error_msg_modal.view(), ErrorMsgModalMessage::Close.into()))
 			.into()
+	}
+
+	fn content_view(&self) -> Element<UiMessage> {
+		self.project_page
+			.as_ref()
+			.map(|project_page| project_page.view(self))
+			.unwrap_or(self.stopwatch_page.view(&self.database))
 	}
 }

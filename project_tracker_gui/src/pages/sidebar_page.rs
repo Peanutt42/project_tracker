@@ -92,6 +92,8 @@ pub struct SidebarPage {
 }
 
 impl SidebarPage {
+	pub const SPLIT_LAYOUT_PERCENTAGE: f32 = 0.3;
+
 	pub fn new() -> Self {
 		Self {
 			create_new_project_name: None,

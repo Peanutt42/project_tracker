@@ -1,8 +1,9 @@
 use std::time::Instant;
 use iced::{window, Subscription};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub enum ScalarAnimation {
+	#[default]
 	Idle,
 	Animating {
 		start: f32,

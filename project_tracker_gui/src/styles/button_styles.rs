@@ -279,14 +279,6 @@ pub fn color_palette_button_style(theme: &Theme, status: Status, selected: bool)
     }
 }
 
-pub fn invisible_button_style(_theme: &Theme, _status: Status) -> Style {
-    Style {
-        background: None,
-        text_color: Color::TRANSPARENT,
-        ..Default::default()
-    }
-}
-
 pub fn task_tag_button_style(theme: &Theme, status: Status, color: Color, toggled: bool, round_bottom: bool) -> Style {
     let active_style = Style {
         background: Some(if toggled { color.into() } else { theme.extended_palette().background.base.color.into() }),

@@ -15,7 +15,7 @@ iced_fonts = "0.1.1"
 image = "0.24"
 
 [workspace.dependencies]
-iced = { version = "0.13.1", features = ["image", "tokio", "canvas", "advanced"] }
+iced = { version = "0.13.1", features = ["image", "tokio", "canvas", "advanced", "lazy"] }
 iced_aw = { version = "0.11", default-features = false, features = ["spinner", "card", "quad", "date_picker"] }
 
 [build-dependencies]
