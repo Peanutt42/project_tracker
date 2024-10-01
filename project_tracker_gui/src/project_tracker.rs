@@ -752,13 +752,20 @@ impl ProjectTrackerApp {
 					Space::new(Fill, Fill).into()
 				};
 
+				let seperator: Element<UiMessage> = if show_sidebar || sidebar_animation_value.is_some() {
+					vertical_seperator().into()
+				}
+				else {
+					Space::new(0.0, 0.0).into()
+				};
+
 				stack![
 					sidebar,
 
 					container(
 						container(
 							row![
-								vertical_seperator(),
+								seperator,
 
 								row![
 									if show_sidebar || sidebar_animation_value.is_some() {
