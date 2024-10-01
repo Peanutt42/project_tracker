@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, border::rounded, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Color, Element, Length::{self, Fill}};
 use iced_aw::{quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, icons::{icon_to_text, Bootstrap}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{circle_button_style, color_palette_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, icons::{icon_to_text, Bootstrap}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{circle_button_style, color_palette_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 const ICON_FONT_SIZE: f32 = 16.0;
@@ -247,11 +247,11 @@ pub fn copy_to_clipboard_button(copied_text: String) -> Element<'static, UiMessa
 	.into()
 }
 
-pub fn toggle_sidebar_button() -> Element<'static, UiMessage> {
+pub fn toggle_sidebar_button(round_all_sides: bool) -> Element<'static, UiMessage> {
 	tooltip(
 		icon_button(Bootstrap::LayoutSidebar)
 			.on_press(UiMessage::ToggleSidebar)
-			.style(secondary_button_style_default),
+			.style(move |t, s| secondary_button_style(t, s, round_all_sides, round_all_sides, round_all_sides, true)),
 
 		text("Toggle sidebar (Ctrl + B)").size(SMALL_TEXT_SIZE),
 
@@ -464,6 +464,7 @@ pub fn color_palette_item_button(color: Color, selected: bool, on_press: UiMessa
 	)
 	.on_press(on_press)
 	.style(move |t, s| color_palette_button_style(t, s, selected))
+	.padding(SMALL_PADDING_AMOUNT)
 }
 
 pub fn confirm_ok_button(on_confirmed: &UiMessage) -> Button<'static, UiMessage> {

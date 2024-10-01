@@ -717,22 +717,43 @@ impl ProjectTrackerApp {
 		// 0.0..1.0
 		let sidebar_animation_percentage = sidebar_animation_value.map(|value| (1.0 - value / SidebarPage::SPLIT_LAYOUT_PERCENTAGE));
 
-		let underlay: Element<UiMessage> = if show_sidebar || sidebar_animation_value.is_some() {
-			let sidebar_layout_percentage = sidebar_animation_value.unwrap_or(SidebarPage::SPLIT_LAYOUT_PERCENTAGE);
+		let underlay: Element<UiMessage> = {
+			let sidebar_layout_percentage = sidebar_animation_value.unwrap_or(
+				if show_sidebar {
+					SidebarPage::SPLIT_LAYOUT_PERCENTAGE
+				}
+				else {
+					0.0
+				}
+			);
 			// 0.0..1.0
-			let sidebar_animation_percentage = sidebar_animation_percentage.unwrap_or(0.0);
+			let sidebar_animation_percentage = sidebar_animation_percentage.unwrap_or(
+				if show_sidebar {
+					0.0
+				}
+				else {
+					1.0
+				});
 
 			let arc_self = Rc::new(self);
 
 			responsive(move |size| {
 				let empty_toggle_sidebar_button_layout_width = ICON_BUTTON_WIDTH * sidebar_animation_percentage;
 
-				stack![
+				let sidebar: Element<UiMessage> = if show_sidebar || sidebar_animation_value.is_some() {
 					container(
 						arc_self.sidebar_page.view(*arc_self)
 					)
 					.width(Fill)
-					.padding(Padding::default().right(size.width * (1.0 - SidebarPage::SPLIT_LAYOUT_PERCENTAGE))),
+					.padding(Padding::default().right(size.width * (1.0 - SidebarPage::SPLIT_LAYOUT_PERCENTAGE)))
+					.into()
+				}
+				else {
+					Space::new(Fill, Fill).into()
+				};
+
+				stack![
+					sidebar,
 
 					container(
 						container(
@@ -740,7 +761,12 @@ impl ProjectTrackerApp {
 								vertical_seperator(),
 
 								row![
-									Space::with_width(empty_toggle_sidebar_button_layout_width),
+									if show_sidebar || sidebar_animation_value.is_some() {
+										Space::with_width(empty_toggle_sidebar_button_layout_width).into()
+									}
+									else {
+										toggle_sidebar_button(false)
+									},
 
 									arc_self.content_view(),
 
@@ -758,16 +784,6 @@ impl ProjectTrackerApp {
 				]
 				.into()
 			})
-			.into()
-		}
-		else {
-			row![
-				toggle_sidebar_button(),
-
-				self.content_view(),
-
-				Space::with_width(ICON_BUTTON_WIDTH)
-			]
 			.into()
 		};
 

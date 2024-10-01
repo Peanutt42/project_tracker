@@ -436,7 +436,7 @@ impl SidebarPage {
 			column![
 				row![
 					stopwatch_button(&app.stopwatch_page, app.project_page.is_none()),
-					toggle_sidebar_button(),
+					toggle_sidebar_button(true),
 				]
 				.align_y(Alignment::Center)
 				.spacing(SMALL_SPACING_AMOUNT),
