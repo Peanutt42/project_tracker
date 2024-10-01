@@ -249,36 +249,6 @@ pub fn selection_list_button_style(theme: &Theme, status: Status, selected: bool
     }
 }
 
-pub fn color_palette_button_style(theme: &Theme, status: Status, selected: bool) -> Style {
-    let active_style = Style {
-        background: if selected {
-            Some(theme.extended_palette().background.weak.color.into())
-        } else {
-            None
-        },
-        text_color: theme.palette().text,
-        border: rounded(BORDER_RADIUS),
-        ..Default::default()
-    };
-
-    match status {
-        Status::Active => active_style,
-        Status::Hovered => Style {
-            background: Some(if selected {
-                theme.extended_palette().background.weak.color.into()
-            } else {
-                color_average(
-                    theme.extended_palette().background.weak.color,
-                    theme.extended_palette().background.base.color
-                ).into()
-            }),
-            ..active_style
-        },
-        Status::Pressed => active_style,
-        Status::Disabled => active_style,
-    }
-}
-
 pub fn task_tag_button_style(theme: &Theme, status: Status, color: Color, toggled: bool, round_bottom: bool) -> Style {
     let active_style = Style {
         background: Some(if toggled { color.into() } else { theme.extended_palette().background.base.color.into() }),

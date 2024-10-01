@@ -228,6 +228,8 @@ impl ManageTaskTagsModal {
 						color_palette_item_button(
 							tag.color.into(),
 							false,
+							true,
+							true,
 							if show_color_palette {
 								ManageTaskTagsModalMessage::StopEditTaskTagColor.into()
 							}

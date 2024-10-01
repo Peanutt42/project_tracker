@@ -632,6 +632,7 @@ impl ProjectPage {
 
 		let show_color_picker_button = edit_color_palette_button(
 			project.color.into(),
+			self.show_color_picker,
 			if self.show_color_picker {
 				ProjectPageMessage::HideColorPicker.into()
 			}

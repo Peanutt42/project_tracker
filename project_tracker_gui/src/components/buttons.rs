@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use iced::{alignment::{Horizontal, Vertical}, border::rounded, widget::{button, container, row, text, tooltip, tooltip::Position, Button}, Alignment, Color, Element, Length::{self, Fill}};
 use iced_aw::{quad::Quad, widgets::InnerBounds, Spinner};
 use crate::{
-	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, icons::{icon_to_text, Bootstrap}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{circle_button_style, color_palette_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
+	components::{date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage}, core::{DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId, TaskTag, TaskTagId}, icons::{icon_to_text, Bootstrap}, pages::{format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::{circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT}, theme_mode::ThemeMode
 };
 
 const ICON_FONT_SIZE: f32 = 16.0;
@@ -439,9 +439,9 @@ pub fn edit_due_date_button(due_date: &SerializableDate, date_formatting: DateFo
 	.style(move |t, s| secondary_button_style(t, s, false, true, false, false))
 }
 
-pub fn edit_color_palette_button(color: Color, on_press: UiMessage) -> Element<'static, UiMessage> {
+pub fn edit_color_palette_button(color: Color, editing: bool, on_press: UiMessage) -> Element<'static, UiMessage> {
 	tooltip(
-		color_palette_item_button(color, false, on_press),
+		color_palette_item_button(color, editing, true, true, on_press),
 		text("Edit color").size(SMALL_TEXT_SIZE),
 		Position::Bottom
 	)
@@ -450,7 +450,7 @@ pub fn edit_color_palette_button(color: Color, on_press: UiMessage) -> Element<'
 	.into()
 }
 
-pub fn color_palette_item_button(color: Color, selected: bool, on_press: UiMessage) -> Button<'static, UiMessage> {
+pub fn color_palette_item_button(color: Color, selected: bool, round_left: bool, round_right: bool, on_press: UiMessage) -> Button<'static, UiMessage> {
 	button(
 		Quad {
 			width: Length::Fixed(25.0),
@@ -463,7 +463,7 @@ pub fn color_palette_item_button(color: Color, selected: bool, on_press: UiMessa
 		}
 	)
 	.on_press(on_press)
-	.style(move |t, s| color_palette_button_style(t, s, selected))
+	.style(move |t, s| selection_list_button_style(t, s, selected, round_left, round_right))
 	.padding(SMALL_PADDING_AMOUNT)
 }
 
