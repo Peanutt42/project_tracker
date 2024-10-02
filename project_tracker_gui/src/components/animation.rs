@@ -1,5 +1,5 @@
-use std::time::Instant;
 use iced::{window, Subscription};
+use std::time::Instant;
 
 #[derive(Debug, Default, Clone)]
 pub enum ScalarAnimation {
@@ -11,7 +11,7 @@ pub enum ScalarAnimation {
 		value: f32,
 		start_time: Instant,
 		duration_secs: f32,
-	}
+	},
 }
 
 impl ScalarAnimation {
@@ -26,21 +26,28 @@ impl ScalarAnimation {
 	}
 
 	pub fn subscription(&self) -> Subscription<()> {
-		if matches!(self, ScalarAnimation::Animating{ .. }) {
+		if matches!(self, ScalarAnimation::Animating { .. }) {
 			window::frames().map(|_at| ())
-		}
-		else {
+		} else {
 			Subscription::none()
 		}
 	}
 
 	pub fn update(&mut self) {
-		if let ScalarAnimation::Animating { start, target, value, start_time, duration_secs, .. } = self {
-			let anim_percentage = Instant::now().duration_since(*start_time).as_secs_f32() / *duration_secs;
+		if let ScalarAnimation::Animating {
+			start,
+			target,
+			value,
+			start_time,
+			duration_secs,
+			..
+		} = self
+		{
+			let anim_percentage =
+				Instant::now().duration_since(*start_time).as_secs_f32() / *duration_secs;
 			if anim_percentage > 1.0 {
 				*self = ScalarAnimation::Idle;
-			}
-			else {
+			} else {
 				*value = *start + (*target - *start) * anim_percentage;
 			}
 		}

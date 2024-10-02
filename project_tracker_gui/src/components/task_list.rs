@@ -1,17 +1,48 @@
-use std::collections::HashSet;
-use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable, text::LineHeight, text_input, Column}, Element, Length::Fill, Padding};
-use once_cell::sync::Lazy;
-use crate::{core::{DateFormatting, Project, TaskTagId, TaskType}, pages::{CachedTaskList, EditTaskState, StopwatchPage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID}, project_tracker::UiMessage, styles::PADDING_AMOUNT};
-use crate::core::{Task, TaskId, ProjectId};
-use crate::components::{vertical_scrollable, show_done_tasks_button, show_source_code_todos_button, unfocusable, task_widget, cancel_create_task_button, delete_all_done_tasks_button, reimport_source_code_todos_button, task_tags_buttons, in_between_dropzone};
-use crate::styles::{SPACING_AMOUNT, text_input_style};
+use crate::components::{
+	cancel_create_task_button, delete_all_done_tasks_button, in_between_dropzone,
+	reimport_source_code_todos_button, show_done_tasks_button, show_source_code_todos_button,
+	task_tags_buttons, task_widget, unfocusable, vertical_scrollable,
+};
+use crate::core::{ProjectId, Task, TaskId};
 use crate::pages::ProjectPageMessage;
+use crate::styles::{text_input_style, SPACING_AMOUNT};
+use crate::{
+	core::{DateFormatting, Project, TaskTagId, TaskType},
+	pages::{
+		CachedTaskList, EditTaskState, StopwatchPage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
+	},
+	project_tracker::UiMessage,
+	styles::PADDING_AMOUNT,
+};
+use iced::{
+	alignment::{Alignment, Horizontal},
+	widget::{column, container, row, scrollable, text::LineHeight, text_input, Column},
+	Element,
+	Length::Fill,
+	Padding,
+};
+use once_cell::sync::Lazy;
+use std::collections::HashSet;
 
 pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
 pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
-pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_list: &'a CachedTaskList, edit_task_state: &'a Option<EditTaskState>, dragged_task: Option<TaskId>, just_minimal_dragging: bool, hovered_task_dropzone: Option<TaskDropzone>, show_done_tasks: bool, show_source_code_todos: bool, create_new_task: &'a Option<(String, HashSet<TaskTagId>)>, stopwatch_page: &'a StopwatchPage, date_formatting: DateFormatting, create_new_tasks_at_top: bool) -> Element<'a, UiMessage> {
+pub fn task_list<'a>(
+	project_id: ProjectId,
+	project: &'a Project,
+	cached_task_list: &'a CachedTaskList,
+	edit_task_state: &'a Option<EditTaskState>,
+	dragged_task: Option<TaskId>,
+	just_minimal_dragging: bool,
+	hovered_task_dropzone: Option<TaskDropzone>,
+	show_done_tasks: bool,
+	show_source_code_todos: bool,
+	create_new_task: &'a Option<(String, HashSet<TaskTagId>)>,
+	stopwatch_page: &'a StopwatchPage,
+	date_formatting: DateFormatting,
+	create_new_tasks_at_top: bool,
+) -> Element<'a, UiMessage> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut source_code_todo_elements = Vec::new(); // only gets populated when 'show_source_code_todos'
@@ -35,19 +66,34 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 				task.as_ref().and_then(|(timed_project_id, timed_task_id)| {
 					if *timed_project_id == project_id && *timed_task_id == task_id {
 						Some(clock.label())
-					}
-					else {
+					} else {
 						None
 					}
 				})
-			},
+			}
 		};
-		task_widget(task, task_id, task_type, project_id, &project.task_tags, edit_task_state, dragging, just_minimal_dragging, highlight, stopwatch_label, date_formatting)
+		task_widget(
+			task,
+			task_id,
+			task_type,
+			project_id,
+			&project.task_tags,
+			edit_task_state,
+			dragging,
+			just_minimal_dragging,
+			highlight,
+			stopwatch_label,
+			date_formatting,
+		)
 	};
 
 	if create_new_tasks_at_top {
 		if let Some((create_new_task_name, create_new_task_tags)) = create_new_task {
-			todo_task_elements.push(create_new_task_element(project, create_new_task_name, create_new_task_tags));
+			todo_task_elements.push(create_new_task_element(
+				project,
+				create_new_task_name,
+				create_new_task_tags,
+			));
 		}
 	}
 	for task_id in cached_task_list.todo.iter() {
@@ -58,7 +104,11 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 
 	if !create_new_tasks_at_top {
 		if let Some((create_new_task_name, create_new_task_tags)) = create_new_task {
-			todo_task_elements.push(create_new_task_element(project, create_new_task_name, create_new_task_tags));
+			todo_task_elements.push(create_new_task_element(
+				project,
+				create_new_task_name,
+				create_new_task_tags,
+			));
 		}
 	}
 	if show_done_tasks {
@@ -76,69 +126,69 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 		}
 	}
 
-	let highlight_bottom_todo_task_dropzone = matches!(hovered_task_dropzone, Some(TaskDropzone::EndOfTodoTaskList));
-	todo_task_elements.push(in_between_dropzone(BOTTOM_TODO_TASK_DROPZONE_ID.clone(), highlight_bottom_todo_task_dropzone));
+	let highlight_bottom_todo_task_dropzone =
+		matches!(hovered_task_dropzone, Some(TaskDropzone::EndOfTodoTaskList));
+	todo_task_elements.push(in_between_dropzone(
+		BOTTOM_TODO_TASK_DROPZONE_ID.clone(),
+		highlight_bottom_todo_task_dropzone,
+	));
 
 	let show_source_code_todos_button: Element<UiMessage> =
-			if cached_task_list.source_code_todo.is_empty() {
-				column![].into()
-			}
-			else {
-				container(
-					row![
-						show_source_code_todos_button(show_source_code_todos, cached_task_list.source_code_todo.len())
-					]
-					.push_maybe(
-						if source_code_todo_elements.is_empty() {
-							None
-						}
-						else {
-							Some(
-								container(reimport_source_code_todos_button())
-									.width(Fill)
-									.align_x(Horizontal::Right)
-							)
-						}
-					)
-				)
-				.padding(Padding{
-					top: PADDING_AMOUNT,
-					bottom: if show_source_code_todos { 0.0 } else { PADDING_AMOUNT },
-					..Padding::ZERO
-				})
-				.into()
-			};
-
-
-	let show_tasks_button: Element<UiMessage> =
-		if cached_task_list.done.is_empty() {
+		if cached_task_list.source_code_todo.is_empty() {
 			column![].into()
-		}
-		else {
+		} else {
 			container(
-				row![
-					show_done_tasks_button(show_done_tasks, cached_task_list.done.len())
-				]
-				.push_maybe(
-					if done_task_elements.is_empty() {
-						None
-					}
-					else {
-						Some(
-							container(delete_all_done_tasks_button(project_id, &project.name))
-								.width(Fill)
-								.align_x(Horizontal::Right)
-						)
-					}
-				)
+				row![show_source_code_todos_button(
+					show_source_code_todos,
+					cached_task_list.source_code_todo.len()
+				)]
+				.push_maybe(if source_code_todo_elements.is_empty() {
+					None
+				} else {
+					Some(
+						container(reimport_source_code_todos_button())
+							.width(Fill)
+							.align_x(Horizontal::Right),
+					)
+				}),
 			)
-			.padding(Padding{
+			.padding(Padding {
 				top: PADDING_AMOUNT,
-				bottom: if show_done_tasks { 0.0 } else { PADDING_AMOUNT },
+				bottom: if show_source_code_todos {
+					0.0
+				} else {
+					PADDING_AMOUNT
+				},
 				..Padding::ZERO
 			})
 			.into()
 		};
+
+	let show_tasks_button: Element<UiMessage> = if cached_task_list.done.is_empty() {
+		column![].into()
+	} else {
+		container(
+			row![show_done_tasks_button(
+				show_done_tasks,
+				cached_task_list.done.len()
+			)]
+			.push_maybe(if done_task_elements.is_empty() {
+				None
+			} else {
+				Some(
+					container(delete_all_done_tasks_button(project_id, &project.name))
+						.width(Fill)
+						.align_x(Horizontal::Right),
+				)
+			}),
+		)
+		.padding(Padding {
+			top: PADDING_AMOUNT,
+			bottom: if show_done_tasks { 0.0 } else { PADDING_AMOUNT },
+			..Padding::ZERO
+		})
+		.into()
+	};
 
 	let task_indentation_padding = Padding {
 		left: PADDING_AMOUNT,
@@ -146,32 +196,27 @@ pub fn task_list<'a>(project_id: ProjectId, project: &'a Project, cached_task_li
 		..Padding::ZERO
 	};
 
-	vertical_scrollable(
-		column![
-			Column::with_children(todo_task_elements).padding(task_indentation_padding),
-
-			show_source_code_todos_button,
-
-			Column::with_children(source_code_todo_elements).padding(task_indentation_padding),
-
-			show_tasks_button,
-
-			Column::with_children(done_task_elements).padding(task_indentation_padding),
-		]
-	)
+	vertical_scrollable(column![
+		Column::with_children(todo_task_elements).padding(task_indentation_padding),
+		show_source_code_todos_button,
+		Column::with_children(source_code_todo_elements).padding(task_indentation_padding),
+		show_tasks_button,
+		Column::with_children(done_task_elements).padding(task_indentation_padding),
+	])
 	.id(TASK_LIST_ID.clone())
 	.height(Fill)
 	.into()
 }
 
-fn create_new_task_element<'a>(project: &'a Project, create_new_task_name: &'a str, create_new_task_tags: &'a HashSet<TaskTagId>) -> Element<'a, UiMessage> {
+fn create_new_task_element<'a>(
+	project: &'a Project,
+	create_new_task_name: &'a str,
+	create_new_task_tags: &'a HashSet<TaskTagId>,
+) -> Element<'a, UiMessage> {
 	column![
-		task_tags_buttons(
-			&project.task_tags,
-			create_new_task_tags,
-			|tag_id| ProjectPageMessage::ToggleCreateNewTaskTag(tag_id).into()
-		),
-
+		task_tags_buttons(&project.task_tags, create_new_task_tags, |tag_id| {
+			ProjectPageMessage::ToggleCreateNewTaskTag(tag_id).into()
+		}),
 		row![
 			unfocusable(
 				text_input("New task name", create_new_task_name)
@@ -183,25 +228,25 @@ fn create_new_task_element<'a>(project: &'a Project, create_new_task_name: &'a s
 						t,
 						s,
 						// is the first tag enabled?
-						project.task_tags
+						project
+							.task_tags
 							.iter()
 							.next()
-							.map(|(tag_id, _tag)|
-								!create_new_task_tags.contains(&tag_id)
-							)
+							.map(|(tag_id, _tag)| !create_new_task_tags.contains(&tag_id))
 							.unwrap_or(true),
 						false,
 						false,
 						true
 					)),
-
 				ProjectPageMessage::CloseCreateNewTask.into()
 			),
-
 			cancel_create_task_button(),
 		]
 		.align_y(Alignment::Center)
 	]
-	.padding(Padding{ top: SPACING_AMOUNT as f32, ..Padding::ZERO })
+	.padding(Padding {
+		top: SPACING_AMOUNT as f32,
+		..Padding::ZERO
+	})
 	.into()
 }

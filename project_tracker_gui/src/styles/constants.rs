@@ -25,7 +25,7 @@ pub mod size {
 }
 
 pub mod colors {
-	use iced::{theme::palette, Color, color};
+	use iced::{color, theme::palette, Color};
 
 	pub const GREY: Color = Color::from_rgb(0.5, 0.5, 0.5);
 

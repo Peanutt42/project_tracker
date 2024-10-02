@@ -1,13 +1,23 @@
-use iced::{widget::container, Color, Element, Length::{self, Fill}, Padding};
+use crate::{
+	project_tracker::UiMessage,
+	styles::{GREY, PADDING_AMOUNT},
+};
+use iced::{
+	widget::container,
+	Color, Element,
+	Length::{self, Fill},
+	Padding,
+};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
-use crate::{project_tracker::UiMessage, styles::{GREY, PADDING_AMOUNT}};
 
 pub fn horizontal_seperator_padded() -> Element<'static, UiMessage> {
-	container(
-		horizontal_seperator()
-	)
-	.padding(Padding{ top: PADDING_AMOUNT, bottom: PADDING_AMOUNT, ..Padding::ZERO })
-	.into()
+	container(horizontal_seperator())
+		.padding(Padding {
+			top: PADDING_AMOUNT,
+			bottom: PADDING_AMOUNT,
+			..Padding::ZERO
+		})
+		.into()
 }
 
 pub fn horizontal_seperator() -> Quad {

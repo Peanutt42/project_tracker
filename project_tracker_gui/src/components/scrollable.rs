@@ -1,5 +1,15 @@
-use iced::{widget::{container, scrollable, scrollable::{Direction, Scrollbar}, Scrollable}, Element, Padding};
-use crate::{project_tracker::UiMessage, styles::{scrollable_style, SMALL_PADDING_AMOUNT}};
+use crate::{
+	project_tracker::UiMessage,
+	styles::{scrollable_style, SMALL_PADDING_AMOUNT},
+};
+use iced::{
+	widget::{
+		container, scrollable,
+		scrollable::{Direction, Scrollbar},
+		Scrollable,
+	},
+	Element, Padding,
+};
 
 pub const SCROLLBAR_WIDTH: f32 = SMALL_PADDING_AMOUNT;
 
@@ -8,35 +18,29 @@ pub const HORIZONTAL_SCROLLABLE_PADDING: Padding = Padding {
 	..Padding::ZERO
 };
 
-pub fn horizontal_scrollable<'a>(content: impl Into<Element<'a, UiMessage>>) -> Scrollable<'a, UiMessage> {
-	scrollable(
-		container(
-			content
-		)
-		.padding(Padding{
-			bottom: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
-			..Padding::ZERO
-		})
-	)
+pub fn horizontal_scrollable<'a>(
+	content: impl Into<Element<'a, UiMessage>>,
+) -> Scrollable<'a, UiMessage> {
+	scrollable(container(content).padding(Padding {
+		bottom: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
+		..Padding::ZERO
+	}))
 	.direction(Direction::Horizontal(
-		Scrollbar::new().scroller_width(SCROLLBAR_WIDTH)
+		Scrollbar::new().scroller_width(SCROLLBAR_WIDTH),
 	))
 	.style(scrollable_style)
 }
 
-pub fn vertical_scrollable<'a>(content: impl Into<Element<'a, UiMessage>>) -> Scrollable<'a, UiMessage> {
-	scrollable(
-		container(
-			content
-		)
-		.padding(Padding {
-			left: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
-			right: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
-			..Padding::ZERO
-		})
-	)
+pub fn vertical_scrollable<'a>(
+	content: impl Into<Element<'a, UiMessage>>,
+) -> Scrollable<'a, UiMessage> {
+	scrollable(container(content).padding(Padding {
+		left: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
+		right: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
+		..Padding::ZERO
+	}))
 	.direction(Direction::Vertical(
-		Scrollbar::new().scroller_width(SCROLLBAR_WIDTH)
+		Scrollbar::new().scroller_width(SCROLLBAR_WIDTH),
 	))
 	.style(scrollable_style)
 }

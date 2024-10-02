@@ -1,9 +1,9 @@
-pub mod core;
 mod components;
+pub mod core;
 mod pages;
-mod styles;
 mod project_tracker;
+mod styles;
 pub use project_tracker::ProjectTrackerApp;
-mod theme_mode;
-pub mod integrations;
 pub mod icons;
+pub mod integrations;
+mod theme_mode;

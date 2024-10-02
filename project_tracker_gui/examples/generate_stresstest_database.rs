@@ -12,13 +12,17 @@ async fn main() {
 			let task = Task::new(format!("{j}. Task"), HashSet::new());
 			if j % 2 == 0 {
 				project.todo_tasks.insert(j, task);
-			}
-			else {
+			} else {
 				project.done_tasks.insert(j, task);
 			}
 		}
 		db.modify(|projects| projects.insert(ProjectId(i), project));
 	}
 
-	Database::save_to(PathBuf::from("stresstest_database.json"), serde_json::to_string_pretty(&db).unwrap()).await.unwrap();
+	Database::save_to(
+		PathBuf::from("stresstest_database.json"),
+		serde_json::to_string_pretty(&db).unwrap(),
+	)
+	.await
+	.unwrap();
 }

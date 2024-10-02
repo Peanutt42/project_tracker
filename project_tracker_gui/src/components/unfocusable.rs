@@ -1,4 +1,8 @@
-use iced::{advanced::Widget, Element, Event, keyboard::{self, key::Named, Key}, Renderer, Theme};
+use iced::{
+	advanced::Widget,
+	keyboard::{self, key::Named, Key},
+	Element, Event, Renderer, Theme,
+};
 
 pub struct Unfocusable<'a, Message: 'a + Clone> {
 	content: Element<'a, Message>,
@@ -7,10 +11,7 @@ pub struct Unfocusable<'a, Message: 'a + Clone> {
 
 impl<'a, Message: 'a + Clone> Unfocusable<'a, Message> {
 	pub fn new(content: Element<'a, Message>, on_esc: Message) -> Self {
-		Self {
-			content,
-			on_esc,
-		}
+		Self { content, on_esc }
 	}
 }
 
@@ -52,7 +53,9 @@ impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'
 		operation: &mut dyn iced::advanced::widget::Operation,
 	) {
 		operation.container(None, layout.bounds(), &mut |operation| {
-			self.content.as_widget().operate(state, layout, renderer, operation)
+			self.content
+				.as_widget()
+				.operate(state, layout, renderer, operation)
 		})
 	}
 
@@ -68,11 +71,16 @@ impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'
 		viewport: &iced::Rectangle,
 	) -> iced::advanced::graphics::core::event::Status {
 		match &event {
-			Event::Keyboard(keyboard::Event::KeyPressed { key: Key::Named(Named::Escape), .. }) => {
+			Event::Keyboard(keyboard::Event::KeyPressed {
+				key: Key::Named(Named::Escape),
+				..
+			}) => {
 				shell.publish(self.on_esc.clone());
 				iced::advanced::graphics::core::event::Status::Captured
-			},
-			_ => self.content.as_widget_mut().on_event(state, event, layout, cursor, renderer, clipboard, shell, viewport)
+			}
+			_ => self.content.as_widget_mut().on_event(
+				state, event, layout, cursor, renderer, clipboard, shell, viewport,
+			),
 		}
 	}
 
@@ -84,7 +92,9 @@ impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'
 		viewport: &iced::Rectangle,
 		renderer: &Renderer,
 	) -> iced::advanced::mouse::Interaction {
-		self.content.as_widget().mouse_interaction(state, layout, cursor, viewport, renderer)
+		self.content
+			.as_widget()
+			.mouse_interaction(state, layout, cursor, viewport, renderer)
 	}
 
 	fn draw(
@@ -97,7 +107,9 @@ impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'
 		cursor: iced::advanced::mouse::Cursor,
 		viewport: &iced::Rectangle,
 	) {
-		self.content.as_widget().draw(tree, renderer, theme, style, layout, cursor, viewport)
+		self.content
+			.as_widget()
+			.draw(tree, renderer, theme, style, layout, cursor, viewport)
 	}
 
 	fn overlay<'b>(
@@ -107,7 +119,9 @@ impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'
 		renderer: &Renderer,
 		translation: iced::Vector,
 	) -> Option<iced::advanced::overlay::Element<'b, Message, Theme, Renderer>> {
-		self.content.as_widget_mut().overlay(state, layout, renderer, translation)
+		self.content
+			.as_widget_mut()
+			.overlay(state, layout, renderer, translation)
 	}
 }
 
@@ -117,6 +131,9 @@ impl<'a, Message: 'a + Clone> From<Unfocusable<'a, Message>> for Element<'a, Mes
 	}
 }
 
-pub fn unfocusable<'a, Message: 'a + Clone>(content: impl Into<Element<'a, Message>>, on_esc: Message) -> Unfocusable<'a, Message> {
+pub fn unfocusable<'a, Message: 'a + Clone>(
+	content: impl Into<Element<'a, Message>>,
+	on_esc: Message,
+) -> Unfocusable<'a, Message> {
 	Unfocusable::new(content.into(), on_esc)
 }

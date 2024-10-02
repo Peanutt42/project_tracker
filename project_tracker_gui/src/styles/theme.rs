@@ -1,7 +1,13 @@
-use std::sync::Arc;
-use iced::{theme::{palette::{Extended, Secondary}, Custom, Palette}, Color, Theme};
-use once_cell::sync::Lazy;
 use crate::styles::GREY;
+use iced::{
+	theme::{
+		palette::{Extended, Secondary},
+		Custom, Palette,
+	},
+	Color, Theme,
+};
+use once_cell::sync::Lazy;
+use std::sync::Arc;
 
 #[derive(Copy, Clone, Default)]
 pub enum ProjectTrackerTheme {
@@ -19,12 +25,14 @@ pub static DARK_THEME: Lazy<Theme> = Lazy::new(|| {
 		danger: Color::from_rgb(0.9, 0.0, 0.0),
 	};
 
-	Theme::Custom(Arc::new(Custom::with_fn("Dark".to_string(), palette, |p| {
-		Extended {
+	Theme::Custom(Arc::new(Custom::with_fn(
+		"Dark".to_string(),
+		palette,
+		|p| Extended {
 			secondary: Secondary::generate(p.background, GREY),
 			..Extended::generate(p)
-		}
-	})))
+		},
+	)))
 });
 
 pub static LIGHT_THEME: Lazy<Theme> = Lazy::new(|| {
@@ -36,12 +44,14 @@ pub static LIGHT_THEME: Lazy<Theme> = Lazy::new(|| {
 		danger: Color::from_rgb(0.9, 0.0, 0.0),
 	};
 
-	Theme::Custom(Arc::new(Custom::with_fn("Light".to_string(), palette, |p| {
-		Extended {
+	Theme::Custom(Arc::new(Custom::with_fn(
+		"Light".to_string(),
+		palette,
+		|p| Extended {
 			secondary: Secondary::generate(p.background, GREY),
 			..Extended::generate(p)
-		}
-	})))
+		},
+	)))
 });
 
 impl ProjectTrackerTheme {

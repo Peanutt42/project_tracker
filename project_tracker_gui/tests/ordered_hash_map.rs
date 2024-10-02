@@ -70,7 +70,10 @@ fn test_move_before_other_first_order() {
 	hash_map.insert(1, 5);
 	hash_map.insert(2, 15);
 	hash_map.move_before_other(2, 1);
-	assert_eq!(hash_map.get_order(&2).unwrap(), hash_map.get_order(&1).unwrap() - 1);
+	assert_eq!(
+		hash_map.get_order(&2).unwrap(),
+		hash_map.get_order(&1).unwrap() - 1
+	);
 }
 
 #[test]
@@ -80,7 +83,10 @@ fn test_move_before_other_second_order() {
 	hash_map.insert(2, 15);
 	hash_map.insert(3, 25);
 	hash_map.move_before_other(2, 3);
-	assert_eq!(hash_map.get_order(&2).unwrap(), hash_map.get_order(&3).unwrap() - 1);
+	assert_eq!(
+		hash_map.get_order(&2).unwrap(),
+		hash_map.get_order(&3).unwrap() - 1
+	);
 }
 
 #[test]

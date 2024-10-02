@@ -1,10 +1,31 @@
-use iced::{alignment::Horizontal, keyboard, padding::{left, right}, widget::{button, column, container, row, text, Column, Space}, Alignment, Element, Length::Fill, Padding, Subscription, Task};
-use iced_aw::card;
-use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{card_style, secondary_button_style_default, GREY, PADDING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
-use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT, rounded_container_style, HEADING_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT};
-use crate::project_tracker::{ProjectTrackerApp, UiMessage};
 use crate::icons::Bootstrap;
+use crate::project_tracker::{ProjectTrackerApp, UiMessage};
+use crate::styles::{
+	rounded_container_style, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING,
+	SMALL_SPACING_AMOUNT, SPACING_AMOUNT,
+};
+use crate::{
+	components::{
+		clear_synchronization_filepath_button, dangerous_button, export_database_button,
+		file_location, filepath_widget, horizontal_seperator_padded, import_database_button,
+		import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button,
+		sync_database_button, vertical_seperator, ErrorMsgModalMessage,
+		HORIZONTAL_SCROLLABLE_PADDING,
+	},
+	integrations::{import_google_tasks_dialog, ImportGoogleTasksError},
+	styles::{card_style, secondary_button_style_default, GREY, PADDING_AMOUNT},
+};
+use iced::{
+	alignment::Horizontal,
+	keyboard,
+	padding::{left, right},
+	widget::{button, column, container, row, text, Column, Space},
+	Alignment, Element,
+	Length::Fill,
+	Padding, Subscription, Task,
+};
+use iced_aw::card;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {
@@ -41,10 +62,14 @@ impl SettingTab {
 		SettingTab::General,
 		SettingTab::Database,
 		SettingTab::Shortcuts,
-		SettingTab::About
+		SettingTab::About,
 	];
 
-	fn view<'a>(&'a self, app: &'a ProjectTrackerApp, preferences: &'a Preferences) -> Element<'a, UiMessage> {
+	fn view<'a>(
+		&'a self,
+		app: &'a ProjectTrackerApp,
+		preferences: &'a Preferences,
+	) -> Element<'a, UiMessage> {
 		match self {
 			SettingTab::General => preferences.view(),
 			SettingTab::Database => {
@@ -206,41 +231,47 @@ pub enum SettingsModal {
 
 impl SettingsModal {
 	pub fn is_open(&self) -> bool {
-		matches!(self, SettingsModal::Opened{ .. })
+		matches!(self, SettingsModal::Opened { .. })
 	}
 
 	pub fn subscription(&self) -> Subscription<SettingsModalMessage> {
 		keyboard::on_key_press(|key, modifiers| match key.as_ref() {
-			keyboard::Key::Character(",") if modifiers.command() => Some(SettingsModalMessage::Open),
+			keyboard::Key::Character(",") if modifiers.command() => {
+				Some(SettingsModalMessage::Open)
+			}
 			_ => None,
 		})
 	}
 
-	pub fn update(&mut self, message: SettingsModalMessage, preferences: &mut Option<Preferences>) -> Task<UiMessage> {
+	pub fn update(
+		&mut self,
+		message: SettingsModalMessage,
+		preferences: &mut Option<Preferences>,
+	) -> Task<UiMessage> {
 		match message {
 			SettingsModalMessage::Open => {
-				*self = SettingsModal::Opened{ selected_tab: SettingTab::default() };
+				*self = SettingsModal::Opened {
+					selected_tab: SettingTab::default(),
+				};
 				Task::none()
-			},
+			}
 			SettingsModalMessage::Close => {
 				*self = SettingsModal::Closed;
 				Task::none()
-			},
+			}
 
-			SettingsModalMessage::BrowseSynchronizationFilepath => Task::perform(
-				Database::export_file_dialog(),
-				|filepath| {
-					match filepath {
-						Some(filepath) => PreferenceMessage::SetSynchronizationFilepath(Some(filepath)).into(),
-						None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
+			SettingsModalMessage::BrowseSynchronizationFilepath => {
+				Task::perform(Database::export_file_dialog(), |filepath| match filepath {
+					Some(filepath) => {
+						PreferenceMessage::SetSynchronizationFilepath(Some(filepath)).into()
 					}
-				}
-			),
+					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
+				})
+			}
 			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => Task::none(),
 
-			SettingsModalMessage::ImportGoogleTasksFileDialog => Task::perform(
-				import_google_tasks_dialog(),
-				move |result| {
+			SettingsModalMessage::ImportGoogleTasksFileDialog => {
+				Task::perform(import_google_tasks_dialog(), move |result| {
 					match result {
 						Some((result, filepath)) => match result {
 							Ok(projects) => DatabaseMessage::ImportProjects(projects).into(),
@@ -255,64 +286,56 @@ impl SettingsModal {
 						},
 						None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
 					}
-				}
-			),
+				})
+			}
 			SettingsModalMessage::ImportGoogleTasksFileDialogCanceled => Task::none(),
 
 			SettingsModalMessage::SetDateFormatting(date_formatting) => {
 				if let Some(preferences) = preferences {
 					preferences.update(PreferenceMessage::SetDateFormatting(date_formatting))
-				}
-				else {
+				} else {
 					Task::none()
 				}
-			},
+			}
 
 			SettingsModalMessage::SwitchSettingsTab(new_tab) => {
 				if let SettingsModal::Opened { selected_tab } = self {
 					*selected_tab = new_tab;
 				}
 				Task::none()
-			},
+			}
 		}
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<UiMessage>> {
 		match self {
 			SettingsModal::Closed => None,
-			SettingsModal::Opened{ selected_tab } => {
-				app.preferences.as_ref().map(|preferences| {
-					let tabs: Vec<Element<UiMessage>> = SettingTab::ALL.iter().map(|tab| {
-						settings_tab_button(*tab, *selected_tab).into()
-					})
+			SettingsModal::Opened { selected_tab } => app.preferences.as_ref().map(|preferences| {
+				let tabs: Vec<Element<UiMessage>> = SettingTab::ALL
+					.iter()
+					.map(|tab| settings_tab_button(*tab, *selected_tab).into())
 					.collect();
 
-					card(
-						text("Settings").size(HEADING_TEXT_SIZE),
-
-						row![
-							Column::with_children(tabs)
-								.width(150.0)
-								.spacing(SMALL_SPACING_AMOUNT)
-								.padding(right(PADDING_AMOUNT)),
-
-							vertical_seperator(),
-
-							container(
-								selected_tab.view(app, preferences)
-							)
+				card(
+					text("Settings").size(HEADING_TEXT_SIZE),
+					row![
+						Column::with_children(tabs)
+							.width(150.0)
+							.spacing(SMALL_SPACING_AMOUNT)
+							.padding(right(PADDING_AMOUNT)),
+						vertical_seperator(),
+						container(selected_tab.view(app, preferences))
 							.width(Fill)
 							.padding(left(PADDING_AMOUNT))
-						]
-					)
-					.max_width(900.0)
-					.max_height(475.0)
-					.close_size(LARGE_TEXT_SIZE)
-					.style(card_style)
-					.on_close(SettingsModalMessage::Close.into())
-					.into()
-				})
-			},
+					],
+				)
+				.max_width(900.0)
+				.max_height(475.0)
+				.close_size(LARGE_TEXT_SIZE)
+				.style(card_style)
+				.on_close(SettingsModalMessage::Close.into())
+				.into()
+			}),
 		}
 	}
 }

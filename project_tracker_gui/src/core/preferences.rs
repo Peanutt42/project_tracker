@@ -1,12 +1,31 @@
+use crate::icons::Bootstrap;
+use crate::{
+	components::{
+		dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded,
+		theme_mode_button, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING,
+	},
+	core::{ProjectId, SerializableDate, TaskId},
+	project_tracker::UiMessage,
+	styles::SPACING_AMOUNT,
+	theme_mode::ThemeMode,
+};
+use iced::{
+	alignment::Horizontal,
+	widget::{column, container, row, toggler, Row},
+	Alignment, Element,
+	Length::Fill,
+	Task,
+};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Instant;
-use iced::{alignment::Horizontal, widget::{column, container, row, toggler, Row}, Alignment, Element, Length::Fill, Task};
-use serde::{Serialize, Deserialize};
-use crate::{components::{dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded, theme_mode_button, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, core::{ProjectId, TaskId, SerializableDate}, project_tracker::UiMessage, styles::SPACING_AMOUNT, theme_mode::ThemeMode};
-use crate::icons::Bootstrap;
 
-fn default_show_sidebar() -> bool { true }
-fn default_create_new_tasks_at_top() -> bool { true }
+fn default_show_sidebar() -> bool {
+	true
+}
+fn default_create_new_tasks_at_top() -> bool {
+	true
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
@@ -99,13 +118,27 @@ pub enum LoadPreferencesResult {
 impl Preferences {
 	const FILE_NAME: &'static str = "preferences.json";
 
-	pub fn synchronization_filepath(&self) -> &Option<PathBuf> { &self.synchronization_filepath }
-	pub fn theme_mode(&self) -> &ThemeMode { &self.theme_mode }
-	pub fn selected_content_page(&self) -> &SerializedContentPage { &self.selected_content_page }
-	pub fn stopwatch_progress(&self) -> &Option<StopwatchProgress> { &self.stopwatch_progress }
-	pub fn show_sidebar(&self) -> bool { self.show_sidebar }
-	pub fn date_formatting(&self) -> DateFormatting { self.date_formatting }
-	pub fn create_new_tasks_at_top(&self) -> bool { self.create_new_tasks_at_top }
+	pub fn synchronization_filepath(&self) -> &Option<PathBuf> {
+		&self.synchronization_filepath
+	}
+	pub fn theme_mode(&self) -> &ThemeMode {
+		&self.theme_mode
+	}
+	pub fn selected_content_page(&self) -> &SerializedContentPage {
+		&self.selected_content_page
+	}
+	pub fn stopwatch_progress(&self) -> &Option<StopwatchProgress> {
+		&self.stopwatch_progress
+	}
+	pub fn show_sidebar(&self) -> bool {
+		self.show_sidebar
+	}
+	pub fn date_formatting(&self) -> DateFormatting {
+		self.date_formatting
+	}
+	pub fn create_new_tasks_at_top(&self) -> bool {
+		self.create_new_tasks_at_top
+	}
 
 	pub fn modify(&mut self, f: impl FnOnce(&mut Preferences)) {
 		f(self);
@@ -122,74 +155,74 @@ impl Preferences {
 
 	pub fn update(&mut self, message: PreferenceMessage) -> Task<UiMessage> {
 		match message {
-			PreferenceMessage::Save => Task::perform(
-				Self::save(self.to_json()),
-				|result| {
-					match result {
-						Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
-						Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
-					}
-				}
-			),
-			PreferenceMessage::Saved(begin_time) => { self.last_saved_time = begin_time; Task::none() },
-			PreferenceMessage::Reset => { *self = Preferences::default(); self.modified(); Task::none() },
+			PreferenceMessage::Save => {
+				Task::perform(Self::save(self.to_json()), |result| match result {
+					Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
+					Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
+				})
+			}
+			PreferenceMessage::Saved(begin_time) => {
+				self.last_saved_time = begin_time;
+				Task::none()
+			}
+			PreferenceMessage::Reset => {
+				*self = Preferences::default();
+				self.modified();
+				Task::none()
+			}
 			PreferenceMessage::Export => Task::perform(
 				Self::export_file_dialog(self.to_json()),
-				|result| {
-					match result {
-						Ok(_) => PreferenceMessage::Exported.into(),
-						Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
-					}
-				}
+				|result| match result {
+					Ok(_) => PreferenceMessage::Exported.into(),
+					Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
+				},
 			),
 			PreferenceMessage::Exported => Task::none(),
-			PreferenceMessage::Import => Task::perform(
-				Preferences::import_file_dialog(),
-				|result| {
+			PreferenceMessage::Import => {
+				Task::perform(Preferences::import_file_dialog(), |result| {
 					if let Some(load_preference_result) = result {
 						UiMessage::LoadedPreferences(load_preference_result)
-					}
-					else {
+					} else {
 						PreferenceMessage::ImportFailed.into()
 					}
-				}
-			),
+				})
+			}
 			PreferenceMessage::ImportFailed => Task::none(),
 
 			PreferenceMessage::SetThemeMode(theme_mode) => {
 				self.modify(|pref| pref.theme_mode = theme_mode);
 				Task::none()
-			},
+			}
 
 			PreferenceMessage::ToggleShowSidebar => {
 				self.modify(|pref| pref.show_sidebar = !pref.show_sidebar);
 				Task::none()
-			},
+			}
 
 			PreferenceMessage::SetContentPage(content_page) => {
 				self.modify(|pref| pref.selected_content_page = content_page);
 				Task::none()
-			},
+			}
 
 			PreferenceMessage::SetStopwatchProgress(progress) => {
 				self.modify(|pref| pref.stopwatch_progress = progress);
 				Task::none()
-			},
+			}
 
 			PreferenceMessage::SetSynchronizationFilepath(filepath) => {
 				self.modify(|pref| pref.synchronization_filepath = filepath);
 				Task::none()
-			},
+			}
 
 			PreferenceMessage::SetDateFormatting(date_formatting) => {
 				self.modify(|pref| pref.date_formatting = date_formatting);
 				Task::none()
-			},
+			}
 
 			PreferenceMessage::SetCreateNewTaskAtTop(create_at_top) => {
 				self.modify(|pref| pref.create_new_tasks_at_top = create_at_top);
 				Task::none()
-			},
+			}
 		}
 	}
 
@@ -197,14 +230,18 @@ impl Preferences {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
 			.expect("Failed to get saved state filepath");
 
-		project_dirs.config_local_dir().join(Self::FILE_NAME)
+		project_dirs
+			.config_local_dir()
+			.join(Self::FILE_NAME)
 			.to_path_buf()
 	}
 
 	async fn get_and_ensure_filepath() -> PathBuf {
 		let filepath = Self::get_filepath();
 
-		tokio::fs::create_dir_all(filepath.parent().unwrap()).await.expect("Failed to create Local Config Directories");
+		tokio::fs::create_dir_all(filepath.parent().unwrap())
+			.await
+			.expect("Failed to create Local Config Directories");
 
 		filepath
 	}
@@ -212,8 +249,7 @@ impl Preferences {
 	async fn load_from(filepath: PathBuf) -> LoadPreferencesResult {
 		let file_content = if let Ok(file_content) = tokio::fs::read_to_string(&filepath).await {
 			file_content
-		}
-		else {
+		} else {
 			return LoadPreferencesResult::FailedToOpenFile(filepath);
 		};
 
@@ -230,8 +266,7 @@ impl Preferences {
 	async fn save_to(filepath: PathBuf, json: String) -> Result<(), String> {
 		if let Err(e) = tokio::fs::write(&filepath, json.as_bytes()).await {
 			Err(format!("Failed to save to {}: {e}", filepath.display()))
-		}
-		else {
+		} else {
 			Ok(())
 		}
 	}
@@ -270,18 +305,18 @@ impl Preferences {
 
 		if let Some(result) = file_dialog_result {
 			Some(Self::load_from(result.path().to_path_buf()).await)
-		}
-		else {
+		} else {
 			None
 		}
 	}
 
-	fn setting_item<'a>(label: impl Into<Element<'a, UiMessage>>, content: impl Into<Element<'a, UiMessage>>) -> Row<'a, UiMessage> {
+	fn setting_item<'a>(
+		label: impl Into<Element<'a, UiMessage>>,
+		content: impl Into<Element<'a, UiMessage>>,
+	) -> Row<'a, UiMessage> {
 		row![
 			label.into(),
-			container(content)
-				.width(Fill)
-				.align_x(Horizontal::Right),
+			container(content).width(Fill).align_x(Horizontal::Right),
 		]
 		.align_y(Alignment::Center)
 	}
@@ -296,29 +331,35 @@ impl Preferences {
 					theme_mode_button(ThemeMode::Light, self.theme_mode, false, true),
 				]
 			),
-
 			Self::setting_item(
 				"Date Formatting:",
 				row![
-					date_formatting_button(&DateFormatting::DayMonthYear, &self.date_formatting, true),
-					date_formatting_button(&DateFormatting::MonthDayYear, &self.date_formatting, false),
+					date_formatting_button(
+						&DateFormatting::DayMonthYear,
+						&self.date_formatting,
+						true
+					),
+					date_formatting_button(
+						&DateFormatting::MonthDayYear,
+						&self.date_formatting,
+						false
+					),
 				]
 			),
-
 			Self::setting_item(
 				"Create new tasks at top:",
 				toggler(self.create_new_tasks_at_top)
-					.on_toggle(|create_at_top| PreferenceMessage::SetCreateNewTaskAtTop(create_at_top).into())
+					.on_toggle(|create_at_top| PreferenceMessage::SetCreateNewTaskAtTop(
+						create_at_top
+					)
+					.into())
 					.size(27.5)
 			),
-
 			horizontal_seperator_padded(),
-
 			Self::setting_item(
 				container("Preferences file location:").padding(HORIZONTAL_SCROLLABLE_PADDING),
 				file_location(Self::get_filepath())
 			),
-
 			container(
 				row![
 					dangerous_button(
@@ -327,20 +368,13 @@ impl Preferences {
 						Some("Reset Preferences".to_string()),
 						PreferenceMessage::Reset
 					),
-
 					dangerous_button(
 						Bootstrap::Download,
 						"Import",
 						None,
 						PreferenceMessage::Import
 					),
-
-					dangerous_button(
-						Bootstrap::Upload,
-						"Export",
-						None,
-						PreferenceMessage::Export
-					),
+					dangerous_button(Bootstrap::Upload, "Export", None, PreferenceMessage::Export),
 				]
 				.spacing(SPACING_AMOUNT)
 			)

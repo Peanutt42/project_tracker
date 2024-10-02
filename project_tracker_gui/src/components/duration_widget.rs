@@ -1,11 +1,18 @@
-use std::{borrow::Cow, time::Duration};
+use crate::{
+	project_tracker::UiMessage,
+	styles::{rounded_container_style, SMALL_HORIZONTAL_PADDING},
+};
+use iced::{
+	widget::{container, text, Text},
+	Element,
+};
 use pretty_duration::{pretty_duration, PrettyDurationLabels, PrettyDurationOptions};
-use iced::{widget::{container, text, Text}, Element};
-use crate::{project_tracker::UiMessage, styles::{rounded_container_style, SMALL_HORIZONTAL_PADDING}};
+use std::{borrow::Cow, time::Duration};
 
 pub fn duration_text(duration: Cow<'_, Duration>) -> Text {
-	text(
-		pretty_duration(duration.as_ref(), Some(PrettyDurationOptions {
+	text(pretty_duration(
+		duration.as_ref(),
+		Some(PrettyDurationOptions {
 			output_format: None,
 			singular_labels: Some(PrettyDurationLabels {
 				year: "year",
@@ -24,16 +31,14 @@ pub fn duration_text(duration: Cow<'_, Duration>) -> Text {
 				minute: "min",
 				second: "s",
 				millisecond: "ms",
-			})
-		}))
-	)
+			}),
+		}),
+	))
 }
 
 pub fn duration_widget(duration: Cow<'_, Duration>) -> Element<'_, UiMessage> {
-	container(
-		duration_text(duration)
-	)
-	.padding(SMALL_HORIZONTAL_PADDING)
-	.style(rounded_container_style)
-	.into()
+	container(duration_text(duration))
+		.padding(SMALL_HORIZONTAL_PADDING)
+		.style(rounded_container_style)
+		.into()
 }

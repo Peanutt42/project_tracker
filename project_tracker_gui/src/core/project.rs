@@ -1,8 +1,8 @@
-use std::collections::HashSet;
-use serde::{Serialize, Deserialize};
-use indexmap::IndexMap;
+use crate::core::{OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType};
 use iced::{widget::container::Id, Color};
-use crate::core::{OrderedHashMap, Task, TaskId, TaskType, TaskTag, TaskTagId, SerializableDate};
+use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
 pub struct ProjectId(pub usize);
@@ -60,13 +60,18 @@ impl Project {
 			.or(self.source_code_todos.get_mut(task_id))
 	}
 
-	pub fn add_task(&mut self, task_id: TaskId, name: String, tags: HashSet<TaskTagId>, create_at_top: bool) {
+	pub fn add_task(
+		&mut self,
+		task_id: TaskId,
+		name: String,
+		tags: HashSet<TaskTagId>,
+		create_at_top: bool,
+	) {
 		let task = Task::new(name, tags);
 
 		if create_at_top {
 			self.todo_tasks.insert_at_top(task_id, task);
-		}
-		else {
+		} else {
 			self.todo_tasks.insert(task_id, task);
 		}
 	}
@@ -76,16 +81,14 @@ impl Project {
 		self.todo_tasks
 			.remove(task_id)
 			.map(|task| (TaskType::Todo, task))
-			.or(
-				self.done_tasks
-					.shift_remove(task_id)
-					.map(|task| (TaskType::Done, task))
-			)
-			.or(
-				self.source_code_todos
-					.shift_remove(task_id)
-					.map(|task| (TaskType::SourceCodeTodo, task))
-			)
+			.or(self
+				.done_tasks
+				.shift_remove(task_id)
+				.map(|task| (TaskType::Done, task)))
+			.or(self
+				.source_code_todos
+				.shift_remove(task_id)
+				.map(|task| (TaskType::SourceCodeTodo, task)))
 	}
 
 	pub fn set_task_name(&mut self, task_id: TaskId, new_name: String) {
@@ -101,12 +104,20 @@ impl Project {
 	}
 
 	pub fn set_task_done(&mut self, task_id: TaskId) {
-		if let Some(task) = self.todo_tasks.remove(&task_id).or(self.source_code_todos.shift_remove(&task_id)) {
+		if let Some(task) = self
+			.todo_tasks
+			.remove(&task_id)
+			.or(self.source_code_todos.shift_remove(&task_id))
+		{
 			self.done_tasks.insert(task_id, task);
 		}
 	}
 
-	pub fn set_task_needed_time(&mut self, task_id: TaskId, new_needed_time_minutes: Option<usize>) {
+	pub fn set_task_needed_time(
+		&mut self,
+		task_id: TaskId,
+		new_needed_time_minutes: Option<usize>,
+	) {
 		if let Some(task) = self.get_task_mut(&task_id) {
 			task.needed_time_minutes = new_needed_time_minutes;
 		}
@@ -122,8 +133,7 @@ impl Project {
 		if let Some(task) = self.get_task_mut(&task_id) {
 			if task.tags.contains(&task_tag_id) {
 				task.tags.remove(&task_tag_id);
-			}
-			else {
+			} else {
 				task.tags.insert(task_tag_id);
 			}
 		}
@@ -141,12 +151,9 @@ impl Project {
 		}
 	}
 
-
 	// ignores iced unique id's, probably only for tests
 	pub fn has_same_content_as(&self, other: &Project) -> bool {
-		if self.name != other.name ||
-			self.color != other.color ||
-			self.task_tags != other.task_tags
+		if self.name != other.name || self.color != other.color || self.task_tags != other.task_tags
 		{
 			return false;
 		}
@@ -156,8 +163,7 @@ impl Project {
 				if !task.has_same_content_as(other_task) {
 					return false;
 				}
-			}
-			else {
+			} else {
 				return false;
 			}
 		}
@@ -167,8 +173,7 @@ impl Project {
 				if !task.has_same_content_as(other_task) {
 					return false;
 				}
-			}
-			else {
+			} else {
 				return false;
 			}
 		}
@@ -178,8 +183,7 @@ impl Project {
 				if !task.has_same_content_as(other_task) {
 					return false;
 				}
-			}
-			else {
+			} else {
 				return false;
 			}
 		}
@@ -187,8 +191,6 @@ impl Project {
 		true
 	}
 }
-
-
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct SerializableColor(pub [u8; 3]);
@@ -201,10 +203,10 @@ impl From<SerializableColor> for Color {
 
 impl From<Color> for SerializableColor {
 	fn from(value: Color) -> Self {
-		Self ([
+		Self([
 			(value.r * 255.0) as u8,
 			(value.g * 255.0) as u8,
-			(value.b * 255.0) as u8
+			(value.b * 255.0) as u8,
 		])
 	}
 }

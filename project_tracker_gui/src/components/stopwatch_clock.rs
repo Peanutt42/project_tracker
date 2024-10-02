@@ -1,6 +1,10 @@
 use std::f32::consts::PI;
 
-use iced::{alignment::{Horizontal, Vertical}, widget::canvas::{path::Arc, stroke, Cache, Geometry, LineCap, Path, Program, Stroke, Text}, Color, Font, Point, Radians, Renderer, Theme};
+use iced::{
+	alignment::{Horizontal, Vertical},
+	widget::canvas::{path::Arc, stroke, Cache, Geometry, LineCap, Path, Program, Stroke, Text},
+	Color, Font, Point, Radians, Renderer, Theme,
+};
 
 use crate::project_tracker::UiMessage;
 
@@ -18,11 +22,13 @@ impl StopwatchClock {
 			percentage,
 			label,
 			sub_label,
-			cache: Cache::new()
+			cache: Cache::new(),
 		}
 	}
 
-	pub fn label(&self) -> &String { &self.label }
+	pub fn label(&self) -> &String {
+		&self.label
+	}
 
 	pub fn set_percentage(&mut self, percentage: f32) {
 		self.percentage = percentage;
@@ -56,39 +62,46 @@ impl Program<UiMessage> for StopwatchClock {
 			const STROKE_WIDTH: f32 = 7.5;
 			let radius = frame.width().min(frame.height()) / 2.0 - STROKE_WIDTH;
 
-			let stroke = |color: Color| {
-				Stroke {
-					width: STROKE_WIDTH,
-					style: stroke::Style::Solid(color),
-					line_cap: LineCap::Round,
-					..Default::default()
-				}
+			let stroke = |color: Color| Stroke {
+				width: STROKE_WIDTH,
+				style: stroke::Style::Solid(color),
+				line_cap: LineCap::Round,
+				..Default::default()
 			};
 
 			let background = Path::circle(center, radius);
-			frame.stroke(&background, stroke(theme.extended_palette().secondary.base.color));
+			frame.stroke(
+				&background,
+				stroke(theme.extended_palette().secondary.base.color),
+			);
 
 			if self.percentage < 1.0 {
-				let left_arc = Path::new(|builder| builder.arc(Arc {
-					center,
-					radius,
-					start_angle: Radians(-0.5 * PI),
-					end_angle: Radians(1.5 * PI - self.percentage.min(1.0) * 2.0 * PI)
-				}));
+				let left_arc = Path::new(|builder| {
+					builder.arc(Arc {
+						center,
+						radius,
+						start_angle: Radians(-0.5 * PI),
+						end_angle: Radians(1.5 * PI - self.percentage.min(1.0) * 2.0 * PI),
+					})
+				});
 				frame.stroke(
 					&left_arc,
-					stroke(theme.extended_palette().primary.base.color)
+					stroke(theme.extended_palette().primary.base.color),
 				);
-			}
-			else {
+			} else {
 				let overflow_percentage = self.percentage - 1.0;
-				let overflow_arc = Path::new(|builder| builder.arc(Arc {
-					center,
-					radius,
-					start_angle: Radians(-0.5 * PI),
-					end_angle: Radians(-0.5 * PI - overflow_percentage.min(1.0) * 2.0 * PI)
-				}));
-				frame.stroke(&overflow_arc, stroke(theme.extended_palette().danger.base.color));
+				let overflow_arc = Path::new(|builder| {
+					builder.arc(Arc {
+						center,
+						radius,
+						start_angle: Radians(-0.5 * PI),
+						end_angle: Radians(-0.5 * PI - overflow_percentage.min(1.0) * 2.0 * PI),
+					})
+				});
+				frame.stroke(
+					&overflow_arc,
+					stroke(theme.extended_palette().danger.base.color),
+				);
 			}
 
 			frame.fill_text(Text {
@@ -96,8 +109,7 @@ impl Program<UiMessage> for StopwatchClock {
 				position: center,
 				color: if self.percentage < 1.0 {
 					theme.extended_palette().background.base.text
-				}
-				else {
+				} else {
 					theme.extended_palette().danger.base.color
 				},
 				horizontal_alignment: Horizontal::Center,
@@ -109,7 +121,10 @@ impl Program<UiMessage> for StopwatchClock {
 
 			frame.fill_text(Text {
 				content: self.sub_label.clone(),
-				position: Point { x: center.x, y: center.y + 60.0 },
+				position: Point {
+					x: center.x,
+					y: center.y + 60.0,
+				},
 				color: theme.extended_palette().background.base.text,
 				horizontal_alignment: Horizontal::Center,
 				vertical_alignment: Vertical::Center,

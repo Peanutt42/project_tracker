@@ -1,10 +1,35 @@
-use std::{path::PathBuf, rc::Rc, time::{Duration, Instant}};
-use iced::{clipboard, event::Status, keyboard, time, widget::{center, container, focus_next, focus_previous, mouse_area, opaque, responsive, row, stack, Space, Stack}, window, Color, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme};
 use crate::{
-	components::{toggle_sidebar_button, vertical_seperator, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, ScalarAnimation, SettingsModal, SettingsModalMessage, ICON_BUTTON_WIDTH},
-	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId},
-	pages::{ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage},
+	components::{
+		toggle_sidebar_button, vertical_seperator, ConfirmModal, ConfirmModalMessage,
+		ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage,
+		ScalarAnimation, SettingsModal, SettingsModalMessage, ICON_BUTTON_WIDTH,
+	},
+	core::{
+		Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage,
+		Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId,
+	},
+	pages::{
+		ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage,
+		StopwatchPage, StopwatchPageMessage,
+	},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
+};
+use iced::{
+	clipboard,
+	event::Status,
+	keyboard, time,
+	widget::{
+		center, container, focus_next, focus_previous, mouse_area, opaque, responsive, row, stack,
+		Space, Stack,
+	},
+	window, Color, Element, Event,
+	Length::Fill,
+	Padding, Point, Rectangle, Subscription, Task, Theme,
+};
+use std::{
+	path::PathBuf,
+	rc::Rc,
+	time::{Duration, Instant},
 };
 
 pub struct ProjectTrackerApp {
@@ -35,7 +60,9 @@ pub enum UiMessage {
 	FocusPrevious,
 	SaveChangedFiles,
 	OpenFolderLocation(PathBuf),
-	SystemTheme { is_dark: bool },
+	SystemTheme {
+		is_dark: bool,
+	},
 	ConfirmModalMessage(ConfirmModalMessage),
 	ConfirmModalConfirmed(Box<UiMessage>),
 	ErrorMsgModalMessage(ErrorMsgModalMessage),
@@ -60,7 +87,9 @@ pub enum UiMessage {
 	SelectProject(Option<ProjectId>),
 	SwitchToUpperProject, // switches to upper project when using shortcuts
 	SwitchToLowerProject, // switches to lower project when using shortcuts
-	SwitchToProject{ order: usize }, // switches to project when using shortcuts
+	SwitchToProject {
+		order: usize,
+	}, // switches to project when using shortcuts
 	DeleteSelectedProject,
 	DragTask {
 		project_id: ProjectId,
@@ -92,8 +121,7 @@ impl ProjectTrackerApp {
 				ThemeMode::Dark => true,
 				ThemeMode::Light => false,
 			}
-		}
-		else {
+		} else {
 			self.is_system_theme_dark
 		}
 	}
@@ -125,7 +153,7 @@ impl ProjectTrackerApp {
 			Task::batch([
 				Task::perform(Preferences::load(), UiMessage::LoadedPreferences),
 				Task::perform(Database::load(), UiMessage::LoadedDatabase),
-			])
+			]),
 		)
 	}
 
@@ -136,69 +164,71 @@ impl ProjectTrackerApp {
 	pub fn subscription(&self) -> Subscription<UiMessage> {
 		Subscription::batch([
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
-				keyboard::Key::Character("b") if modifiers.command() => Some(UiMessage::ToggleSidebar),
-				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::OpenStopwatch),
-				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
+				keyboard::Key::Character("b") if modifiers.command() => {
+					Some(UiMessage::ToggleSidebar)
+				}
+				keyboard::Key::Character("h") if modifiers.command() => {
+					Some(UiMessage::OpenStopwatch)
+				}
+				keyboard::Key::Named(keyboard::key::Named::Escape) => {
+					Some(UiMessage::EscapePressed)
+				}
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
-				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => Some(UiMessage::DeleteSelectedProject),
-				keyboard::Key::Named(keyboard::key::Named::Tab) => Some(
-					if modifiers.command() {
-						if modifiers.shift() {
-							UiMessage::SwitchToUpperProject
-						}
-						else {
-							UiMessage::SwitchToLowerProject
-						}
+				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => {
+					Some(UiMessage::DeleteSelectedProject)
+				}
+				keyboard::Key::Named(keyboard::key::Named::Tab) => Some(if modifiers.command() {
+					if modifiers.shift() {
+						UiMessage::SwitchToUpperProject
+					} else {
+						UiMessage::SwitchToLowerProject
 					}
-					else if modifiers.shift() {
-						UiMessage::FocusPrevious
-					}
-					else {
-						UiMessage::FocusNext
-					}
-				),
+				} else if modifiers.shift() {
+					UiMessage::FocusPrevious
+				} else {
+					UiMessage::FocusNext
+				}),
 				_ => None,
 			}),
-
-			iced::event::listen_with(move |event, status, id| {
-				match event {
-					Event::Window(window::Event::CloseRequested) if matches!(status, Status::Ignored) => Some(UiMessage::CloseWindowRequested(id)),
-					_ => None,
+			iced::event::listen_with(move |event, status, id| match event {
+				Event::Window(window::Event::CloseRequested)
+					if matches!(status, Status::Ignored) =>
+				{
+					Some(UiMessage::CloseWindowRequested(id))
 				}
+				_ => None,
 			}),
-
-			self.sidebar_page.subscription().map(UiMessage::SidebarPageMessage),
-
-			self.sidebar_animation.subscription().map(|_| UiMessage::AnimateSidebar),
-
-			self.stopwatch_page.subscription(self.project_page.is_none())
+			self.sidebar_page
+				.subscription()
+				.map(UiMessage::SidebarPageMessage),
+			self.sidebar_animation
+				.subscription()
+				.map(|_| UiMessage::AnimateSidebar),
+			self.stopwatch_page
+				.subscription(self.project_page.is_none())
 				.map(UiMessage::StopwatchPageMessage),
-
 			if let Some(project_page) = &self.project_page {
-				project_page.subscription().map(UiMessage::ProjectPageMessage)
-			}
-			else {
+				project_page
+					.subscription()
+					.map(UiMessage::ProjectPageMessage)
+			} else {
 				Subscription::none()
 			},
-
-			self.settings_modal.subscription().map(UiMessage::SettingsModalMessage),
-
-			time::every(Duration::from_secs(1))
-				.map(|_| UiMessage::SaveChangedFiles),
-
+			self.settings_modal
+				.subscription()
+				.map(UiMessage::SettingsModalMessage),
+			time::every(Duration::from_secs(1)).map(|_| UiMessage::SaveChangedFiles),
 			system_theme_subscription(),
 		])
 	}
 
 	pub fn update(&mut self, message: UiMessage) -> Task<UiMessage> {
 		match message {
-			UiMessage::CloseWindowRequested(id) => {
-				Task::batch([
-					self.update(UiMessage::SaveDatabase),
-					self.update(PreferenceMessage::Save.into()),
-					window::close(id),
-				])
-			},
+			UiMessage::CloseWindowRequested(id) => Task::batch([
+				self.update(UiMessage::SaveDatabase),
+				self.update(PreferenceMessage::Save.into()),
+				window::close(id),
+			]),
 			UiMessage::EscapePressed => {
 				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
 					return self.update(ErrorMsgModalMessage::Close.into());
@@ -206,7 +236,7 @@ impl ProjectTrackerApp {
 				if matches!(self.confirm_modal, ConfirmModal::Opened { .. }) {
 					return self.update(ConfirmModalMessage::Close.into());
 				}
-				if matches!(self.settings_modal, SettingsModal::Opened{ .. }) {
+				if matches!(self.settings_modal, SettingsModal::Opened { .. }) {
 					return self.update(SettingsModalMessage::Close.into());
 				}
 				if matches!(self.manage_tags_modal, ManageTaskTagsModal::Opened { .. }) {
@@ -214,27 +244,28 @@ impl ProjectTrackerApp {
 				}
 				if self.project_page.is_some() {
 					self.update(ProjectPageMessage::HideColorPicker.into())
-				}
-				else {
+				} else {
 					self.update(StopwatchPageMessage::Stop.into())
 				}
-			},
+			}
 			UiMessage::EnterPressed => {
 				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
 					self.error_msg_modal = ErrorMsgModal::Closed;
 					Task::none()
-				}
-				else {
+				} else {
 					match &self.confirm_modal {
-						ConfirmModal::Opened{ on_confirmed, .. } => {
-							self.update(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())))
-						},
-						ConfirmModal::Closed => Task::none()
+						ConfirmModal::Opened { on_confirmed, .. } => self.update(
+							UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())),
+						),
+						ConfirmModal::Closed => Task::none(),
 					}
 				}
-			},
+			}
 			UiMessage::CopyToClipboard(copied_text) => clipboard::write(copied_text),
-			UiMessage::OpenUrl(url) => { let _ = webbrowser::open(url.as_str()); Task::none() },
+			UiMessage::OpenUrl(url) => {
+				let _ = webbrowser::open(url.as_str());
+				Task::none()
+			}
 			UiMessage::FocusNext => focus_next(),
 			UiMessage::FocusPrevious => focus_previous(),
 			UiMessage::SaveChangedFiles => {
@@ -250,112 +281,126 @@ impl ProjectTrackerApp {
 					}
 				}
 				Task::batch(commands)
-			},
+			}
 			UiMessage::OpenFolderLocation(filepath) => {
 				let _ = open::that(filepath);
 				Task::none()
-			},
-			UiMessage::SystemTheme{ is_dark } => { self.is_system_theme_dark = is_dark; Task::none() },
-			UiMessage::ConfirmModalConfirmed(message) => {
-				Task::batch([
-					self.update(*message),
-					self.update(ConfirmModalMessage::Close.into()),
-				])
-			},
+			}
+			UiMessage::SystemTheme { is_dark } => {
+				self.is_system_theme_dark = is_dark;
+				Task::none()
+			}
+			UiMessage::ConfirmModalConfirmed(message) => Task::batch([
+				self.update(*message),
+				self.update(ConfirmModalMessage::Close.into()),
+			]),
 			UiMessage::ConfirmModalMessage(message) => {
 				self.confirm_modal.update(message);
 				Task::none()
-			},
+			}
 			UiMessage::ErrorMsgModalMessage(message) => {
 				self.error_msg_modal.update(message);
 				Task::none()
-			},
-			UiMessage::SaveDatabase => if let Some(database) = &self.database {
-				Task::perform(
-					Database::save(database.to_json()),
-					|result| {
-						match result {
-							Ok(begin_time) => UiMessage::DatabaseSaved(begin_time),
-							Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
-						}
-					}
-				)
 			}
-			else {
-				Task::none()
-			},
+			UiMessage::SaveDatabase => {
+				if let Some(database) = &self.database {
+					Task::perform(Database::save(database.to_json()), |result| match result {
+						Ok(begin_time) => UiMessage::DatabaseSaved(begin_time),
+						Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
+					})
+				} else {
+					Task::none()
+				}
+			}
 			UiMessage::DatabaseSaved(saved_time) => {
 				if let Some(database) = &mut self.database {
 					database.last_saved_time = saved_time;
 				}
 				Task::none()
-			},
-			UiMessage::ExportDatabaseDialog => Task::perform(
-				Database::export_file_dialog(),
-				|filepath| {
-					match filepath {
-						Some(filepath) => UiMessage::ExportDatabase(filepath),
-						None => UiMessage::ExportDatabaseDialogCanceled,
-					}
-				}
-			),
-			UiMessage::ExportDatabaseDialogCanceled => { self.exporting_database = false; Task::none() },
+			}
+			UiMessage::ExportDatabaseDialog => {
+				Task::perform(Database::export_file_dialog(), |filepath| match filepath {
+					Some(filepath) => UiMessage::ExportDatabase(filepath),
+					None => UiMessage::ExportDatabaseDialogCanceled,
+				})
+			}
+			UiMessage::ExportDatabaseDialogCanceled => {
+				self.exporting_database = false;
+				Task::none()
+			}
 			UiMessage::ExportDatabase(filepath) => {
 				if let Some(database) = &self.database {
 					self.exporting_database = true;
-					Task::perform(
-						Database::save_to(filepath, database.to_json()),
-						|result| match result {
+					Task::perform(Database::save_to(filepath, database.to_json()), |result| {
+						match result {
 							Ok(_) => UiMessage::DatabaseExported,
 							Err(e) => UiMessage::ExportDatabaseFailed(e),
 						}
-					)
-				}
-				else {
+					})
+				} else {
 					Task::none()
 				}
-			},
-			UiMessage::ExportDatabaseFailed(error_msg) => { self.exporting_database = false; self.show_error_msg(error_msg) }
-			UiMessage::DatabaseExported => { self.exporting_database = false; Task::none() },
-			UiMessage::ImportDatabaseDialog => Task::perform(
-				Database::import_file_dialog(),
-				|filepath| {
+			}
+			UiMessage::ExportDatabaseFailed(error_msg) => {
+				self.exporting_database = false;
+				self.show_error_msg(error_msg)
+			}
+			UiMessage::DatabaseExported => {
+				self.exporting_database = false;
+				Task::none()
+			}
+			UiMessage::ImportDatabaseDialog => {
+				Task::perform(Database::import_file_dialog(), |filepath| {
 					if let Some(filepath) = filepath {
 						UiMessage::ImportDatabase(filepath)
-					}
-					else {
+					} else {
 						UiMessage::ImportDatabaseDialogCanceled
 					}
-				}
-			),
-			UiMessage::ImportDatabaseDialogCanceled => { self.importing_database = false; Task::none() },
+				})
+			}
+			UiMessage::ImportDatabaseDialogCanceled => {
+				self.importing_database = false;
+				Task::none()
+			}
 			UiMessage::ImportDatabase(filepath) => {
 				self.importing_database = true;
 				Task::perform(Database::load_from(filepath), UiMessage::LoadedDatabase)
-			},
+			}
 			UiMessage::SyncDatabase(filepath) => {
 				self.syncing_database = true;
-				Task::perform(Database::sync(filepath.clone()), move |result| {
-					match result {
-						SyncDatabaseResult::InvalidSynchronizationFilepath => UiMessage::SyncDatabaseFailed(format!("Failed to open synchronization file in\n\"{}\"", filepath.display())),
-						SyncDatabaseResult::Upload => UiMessage::SyncDatabaseUpload(filepath.clone()),
+				Task::perform(
+					Database::sync(filepath.clone()),
+					move |result| match result {
+						SyncDatabaseResult::InvalidSynchronizationFilepath => {
+							UiMessage::SyncDatabaseFailed(format!(
+								"Failed to open synchronization file in\n\"{}\"",
+								filepath.display()
+							))
+						}
+						SyncDatabaseResult::Upload => {
+							UiMessage::SyncDatabaseUpload(filepath.clone())
+						}
 						SyncDatabaseResult::Download => UiMessage::ImportDatabase(filepath.clone()),
-					}
-				})
-			},
+					},
+				)
+			}
 			UiMessage::SyncDatabaseUpload(filepath) => {
 				if let Some(database) = &self.database {
-					Task::perform(
-						Database::save_to(filepath, database.to_json()),
-						|_| UiMessage::SyncDatabaseUploaded
-					)
-				}
-				else {
+					Task::perform(Database::save_to(filepath, database.to_json()), |_| {
+						UiMessage::SyncDatabaseUploaded
+					})
+				} else {
 					Task::none()
 				}
-			},
-			UiMessage::SyncDatabaseUploaded => { self.syncing_database = false; Task::none() },
-			UiMessage::SyncDatabaseFailed(error_msg) => { self.syncing_database = false; self.show_error_msg(error_msg) },
+			}
+			UiMessage::SyncDatabaseUploaded => {
+				self.syncing_database = false;
+				Task::none()
+			}
+			UiMessage::SyncDatabaseFailed(error_msg) => {
+				self.syncing_database = false;
+				self.show_error_msg(error_msg)
+			}
 			UiMessage::LoadedDatabase(load_database_result) => {
 				match load_database_result {
 					LoadDatabaseResult::Ok(database) => {
@@ -363,68 +408,76 @@ impl ProjectTrackerApp {
 						self.importing_database = false;
 						self.syncing_database = false;
 						let task = if let Some(preferences) = &self.preferences {
-							let stopwatch_progress_message: Option<UiMessage> = preferences
-								.stopwatch_progress()
-								.as_ref()
-								.map(|progress|
+							let stopwatch_progress_message: Option<UiMessage> =
+								preferences.stopwatch_progress().as_ref().map(|progress| {
 									StopwatchPageMessage::StartupAgain {
 										task: progress.task,
-										elapsed_time: Duration::from_secs(progress.elapsed_time_seconds),
+										elapsed_time: Duration::from_secs(
+											progress.elapsed_time_seconds,
+										),
 										paused: progress.paused,
-										finished_notification_sent: progress.finished_notification_sent,
+										finished_notification_sent: progress
+											.finished_notification_sent,
 									}
 									.into()
-								);
+								});
 
 							let selected_content_page = *preferences.selected_content_page();
 
 							Task::batch([
-								if let Some(stopwatch_progress_message) = stopwatch_progress_message {
+								if let Some(stopwatch_progress_message) = stopwatch_progress_message
+								{
 									self.update(stopwatch_progress_message)
-								}
-								else {
+								} else {
 									Task::none()
 								},
-
 								match selected_content_page {
-									SerializedContentPage::Stopwatch => self.update(UiMessage::OpenStopwatch),
+									SerializedContentPage::Stopwatch => {
+										self.update(UiMessage::OpenStopwatch)
+									}
 									SerializedContentPage::Project(project_id) => {
 										match &self.project_page {
-											Some(project_page) => self.update(UiMessage::SelectProject(Some(project_page.project_id))),
-											None => self.update(UiMessage::SelectProject(Some(project_id))),
+											Some(project_page) => {
+												self.update(UiMessage::SelectProject(Some(
+													project_page.project_id,
+												)))
+											}
+											None => self
+												.update(UiMessage::SelectProject(Some(project_id))),
 										}
-									},
+									}
 								},
 							])
-						}
-						else {
+						} else {
 							Task::none()
 						};
 
-						Task::batch([
-							task,
-							self.update(UiMessage::SaveDatabase),
-						])
-					},
+						Task::batch([task, self.update(UiMessage::SaveDatabase)])
+					}
 					LoadDatabaseResult::FailedToOpenFile(filepath) => {
 						self.importing_database = false;
 						self.syncing_database = false;
 						let command = if self.database.is_none() {
 							self.database = Some(Database::default());
 							self.update(UiMessage::SaveDatabase)
-						}
-						else {
+						} else {
 							Task::none()
 						};
 
 						Task::batch([
 							command,
-							self.show_error_msg(format!("Failed to open database file:\n{}", filepath.display()))
+							self.show_error_msg(format!(
+								"Failed to open database file:\n{}",
+								filepath.display()
+							)),
 						])
-					},
+					}
 					LoadDatabaseResult::FailedToParse(filepath) => {
 						// saves the corrupted database, just so we don't lose the progress and can correct it afterwards
-						let saved_corrupted_filepath = Database::get_filepath().parent().unwrap().join("corrupted - database.json");
+						let saved_corrupted_filepath = Database::get_filepath()
+							.parent()
+							.unwrap()
+							.join("corrupted - database.json");
 						let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
 						if self.database.is_none() {
 							self.database = Some(Database::default());
@@ -433,27 +486,29 @@ impl ProjectTrackerApp {
 							self.update(UiMessage::SaveDatabase),
 							self.show_error_msg(format!("Parsing Error:\nFailed to load previous projects in\n\"{}\"\n\nOld corrupted database saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
 						])
-					},
+					}
 				}
-			},
+			}
 			UiMessage::LoadedPreferences(load_preferences_result) => {
 				match load_preferences_result {
 					LoadPreferencesResult::Ok(preferences) => {
 						self.preferences = Some(preferences);
 						self.update(PreferenceMessage::Save.into())
-					},
+					}
 					LoadPreferencesResult::FailedToOpenFile(_) => {
 						if self.preferences.is_none() {
 							self.preferences = Some(Preferences::default());
 							self.update(PreferenceMessage::Save.into())
-						}
-						else {
+						} else {
 							Task::none()
 						}
-					},
+					}
 					LoadPreferencesResult::FailedToParse(filepath) => {
 						// saves the corrupted preferences, just so we don't lose the progress and can correct it afterwards
-						let saved_corrupted_filepath = Preferences::get_filepath().parent().unwrap().join("corrupted - preferences.json");
+						let saved_corrupted_filepath = Preferences::get_filepath()
+							.parent()
+							.unwrap()
+							.join("corrupted - preferences.json");
 						let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
 						if self.preferences.is_none() {
 							self.preferences = Some(Preferences::default());
@@ -462,98 +517,112 @@ impl ProjectTrackerApp {
 							self.update(PreferenceMessage::Save.into()),
 							self.show_error_msg(format!("Parsing Error:\nFailed to load preferences in\n\"{}\"\n\nOld corrupted preferences saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
 						])
-					},
+					}
 				}
-			},
+			}
 			UiMessage::DatabaseMessage(database_message) => {
 				if let Some(database) = &mut self.database {
 					database.update(database_message.clone());
 					match database_message {
-						DatabaseMessage::DeleteProject(project_id) => {
-							match &self.project_page {
-								Some(project_page) if project_page.project_id == project_id => {
-									self.update(UiMessage::OpenStopwatch)
-								},
-								_ => Task::none(),
+						DatabaseMessage::DeleteProject(project_id) => match &self.project_page {
+							Some(project_page) if project_page.project_id == project_id => {
+								self.update(UiMessage::OpenStopwatch)
 							}
+							_ => Task::none(),
 						},
 						_ => Task::none(),
 					}
-				}
-				else {
+				} else {
 					Task::none()
 				}
-			},
-			UiMessage::PreferenceMessage(preference_message) => if let Some(preferences) = &mut self.preferences {
-				preferences.update(preference_message)
 			}
-			else {
-				Task::none()
-			},
+			UiMessage::PreferenceMessage(preference_message) => {
+				if let Some(preferences) = &mut self.preferences {
+					preferences.update(preference_message)
+				} else {
+					Task::none()
+				}
+			}
 			UiMessage::OpenStopwatch => self.update(UiMessage::SelectProject(None)),
 			UiMessage::StopwatchPageMessage(message) => {
-				let messages = self.stopwatch_page.update(message, &self.database, self.project_page.is_none());
+				let messages = self.stopwatch_page.update(
+					message,
+					&self.database,
+					self.project_page.is_none(),
+				);
 				if let Some(messages) = messages {
-					let tasks: Vec<Task<UiMessage>> = messages.into_iter().map(|msg| self.update(msg)).collect();
+					let tasks: Vec<Task<UiMessage>> =
+						messages.into_iter().map(|msg| self.update(msg)).collect();
 					Task::batch(tasks)
-				}
-				else {
+				} else {
 					Task::none()
 				}
-			},
+			}
 			UiMessage::SelectProject(project_id) => {
 				let open_project_info = if let Some(database) = &self.database {
 					project_id.and_then(|project_id| {
-						database.get_project(&project_id)
+						database
+							.get_project(&project_id)
 							.map(|project| (project_id, project))
 					})
-				}
-				else {
+				} else {
 					None
 				};
 				if let Some((project_id, project)) = open_project_info {
 					self.project_page = Some(ProjectPage::new(project_id, project));
-					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Project(project_id)).into())
-				}
-				else {
+					self.update(
+						PreferenceMessage::SetContentPage(SerializedContentPage::Project(
+							project_id,
+						))
+						.into(),
+					)
+				} else {
 					self.project_page = None;
-					self.update(PreferenceMessage::SetContentPage(SerializedContentPage::Stopwatch).into())
+					self.update(
+						PreferenceMessage::SetContentPage(SerializedContentPage::Stopwatch).into(),
+					)
 				}
-			},
+			}
 			UiMessage::SwitchToLowerProject => {
 				if let Some(database) = &self.database {
 					if let Some(project_page) = &self.project_page {
-						if let Some(order) = database.projects().get_order(&project_page.project_id) {
+						if let Some(order) = database.projects().get_order(&project_page.project_id)
+						{
 							let lower_order = order + 1;
 							let order_to_switch_to = if lower_order < database.projects().len() {
 								lower_order
-							}
-							else {
+							} else {
 								0
 							};
-							return self.update(UiMessage::SwitchToProject { order: order_to_switch_to });
+							return self.update(UiMessage::SwitchToProject {
+								order: order_to_switch_to,
+							});
 						}
 					}
 				}
 				self.update(UiMessage::SwitchToProject { order: 0 })
-			},
+			}
 			UiMessage::SwitchToUpperProject => {
 				if let Some(database) = &self.database {
 					if let Some(project_page) = &self.project_page {
-						if let Some(order) = database.projects().get_order(&project_page.project_id) {
+						if let Some(order) = database.projects().get_order(&project_page.project_id)
+						{
 							let order_to_switch_to = if order > 0 {
 								order - 1
-							}
-							else {
+							} else {
 								database.projects().len() - 1 // switches to the last project
 							};
-							return self.update(UiMessage::SwitchToProject { order: order_to_switch_to });
+							return self.update(UiMessage::SwitchToProject {
+								order: order_to_switch_to,
+							});
 						}
 					}
-					return self.update(UiMessage::SwitchToProject { order: database.projects().len() - 1 });
+					return self.update(UiMessage::SwitchToProject {
+						order: database.projects().len() - 1,
+					});
 				}
 				self.update(UiMessage::SwitchToProject { order: 0 })
-			},
+			}
 			UiMessage::SwitchToProject { order } => {
 				if let Some(database) = &self.database {
 					let switched_project_id = database.projects().get_key_at_order(order);
@@ -561,106 +630,169 @@ impl ProjectTrackerApp {
 					return Task::batch([
 						if let Some(project_id) = switched_project_id {
 							self.update(UiMessage::SelectProject(Some(*project_id)))
-						}
-						else {
+						} else {
 							Task::none()
 						},
 						sidebar_snap_command,
 					]);
 				}
 				Task::none()
-			},
+			}
 			UiMessage::DeleteSelectedProject => {
 				if let Some(project_page) = &self.project_page {
 					if let Some(database) = &self.database {
 						if let Some(project) = database.get_project(&project_page.project_id) {
-							return self.update(ConfirmModalMessage::open(format!("Delete Project '{}'?", project.name), DatabaseMessage::DeleteProject(project_page.project_id)));
+							return self.update(ConfirmModalMessage::open(
+								format!("Delete Project '{}'?", project.name),
+								DatabaseMessage::DeleteProject(project_page.project_id),
+							));
 						}
 					}
 				}
 				Task::none()
-			},
-			UiMessage::DragTask { project_id, task_id, task_is_todo, point, rect } => {
+			}
+			UiMessage::DragTask {
+				project_id,
+				task_id,
+				task_is_todo,
+				point,
+				rect,
+			} => {
 				let is_theme_dark = self.is_theme_dark();
 
 				Task::batch([
 					self.project_page
 						.as_mut()
-						.map(|project_page| project_page.update(ProjectPageMessage::DragTask { task_id, point }, &mut self.database, &self.preferences))
+						.map(|project_page| {
+							project_page.update(
+								ProjectPageMessage::DragTask { task_id, point },
+								&mut self.database,
+								&self.preferences,
+							)
+						})
 						.unwrap_or(Task::none()),
-
-					match self.sidebar_page.update(SidebarPageMessage::DragTask { project_id, task_id, task_is_todo, point, rect }, &mut self.database, &mut self.stopwatch_page, is_theme_dark) {
+					match self.sidebar_page.update(
+						SidebarPageMessage::DragTask {
+							project_id,
+							task_id,
+							task_is_todo,
+							point,
+							rect,
+						},
+						&mut self.database,
+						&mut self.stopwatch_page,
+						is_theme_dark,
+					) {
 						SidebarPageAction::None => Task::none(),
 						SidebarPageAction::Task(task) => task,
-						SidebarPageAction::SelectProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
+						SidebarPageAction::SelectProject(project_id) => {
+							self.update(UiMessage::SelectProject(Some(project_id)))
+						}
 					},
 				])
-			},
+			}
 			UiMessage::CancelDragTask => {
 				let is_theme_dark = self.is_theme_dark();
 
 				Task::batch([
 					self.project_page
 						.as_mut()
-						.map(|project_page| project_page.update(ProjectPageMessage::CancelDragTask, &mut self.database, &self.preferences))
+						.map(|project_page| {
+							project_page.update(
+								ProjectPageMessage::CancelDragTask,
+								&mut self.database,
+								&self.preferences,
+							)
+						})
 						.unwrap_or(Task::none()),
-
-					match self.sidebar_page.update(SidebarPageMessage::CancelDragTask, &mut self.database, &mut self.stopwatch_page, is_theme_dark) {
+					match self.sidebar_page.update(
+						SidebarPageMessage::CancelDragTask,
+						&mut self.database,
+						&mut self.stopwatch_page,
+						is_theme_dark,
+					) {
 						SidebarPageAction::None => Task::none(),
 						SidebarPageAction::Task(task) => task,
-						SidebarPageAction::SelectProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
+						SidebarPageAction::SelectProject(project_id) => {
+							self.update(UiMessage::SelectProject(Some(project_id)))
+						}
 					},
 				])
-			},
+			}
 			UiMessage::ProjectPageMessage(message) => match &mut self.project_page {
-				Some(project_page) => project_page.update(message, &mut self.database, &self.preferences),
-				None => Task::none()
+				Some(project_page) => {
+					project_page.update(message, &mut self.database, &self.preferences)
+				}
+				None => Task::none(),
 			},
 			UiMessage::SidebarPageMessage(message) => {
 				let is_theme_dark = self.is_theme_dark();
-				let sidebar_action = self.sidebar_page.update(message.clone(), &mut self.database, &mut self.stopwatch_page, is_theme_dark);
+				let sidebar_action = self.sidebar_page.update(
+					message.clone(),
+					&mut self.database,
+					&mut self.stopwatch_page,
+					is_theme_dark,
+				);
 
 				match sidebar_action {
 					SidebarPageAction::None => Task::none(),
 					SidebarPageAction::Task(task) => task,
-					SidebarPageAction::SelectProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
+					SidebarPageAction::SelectProject(project_id) => {
+						self.update(UiMessage::SelectProject(Some(project_id)))
+					}
 				}
-			},
+			}
 			UiMessage::ToggleSidebar => {
-				let old_show_sidebar = self.preferences.as_ref().map(|pref| pref.show_sidebar()).unwrap_or(true);
+				let old_show_sidebar = self
+					.preferences
+					.as_ref()
+					.map(|pref| pref.show_sidebar())
+					.unwrap_or(true);
 				self.sidebar_animation = if old_show_sidebar {
 					ScalarAnimation::start(SidebarPage::SPLIT_LAYOUT_PERCENTAGE, 0.0, 0.15)
-				}
-				else {
+				} else {
 					ScalarAnimation::start(0.0, SidebarPage::SPLIT_LAYOUT_PERCENTAGE, 0.15)
 				};
 
 				self.update(PreferenceMessage::ToggleShowSidebar.into())
-			},
-			UiMessage::AnimateSidebar => { self.sidebar_animation.update(); Task::none() },
-			UiMessage::SettingsModalMessage(message) => self.settings_modal.update(message, &mut self.preferences),
+			}
+			UiMessage::AnimateSidebar => {
+				self.sidebar_animation.update();
+				Task::none()
+			}
+			UiMessage::SettingsModalMessage(message) => {
+				self.settings_modal.update(message, &mut self.preferences)
+			}
 			UiMessage::ManageTaskTagsModalMessage(message) => {
-				let deleted_task_tag_id = if let ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) = &message {
-					Some(*task_tag_id)
-				}
-				else {
-					None
-				};
+				let deleted_task_tag_id =
+					if let ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) = &message {
+						Some(*task_tag_id)
+					} else {
+						None
+					};
 
 				Task::batch([
 					self.manage_tags_modal.update(message, &mut self.database),
-					deleted_task_tag_id.and_then(|deleted_task_tag_id| {
-						self.project_page
-        					.as_mut()
-							.map(|project_page| project_page.update(ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id), &mut self.database, &self.preferences))
-					})
-					.unwrap_or(Task::none())
+					deleted_task_tag_id
+						.and_then(|deleted_task_tag_id| {
+							self.project_page.as_mut().map(|project_page| {
+								project_page.update(
+									ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id),
+									&mut self.database,
+									&self.preferences,
+								)
+							})
+						})
+						.unwrap_or(Task::none()),
 				])
-			},
+			}
 		}
 	}
 
-	fn modal(content: Option<Element<UiMessage>>, on_close: UiMessage) -> Option<Element<UiMessage>> {
+	fn modal(
+		content: Option<Element<UiMessage>>,
+		on_close: UiMessage,
+	) -> Option<Element<UiMessage>> {
 		content.map(|content| {
 			opaque(
 				mouse_area(center(opaque(content)).style(|_theme| {
@@ -669,93 +801,82 @@ impl ProjectTrackerApp {
 							Color {
 								a: 0.75,
 								..Color::BLACK
-							}.into()
+							}
+							.into(),
 						),
 						..Default::default()
 					}
 				}))
-				.on_press(on_close)
+				.on_press(on_close),
 			)
 		})
 	}
 
 	pub fn view(&self) -> Element<UiMessage> {
-		let show_sidebar =
-			if let Some(preferences) = &self.preferences {
-				preferences.show_sidebar()
-			}
-			else {
-				true
-			};
+		let show_sidebar = if let Some(preferences) = &self.preferences {
+			preferences.show_sidebar()
+		} else {
+			true
+		};
 
 		let sidebar_animation_value = self.sidebar_animation.get_value();
 		// 0.0..1.0
-		let sidebar_animation_percentage = sidebar_animation_value.map(|value| (1.0 - value / SidebarPage::SPLIT_LAYOUT_PERCENTAGE));
+		let sidebar_animation_percentage = sidebar_animation_value
+			.map(|value| (1.0 - value / SidebarPage::SPLIT_LAYOUT_PERCENTAGE));
 
 		let underlay: Element<UiMessage> = {
-			let sidebar_layout_percentage = sidebar_animation_value.unwrap_or(
-				if show_sidebar {
-					SidebarPage::SPLIT_LAYOUT_PERCENTAGE
-				}
-				else {
-					0.0
-				}
-			);
+			let sidebar_layout_percentage = sidebar_animation_value.unwrap_or(if show_sidebar {
+				SidebarPage::SPLIT_LAYOUT_PERCENTAGE
+			} else {
+				0.0
+			});
 			// 0.0..1.0
-			let sidebar_animation_percentage = sidebar_animation_percentage.unwrap_or(
-				if show_sidebar {
-					0.0
-				}
-				else {
-					1.0
-				});
+			let sidebar_animation_percentage =
+				sidebar_animation_percentage.unwrap_or(if show_sidebar { 0.0 } else { 1.0 });
 
 			let arc_self = Rc::new(self);
 
 			responsive(move |size| {
-				let empty_toggle_sidebar_button_layout_width = ICON_BUTTON_WIDTH * sidebar_animation_percentage;
+				let empty_toggle_sidebar_button_layout_width =
+					ICON_BUTTON_WIDTH * sidebar_animation_percentage;
 
-				let sidebar: Element<UiMessage> = if show_sidebar || sidebar_animation_value.is_some() {
-					container(
-						arc_self.sidebar_page.view(*arc_self)
-					)
-					.width(Fill)
-					.padding(Padding::default().right(size.width * (1.0 - SidebarPage::SPLIT_LAYOUT_PERCENTAGE)))
-					.into()
-				}
-				else {
+				let sidebar: Element<UiMessage> = if show_sidebar
+					|| sidebar_animation_value.is_some()
+				{
+					container(arc_self.sidebar_page.view(*arc_self))
+						.width(Fill)
+						.padding(
+							Padding::default()
+								.right(size.width * (1.0 - SidebarPage::SPLIT_LAYOUT_PERCENTAGE)),
+						)
+						.into()
+				} else {
 					Space::new(Fill, Fill).into()
 				};
 
-				let seperator: Element<UiMessage> = if show_sidebar || sidebar_animation_value.is_some() {
-					vertical_seperator().into()
-				}
-				else {
-					Space::new(0.0, 0.0).into()
-				};
+				let seperator: Element<UiMessage> =
+					if show_sidebar || sidebar_animation_value.is_some() {
+						vertical_seperator().into()
+					} else {
+						Space::new(0.0, 0.0).into()
+					};
 
 				stack![
 					sidebar,
-
 					container(
-						container(
+						container(row![
+							seperator,
 							row![
-								seperator,
-
-								row![
-									if show_sidebar || sidebar_animation_value.is_some() {
-										Space::with_width(empty_toggle_sidebar_button_layout_width).into()
-									}
-									else {
-										toggle_sidebar_button(false)
-									},
-
-									arc_self.content_view(),
-
-									Space::with_width(empty_toggle_sidebar_button_layout_width),
-								]
+								if show_sidebar || sidebar_animation_value.is_some() {
+									Space::with_width(empty_toggle_sidebar_button_layout_width)
+										.into()
+								} else {
+									toggle_sidebar_button(false)
+								},
+								arc_self.content_view(),
+								Space::with_width(empty_toggle_sidebar_button_layout_width),
 							]
-						)
+						])
 						.style(|t| container::Style {
 							background: Some(t.extended_palette().background.base.color.into()),
 							..Default::default()
@@ -771,10 +892,22 @@ impl ProjectTrackerApp {
 
 		Stack::new()
 			.push(underlay)
-			.push_maybe(Self::modal(self.manage_tags_modal.view(self), ManageTaskTagsModalMessage::Close.into()))
-			.push_maybe(Self::modal(self.settings_modal.view(self), SettingsModalMessage::Close.into()))
-			.push_maybe(Self::modal(self.confirm_modal.view(), ConfirmModalMessage::Close.into()))
-			.push_maybe(Self::modal(self.error_msg_modal.view(), ErrorMsgModalMessage::Close.into()))
+			.push_maybe(Self::modal(
+				self.manage_tags_modal.view(self),
+				ManageTaskTagsModalMessage::Close.into(),
+			))
+			.push_maybe(Self::modal(
+				self.settings_modal.view(self),
+				SettingsModalMessage::Close.into(),
+			))
+			.push_maybe(Self::modal(
+				self.confirm_modal.view(),
+				ConfirmModalMessage::Close.into(),
+			))
+			.push_maybe(Self::modal(
+				self.error_msg_modal.view(),
+				ErrorMsgModalMessage::Close.into(),
+			))
 			.into()
 	}
 

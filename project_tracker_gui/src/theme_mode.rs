@@ -1,21 +1,20 @@
-use iced::{Subscription, Theme, time};
-use serde::{Serialize, Deserialize};
 use crate::project_tracker::UiMessage;
 use crate::styles::ProjectTrackerTheme;
+use iced::{time, Subscription, Theme};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Default, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ThemeMode {
 	#[default]
 	System,
 	Dark,
-	Light
+	Light,
 }
 
 pub fn get_theme(dark_mode: bool) -> &'static Theme {
 	if dark_mode {
 		ProjectTrackerTheme::Dark.get_theme()
-	}
-	else {
+	} else {
 		ProjectTrackerTheme::Light.get_theme()
 	}
 }
@@ -28,6 +27,7 @@ pub fn is_system_theme_dark() -> bool {
 }
 
 pub fn system_theme_subscription() -> Subscription<UiMessage> {
-	time::every(time::Duration::from_secs(1))
-				.map(|_| UiMessage::SystemTheme{ is_dark: is_system_theme_dark() })
+	time::every(time::Duration::from_secs(1)).map(|_| UiMessage::SystemTheme {
+		is_dark: is_system_theme_dark(),
+	})
 }

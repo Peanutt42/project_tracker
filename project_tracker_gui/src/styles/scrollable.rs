@@ -1,4 +1,11 @@
-use iced::{widget::{container, scrollable::{self, Rail, Status, Style}}, border::{Border, rounded}, Theme};
+use iced::{
+	border::{rounded, Border},
+	widget::{
+		container,
+		scrollable::{self, Rail, Status, Style},
+	},
+	Theme,
+};
 
 pub fn scrollable_style(theme: &Theme, status: Status) -> Style {
 	let active_rail = Rail {
@@ -11,15 +18,16 @@ pub fn scrollable_style(theme: &Theme, status: Status) -> Style {
 	};
 
 	match status {
-		Status::Active => {
-			Style {
-				container: container::Style::default(),
-				gap: None,
-				horizontal_rail: active_rail,
-				vertical_rail: active_rail,
-			}
+		Status::Active => Style {
+			container: container::Style::default(),
+			gap: None,
+			horizontal_rail: active_rail,
+			vertical_rail: active_rail,
 		},
-		Status::Hovered { is_horizontal_scrollbar_hovered, is_vertical_scrollbar_hovered } => {
+		Status::Hovered {
+			is_horizontal_scrollbar_hovered,
+			is_vertical_scrollbar_hovered,
+		} => {
 			let hovered_rail = Rail {
 				background: None,
 				border: Border::default(),
@@ -34,19 +42,20 @@ pub fn scrollable_style(theme: &Theme, status: Status) -> Style {
 				gap: None,
 				horizontal_rail: if is_horizontal_scrollbar_hovered {
 					hovered_rail
-				}
-				else {
+				} else {
 					active_rail
 				},
 				vertical_rail: if is_vertical_scrollbar_hovered {
 					hovered_rail
-				}
-				else {
+				} else {
 					active_rail
-				}
+				},
 			}
-		},
-		Status::Dragged { is_horizontal_scrollbar_dragged, is_vertical_scrollbar_dragged } => {
+		}
+		Status::Dragged {
+			is_horizontal_scrollbar_dragged,
+			is_vertical_scrollbar_dragged,
+		} => {
 			let rail = Rail {
 				background: None,
 				border: Border::default(),
@@ -59,9 +68,17 @@ pub fn scrollable_style(theme: &Theme, status: Status) -> Style {
 			Style {
 				container: container::Style::default(),
 				gap: None,
-				horizontal_rail: if is_horizontal_scrollbar_dragged { rail } else { active_rail },
-				vertical_rail: if is_vertical_scrollbar_dragged { rail } else { active_rail },
+				horizontal_rail: if is_horizontal_scrollbar_dragged {
+					rail
+				} else {
+					active_rail
+				},
+				vertical_rail: if is_vertical_scrollbar_dragged {
+					rail
+				} else {
+					active_rail
+				},
 			}
-		},
+		}
 	}
 }

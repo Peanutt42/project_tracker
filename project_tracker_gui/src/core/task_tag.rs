@@ -1,7 +1,15 @@
+use crate::{
+	core::SerializableColor,
+	project_tracker::UiMessage,
+	styles::{tooltip_container_style, SMALL_TEXT_SIZE},
+};
+use iced::{
+	border::rounded,
+	widget::{text, tooltip, tooltip::Position},
+	Color, Element, Length,
+};
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use serde::{Deserialize, Serialize};
-use iced::{border::rounded, widget::{text, tooltip, tooltip::Position}, Color, Element, Length};
-use crate::{core::SerializableColor, project_tracker::UiMessage, styles::{tooltip_container_style, SMALL_TEXT_SIZE}};
 
 pub const TASK_TAG_QUAD_HEIGHT: f32 = 5.0;
 
@@ -22,10 +30,7 @@ pub struct TaskTag {
 
 impl TaskTag {
 	pub fn new(name: String, color: SerializableColor) -> Self {
-		Self {
-			name,
-			color,
-		}
+		Self { name, color }
 	}
 
 	pub fn view(&self) -> Element<UiMessage> {
@@ -40,7 +45,7 @@ impl TaskTag {
 				..Default::default()
 			},
 			text(&self.name).size(SMALL_TEXT_SIZE),
-			Position::Top
+			Position::Top,
 		)
 		.gap(5)
 		.style(tooltip_container_style)

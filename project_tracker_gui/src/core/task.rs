@@ -1,8 +1,8 @@
-use std::collections::HashSet;
+use crate::core::TaskTagId;
 use iced::widget::container::Id;
 use iced_aw::date_picker::Date;
-use serde::{Serialize, Deserialize};
-use crate::core::TaskTagId;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 pub type TaskId = usize;
 
@@ -40,10 +40,10 @@ impl Task {
 	}
 
 	pub fn has_same_content_as(&self, other: &Task) -> bool {
-		self.name == other.name &&
-		self.needed_time_minutes == other.needed_time_minutes &&
-		self.due_date == other.due_date &&
-		self.tags == other.tags
+		self.name == other.name
+			&& self.needed_time_minutes == other.needed_time_minutes
+			&& self.due_date == other.due_date
+			&& self.tags == other.tags
 	}
 
 	pub fn matches_filter(&self, filter: &HashSet<TaskTagId>) -> bool {
@@ -55,7 +55,6 @@ impl Task {
 		true
 	}
 }
-
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct SerializableDate {
