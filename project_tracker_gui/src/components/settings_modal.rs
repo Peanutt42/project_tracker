@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, padding::{left, right}, widget::{button, column, container, row, text, Column, Space}, Alignment, Element, Length::Fill, Padding, Task};
+use iced::{alignment::Horizontal, keyboard, padding::{left, right}, widget::{button, column, container, row, text, Column, Space}, Alignment, Element, Length::Fill, Padding, Subscription, Task};
 use iced_aw::card;
 use crate::{components::{clear_synchronization_filepath_button, dangerous_button, export_database_button, file_location, filepath_widget, horizontal_seperator_padded, import_database_button, import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button, sync_database_button, vertical_seperator, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING}, integrations::{import_google_tasks_dialog, ImportGoogleTasksError}, styles::{card_style, secondary_button_style_default, GREY, PADDING_AMOUNT}};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
@@ -207,6 +207,13 @@ pub enum SettingsModal {
 impl SettingsModal {
 	pub fn is_open(&self) -> bool {
 		matches!(self, SettingsModal::Opened{ .. })
+	}
+
+	pub fn subscription(&self) -> Subscription<SettingsModalMessage> {
+		keyboard::on_key_press(|key, modifiers| match key.as_ref() {
+			keyboard::Key::Character(",") if modifiers.command() => Some(SettingsModalMessage::Open),
+			_ => None,
+		})
 	}
 
 	pub fn update(&mut self, message: SettingsModalMessage, preferences: &mut Option<Preferences>) -> Task<UiMessage> {

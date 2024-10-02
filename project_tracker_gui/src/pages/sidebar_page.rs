@@ -1,4 +1,4 @@
-use iced::{advanced::widget::Id, alignment::Horizontal, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Element, Length::Fill, Padding, Point, Rectangle, Task};
+use iced::{advanced::widget::Id, alignment::Horizontal, keyboard, mouse, widget::{column, container, row, scrollable::{self, RelativeOffset}, text_input, Column}, Alignment, Color, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task};
 use iced_drop::{find_zones, zones_on_point};
 use once_cell::sync::Lazy;
 use crate::{components::{horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE}, core::{Database, DatabaseMessage, TaskId}, pages::StopwatchPageMessage, project_tracker::UiMessage, styles::{text_input_style_default, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT}};
@@ -63,11 +63,25 @@ pub enum SidebarPageMessage {
 	},
 	ClickProject(ProjectId),
 	CancelDragProject,
+
+	LeftClickReleased,
 }
 
 impl From<SidebarPageMessage> for UiMessage {
 	fn from(value: SidebarPageMessage) -> Self {
 		UiMessage::SidebarPageMessage(value)
+	}
+}
+
+pub enum SidebarPageAction {
+	None,
+	Task(Task<UiMessage>),
+	SelectProject(ProjectId),
+}
+
+impl From<Task<UiMessage>> for SidebarPageAction {
+	fn from(value: Task<UiMessage>) -> Self {
+		SidebarPageAction::Task(value)
 	}
 }
 
@@ -132,7 +146,27 @@ impl SidebarPage {
 		project_id_to_select
 	}
 
-	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>, stopwatch_page: &mut StopwatchPage, is_theme_dark: bool) -> Task<UiMessage> {
+	pub fn subscription(&self) -> Subscription<SidebarPageMessage> {
+		let left_released_subscription = iced::event::listen_with(move |event, _status, _id| match event {
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(SidebarPageMessage::LeftClickReleased),
+			_ => None,
+		});
+
+		let create_new_project_shorcut_subscription = keyboard::on_key_press(|key, modifiers| match key.as_ref() {
+			keyboard::Key::Character("n") if modifiers.command() && modifiers.shift() => {
+				Some(SidebarPageMessage::OpenCreateNewProject)
+			},
+			_ => None,
+		});
+
+		Subscription::batch([
+			left_released_subscription,
+			create_new_project_shorcut_subscription,
+		])
+	}
+
+	#[must_use]
+	pub fn update(&mut self, message: SidebarPageMessage, database: &mut Option<Database>, stopwatch_page: &mut StopwatchPage, is_theme_dark: bool) -> SidebarPageAction {
 		match message {
 			SidebarPageMessage::OpenCreateNewProject => {
 				self.create_new_project_name = Some(String::new());
@@ -140,9 +174,10 @@ impl SidebarPage {
 					text_input::focus(TEXT_INPUT_ID.clone()),
 					scrollable::snap_to(SCROLLABLE_ID.clone(), RelativeOffset::END),
 				])
+				.into()
 			},
-			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; Task::none() },
-			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); Task::none() },
+			SidebarPageMessage::CloseCreateNewProject => { self.create_new_project_name = None; SidebarPageAction::None },
+			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => { self.create_new_project_name = Some(new_project_name); SidebarPageAction::None },
 			SidebarPageMessage::CreateNewProject(project_id) => {
 				if let Some(db) = database {
 					if let Some(create_new_project_name) = &mut self.create_new_project_name {
@@ -151,10 +186,11 @@ impl SidebarPage {
 							name: std::mem::take(create_new_project_name),
 							color: get_new_project_color(is_theme_dark).into(),
 						});
-						return self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, is_theme_dark);
+						return SidebarPageAction::SelectProject(project_id);
 					}
 				}
-				self.update(SidebarPageMessage::CloseCreateNewProject, database, stopwatch_page, is_theme_dark)
+				self.create_new_project_name = None;
+				SidebarPageAction::None
 			},
 
 			SidebarPageMessage::DropTask { project_id, task_id, .. } => {
@@ -200,11 +236,11 @@ impl SidebarPage {
 					}
 				}
 				self.task_dropzone_hovered = None;
-				Task::none()
+				SidebarPageAction::None
 			},
 			SidebarPageMessage::CancelDragTask => {
 				self.task_dropzone_hovered = None;
-				Task::none()
+				SidebarPageAction::None
 			},
 			SidebarPageMessage::HandleProjectZonesForTasks { zones, .. } => {
 				self.task_dropzone_hovered = None;
@@ -221,8 +257,7 @@ impl SidebarPage {
 						}
 					}
 				}
-
-				Task::none()
+				SidebarPageAction::None
 			},
 			SidebarPageMessage::HandleTaskZones{ zones, project_id, .. } => {
 				if !zones.is_empty() && !matches!(self.task_dropzone_hovered, Some(TaskDropzone::Project(_))) {
@@ -247,7 +282,7 @@ impl SidebarPage {
 						}
 					}
 				}
-				Task::none()
+				SidebarPageAction::None
 			},
 			SidebarPageMessage::DragTask { project_id, task_id, task_is_todo, rect, point } => {
 				let task_has_needed_time = database.as_ref().and_then(|db|
@@ -280,7 +315,7 @@ impl SidebarPage {
 						)
 					);
 				}
-				Task::batch(commands)
+				Task::batch(commands).into()
 			},
 
 			SidebarPageMessage::DropProject { .. } => {
@@ -304,7 +339,7 @@ impl SidebarPage {
 					}
 				}
 				self.project_dropzone_hovered = None;
-				Task::none()
+				SidebarPageAction::None
 			},
 			SidebarPageMessage::DragProject { project_id, point, rect } => {
 				self.dragged_project_id = Some(project_id);
@@ -324,6 +359,7 @@ impl SidebarPage {
 					options,
 					None
 				)
+				.into()
 			},
 			SidebarPageMessage::HandleProjectZones { zones, .. } => {
 				self.project_dropzone_hovered = None;
@@ -346,11 +382,11 @@ impl SidebarPage {
 						}
 					}
 				}
-				Task::none()
+				SidebarPageAction::None
 			},
 			SidebarPageMessage::ClickProject(project_id) => {
 				self.pressed_project_id = Some(project_id);
-				Task::none()
+				SidebarPageAction::None
 			},
 			SidebarPageMessage::CancelDragProject => {
 				self.dragged_project_id = None;
@@ -358,8 +394,12 @@ impl SidebarPage {
 				self.just_minimal_dragging = true;
 				self.pressed_project_id = None;
 				self.project_dropzone_hovered = None;
-				Task::none()
+				SidebarPageAction::None
 			},
+
+			SidebarPageMessage::LeftClickReleased => self.should_select_project()
+        			.map(SidebarPageAction::SelectProject)
+               		.unwrap_or(SidebarPageAction::None),
 		}
 	}
 

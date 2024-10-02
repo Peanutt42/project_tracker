@@ -1,9 +1,9 @@
 use std::{path::PathBuf, rc::Rc, time::{Duration, Instant}};
-use iced::{clipboard, event::Status, keyboard, mouse, time, widget::{center, container, focus_next, focus_previous, mouse_area, opaque, responsive, row, stack, Space, Stack}, window, Color, Element, Event, Length::Fill, Padding, Subscription, Task, Theme};
+use iced::{clipboard, event::Status, keyboard, time, widget::{center, container, focus_next, focus_previous, mouse_area, opaque, responsive, row, stack, Space, Stack}, window, Color, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme};
 use crate::{
 	components::{toggle_sidebar_button, vertical_seperator, ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, ScalarAnimation, SettingsModal, SettingsModalMessage, ICON_BUTTON_WIDTH},
-	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult},
-	pages::{ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage},
+	core::{Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId},
+	pages::{ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
 
@@ -29,7 +29,6 @@ pub enum UiMessage {
 	CloseWindowRequested(window::Id),
 	EscapePressed,
 	EnterPressed,
-	LeftClickReleased,
 	CopyToClipboard(String),
 	OpenUrl(String),
 	FocusNext,
@@ -63,6 +62,14 @@ pub enum UiMessage {
 	SwitchToLowerProject, // switches to lower project when using shortcuts
 	SwitchToProject{ order: usize }, // switches to project when using shortcuts
 	DeleteSelectedProject,
+	DragTask {
+		project_id: ProjectId,
+		task_id: TaskId,
+		task_is_todo: bool,
+		point: Point,
+		rect: Rectangle,
+	},
+	CancelDragTask,
 	OpenStopwatch,
 	StopwatchPageMessage(StopwatchPageMessage),
 	ProjectPageMessage(ProjectPageMessage),
@@ -129,25 +136,11 @@ impl ProjectTrackerApp {
 	pub fn subscription(&self) -> Subscription<UiMessage> {
 		Subscription::batch([
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
-				keyboard::Key::Character("n") if modifiers.command() => {
-					Some(
-						if modifiers.shift() {
-							SidebarPageMessage::OpenCreateNewProject.into()
-						}
-						else {
-							ProjectPageMessage::OpenCreateNewTask.into()
-						}
-					)
-				},
 				keyboard::Key::Character("b") if modifiers.command() => Some(UiMessage::ToggleSidebar),
 				keyboard::Key::Character("h") if modifiers.command() => Some(UiMessage::OpenStopwatch),
-				keyboard::Key::Character("r") if modifiers.command() => Some(ProjectPageMessage::EditProjectName.into()),
-				keyboard::Key::Character("f") if modifiers.command() => Some(ProjectPageMessage::OpenSearchTasks.into()),
-				keyboard::Key::Character(",") if modifiers.command() => Some(SettingsModalMessage::Open.into()),
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(UiMessage::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
 				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => Some(UiMessage::DeleteSelectedProject),
-				keyboard::Key::Named(keyboard::key::Named::Space) => Some(StopwatchPageMessage::Toggle.into()),
 				keyboard::Key::Named(keyboard::key::Named::Tab) => Some(
 					if modifiers.command() {
 						if modifiers.shift() {
@@ -170,21 +163,25 @@ impl ProjectTrackerApp {
 			iced::event::listen_with(move |event, status, id| {
 				match event {
 					Event::Window(window::Event::CloseRequested) if matches!(status, Status::Ignored) => Some(UiMessage::CloseWindowRequested(id)),
-					Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(UiMessage::LeftClickReleased),
 					_ => None,
 				}
 			}),
 
-			self.stopwatch_page.subscription(self.project_page.is_none()),
+			self.sidebar_page.subscription().map(UiMessage::SidebarPageMessage),
+
+			self.sidebar_animation.subscription().map(|_| UiMessage::AnimateSidebar),
+
+			self.stopwatch_page.subscription(self.project_page.is_none())
+				.map(UiMessage::StopwatchPageMessage),
 
 			if let Some(project_page) = &self.project_page {
-				project_page.subscription()
+				project_page.subscription().map(UiMessage::ProjectPageMessage)
 			}
 			else {
 				Subscription::none()
 			},
 
-			self.sidebar_animation.subscription().map(|_| UiMessage::AnimateSidebar),
+			self.settings_modal.subscription().map(UiMessage::SettingsModalMessage),
 
 			time::every(Duration::from_secs(1))
 				.map(|_| UiMessage::SaveChangedFiles),
@@ -223,25 +220,18 @@ impl ProjectTrackerApp {
 				}
 			},
 			UiMessage::EnterPressed => {
-				self.error_msg_modal = ErrorMsgModal::Closed;
-
-				match &self.confirm_modal {
-					ConfirmModal::Opened{ on_confirmed, .. } => {
-						self.update(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())))
-					},
-					ConfirmModal::Closed => Task::none()
+				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
+					self.error_msg_modal = ErrorMsgModal::Closed;
+					Task::none()
 				}
-			},
-			UiMessage::LeftClickReleased => {
-				let select_project_command = self.sidebar_page
-					.should_select_project()
-        			.map(|project_id| self.update(UiMessage::SelectProject(Some(project_id))))
-               		.unwrap_or(Task::none());
-
-				Task::batch([
-					self.update(ProjectPageMessage::LeftClickReleased.into()),
-					select_project_command,
-				])
+				else {
+					match &self.confirm_modal {
+						ConfirmModal::Opened{ on_confirmed, .. } => {
+							self.update(UiMessage::ConfirmModalConfirmed(Box::new(on_confirmed.clone())))
+						},
+						ConfirmModal::Closed => Task::none()
+					}
+				}
 			},
 			UiMessage::CopyToClipboard(copied_text) => clipboard::write(copied_text),
 			UiMessage::OpenUrl(url) => { let _ = webbrowser::open(url.as_str()); Task::none() },
@@ -477,11 +467,6 @@ impl ProjectTrackerApp {
 			},
 			UiMessage::DatabaseMessage(database_message) => {
 				if let Some(database) = &mut self.database {
-					let previous_project_progress = self.project_page.as_ref().and_then(|project_page| {
-						database
-							.get_project(&project_page.project_id)
-							.map(|project| project.get_completion_percentage())
-					});
 					database.update(database_message.clone());
 					match database_message {
 						DatabaseMessage::DeleteProject(project_id) => {
@@ -492,32 +477,6 @@ impl ProjectTrackerApp {
 								_ => Task::none(),
 							}
 						},
-						DatabaseMessage::ChangeProjectColor { .. } => {
-							self.update(ProjectPageMessage::HideColorPicker.into())
-						},
-						DatabaseMessage::Clear |
-						DatabaseMessage::CreateTask { .. } |
-					 	DatabaseMessage::DeleteTask { .. } |
-						DatabaseMessage::SetTaskDone { .. } |
-						DatabaseMessage::SetTaskTodo { .. } |
-						DatabaseMessage::DeleteDoneTasks(_) |
-						DatabaseMessage::DeleteTaskTag { .. } |
-						DatabaseMessage::MoveTask { .. } => {
-							let new_project_progress = self.project_page.as_ref().and_then(|project_page| {
-								database
-									.get_project(&project_page.project_id)
-									.map(|project| project.get_completion_percentage())
-							});
-							if let Some(previous_project_progress) = previous_project_progress {
-								if let Some(new_project_progress) = new_project_progress {
-									return self.update(ProjectPageMessage::StartProgressbarAnimation {
-										start_percentage: previous_project_progress,
-										target_percentage: new_project_progress
-									}.into());
-								}
-							}
-							Task::none()
-						},
 						_ => Task::none(),
 					}
 				}
@@ -525,13 +484,11 @@ impl ProjectTrackerApp {
 					Task::none()
 				}
 			},
-			UiMessage::PreferenceMessage(preference_message) => {
-				if let Some(preferences) = &mut self.preferences {
-					preferences.update(preference_message)
-				}
-				else {
-					Task::none()
-				}
+			UiMessage::PreferenceMessage(preference_message) => if let Some(preferences) = &mut self.preferences {
+				preferences.update(preference_message)
+			}
+			else {
+				Task::none()
 			},
 			UiMessage::OpenStopwatch => self.update(UiMessage::SelectProject(None)),
 			UiMessage::StopwatchPageMessage(message) => {
@@ -622,34 +579,52 @@ impl ProjectTrackerApp {
 					}
 				}
 				Task::none()
-			}
+			},
+			UiMessage::DragTask { project_id, task_id, task_is_todo, point, rect } => {
+				let is_theme_dark = self.is_theme_dark();
+
+				Task::batch([
+					self.project_page
+						.as_mut()
+						.map(|project_page| project_page.update(ProjectPageMessage::DragTask { task_id, point }, &mut self.database, &self.preferences))
+						.unwrap_or(Task::none()),
+
+					match self.sidebar_page.update(SidebarPageMessage::DragTask { project_id, task_id, task_is_todo, point, rect }, &mut self.database, &mut self.stopwatch_page, is_theme_dark) {
+						SidebarPageAction::None => Task::none(),
+						SidebarPageAction::Task(task) => task,
+						SidebarPageAction::SelectProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
+					},
+				])
+			},
+			UiMessage::CancelDragTask => {
+				let is_theme_dark = self.is_theme_dark();
+
+				Task::batch([
+					self.project_page
+						.as_mut()
+						.map(|project_page| project_page.update(ProjectPageMessage::CancelDragTask, &mut self.database, &self.preferences))
+						.unwrap_or(Task::none()),
+
+					match self.sidebar_page.update(SidebarPageMessage::CancelDragTask, &mut self.database, &mut self.stopwatch_page, is_theme_dark) {
+						SidebarPageAction::None => Task::none(),
+						SidebarPageAction::Task(task) => task,
+						SidebarPageAction::SelectProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
+					},
+				])
+			},
 			UiMessage::ProjectPageMessage(message) => match &mut self.project_page {
 				Some(project_page) => project_page.update(message, &mut self.database, &self.preferences),
 				None => Task::none()
 			},
 			UiMessage::SidebarPageMessage(message) => {
 				let is_theme_dark = self.is_theme_dark();
-				let sidebar_command = self.sidebar_page.update(message.clone(), &mut self.database, &mut self.stopwatch_page, is_theme_dark);
-				let command = match message {
-					SidebarPageMessage::CreateNewProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
-					SidebarPageMessage::DragTask { task_id, point, .. } => {
-						match &mut self.project_page {
-							Some(project_page) => project_page.update(ProjectPageMessage::DragTask{ task_id, point }, &mut self.database, &self.preferences),
-							None => Task::none()
-						}
-					},
-					SidebarPageMessage::CancelDragTask => {
-						match &mut self.project_page {
-							Some(project_page) => project_page.update(ProjectPageMessage::CancelDragTask, &mut self.database, &self.preferences),
-							None => Task::none()
-						}
-					},
-					_ => Task::none(),
-				};
-				Task::batch([
-					sidebar_command,
-					command
-				])
+				let sidebar_action = self.sidebar_page.update(message.clone(), &mut self.database, &mut self.stopwatch_page, is_theme_dark);
+
+				match sidebar_action {
+					SidebarPageAction::None => Task::none(),
+					SidebarPageAction::Task(task) => task,
+					SidebarPageAction::SelectProject(project_id) => self.update(UiMessage::SelectProject(Some(project_id))),
+				}
 			},
 			UiMessage::ToggleSidebar => {
 				let old_show_sidebar = self.preferences.as_ref().map(|pref| pref.show_sidebar()).unwrap_or(true);

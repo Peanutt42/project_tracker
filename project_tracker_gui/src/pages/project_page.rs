@@ -1,5 +1,5 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, time::Instant};
-use iced::{alignment::{Alignment, Horizontal}, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row, Space}, Color, Element, Length::Fill, Padding, Point, Subscription};
+use iced::{alignment::{Alignment, Horizontal}, keyboard, mouse, widget::{column, container, row, scrollable::{self, RelativeOffset}, text, text_editor, text_input, Row, Space}, Color, Element, Event, Length::Fill, Padding, Point, Subscription};
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
@@ -35,6 +35,7 @@ pub enum ProjectPageMessage {
 
 	ShowColorPicker,
 	HideColorPicker,
+	ChangeProjectColor(Color),
 
 	EditProjectName,
 	StopEditingProjectName,
@@ -63,10 +64,6 @@ pub enum ProjectPageMessage {
 	PressTask(TaskId),
 	LeftClickReleased,
 
-	StartProgressbarAnimation {
-		start_percentage: f32,
-		target_percentage: f32,
-	},
 	AnimateProgressbar,
 }
 
@@ -165,6 +162,7 @@ pub struct ProjectPage {
 	start_dragging_point: Option<Point>,
 	just_minimal_dragging: bool,
 	progressbar_animation: ScalarAnimation,
+	previous_project_progress: f32,
 }
 
 impl ProjectPage {
@@ -187,6 +185,7 @@ impl ProjectPage {
 			start_dragging_point: None,
 			just_minimal_dragging: true,
 			progressbar_animation: ScalarAnimation::Idle,
+			previous_project_progress: project.get_completion_percentage(),
 		}
 	}
 }
@@ -249,9 +248,6 @@ impl ProjectPage {
 			ProjectPageMessage::CreateNewTask => {
 				if let Some((create_new_task_name, create_new_task_tags)) = &mut self.create_new_task {
 					if let Some(db) = database {
-						let previous_project_progress = db
-							.get_project(&self.project_id)
-							.map(Project::get_completion_percentage);
 						db.update(DatabaseMessage::CreateTask {
 							project_id: self.project_id,
 							task_id: generate_task_id(),
@@ -262,16 +258,6 @@ impl ProjectPage {
 								.map(|pref| pref.create_new_tasks_at_top())
 								.unwrap_or(true),
 						});
-						return iced::Task::batch([
-							self.update(ProjectPageMessage::StartProgressbarAnimation {
-								start_percentage: previous_project_progress.unwrap_or(0.0),
-								target_percentage: db
-									.get_project(&self.project_id)
-									.map(Project::get_completion_percentage)
-									.unwrap_or(1.0)
-							}, database, preference),
-							self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
-						]);
 					}
 				}
 				self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
@@ -350,6 +336,17 @@ impl ProjectPage {
 
 			ProjectPageMessage::ShowColorPicker => { self.show_color_picker = true; iced::Task::none() },
 			ProjectPageMessage::HideColorPicker => { self.show_color_picker = false; iced::Task::none() },
+			ProjectPageMessage::ChangeProjectColor(new_color) => {
+				self.show_color_picker = false;
+				if let Some(database) = database {
+					database.modify(|projects| {
+						if let Some(project) = projects.get_mut(&self.project_id) {
+							project.color = new_color.into();
+						}
+					});
+				}
+				iced::Task::none()
+			}
 
 			ProjectPageMessage::EditProjectName => {
 				let project_name = database.as_ref()
@@ -546,34 +543,52 @@ impl ProjectPage {
 				command
 			},
 
-			ProjectPageMessage::StartProgressbarAnimation { start_percentage, target_percentage } => {
-				self.progressbar_animation = ScalarAnimation::start(start_percentage, target_percentage, 0.125);
-				iced::Task::none()
-			},
 			ProjectPageMessage::AnimateProgressbar => {
 				self.progressbar_animation.update();
 				iced::Task::none()
 			},
 		};
 
-		if let Some(database) = database {
-			if self.cached_task_list.cache_time < *database.last_changed_time() {
-				self.generate_cached_task_list(database);
+		if let Some(database_ref) = database {
+			if self.cached_task_list.cache_time < *database_ref.last_changed_time() {
+				self.generate_cached_task_list(database_ref);
+			}
+
+			if let Some(project) = database_ref.get_project(&self.project_id) {
+				let new_project_progress = project.get_completion_percentage();
+				if new_project_progress != self.previous_project_progress {
+					self.start_progressbar_animation(self.previous_project_progress, new_project_progress);
+					self.previous_project_progress = new_project_progress;
+				}
 			}
 		}
 
 		command
 	}
 
-	pub fn subscription(&self) -> Subscription<UiMessage> {
-		self.progressbar_animation.subscription().map(|_| ProjectPageMessage::AnimateProgressbar.into())
+	pub fn subscription(&self) -> Subscription<ProjectPageMessage> {
+		Subscription::batch([
+			self.progressbar_animation.subscription().map(|_| ProjectPageMessage::AnimateProgressbar),
+
+			iced::event::listen_with(move |event, _status, _id| match event {
+				Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => Some(ProjectPageMessage::LeftClickReleased),
+				_ => None,
+			}),
+
+			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
+				keyboard::Key::Character("r") if modifiers.command() => Some(ProjectPageMessage::EditProjectName),
+				keyboard::Key::Character("f") if modifiers.command() => Some(ProjectPageMessage::OpenSearchTasks),
+				keyboard::Key::Character("n") if modifiers.command() && !modifiers.shift() => Some(ProjectPageMessage::OpenCreateNewTask),
+				_ => None,
+			}),
+		])
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
 		if let Some(database) = &app.database {
 			if let Some(project) = database.get_project(&self.project_id) {
 				column![
-					self.project_details_view(self.project_id, project),
+					self.project_details_view(project),
 
 					task_list(
 						self.project_id,
@@ -605,7 +620,7 @@ impl ProjectPage {
 		}
 	}
 
-	fn project_details_view<'a>(&'a self, project_id: ProjectId, project: &'a Project) -> Element<'a, UiMessage> {
+	fn project_details_view<'a>(&'a self, project: &'a Project) -> Element<'a, UiMessage> {
 		let project_name : Element<UiMessage> = if let Some(edited_project_name) = &self.edited_project_name {
 			unfocusable(
 				text_input("New project name", edited_project_name)
@@ -716,7 +731,7 @@ impl ProjectPage {
 				.align_y(Alignment::Center)
 			]
 			.push_maybe(if self.show_color_picker {
-				Some(color_palette(project.color.into(), move |c: Color| DatabaseMessage::ChangeProjectColor{ project_id, new_color: c.into() }.into()))
+				Some(color_palette(project.color.into(), |c| ProjectPageMessage::ChangeProjectColor(c).into()))
 			}
 			else {
 				None
@@ -761,7 +776,7 @@ impl ProjectPage {
 			completion_bar(
 				self.progressbar_animation
 					.get_value()
-					.unwrap_or(project.get_completion_percentage())
+					.unwrap_or(self.previous_project_progress)
 			),
 		]
 		.padding(Padding {
@@ -771,6 +786,10 @@ impl ProjectPage {
 			right: PADDING_AMOUNT,
 		})
 		.into()
+	}
+
+	fn start_progressbar_animation(&mut self, start_percentage: f32, target_percentage: f32) {
+		self.progressbar_animation = ScalarAnimation::start(start_percentage, target_percentage, 0.125);
 	}
 
 	fn generate_cached_task_list(&mut self, database: &Database) {
