@@ -176,7 +176,7 @@ impl ProjectTrackerApp {
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(UiMessage::EnterPressed),
 				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => {
 					Some(UiMessage::DeleteSelectedProject)
-				}
+				},
 				keyboard::Key::Named(keyboard::key::Named::Tab) => Some(if modifiers.command() {
 					if modifiers.shift() {
 						UiMessage::SwitchToUpperProject

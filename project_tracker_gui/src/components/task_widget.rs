@@ -19,6 +19,8 @@ use crate::{
 		SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT,
 	},
 };
+use iced::keyboard::{self, key};
+use iced::widget::text_editor::{Binding, KeyPress, Motion, Status};
 use iced::{
 	alignment::Vertical,
 	widget::{
@@ -97,6 +99,39 @@ fn edit_task_widget_view<'a>(
 					.on_action(move |action| ProjectPageMessage::TaskNameAction(action).into())
 					.style(move |t, s| {
 						text_editor_style(t, s, round_top_left, false, false, round_bottom_right)
+					})
+					.key_binding(|key_press| {
+						let KeyPress {
+							key,
+							modifiers,
+							status,
+							..
+						} = &key_press;
+
+						if *status != Status::Focused {
+							return None;
+						}
+
+						match key {
+							keyboard::Key::Named(key::Named::Delete) => Some(
+								if modifiers.command() {
+									Binding::Sequence(vec![
+										Binding::Select(Motion::WordRight),
+										Binding::Delete,
+									])
+								}
+								else {
+									Binding::Delete
+								}
+							),
+							keyboard::Key::Named(key::Named::Backspace) if modifiers.command() => Some(
+								Binding::Sequence(vec![
+									Binding::Select(Motion::WordLeft),
+									Binding::Backspace,
+								])
+							),
+							_ => Binding::from_key_press(key_press)
+						}
 					}),
 			)
 			.style(shadow_container_style),
