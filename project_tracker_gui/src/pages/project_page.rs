@@ -32,6 +32,7 @@ use iced::{
 	Length::Fill,
 	Padding, Point, Subscription,
 };
+use iced_aw::{drop_down, DropDown};
 use once_cell::sync::Lazy;
 use std::{
 	collections::HashSet,
@@ -758,6 +759,17 @@ impl ProjectPage {
 			},
 		);
 
+		let color_picker = DropDown::new(
+			show_color_picker_button,
+			color_palette(project.color.into(), |c| {
+				ProjectPageMessage::ChangeProjectColor(c).into()
+			}),
+			self.show_color_picker
+		)
+		.width(Fill)
+		.alignment(drop_down::Alignment::End)
+		.on_dismiss(ProjectPageMessage::HideColorPicker.into());
+
 		let mut task_tags_list: Vec<Element<UiMessage>> = Vec::new();
 		for (tag_id, tag) in project.task_tags.iter() {
 			task_tags_list.push(
@@ -814,7 +826,7 @@ impl ProjectPage {
 
 		column![
 			column![row![
-				show_color_picker_button,
+				color_picker,
 				project_name,
 				if self.edited_project_name.is_some() {
 					quick_actions
@@ -827,13 +839,6 @@ impl ProjectPage {
 			]
 			.spacing(SPACING_AMOUNT)
 			.align_y(Alignment::Center)]
-			.push_maybe(if self.show_color_picker {
-				Some(color_palette(project.color.into(), |c| {
-					ProjectPageMessage::ChangeProjectColor(c).into()
-				}))
-			} else {
-				None
-			})
 			.width(Fill),
 			spacer(),
 			row![

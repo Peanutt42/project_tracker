@@ -17,7 +17,7 @@ use iced::{
 	Length::Fill,
 	Task,
 };
-use iced_aw::card;
+use iced_aw::{card, drop_down, DropDown};
 use once_cell::sync::Lazy;
 
 static CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> =
@@ -315,31 +315,35 @@ impl ManageTaskTagsModal {
 					.into()
 			};
 
+			let color_picker = DropDown::new(
+				color_palette_item_button(
+					tag.color.into(),
+					false,
+					true,
+					true,
+					if show_color_palette {
+						ManageTaskTagsModalMessage::StopEditTaskTagColor.into()
+					} else {
+						ManageTaskTagsModalMessage::EditTaskTagColor(tag_id).into()
+					}
+				),
+				color_palette(tag.color.into(), move |new_color| {
+					ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color).into()
+				}),
+				show_color_palette
+			)
+			.width(Fill)
+			.alignment(drop_down::Alignment::End)
+			.on_dismiss(ManageTaskTagsModalMessage::StopEditTaskTagColor.into());
+
 			tags_list.push(
 				column![row![
-					color_palette_item_button(
-						tag.color.into(),
-						false,
-						true,
-						true,
-						if show_color_palette {
-							ManageTaskTagsModalMessage::StopEditTaskTagColor.into()
-						} else {
-							ManageTaskTagsModalMessage::EditTaskTagColor(tag_id).into()
-						}
-					),
+					color_picker,
 					name_element,
 					delete_task_tag_button(tag_id),
 				]
 				.align_y(Alignment::Center)
 				.spacing(SMALL_SPACING_AMOUNT)]
-				.push_maybe(if show_color_palette {
-					Some(color_palette(tag.color.into(), move |new_color| {
-						ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color).into()
-					}))
-				} else {
-					None
-				})
 				.into(),
 			);
 		}

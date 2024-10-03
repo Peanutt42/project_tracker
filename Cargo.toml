@@ -16,7 +16,7 @@ image = "0.24"
 
 [workspace.dependencies]
 iced = { version = "0.13.1", features = ["image", "tokio", "canvas", "advanced", "lazy"] }
-iced_aw = { version = "0.11", default-features = false, features = ["spinner", "card", "quad", "date_picker"] }
+iced_aw = { version = "0.11", default-features = false, features = ["spinner", "card", "quad", "date_picker", "drop_down"] }
 
 [build-dependencies]
 winresource = "0.1.17"
