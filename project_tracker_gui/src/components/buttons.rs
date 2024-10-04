@@ -14,25 +14,18 @@ use crate::{
 	},
 	project_tracker::UiMessage,
 	styles::{
-		circle_button_style, dangerous_button_style, delete_button_style,
-		delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style,
-		project_preview_style, secondary_button_style, secondary_button_style_default,
-		secondary_button_style_only_round_bottom, secondary_button_style_only_round_right,
-		selection_list_button_style, settings_tab_button_style, task_tag_button_style,
-		timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE,
-		SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE,
-		SPACING_AMOUNT,
+		circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	},
 	theme_mode::ThemeMode,
 };
 use iced::{
 	alignment::{Horizontal, Vertical},
 	border::rounded,
-	widget::{button, container, row, text, tooltip, tooltip::Position, Button},
+	widget::{button, column, container, row, text, tooltip, tooltip::Position, Button},
 	Alignment, Color, Element,
-	Length::{self, Fill},
+	Length::{self, Fill}, Shadow,
 };
-use iced_aw::{quad::Quad, widgets::InnerBounds, Spinner};
+use iced_aw::{drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
 use std::path::PathBuf;
 
 const ICON_FONT_SIZE: f32 = 16.0;
@@ -101,16 +94,51 @@ pub fn cancel_create_task_button() -> Button<'static, UiMessage> {
 		.style(secondary_button_style_only_round_right)
 }
 
-pub fn delete_project_button(
-	project_id: ProjectId,
-	project_name: &str,
-) -> Button<'static, UiMessage> {
-	icon_button(Bootstrap::Trash)
-		.on_press(ConfirmModalMessage::open(
-			format!("Delete Project '{project_name}'?"),
-			DatabaseMessage::DeleteProject(project_id),
-		))
-		.style(move |t, s| delete_button_style(t, s, true, true))
+fn delete_project_button() -> Button<'static, UiMessage> {
+	icon_label_button("Delete", Bootstrap::Trash)
+		.width(Fill)
+		.on_press(ProjectPageMessage::ConfirmDeleteProject.into())
+		.style(move |t, s| delete_button_style(t, s, false, false, true, true))
+}
+
+pub fn project_context_menu_button(opened: bool) -> Element<'static, UiMessage> {
+	DropDown::new(
+		icon_button(Bootstrap::ThreeDotsVertical)
+			.on_press(if opened {
+				ProjectPageMessage::HideContextMenu.into()
+			}
+			else {
+				ProjectPageMessage::ShowContextMenu.into()
+			})
+			.style(secondary_button_style_default),
+
+		container(
+			column![
+				manage_task_tags_button(),
+				import_source_code_todos_button(),
+				delete_project_button(),
+			]
+			.width(Length::Fixed(150.0))
+		)
+		.style(|theme| -> container::Style {
+			container::Style {
+				text_color: None,
+				background: Some(theme.extended_palette().background.base.color.into()),
+				border: rounded(BORDER_RADIUS),
+				shadow: Shadow {
+					blur_radius: BLUR_RADIUS,
+					..Default::default()
+				}
+			}
+		}),
+
+		opened
+	)
+	.width(Fill)
+	.alignment(drop_down::Alignment::BottomStart)
+	.offset(Offset::new(-ICON_BUTTON_WIDTH, ICON_BUTTON_WIDTH))
+	.on_dismiss(ProjectPageMessage::HideContextMenu.into())
+	.into()
 }
 
 pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, UiMessage> {
@@ -122,7 +150,7 @@ pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'sta
 			}
 			.into(),
 		)
-		.style(move |t, s| delete_button_style(t, s, false, true))
+		.style(move |t, s| delete_button_style(t, s, false, true, false, true))
 }
 
 pub fn delete_all_done_tasks_button(
@@ -428,11 +456,12 @@ pub fn task_tag_button(
 	}
 }
 
-pub fn manage_task_tags_button(project_id: ProjectId) -> Element<'static, UiMessage> {
+fn manage_task_tags_button() -> Element<'static, UiMessage> {
 	tooltip(
-		icon_button(Bootstrap::Bookmark)
-			.on_press(ManageTaskTagsModalMessage::Open { project_id }.into())
-			.style(secondary_button_style_default),
+		icon_label_button("Manage Tags", Bootstrap::Bookmark)
+			.width(Fill)
+			.on_press(ProjectPageMessage::OpenManageTaskTagsModal.into())
+			.style(secondary_button_style_only_round_top),
 		text("Manage tags").size(SMALL_TEXT_SIZE),
 		Position::Bottom,
 	)
@@ -456,7 +485,7 @@ pub fn cancel_create_new_task_tag_button() -> Button<'static, UiMessage> {
 pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, UiMessage> {
 	icon_button(Bootstrap::Trash)
 		.on_press(ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id).into())
-		.style(move |t, s| delete_button_style(t, s, true, true))
+		.style(move |t, s| delete_button_style(t, s, true, true, true, true))
 }
 
 pub fn clear_task_needed_time_button() -> Button<'static, UiMessage> {
@@ -572,11 +601,12 @@ pub fn settings_tab_button(
 		.on_press(SettingsModalMessage::SwitchSettingsTab(tab).into())
 }
 
-pub fn import_source_code_todos_button() -> Element<'static, UiMessage> {
+fn import_source_code_todos_button() -> Element<'static, UiMessage> {
 	tooltip(
-		icon_button(Bootstrap::FileEarmarkCode)
+		icon_label_button("Import Todos", Bootstrap::FileEarmarkCode)
+			.width(Fill)
 			.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
-			.style(secondary_button_style_default),
+			.style(secondary_button_style_no_rounding),
 		text("Import TODO's").size(SMALL_TEXT_SIZE),
 		Position::Bottom,
 	)

@@ -9,8 +9,7 @@ use crate::{
 		Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId,
 	},
 	pages::{
-		ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage,
-		StopwatchPage, StopwatchPageMessage,
+		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
 	},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
@@ -670,6 +669,7 @@ impl ProjectTrackerApp {
 								&self.preferences,
 							)
 						})
+						.map(|action| self.perform_project_page_action(action))
 						.unwrap_or(Task::none()),
 					match self.sidebar_page.update(
 						SidebarPageMessage::DragTask {
@@ -704,6 +704,7 @@ impl ProjectTrackerApp {
 								&self.preferences,
 							)
 						})
+						.map(|action| self.perform_project_page_action(action))
 						.unwrap_or(Task::none()),
 					match self.sidebar_page.update(
 						SidebarPageMessage::CancelDragTask,
@@ -721,8 +722,9 @@ impl ProjectTrackerApp {
 			}
 			UiMessage::ProjectPageMessage(message) => match &mut self.project_page {
 				Some(project_page) => {
-					project_page.update(message, &mut self.database, &self.preferences)
-				}
+					let action = project_page.update(message, &mut self.database, &self.preferences);
+					self.perform_project_page_action(action)
+				},
 				None => Task::none(),
 			},
 			UiMessage::SidebarPageMessage(message) => {
@@ -775,17 +777,32 @@ impl ProjectTrackerApp {
 					self.manage_tags_modal.update(message, &mut self.database),
 					deleted_task_tag_id
 						.and_then(|deleted_task_tag_id| {
-							self.project_page.as_mut().map(|project_page| {
+							let action = self.project_page.as_mut().map(|project_page| {
 								project_page.update(
 									ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id),
 									&mut self.database,
 									&self.preferences,
 								)
-							})
+							});
+							action.map(|action| self.perform_project_page_action(action))
 						})
 						.unwrap_or(Task::none()),
 				])
 			}
+		}
+	}
+
+	fn perform_project_page_action(&mut self, action: ProjectPageAction) -> Task<UiMessage> {
+		match action {
+			ProjectPageAction::None => Task::none(),
+			ProjectPageAction::Task(task) => task,
+			ProjectPageAction::OpenManageTaskTagsModal(project_id) => self.update(
+				ManageTaskTagsModalMessage::Open { project_id }.into()
+			),
+			ProjectPageAction::ConfirmDeleteProject { project_id, project_name } => self.update(ConfirmModalMessage::open(
+				format!("Delete Project '{project_name}'?"),
+				DatabaseMessage::DeleteProject(project_id),
+			))
 		}
 	}
 

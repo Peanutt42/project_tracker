@@ -1,11 +1,6 @@
 use crate::{
 	components::{
-		cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button,
-		delete_project_button, edit_color_palette_button, edit_project_name_button,
-		horizontal_scrollable, import_source_code_todos_button, manage_task_tags_button,
-		search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation,
-		CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID,
-		HORIZONTAL_SCROLLABLE_PADDING, TASK_LIST_ID,
+		cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING, TASK_LIST_ID
 	},
 	core::{
 		generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId,
@@ -53,6 +48,10 @@ pub enum ProjectPageMessage {
 	ToggleCreateNewTaskTag(TaskTagId),
 	CreateNewTask,
 
+	ShowContextMenu,
+	HideContextMenu,
+	OpenManageTaskTagsModal,
+
 	OpenSearchTasks,
 	CloseSearchTasks,
 	ChangeSearchTasksFilter(String),
@@ -76,6 +75,8 @@ pub enum ProjectPageMessage {
 	StopEditingProjectName,
 	ChangeEditedProjectName(String),
 	ChangeProjectName,
+
+	ConfirmDeleteProject,
 
 	EditTask(TaskId),
 	StopEditingTask,
@@ -181,6 +182,24 @@ impl CachedTaskList {
 	}
 }
 
+#[derive(Default)]
+pub enum ProjectPageAction {
+	#[default]
+	None,
+	Task(iced::Task<UiMessage>),
+	OpenManageTaskTagsModal(ProjectId),
+	ConfirmDeleteProject{
+		project_id: ProjectId,
+		project_name: String,
+	},
+}
+
+impl From<iced::Task<UiMessage>> for ProjectPageAction {
+	fn from(value: iced::Task<UiMessage>) -> Self {
+		ProjectPageAction::Task(value)
+	}
+}
+
 #[derive(Debug)]
 pub struct ProjectPage {
 	pub project_id: ProjectId,
@@ -199,6 +218,7 @@ pub struct ProjectPage {
 	just_minimal_dragging: bool,
 	progressbar_animation: ScalarAnimation,
 	previous_project_progress: f32,
+	show_context_menu: bool,
 }
 
 impl ProjectPage {
@@ -222,17 +242,16 @@ impl ProjectPage {
 			just_minimal_dragging: true,
 			progressbar_animation: ScalarAnimation::Idle,
 			previous_project_progress: project.get_completion_percentage(),
+			show_context_menu: false,
 		}
 	}
-}
 
-impl ProjectPage {
 	pub fn update(
 		&mut self,
 		message: ProjectPageMessage,
 		database: &mut Option<Database>,
 		preference: &Option<Preferences>,
-	) -> iced::Task<UiMessage> {
+	) -> ProjectPageAction {
 		let command = match message {
 			ProjectPageMessage::OpenCreateNewTask => {
 				self.create_new_task = Some((String::new(), HashSet::new()));
@@ -263,6 +282,8 @@ impl ProjectPage {
 						})
 						.unwrap_or(1.0)
 				};
+				self.edited_task = None;
+
 				iced::Task::batch([
 					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
 					scrollable::snap_to(
@@ -271,13 +292,13 @@ impl ProjectPage {
 							x: 0.0,
 							y: create_new_task_element_relative_y_offset,
 						},
-					),
-					self.update(ProjectPageMessage::StopEditingTask, database, preference),
+					)
 				])
+				.into()
 			}
 			ProjectPageMessage::CloseCreateNewTask => {
 				self.create_new_task = None;
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::ChangeCreateNewTaskName(new_task_name) => {
 				if let Some((create_new_task_name, _create_new_task_tags)) =
@@ -285,7 +306,7 @@ impl ProjectPage {
 				{
 					*create_new_task_name = new_task_name;
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::ToggleCreateNewTaskTag(tag_id) => {
 				if let Some((_create_new_task_name, create_new_task_tags)) =
@@ -297,7 +318,7 @@ impl ProjectPage {
 						create_new_task_tags.insert(tag_id);
 					}
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::CreateNewTask => {
 				if let Some((create_new_task_name, create_new_task_tags)) =
@@ -317,31 +338,36 @@ impl ProjectPage {
 					}
 				}
 				self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
-			}
+			},
+
+			ProjectPageMessage::ShowContextMenu => { self.show_context_menu = true; ProjectPageAction::None },
+			ProjectPageMessage::HideContextMenu => { self.show_context_menu = false; ProjectPageAction::None },
+			ProjectPageMessage::OpenManageTaskTagsModal => { self.show_context_menu = false; ProjectPageAction::OpenManageTaskTagsModal(self.project_id) },
 
 			ProjectPageMessage::OpenSearchTasks => {
 				self.search_tasks_filter = Some(String::new());
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}
-				text_input::focus(SEARCH_TASKS_TEXT_INPUT_ID.clone())
+				text_input::focus(SEARCH_TASKS_TEXT_INPUT_ID.clone()).into()
 			}
 			ProjectPageMessage::CloseSearchTasks => {
 				self.search_tasks_filter = None;
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::ChangeSearchTasksFilter(new_filter) => {
 				self.search_tasks_filter = Some(new_filter);
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 
 			ProjectPageMessage::ImportSourceCodeTodosDialog => {
+				self.show_context_menu = false;
 				iced::Task::perform(Self::pick_todo_source_folders_dialog(), |folders| {
 					if let Some(folders) = folders {
 						ProjectPageMessage::ImportSourceCodeTodos(folders).into()
@@ -349,8 +375,9 @@ impl ProjectPage {
 						ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into()
 					}
 				})
+				.into()
 			}
-			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => iced::Task::none(),
+			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => ProjectPageAction::None,
 			ProjectPageMessage::ImportSourceCodeTodos(todos) => {
 				if let Some(database) = database {
 					database.modify(|projects| {
@@ -362,17 +389,17 @@ impl ProjectPage {
 						}
 					})
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 
 			ProjectPageMessage::ShowSourceCodeTodos(show) => {
 				self.show_source_code_todos = show;
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 
 			ProjectPageMessage::ShowDoneTasks(show) => {
 				self.show_done_tasks = show;
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 
 			ProjectPageMessage::ToggleFilterTaskTag(task_tag_id) => {
@@ -384,23 +411,23 @@ impl ProjectPage {
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::UnsetFilterTaskTag(task_tag_id) => {
 				self.filter_task_tags.remove(&task_tag_id);
 				if let Some(database) = database {
 					self.generate_cached_task_list(database);
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 
 			ProjectPageMessage::ShowColorPicker => {
 				self.show_color_picker = true;
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::HideColorPicker => {
 				self.show_color_picker = false;
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::ChangeProjectColor(new_color) => {
 				self.show_color_picker = false;
@@ -411,7 +438,7 @@ impl ProjectPage {
 						}
 					});
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 
 			ProjectPageMessage::EditProjectName => {
@@ -423,15 +450,15 @@ impl ProjectPage {
 					})
 					.unwrap_or_default();
 				self.edited_project_name = Some(project_name);
-				text_input::focus(PROJECT_NAME_TEXT_INPUT_ID.clone())
+				text_input::focus(PROJECT_NAME_TEXT_INPUT_ID.clone()).into()
 			}
 			ProjectPageMessage::ChangeEditedProjectName(edited_name) => {
 				self.edited_project_name = Some(edited_name);
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::StopEditingProjectName => {
 				self.edited_project_name = None;
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::ChangeProjectName => {
 				if let Some(db) = database {
@@ -452,6 +479,19 @@ impl ProjectPage {
 					database,
 					preference,
 				)
+			},
+			ProjectPageMessage::ConfirmDeleteProject => {
+				self.show_context_menu = false;
+
+				let project_name = database.as_ref().and_then(|db|
+					db.get_project(&self.project_id).map(|project| project.name.clone())
+				)
+				.unwrap_or("<invalid project id>".to_string());
+
+				ProjectPageAction::ConfirmDeleteProject {
+					project_id: self.project_id,
+					project_name,
+				}
 			}
 
 			ProjectPageMessage::EditTask(task_id) => {
@@ -470,7 +510,7 @@ impl ProjectPage {
 			}
 			ProjectPageMessage::StopEditingTask => {
 				self.edited_task = None;
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::TaskNameAction(action) => {
 				if let Some(edit_task_state) = &mut self.edited_task {
@@ -486,7 +526,7 @@ impl ProjectPage {
 						}
 					}
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::ToggleTaskTag(task_tag_id) => {
 				if let Some(edit_task_state) = &mut self.edited_task {
@@ -498,7 +538,7 @@ impl ProjectPage {
 						});
 					}
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::EditTaskNeededTime => {
 				if let Some(edit_task_state) = &mut self.edited_task {
@@ -509,7 +549,7 @@ impl ProjectPage {
 
 					edit_task_state.new_needed_time_minutes = Some(previous_task_needed_minutes);
 				}
-				text_input::focus(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone())
+				text_input::focus(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone()).into()
 			}
 			ProjectPageMessage::ClearTaskNeededTime => {
 				if let Some(edit_task_state) = &mut self.edited_task {
@@ -522,15 +562,15 @@ impl ProjectPage {
 						});
 					}
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::ChangeNewTaskNeededTimeInput(new_needed_time_minutes) => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					edit_task_state.new_needed_time_minutes = Some(new_needed_time_minutes);
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
-			ProjectPageMessage::InvalidNeededTimeInput => iced::Task::none(),
+			ProjectPageMessage::InvalidNeededTimeInput => ProjectPageAction::None,
 			ProjectPageMessage::ChangeTaskNeededTime => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					if let Some(new_needed_time_minutes) = edit_task_state.new_needed_time_minutes {
@@ -548,13 +588,13 @@ impl ProjectPage {
 					}
 					edit_task_state.new_needed_time_minutes = None;
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::EditTaskDueDate => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					edit_task_state.edit_due_date = true;
 				}
-				text_input::focus(EDIT_DUE_DATE_TEXT_INPUT_ID.clone())
+				text_input::focus(EDIT_DUE_DATE_TEXT_INPUT_ID.clone()).into()
 			}
 			ProjectPageMessage::ChangeTaskDueDate(new_due_date) => {
 				if let Some(edit_task_state) = &mut self.edited_task {
@@ -567,7 +607,7 @@ impl ProjectPage {
 						});
 					}
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::ClearTaskDueDate => {
 				if let Some(edit_task_state) = &mut self.edited_task {
@@ -580,13 +620,13 @@ impl ProjectPage {
 						});
 					}
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::StopEditingTaskDueDate => {
 				if let Some(edit_task_state) = &mut self.edited_task {
 					edit_task_state.edit_due_date = false;
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 
 			ProjectPageMessage::DragTask { task_id, point } => {
@@ -600,20 +640,20 @@ impl ProjectPage {
 					self.start_dragging_point = Some(point);
 					self.just_minimal_dragging = true;
 				}
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::CancelDragTask => {
 				self.dragged_task = None;
 				self.start_dragging_point = None;
 				self.just_minimal_dragging = true;
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::PressTask(task_id) => {
 				self.pressed_task = Some(task_id);
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::LeftClickReleased => {
-				let command = if self.just_minimal_dragging {
+				let action = if self.just_minimal_dragging {
 					if let Some(pressed_task) = &self.pressed_task {
 						self.update(
 							ProjectPageMessage::EditTask(*pressed_task),
@@ -621,21 +661,21 @@ impl ProjectPage {
 							preference,
 						)
 					} else {
-						iced::Task::none()
+						ProjectPageAction::None
 					}
 				} else {
-					iced::Task::none()
+					ProjectPageAction::None
 				};
 				self.pressed_task = None;
 				self.dragged_task = None;
 				self.start_dragging_point = None;
 				self.just_minimal_dragging = true;
-				command
+				action
 			}
 
 			ProjectPageMessage::AnimateProgressbar => {
 				self.progressbar_animation.update();
-				iced::Task::none()
+				ProjectPageAction::None
 			}
 		};
 
@@ -810,14 +850,9 @@ impl ProjectPage {
 			search_tasks_button().into()
 		};
 
-		let delete_project_button_element: Element<UiMessage> =
-			delete_project_button(self.project_id, &project.name).into();
-
 		let quick_actions: Element<UiMessage> = row![
 			search_tasks_element,
-			manage_task_tags_button(self.project_id),
-			import_source_code_todos_button(),
-			delete_project_button_element,
+			project_context_menu_button(self.show_context_menu),
 		]
 		.spacing(SPACING_AMOUNT)
 		.into();
