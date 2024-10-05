@@ -1,5 +1,5 @@
 use crate::core::TaskTagId;
-use iced::widget::container::Id;
+use iced::{widget::{container::Id, markdown}, advanced::widget};
 use iced_aw::date_picker::Date;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -17,26 +17,44 @@ pub enum TaskType {
 	SourceCodeTodo,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Task {
-	pub name: String,
+	name: String,
 	pub needed_time_minutes: Option<usize>,
 	pub due_date: Option<SerializableDate>,
 	pub tags: HashSet<TaskTagId>,
 
-	#[serde(skip, default = "Id::unique")]
+	#[serde(skip_serializing, default = "Id::unique")]
 	pub dropzone_id: Id,
+
+	#[serde(skip_serializing, default = "widget::Id::unique")]
+	pub droppable_id: widget::Id,
+
+	#[serde(skip_serializing)]
+	markdown_items: Vec<markdown::Item>,
 }
 
 impl Task {
-	pub fn new(name: String, tags: HashSet<TaskTagId>) -> Self {
+	pub fn new(name: String, needed_time_minutes: Option<usize>, due_date: Option<SerializableDate>, tags: HashSet<TaskTagId>) -> Self {
+		let markdown_items = markdown::parse(&name).collect();
+
 		Self {
 			name,
-			needed_time_minutes: None,
-			due_date: None,
+			needed_time_minutes,
+			due_date,
 			tags,
 			dropzone_id: Id::unique(),
+			droppable_id: widget::Id::unique(),
+			markdown_items,
 		}
+	}
+
+	pub fn name(&self) -> &String { &self.name }
+	pub fn markdown_items(&self) -> &Vec<markdown::Item> { &self.markdown_items }
+
+	pub fn set_name(&mut self, new_name: String) {
+		self.name = new_name;
+		self.markdown_items = markdown::parse(&self.name).collect();
 	}
 
 	pub fn has_same_content_as(&self, other: &Task) -> bool {
@@ -53,6 +71,39 @@ impl Task {
 			}
 		}
 		true
+	}
+}
+
+impl PartialEq for Task {
+	fn eq(&self, other: &Self) -> bool {
+		self.name.eq(&other.name) &&
+		self.needed_time_minutes.eq(&other.needed_time_minutes) &&
+		self.due_date.eq(&other.due_date) &&
+		self.tags.eq(&other.tags)
+	}
+}
+impl Eq for Task {}
+
+impl<'de> Deserialize<'de> for Task {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>
+	{
+		#[derive(Deserialize)]
+		struct SerializedTask {
+			pub name: String,
+			pub needed_time_minutes: Option<usize>,
+			pub due_date: Option<SerializableDate>,
+			pub tags: HashSet<TaskTagId>,
+		}
+
+		let serialized_task = SerializedTask::deserialize(deserializer)?;
+		Ok(Task::new(
+			serialized_task.name,
+			serialized_task.needed_time_minutes,
+			serialized_task.due_date,
+			serialized_task.tags
+		))
 	}
 }
 

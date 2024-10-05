@@ -263,7 +263,7 @@ impl ProjectTrackerApp {
 			}
 			Message::CopyToClipboard(copied_text) => clipboard::write(copied_text),
 			Message::OpenUrl(url) => {
-				let _ = webbrowser::open(url.as_str());
+				let _ = open::that_detached(url.as_str());
 				Task::none()
 			}
 			Message::FocusNext => focus_next(),

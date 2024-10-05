@@ -154,7 +154,7 @@ impl CachedTaskList {
 					.as_ref()
 					.map(|search_filter| {
 						SkimMatcherV2::default()
-							.fuzzy_match(&task.name, search_filter)
+							.fuzzy_match(task.name(), search_filter)
 							.is_some()
 					})
 					.unwrap_or(true)
@@ -499,7 +499,7 @@ impl ProjectPage {
 					.as_ref()
 					.and_then(|db| {
 						db.get_task(&self.project_id, &task_id)
-							.map(|task| task.name.clone())
+							.map(|task| task.name().clone())
 					})
 					.unwrap_or_default();
 				self.edited_task = Some(EditTaskState::new(
@@ -984,7 +984,9 @@ impl ProjectPage {
 										let line_number = i + 1;
 										todos.push(Task::new(
 											format!("{line}:\n    {source} on line {line_number}"),
-											HashSet::new(),
+											None,
+											None,
+											HashSet::new()
 										));
 									}
 								}

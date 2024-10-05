@@ -75,7 +75,7 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 					task_name.push_str(&notes);
 				}
 
-				let mut task = Task::new(task_name, HashSet::new());
+				let mut task = Task::new(task_name, None, None, HashSet::new());
 				task.due_date = google_tasks_task.due.and_then(|due_date_str| {
 					DateTime::parse_from_rfc3339(&due_date_str)
 						.map(|parsed_due_date| {

@@ -9,7 +9,7 @@ async fn main() {
 	for i in 0..1000 {
 		let mut project = Project::new(format!("{i}. Project"), SerializableColor::default());
 		for j in 0..1000 {
-			let task = Task::new(format!("{j}. Task"), HashSet::new());
+			let task = Task::new(format!("{j}. Task"), None, None, HashSet::new());
 			if j % 2 == 0 {
 				project.todo_tasks.insert(j, task);
 			} else {

@@ -262,7 +262,7 @@ impl StopwatchPage {
 
 							if seconds_left <= 0.0 && !*finished_notification_sent {
 								let summary = format!("{} min. timer finished!", needed_minutes);
-								let body = &task.name;
+								let body = task.name();
 
 								#[cfg(target_os = "linux")]
 								{
@@ -373,7 +373,7 @@ impl StopwatchPage {
 							.spacing(TINY_SPACING_AMOUNT)
 							.align_y(Vertical::Center)
 						}))
-						.push(text(&task.name).size(LARGE_TEXT_SIZE))
+						.push(text(task.name()).size(LARGE_TEXT_SIZE))
 						.push_maybe(task.due_date.map(days_left_widget))
 						.spacing(SPACING_AMOUNT)
 						.padding(top(LARGE_PADDING_AMOUNT))

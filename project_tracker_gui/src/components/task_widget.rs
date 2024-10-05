@@ -6,6 +6,7 @@ use crate::components::{
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::Message;
+use crate::styles::PADDING_AMOUNT;
 use crate::{
 	core::{
 		DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag,
@@ -15,11 +16,12 @@ use crate::{
 	styles::{
 		checkbox_style, secondary_button_style_default, secondary_button_style_only_round_bottom,
 		shadow_container_style, task_background_container_style, task_button_style,
-		text_editor_style, text_input_style, GREY, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
-		SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT,
+		text_editor_style, text_input_style, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
+		SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT, DARK_THEME
 	},
 };
 use iced::keyboard::{self, key};
+use iced::widget::{hover, markdown, Space};
 use iced::widget::text_editor::{Binding, KeyPress, Motion, Status};
 use iced::{
 	alignment::Vertical,
@@ -285,20 +287,53 @@ fn task_widget_view<'a>(
 	)
 	.spacing(TINY_SPACING_AMOUNT);
 
-	let inner_text_element: Element<'a, Message> = {
-		let text_style = if matches!(task_type, TaskType::Done) {
-			text::Style { color: Some(GREY) }
-		} else {
-			text::Style::default()
-		};
+	// TODO: how should markdown look on done tasks?
+	let inner_text_element: Element<'a, Message> = markdown(
+		task.markdown_items(),
+		markdown::Settings::default(),
+		markdown::Style::from_palette(DARK_THEME.palette())
+	)
+	.map(|markdown_url| Message::OpenUrl(markdown_url.to_string()));
 
-		text(&task.name)
-			.width(Fill)
-			.style(move |_theme| text_style)
-			.into()
+	let grip_hover_icon: Element<'a, Message> = container(
+		if dragging {
+			Space::new(0.0, 0.0).into()
+		}
+		else {
+			Element::new(icon_to_text(Bootstrap::GripVertical))
+		}
+	)
+	.padding(Padding {
+		top: if task.tags.is_empty() {
+			0.0
+		} else {
+			TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT * 1.5
+		},
+		..Padding::ZERO
+	})
+	.center_y(Fill)
+	.into();
+
+	let grip_icon_dummy: Element<Message> = if dragging {
+		container(
+			icon_to_text(Bootstrap::GripVertical)
+		)
+		.padding(Padding {
+			top: if task.tags.is_empty() {
+				0.0
+			} else {
+				TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT * 1.5
+			},
+			..Padding::ZERO
+		})
+		.into()
+	}
+	else {
+		Space::new(PADDING_AMOUNT, 0.0).into()
 	};
 
-	let inner: Element<Message> = row![
+	let inner: Element<'a, Message> = row![
+		grip_icon_dummy,
 		container(
 			checkbox("", matches!(task_type, TaskType::Done))
 				.on_toggle(move |checked| {
@@ -386,33 +421,37 @@ fn task_widget_view<'a>(
 			},
 			highlight
 		),
-		droppable(
-			container(inner)
-				.padding(Padding::new(SMALL_PADDING_AMOUNT))
-				.style(move |t| task_background_container_style(
-					t,
-					dragging && !just_minimal_dragging
-				))
+		hover(
+			droppable(
+				container(inner)
+					.padding(Padding::new(SMALL_PADDING_AMOUNT))
+					.style(move |t| task_background_container_style(
+						t,
+						dragging && !just_minimal_dragging
+					))
+			)
+			.on_drop(move |point, rect| SidebarPageMessage::DropTask {
+				project_id,
+				task_id,
+				point,
+				rect
+			}
+			.into())
+			.on_drag(move |point, rect| Message::DragTask {
+				project_id,
+				task_id,
+				task_is_todo: matches!(task_type, TaskType::Todo),
+				point,
+				rect
+			})
+			.on_click(ProjectPageMessage::PressTask(task_id).into())
+			.on_cancel(Message::CancelDragTask)
+			.drag_overlay(!just_minimal_dragging)
+			.drag_hide(!just_minimal_dragging)
+			.style(task_button_style),
+
+			grip_hover_icon
 		)
-		.on_drop(move |point, rect| SidebarPageMessage::DropTask {
-			project_id,
-			task_id,
-			point,
-			rect
-		}
-		.into())
-		.on_drag(move |point, rect| Message::DragTask {
-			project_id,
-			task_id,
-			task_is_todo: matches!(task_type, TaskType::Todo),
-			point,
-			rect
-		})
-		.on_click(ProjectPageMessage::PressTask(task_id).into())
-		.on_cancel(Message::CancelDragTask)
-		.drag_overlay(!just_minimal_dragging)
-		.drag_hide(!just_minimal_dragging)
-		.style(task_button_style)
 	]
 	.into()
 }

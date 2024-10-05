@@ -60,4 +60,4 @@ mod text;
 pub use text::text_color;
 
 mod theme;
-pub use theme::ProjectTrackerTheme;
+pub use theme::{ProjectTrackerTheme, DARK_THEME};

@@ -67,7 +67,7 @@ impl Project {
 		tags: HashSet<TaskTagId>,
 		create_at_top: bool,
 	) {
-		let task = Task::new(name, tags);
+		let task = Task::new(name, None, None, tags);
 
 		if create_at_top {
 			self.todo_tasks.insert_at_top(task_id, task);
@@ -93,7 +93,7 @@ impl Project {
 
 	pub fn set_task_name(&mut self, task_id: TaskId, new_name: String) {
 		if let Some(task) = self.get_task_mut(&task_id) {
-			task.name = new_name;
+			task.set_name(new_name);
 		}
 	}
 

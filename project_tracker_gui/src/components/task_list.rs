@@ -191,7 +191,6 @@ pub fn task_list<'a>(
 	};
 
 	let task_indentation_padding = Padding {
-		left: PADDING_AMOUNT,
 		right: PADDING_AMOUNT,
 		..Padding::ZERO
 	};
