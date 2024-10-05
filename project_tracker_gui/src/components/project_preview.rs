@@ -6,7 +6,7 @@ use crate::styles::{
 };
 use crate::{
 	pages::SidebarPageMessage,
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::{dropzone_container_style, project_preview_style},
 };
 use iced::{
@@ -23,7 +23,7 @@ use iced_drop::droppable;
 pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
 const PROJECT_COLOR_BLOCK_HEIGHT: f32 = 35.0;
 
-pub fn project_color_block(color: Color) -> Element<'static, UiMessage> {
+pub fn project_color_block(color: Color) -> Element<'static, Message> {
 	Quad {
 		width: Length::Fixed(PROJECT_COLOR_BLOCK_WIDTH),
 		height: Length::Fixed(PROJECT_COLOR_BLOCK_HEIGHT),
@@ -43,7 +43,7 @@ pub fn project_preview(
 	task_dropzone_highlight: bool,
 	dragging: bool,
 	just_minimal_dragging: bool,
-) -> Element<UiMessage> {
+) -> Element<Message> {
 	let inner_text_element = text(&project.name).size(LARGE_TEXT_SIZE).into();
 
 	custom_project_preview(
@@ -70,13 +70,13 @@ pub fn custom_project_preview(
 	project_color: Color,
 	tasks_done: usize,
 	task_len: usize,
-	inner_text_element: Element<UiMessage>,
+	inner_text_element: Element<Message>,
 	selected: bool,
 	project_dropzone_highlight: bool,
 	task_dropzone_highlight: bool,
 	dragging: bool,
 	just_minimal_dragging: bool,
-) -> Element<UiMessage> {
+) -> Element<Message> {
 	let inner = container(
 		row![
 			if selected && project_id.is_some() {

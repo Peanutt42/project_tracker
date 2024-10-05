@@ -1,6 +1,6 @@
 use crate::{
 	core::{DateFormatting, SerializableDate},
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::{rounded_container_style, SMALL_HORIZONTAL_PADDING},
 };
 use chrono::NaiveDate;
@@ -14,7 +14,7 @@ pub fn date_text(date: &SerializableDate, formatting: DateFormatting) -> Text<'s
 	text(formatting.format(date))
 }
 
-pub fn days_left_widget(date: SerializableDate) -> Element<'static, UiMessage> {
+pub fn days_left_widget(date: SerializableDate) -> Element<'static, Message> {
 	let today: NaiveDate = Date::today().into();
 	let date: Date = date.into();
 	let date_naive: NaiveDate = date.into();

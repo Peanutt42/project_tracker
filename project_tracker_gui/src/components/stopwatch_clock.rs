@@ -6,7 +6,7 @@ use iced::{
 	Color, Font, Point, Radians, Renderer, Theme,
 };
 
-use crate::project_tracker::UiMessage;
+use crate::project_tracker::Message;
 
 #[derive(Debug)]
 pub struct StopwatchClock {
@@ -46,7 +46,7 @@ impl StopwatchClock {
 	}
 }
 
-impl Program<UiMessage> for StopwatchClock {
+impl Program<Message> for StopwatchClock {
 	type State = ();
 
 	fn draw(

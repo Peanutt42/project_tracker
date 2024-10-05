@@ -13,7 +13,7 @@ use crate::{
 	},
 	core::{Database, DatabaseMessage, TaskId},
 	pages::StopwatchPageMessage,
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::{
 		text_input_style_default, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT,
 	},
@@ -93,20 +93,20 @@ pub enum SidebarPageMessage {
 	LeftClickReleased,
 }
 
-impl From<SidebarPageMessage> for UiMessage {
+impl From<SidebarPageMessage> for Message {
 	fn from(value: SidebarPageMessage) -> Self {
-		UiMessage::SidebarPageMessage(value)
+		Message::SidebarPageMessage(value)
 	}
 }
 
 pub enum SidebarPageAction {
 	None,
-	Task(Task<UiMessage>),
+	Task(Task<Message>),
 	SelectProject(ProjectId),
 }
 
-impl From<Task<UiMessage>> for SidebarPageAction {
-	fn from(value: Task<UiMessage>) -> Self {
+impl From<Task<Message>> for SidebarPageAction {
+	fn from(value: Task<Message>) -> Self {
 		SidebarPageAction::Task(value)
 	}
 }
@@ -149,7 +149,7 @@ impl SidebarPage {
 		&mut self,
 		project_order: usize,
 		database: &Database,
-	) -> Task<UiMessage> {
+	) -> Task<Message> {
 		scrollable::snap_to(
 			SCROLLABLE_ID.clone(),
 			RelativeOffset {
@@ -497,8 +497,8 @@ impl SidebarPage {
 		&'a self,
 		projects: &'a OrderedHashMap<ProjectId, Project>,
 		app: &'a ProjectTrackerApp,
-	) -> Element<'a, UiMessage> {
-		let mut list: Vec<Element<UiMessage>> = projects
+	) -> Element<'a, Message> {
+		let mut list: Vec<Element<Message>> = projects
 			.iter()
 			.map(|(project_id, project)| {
 				let selected = match &app.project_page {
@@ -579,8 +579,8 @@ impl SidebarPage {
 			.into()
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<UiMessage> {
-		let list: Element<UiMessage> = if let Some(database) = &app.database {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<Message> {
+		let list: Element<Message> = if let Some(database) = &app.database {
 			self.project_preview_list(database.projects(), app)
 		} else {
 			loading_screen()

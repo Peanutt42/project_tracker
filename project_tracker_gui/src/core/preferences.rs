@@ -5,7 +5,7 @@ use crate::{
 		theme_mode_button, ErrorMsgModalMessage, HORIZONTAL_SCROLLABLE_PADDING,
 	},
 	core::{ProjectId, SerializableDate, TaskId},
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::SPACING_AMOUNT,
 	theme_mode::ThemeMode,
 };
@@ -102,9 +102,9 @@ pub enum PreferenceMessage {
 	SetCreateNewTaskAtTop(bool),
 }
 
-impl From<PreferenceMessage> for UiMessage {
+impl From<PreferenceMessage> for Message {
 	fn from(value: PreferenceMessage) -> Self {
-		UiMessage::PreferenceMessage(value)
+		Message::PreferenceMessage(value)
 	}
 }
 
@@ -153,7 +153,7 @@ impl Preferences {
 		self.last_changed_time > self.last_saved_time
 	}
 
-	pub fn update(&mut self, message: PreferenceMessage) -> Task<UiMessage> {
+	pub fn update(&mut self, message: PreferenceMessage) -> Task<Message> {
 		match message {
 			PreferenceMessage::Save => {
 				Task::perform(Self::save(self.to_json()), |result| match result {
@@ -181,7 +181,7 @@ impl Preferences {
 			PreferenceMessage::Import => {
 				Task::perform(Preferences::import_file_dialog(), |result| {
 					if let Some(load_preference_result) = result {
-						UiMessage::LoadedPreferences(load_preference_result)
+						Message::LoadedPreferences(load_preference_result)
 					} else {
 						PreferenceMessage::ImportFailed.into()
 					}
@@ -311,9 +311,9 @@ impl Preferences {
 	}
 
 	fn setting_item<'a>(
-		label: impl Into<Element<'a, UiMessage>>,
-		content: impl Into<Element<'a, UiMessage>>,
-	) -> Row<'a, UiMessage> {
+		label: impl Into<Element<'a, Message>>,
+		content: impl Into<Element<'a, Message>>,
+	) -> Row<'a, Message> {
 		row![
 			label.into(),
 			container(content).width(Fill).align_x(Horizontal::Right),
@@ -321,7 +321,7 @@ impl Preferences {
 		.align_y(Alignment::Center)
 	}
 
-	pub fn view(&self) -> Element<UiMessage> {
+	pub fn view(&self) -> Element<Message> {
 		column![
 			Self::setting_item(
 				"Theme Mode:",

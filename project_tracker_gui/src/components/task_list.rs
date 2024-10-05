@@ -11,7 +11,7 @@ use crate::{
 	pages::{
 		CachedTaskList, EditTaskState, StopwatchPage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
 	},
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::PADDING_AMOUNT,
 };
 use iced::{
@@ -42,7 +42,7 @@ pub fn task_list<'a>(
 	stopwatch_page: &'a StopwatchPage,
 	date_formatting: DateFormatting,
 	create_new_tasks_at_top: bool,
-) -> Element<'a, UiMessage> {
+) -> Element<'a, Message> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut source_code_todo_elements = Vec::new(); // only gets populated when 'show_source_code_todos'
@@ -133,7 +133,7 @@ pub fn task_list<'a>(
 		highlight_bottom_todo_task_dropzone,
 	));
 
-	let show_source_code_todos_button: Element<UiMessage> =
+	let show_source_code_todos_button: Element<Message> =
 		if cached_task_list.source_code_todo.is_empty() {
 			column![].into()
 		} else {
@@ -164,7 +164,7 @@ pub fn task_list<'a>(
 			.into()
 		};
 
-	let show_tasks_button: Element<UiMessage> = if cached_task_list.done.is_empty() {
+	let show_tasks_button: Element<Message> = if cached_task_list.done.is_empty() {
 		column![].into()
 	} else {
 		container(
@@ -212,7 +212,7 @@ fn create_new_task_element<'a>(
 	project: &'a Project,
 	create_new_task_name: &'a str,
 	create_new_task_tags: &'a HashSet<TaskTagId>,
-) -> Element<'a, UiMessage> {
+) -> Element<'a, Message> {
 	column![
 		task_tags_buttons(&project.task_tags, create_new_task_tags, |tag_id| {
 			ProjectPageMessage::ToggleCreateNewTaskTag(tag_id).into()

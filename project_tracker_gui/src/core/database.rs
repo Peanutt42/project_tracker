@@ -2,7 +2,7 @@ use crate::core::{
 	OrderedHashMap, Project, ProjectId, SerializableColor, SerializableDate, Task, TaskId, TaskTag,
 	TaskTagId, TaskType,
 };
-use crate::project_tracker::UiMessage;
+use crate::project_tracker::Message;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -120,9 +120,9 @@ pub enum DatabaseMessage {
 	},
 }
 
-impl From<DatabaseMessage> for UiMessage {
+impl From<DatabaseMessage> for Message {
 	fn from(value: DatabaseMessage) -> Self {
-		UiMessage::DatabaseMessage(value)
+		Message::DatabaseMessage(value)
 	}
 }
 

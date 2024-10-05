@@ -1,5 +1,5 @@
 use crate::{
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::{scrollable_style, SMALL_PADDING_AMOUNT},
 };
 use iced::{
@@ -19,8 +19,8 @@ pub const HORIZONTAL_SCROLLABLE_PADDING: Padding = Padding {
 };
 
 pub fn horizontal_scrollable<'a>(
-	content: impl Into<Element<'a, UiMessage>>,
-) -> Scrollable<'a, UiMessage> {
+	content: impl Into<Element<'a, Message>>,
+) -> Scrollable<'a, Message> {
 	scrollable(container(content).padding(Padding {
 		bottom: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
 		..Padding::ZERO
@@ -32,8 +32,8 @@ pub fn horizontal_scrollable<'a>(
 }
 
 pub fn vertical_scrollable<'a>(
-	content: impl Into<Element<'a, UiMessage>>,
-) -> Scrollable<'a, UiMessage> {
+	content: impl Into<Element<'a, Message>>,
+) -> Scrollable<'a, Message> {
 	scrollable(container(content).padding(Padding {
 		left: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,
 		right: SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT,

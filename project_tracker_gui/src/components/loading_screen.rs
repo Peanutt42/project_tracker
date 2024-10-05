@@ -1,4 +1,4 @@
-use crate::project_tracker::UiMessage;
+use crate::project_tracker::Message;
 use iced::{
 	widget::container,
 	Element,
@@ -6,7 +6,7 @@ use iced::{
 };
 use iced_aw::Spinner;
 
-pub fn loading_screen() -> Element<'static, UiMessage> {
+pub fn loading_screen() -> Element<'static, Message> {
 	container(
 		Spinner::new()
 			.width(Length::Fixed(75.0))

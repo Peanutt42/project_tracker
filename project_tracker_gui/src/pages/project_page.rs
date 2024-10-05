@@ -7,7 +7,7 @@ use crate::{
 		SerializableDate, Task, TaskId, TaskTagId,
 	},
 	icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT},
-	project_tracker::{ProjectTrackerApp, UiMessage},
+	project_tracker::{ProjectTrackerApp, Message},
 	styles::{
 		text_input_style_default, text_input_style_only_round_left, LARGE_PADDING_AMOUNT,
 		MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT,
@@ -100,9 +100,9 @@ pub enum ProjectPageMessage {
 	AnimateProgressbar,
 }
 
-impl From<ProjectPageMessage> for UiMessage {
+impl From<ProjectPageMessage> for Message {
 	fn from(value: ProjectPageMessage) -> Self {
-		UiMessage::ProjectPageMessage(value)
+		Message::ProjectPageMessage(value)
 	}
 }
 
@@ -186,7 +186,7 @@ impl CachedTaskList {
 pub enum ProjectPageAction {
 	#[default]
 	None,
-	Task(iced::Task<UiMessage>),
+	Task(iced::Task<Message>),
 	OpenManageTaskTagsModal(ProjectId),
 	ConfirmDeleteProject{
 		project_id: ProjectId,
@@ -194,8 +194,8 @@ pub enum ProjectPageAction {
 	},
 }
 
-impl From<iced::Task<UiMessage>> for ProjectPageAction {
-	fn from(value: iced::Task<UiMessage>) -> Self {
+impl From<iced::Task<Message>> for ProjectPageAction {
+	fn from(value: iced::Task<Message>) -> Self {
 		ProjectPageAction::Task(value)
 	}
 }
@@ -725,7 +725,7 @@ impl ProjectPage {
 		])
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, UiMessage> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
 		if let Some(database) = &app.database {
 			if let Some(project) = database.get_project(&self.project_id) {
 				column![
@@ -764,8 +764,8 @@ impl ProjectPage {
 		}
 	}
 
-	fn project_details_view<'a>(&'a self, project: &'a Project) -> Element<'a, UiMessage> {
-		let project_name: Element<UiMessage> =
+	fn project_details_view<'a>(&'a self, project: &'a Project) -> Element<'a, Message> {
+		let project_name: Element<Message> =
 			if let Some(edited_project_name) = &self.edited_project_name {
 				unfocusable(
 					text_input("New project name", edited_project_name)
@@ -810,7 +810,7 @@ impl ProjectPage {
 		.alignment(drop_down::Alignment::End)
 		.on_dismiss(ProjectPageMessage::HideColorPicker.into());
 
-		let mut task_tags_list: Vec<Element<UiMessage>> = Vec::new();
+		let mut task_tags_list: Vec<Element<Message>> = Vec::new();
 		for (tag_id, tag) in project.task_tags.iter() {
 			task_tags_list.push(
 				task_tag_button(tag, self.filter_task_tags.contains(&tag_id), true, true)
@@ -819,7 +819,7 @@ impl ProjectPage {
 			);
 		}
 
-		let search_tasks_element: Element<UiMessage> = if let Some(search_tasks_filter) =
+		let search_tasks_element: Element<Message> = if let Some(search_tasks_filter) =
 			&self.search_tasks_filter
 		{
 			row![
@@ -850,7 +850,7 @@ impl ProjectPage {
 			search_tasks_button().into()
 		};
 
-		let quick_actions: Element<UiMessage> = row![
+		let quick_actions: Element<Message> = row![
 			search_tasks_element,
 			project_context_menu_button(self.show_context_menu),
 		]

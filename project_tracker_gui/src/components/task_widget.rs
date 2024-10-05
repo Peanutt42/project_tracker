@@ -5,7 +5,7 @@ use crate::components::{
 };
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::pages::ProjectPageMessage;
-use crate::project_tracker::UiMessage;
+use crate::project_tracker::Message;
 use crate::{
 	core::{
 		DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag,
@@ -52,7 +52,7 @@ pub fn task_widget<'a>(
 	highlight: bool,
 	stopwatch_label: Option<&'a String>,
 	date_formatting: DateFormatting,
-) -> Element<'a, UiMessage> {
+) -> Element<'a, Message> {
 	if let Some(edit_task_state) = edit_task_state {
 		edit_task_widget_view(
 			task,
@@ -84,8 +84,8 @@ fn edit_task_widget_view<'a>(
 	task_tags: &'a OrderedHashMap<TaskTagId, TaskTag>,
 	edit_task_state: &'a EditTaskState,
 	date_formatting: DateFormatting,
-) -> Element<'a, UiMessage> {
-	let edit_task_name_text_editor: Element<'a, UiMessage> = {
+) -> Element<'a, Message> {
+	let edit_task_name_text_editor: Element<'a, Message> = {
 		let round_top_left = task.needed_time_minutes.is_none()
 			&& task_tags
 				.get_key_at_order(0)
@@ -163,7 +163,7 @@ fn edit_task_widget_view<'a>(
 						if let Some(new_task_needed_minutes) =
 							&edit_task_state.new_needed_time_minutes
 						{
-							let stop_editing_task_message: UiMessage =
+							let stop_editing_task_message: Message =
 								ProjectPageMessage::StopEditingTask.into();
 
 							let edit_needed_time_element = unfocusable(
@@ -276,7 +276,7 @@ fn task_widget_view<'a>(
 	just_minimal_dragging: bool,
 	highlight: bool,
 	stopwatch_label: Option<&'a String>,
-) -> Element<'a, UiMessage> {
+) -> Element<'a, Message> {
 	let tags_element = Row::with_children(
 		task_tags
 			.iter()
@@ -285,7 +285,7 @@ fn task_widget_view<'a>(
 	)
 	.spacing(TINY_SPACING_AMOUNT);
 
-	let inner_text_element: Element<'a, UiMessage> = {
+	let inner_text_element: Element<'a, Message> = {
 		let text_style = if matches!(task_type, TaskType::Done) {
 			text::Style { color: Some(GREY) }
 		} else {
@@ -298,7 +298,7 @@ fn task_widget_view<'a>(
 			.into()
 	};
 
-	let inner: Element<UiMessage> = row![
+	let inner: Element<Message> = row![
 		container(
 			checkbox("", matches!(task_type, TaskType::Done))
 				.on_toggle(move |checked| {
@@ -348,7 +348,7 @@ fn task_widget_view<'a>(
 								.as_ref()
 								.map(|due_date| days_left_widget(*due_date)),
 						)
-						.push_maybe(stopwatch_label.map(|label| -> Element<UiMessage> {
+						.push_maybe(stopwatch_label.map(|label| -> Element<Message> {
 							button(
 								row![
 									icon_to_text(Bootstrap::Stopwatch).size(SMALL_TEXT_SIZE),
@@ -361,13 +361,13 @@ fn task_widget_view<'a>(
 							)
 							.padding(SMALL_HORIZONTAL_PADDING)
 							.style(secondary_button_style_default)
-							.on_press(UiMessage::OpenStopwatch)
+							.on_press(Message::OpenStopwatch)
 							.into()
 						}))
 						.spacing(TINY_SPACING_AMOUNT)
 						.align_x(Alignment::End)
 						.into(),
-				) as Option<Element<UiMessage>>
+				) as Option<Element<Message>>
 			} else {
 				None
 			}
@@ -401,7 +401,7 @@ fn task_widget_view<'a>(
 			rect
 		}
 		.into())
-		.on_drag(move |point, rect| UiMessage::DragTask {
+		.on_drag(move |point, rect| Message::DragTask {
 			project_id,
 			task_id,
 			task_is_todo: matches!(task_type, TaskType::Todo),
@@ -409,7 +409,7 @@ fn task_widget_view<'a>(
 			rect
 		})
 		.on_click(ProjectPageMessage::PressTask(task_id).into())
-		.on_cancel(UiMessage::CancelDragTask)
+		.on_cancel(Message::CancelDragTask)
 		.drag_overlay(!just_minimal_dragging)
 		.drag_hide(!just_minimal_dragging)
 		.style(task_button_style)

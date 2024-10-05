@@ -1,5 +1,5 @@
 use crate::{
-	components::color_palette_item_button, project_tracker::UiMessage,
+	components::color_palette_item_button, project_tracker::Message,
 	styles::palette_container_style,
 };
 use iced::{
@@ -23,8 +23,8 @@ pub const COLOR_PALETTE_WHITE: Color = Color {
 
 pub fn color_palette(
 	selected_color: Color,
-	on_submit: impl Fn(Color) -> UiMessage,
-) -> Element<'static, UiMessage> {
+	on_submit: impl Fn(Color) -> Message,
+) -> Element<'static, Message> {
 	let color_item = |color: Color, round_left: bool, round_right: bool| {
 		color_palette_item_button(
 			color,

@@ -1,6 +1,6 @@
 use crate::{
 	core::SerializableColor,
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::{tooltip_container_style, SMALL_TEXT_SIZE},
 };
 use iced::{
@@ -33,7 +33,7 @@ impl TaskTag {
 		Self { name, color }
 	}
 
-	pub fn view(&self) -> Element<UiMessage> {
+	pub fn view(&self) -> Element<Message> {
 		let color: Color = self.color.into();
 		tooltip(
 			Quad {

@@ -1,5 +1,5 @@
 use crate::{
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::{GREY, PADDING_AMOUNT},
 };
 use iced::{
@@ -10,7 +10,7 @@ use iced::{
 };
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 
-pub fn horizontal_seperator_padded() -> Element<'static, UiMessage> {
+pub fn horizontal_seperator_padded() -> Element<'static, Message> {
 	container(horizontal_seperator())
 		.padding(Padding {
 			top: PADDING_AMOUNT,

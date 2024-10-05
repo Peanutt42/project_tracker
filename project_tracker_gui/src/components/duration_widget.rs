@@ -1,5 +1,5 @@
 use crate::{
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::{rounded_container_style, SMALL_HORIZONTAL_PADDING},
 };
 use iced::{
@@ -36,7 +36,7 @@ pub fn duration_text(duration: Cow<'_, Duration>) -> Text {
 	))
 }
 
-pub fn duration_widget(duration: Cow<'_, Duration>) -> Element<'_, UiMessage> {
+pub fn duration_widget(duration: Cow<'_, Duration>) -> Element<'_, Message> {
 	container(duration_text(duration))
 		.padding(SMALL_HORIZONTAL_PADDING)
 		.style(rounded_container_style)

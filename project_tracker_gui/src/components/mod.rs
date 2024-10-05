@@ -47,8 +47,11 @@ pub use seperator::{horizontal_seperator, horizontal_seperator_padded, vertical_
 mod file_location;
 pub use file_location::{file_location, filepath_widget};
 
-mod modals;
-pub use modals::{ConfirmModal, ConfirmModalMessage, ErrorMsgModal, ErrorMsgModalMessage};
+mod error_msg_modal;
+pub use error_msg_modal::{ErrorMsgModal, ErrorMsgModalMessage};
+
+mod confirm_modal;
+pub use confirm_modal::{ConfirmModal, ConfirmModalMessage};
 
 mod settings_modal;
 pub use settings_modal::{SettingTab, SettingsModal, SettingsModalMessage};

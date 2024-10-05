@@ -1,6 +1,6 @@
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
 use crate::icons::Bootstrap;
-use crate::project_tracker::{ProjectTrackerApp, UiMessage};
+use crate::project_tracker::{ProjectTrackerApp, Message};
 use crate::styles::{
 	rounded_container_style, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING,
 	SMALL_SPACING_AMOUNT, SPACING_AMOUNT,
@@ -42,9 +42,9 @@ pub enum SettingsModalMessage {
 	ImportGoogleTasksFileDialogCanceled,
 }
 
-impl From<SettingsModalMessage> for UiMessage {
+impl From<SettingsModalMessage> for Message {
 	fn from(value: SettingsModalMessage) -> Self {
-		UiMessage::SettingsModalMessage(value)
+		Message::SettingsModalMessage(value)
 	}
 }
 
@@ -69,7 +69,7 @@ impl SettingTab {
 		&'a self,
 		app: &'a ProjectTrackerApp,
 		preferences: &'a Preferences,
-	) -> Element<'a, UiMessage> {
+	) -> Element<'a, Message> {
 		match self {
 			SettingTab::General => preferences.view(),
 			SettingTab::Database => {
@@ -186,7 +186,7 @@ impl SettingTab {
 				.into()
 			},
 			SettingTab::About => {
-				let item = |label: &'static str, content: Element<'static, UiMessage>| {
+				let item = |label: &'static str, content: Element<'static, Message>| {
 					row![
 						label,
 						Space::new(Fill, 0.0),
@@ -207,7 +207,7 @@ impl SettingTab {
 					item(
 						"Repository:",
 						button(repository)
-							.on_press(UiMessage::OpenUrl(repository.to_string()))
+							.on_press(Message::OpenUrl(repository.to_string()))
 							.style(secondary_button_style_default)
 							.into()
 					),
@@ -247,7 +247,7 @@ impl SettingsModal {
 		&mut self,
 		message: SettingsModalMessage,
 		preferences: &mut Option<Preferences>,
-	) -> Task<UiMessage> {
+	) -> Task<Message> {
 		match message {
 			SettingsModalMessage::Open => {
 				*self = SettingsModal::Opened {
@@ -307,11 +307,11 @@ impl SettingsModal {
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<UiMessage>> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<Message>> {
 		match self {
 			SettingsModal::Closed => None,
 			SettingsModal::Opened { selected_tab } => app.preferences.as_ref().map(|preferences| {
-				let tabs: Vec<Element<UiMessage>> = SettingTab::ALL
+				let tabs: Vec<Element<Message>> = SettingTab::ALL
 					.iter()
 					.map(|tab| settings_tab_button(*tab, *selected_tab).into())
 					.collect();

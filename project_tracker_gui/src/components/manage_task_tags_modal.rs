@@ -4,7 +4,7 @@ use crate::{
 		create_new_task_tags_button, delete_task_tag_button, unfocusable,
 	},
 	core::{Database, DatabaseMessage, Project, ProjectId, TaskTag, TaskTagId},
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::{
 		card_style, hidden_secondary_button_style, text_input_style_only_round_left,
 		LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT,
@@ -41,9 +41,9 @@ pub enum ManageTaskTagsModalMessage {
 	Close,
 }
 
-impl From<ManageTaskTagsModalMessage> for UiMessage {
+impl From<ManageTaskTagsModalMessage> for Message {
 	fn from(value: ManageTaskTagsModalMessage) -> Self {
-		UiMessage::ManageTaskTagsModalMessage(value)
+		Message::ManageTaskTagsModalMessage(value)
 	}
 }
 
@@ -62,7 +62,7 @@ impl ManageTaskTagsModal {
 		&'a mut self,
 		message: ManageTaskTagsModalMessage,
 		database: &'a mut Option<Database>,
-	) -> Task<UiMessage> {
+	) -> Task<Message> {
 		match message {
 			ManageTaskTagsModalMessage::Open { project_id } => {
 				*self = ManageTaskTagsModal::Opened {
@@ -247,7 +247,7 @@ impl ManageTaskTagsModal {
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<UiMessage>> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<Message>> {
 		match self {
 			ManageTaskTagsModal::Opened {
 				project_id,
@@ -285,7 +285,7 @@ impl ManageTaskTagsModal {
 		create_new_task_tag: &'a Option<String>,
 		edit_task_tag_color_id: &'a Option<TaskTagId>,
 		edit_task_tag_name_id: &'a Option<(TaskTagId, String)>,
-	) -> Element<'a, UiMessage> {
+	) -> Element<'a, Message> {
 		let mut tags_list = Vec::new();
 		for (tag_id, tag) in project.task_tags.iter() {
 			let show_color_palette = match edit_task_tag_color_id {
@@ -300,7 +300,7 @@ impl ManageTaskTagsModal {
 				_ => None,
 			};
 
-			let name_element: Element<UiMessage> = if let Some(edited_name) = edited_name {
+			let name_element: Element<Message> = if let Some(edited_name) = edited_name {
 				text_input("tag name", edited_name)
 					.on_input(move |new_name| {
 						ManageTaskTagsModalMessage::ChangeEditTaskTagName(new_name).into()

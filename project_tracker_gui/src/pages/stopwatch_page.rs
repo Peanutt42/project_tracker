@@ -4,7 +4,7 @@ use crate::{
 		resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock,
 	},
 	core::{Database, DatabaseMessage, PreferenceMessage, ProjectId, StopwatchProgress, TaskId},
-	project_tracker::UiMessage,
+	project_tracker::Message,
 	styles::{
 		task_tag_container_style, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE,
 		PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT,
@@ -56,9 +56,9 @@ pub enum StopwatchPageMessage {
 	RedrawClock,
 }
 
-impl From<StopwatchPageMessage> for UiMessage {
+impl From<StopwatchPageMessage> for Message {
 	fn from(value: StopwatchPageMessage) -> Self {
-		UiMessage::StopwatchPageMessage(value)
+		Message::StopwatchPageMessage(value)
 	}
 }
 
@@ -117,7 +117,7 @@ impl StopwatchPage {
 		message: StopwatchPageMessage,
 		database: &Option<Database>,
 		opened: bool,
-	) -> Option<Vec<UiMessage>> {
+	) -> Option<Vec<Message>> {
 		match message {
 			StopwatchPageMessage::Start { task } => {
 				*self = StopwatchPage::Ticking {
@@ -129,7 +129,7 @@ impl StopwatchPage {
 					finished_notification_sent: false,
 				};
 				Some(vec![
-					UiMessage::OpenStopwatch,
+					Message::OpenStopwatch,
 					PreferenceMessage::SetStopwatchProgress(self.get_progress()).into(),
 				])
 			}
@@ -147,7 +147,7 @@ impl StopwatchPage {
 					clock: StopwatchClock::new(0.0, String::new(), String::new()),
 					finished_notification_sent,
 				};
-				Some(vec![UiMessage::OpenStopwatch])
+				Some(vec![Message::OpenStopwatch])
 			}
 			StopwatchPageMessage::Stop => {
 				*self = StopwatchPage::Idle;
@@ -200,7 +200,7 @@ impl StopwatchPage {
 				}
 			}
 			StopwatchPageMessage::CompleteTask => {
-				let database_action: Option<UiMessage> = if let StopwatchPage::Ticking {
+				let database_action: Option<Message> = if let StopwatchPage::Ticking {
 					task: Some((project_id, task_id)),
 					..
 				} = self
@@ -297,7 +297,7 @@ impl StopwatchPage {
 		}
 	}
 
-	pub fn view<'a>(&'a self, database: &'a Option<Database>) -> Element<'a, UiMessage> {
+	pub fn view<'a>(&'a self, database: &'a Option<Database>) -> Element<'a, Message> {
 		container(match self {
 			StopwatchPage::Idle => column![text("Start any task!").size(90), start_timer_button()]
 				.align_x(Alignment::Center)
@@ -320,7 +320,7 @@ impl StopwatchPage {
 					}
 				}
 
-				let clock: Element<UiMessage> = if task_ref.is_some() {
+				let clock: Element<Message> = if task_ref.is_some() {
 					canvas(clock)
 						.width(Length::Fixed(300.0))
 						.height(Length::Fixed(300.0))
