@@ -10,17 +10,18 @@ use crate::{
 		clear_synchronization_filepath_button, dangerous_button, export_database_button,
 		file_location, filepath_widget, horizontal_seperator_padded, import_database_button,
 		import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button,
-		sync_database_button, vertical_seperator, ErrorMsgModalMessage,
+		sync_database_button, vertical_seperator, copy_to_clipboard_button, open_link_button, ErrorMsgModalMessage,
 		HORIZONTAL_SCROLLABLE_PADDING,
 	},
 	integrations::{import_google_tasks_dialog, ImportGoogleTasksError},
-	styles::{card_style, secondary_button_style_default, GREY, PADDING_AMOUNT},
+	styles::{card_style, GREY, PADDING_AMOUNT},
 };
+use iced::alignment::Vertical;
 use iced::{
 	alignment::Horizontal,
 	keyboard,
 	padding::{left, right},
-	widget::{button, column, container, row, text, Column, Space},
+	widget::{column, container, row, text, Column, Space},
 	Alignment, Element,
 	Length::Fill,
 	Padding, Subscription, Task,
@@ -197,19 +198,39 @@ impl SettingTab {
 
 				let repository = env!("CARGO_PKG_REPOSITORY");
 
+				let author_link = "https://github.com/Peanutt42";
+
 				column![
 					item("Project Tracker:", text("Project Todo Tracker for personal programming projects").into()),
 
-					item("Author:", text("P3anutt42 (github)").into()),
+					item(
+						"Author:",
+						row![
+							text("P3anutt42 (github)"),
+
+							copy_to_clipboard_button(author_link.to_string()),
+
+							open_link_button(author_link.to_string()),
+						]
+						.spacing(SMALL_SPACING_AMOUNT)
+						.align_y(Vertical::Center)
+						.into()
+					),
 
 					item("Version:", text(env!("CARGO_PKG_VERSION")).into()),
 
 					item(
 						"Repository:",
-						button(repository)
-							.on_press(Message::OpenUrl(repository.to_string()))
-							.style(secondary_button_style_default)
-							.into()
+						row![
+							text(repository),
+
+							copy_to_clipboard_button(repository.to_string()),
+
+							open_link_button(repository.to_string()),
+						]
+						.spacing(SMALL_SPACING_AMOUNT)
+						.align_y(Vertical::Center)
+						.into()
 					),
 				]
 				.spacing(SPACING_AMOUNT)

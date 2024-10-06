@@ -751,3 +751,18 @@ pub fn import_google_tasks_button() -> Button<'static, Message> {
 		.on_press(SettingsModalMessage::ImportGoogleTasksFileDialog.into())
 		.style(dangerous_button_style)
 }
+
+pub fn open_link_button(url: String) -> Element<'static, Message> {
+	tooltip(
+		icon_button(Bootstrap::BoxArrowUpRight)
+			.on_press(Message::OpenUrl(url))
+			.style(secondary_button_style_default),
+
+		text("Open link").size(SMALL_TEXT_SIZE),
+
+		Position::Bottom
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
+}
