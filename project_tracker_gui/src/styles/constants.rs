@@ -38,6 +38,15 @@ pub mod colors {
 		}
 	}
 
+	pub fn link_color(is_theme_dark: bool) -> Color {
+		if is_theme_dark {
+			iced::color!(0x3584e4)
+		}
+		else {
+			iced::color!(0x0000ee)
+		}
+	}
+
 	pub fn background_shadow_color(palette: &palette::Extended) -> Color {
 		let background = palette.background.base.color;
 		let amount = if palette.is_dark { 0.1 } else { 0.15 };

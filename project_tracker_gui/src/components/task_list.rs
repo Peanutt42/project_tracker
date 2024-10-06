@@ -42,6 +42,7 @@ pub fn task_list<'a>(
 	stopwatch_page: &'a StopwatchPage,
 	date_formatting: DateFormatting,
 	create_new_tasks_at_top: bool,
+	is_theme_dark: bool
 ) -> Element<'a, Message> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
@@ -84,6 +85,7 @@ pub fn task_list<'a>(
 			highlight,
 			stopwatch_label,
 			date_formatting,
+			is_theme_dark
 		)
 	};
 

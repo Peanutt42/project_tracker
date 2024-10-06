@@ -6,7 +6,7 @@ use crate::components::{
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::pages::ProjectPageMessage;
 use crate::project_tracker::Message;
-use crate::styles::PADDING_AMOUNT;
+use crate::styles::{link_color, PADDING_AMOUNT};
 use crate::{
 	core::{
 		DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag,
@@ -56,6 +56,7 @@ pub fn task_widget<'a>(
 	highlight: bool,
 	stopwatch_label: Option<&'a String>,
 	date_formatting: DateFormatting,
+	is_theme_dark: bool
 ) -> Element<'a, Message> {
 	if let Some(edit_task_state) = edit_task_state {
 		edit_task_widget_view(
@@ -77,6 +78,7 @@ pub fn task_widget<'a>(
 			just_minimal_dragging,
 			highlight,
 			stopwatch_label,
+			is_theme_dark
 		)
 	}
 }
@@ -280,6 +282,7 @@ fn task_widget_view<'a>(
 	just_minimal_dragging: bool,
 	highlight: bool,
 	stopwatch_label: Option<&'a String>,
+	is_theme_dark: bool,
 ) -> Element<'a, Message> {
 	let tags_element = Row::with_children(
 		task_tags
@@ -293,7 +296,10 @@ fn task_widget_view<'a>(
 	let inner_text_element: Element<'a, Message> = markdown(
 		task.markdown_items(),
 		markdown::Settings::default(),
-		markdown::Style::from_palette(DARK_THEME.palette())
+		markdown::Style {
+			link_color: link_color(is_theme_dark),
+			..markdown::Style::from_palette(DARK_THEME.palette())
+		}
 	)
 	.map(|markdown_url| Message::OpenUrl(markdown_url.to_string()));
 

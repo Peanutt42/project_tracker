@@ -729,6 +729,7 @@ impl ProjectPage {
 							.as_ref()
 							.map(|pref| pref.create_new_tasks_at_top())
 							.unwrap_or(true),
+						app.is_theme_dark()
 					),
 				]
 				// .spacing(SPACING_AMOUNT) this is not needed since every task in the list has a SPACING_AMOUNT height dropzone
