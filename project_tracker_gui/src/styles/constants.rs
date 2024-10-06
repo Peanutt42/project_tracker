@@ -29,7 +29,14 @@ pub mod colors {
 
 	pub const GREY: Color = Color::from_rgb(0.5, 0.5, 0.5);
 
-	pub const SELECTION_COLOR: Color = color!(0x3584e4);
+	pub fn selection_color(palette: &palette::Extended) -> Color {
+		if palette.is_dark {
+			color!(0x0000ee)
+		}
+		else {
+			color!(0x3584e4)
+		}
+	}
 
 	pub fn background_shadow_color(palette: &palette::Extended) -> Color {
 		let background = palette.background.base.color;

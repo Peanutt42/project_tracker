@@ -21,7 +21,6 @@ use crate::{
 	},
 };
 use iced::keyboard::{self, key};
-use iced::padding;
 use iced::widget::{hover, markdown, Space};
 use iced::widget::text_editor::{Binding, KeyPress, Motion, Status};
 use iced::{

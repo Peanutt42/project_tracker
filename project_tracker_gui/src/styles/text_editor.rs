@@ -1,7 +1,6 @@
-use crate::styles::BORDER_RADIUS;
+use crate::styles::{BORDER_RADIUS, selection_color};
 use iced::{
 	border::Radius,
-	color,
 	widget::text_editor::{Status, Style},
 	Border, Theme,
 };
@@ -16,7 +15,7 @@ pub fn text_editor_style(
 ) -> Style {
 	let placeholder = theme.extended_palette().background.strong.color;
 	let value = theme.extended_palette().background.base.text;
-	let selection = color!(0x3367d1);
+	let selection = selection_color(theme.extended_palette());
 
 	let border = Border {
 		radius: Radius::default()

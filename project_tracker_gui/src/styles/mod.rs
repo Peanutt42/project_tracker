@@ -45,7 +45,7 @@ mod constants;
 pub use constants::{
 	blur_radius::{BLUR_RADIUS, LARGE_BLUR_RADIUS},
 	border_radius::{BORDER_RADIUS, LARGE_BORDER_RADIUS},
-	colors::{background_shadow_color, color_average, mix_color, GREY, SELECTION_COLOR},
+	colors::{background_shadow_color, color_average, mix_color, selection_color, GREY},
 	padding::{
 		LARGE_PADDING_AMOUNT, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
 	},
