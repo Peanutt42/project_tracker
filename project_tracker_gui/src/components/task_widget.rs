@@ -21,6 +21,7 @@ use crate::{
 	},
 };
 use iced::keyboard::{self, key};
+use iced::padding;
 use iced::widget::{hover, markdown, Space};
 use iced::widget::text_editor::{Binding, KeyPress, Motion, Status};
 use iced::{
@@ -37,6 +38,8 @@ use iced_aw::{date_picker, date_picker::Date};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
 use std::{borrow::Cow, str::FromStr, time::Duration};
+
+use super::{edit_task_button, ICON_BUTTON_WIDTH};
 
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -295,23 +298,34 @@ fn task_widget_view<'a>(
 	)
 	.map(|markdown_url| Message::OpenUrl(markdown_url.to_string()));
 
-	let grip_hover_icon: Element<'a, Message> = container(
+	let on_hover_view: Element<'a, Message> = row![
 		if dragging {
 			Space::new(0.0, 0.0).into()
 		}
 		else {
-			Element::new(icon_to_text(Bootstrap::GripVertical))
-		}
-	)
-	.padding(Padding {
-		top: if task.tags.is_empty() {
-			0.0
-		} else {
-			TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT * 1.5
+			Element::new(
+				container(icon_to_text(Bootstrap::GripVertical))
+					.padding(Padding {
+						top: if task.tags.is_empty() {
+							0.0
+						} else {
+							TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT * 1.5
+						},
+						..Padding::ZERO
+					})
+					.center_y(Fill)
+			)
 		},
-		..Padding::ZERO
-	})
-	.center_y(Fill)
+
+		Space::new(Fill, 0.0),
+
+		if dragging {
+			Space::new(0.0, 0.0).into()
+		}
+		else {
+			Element::new(edit_task_button(task_id))
+		}
+	]
 	.into();
 
 	let grip_icon_dummy: Element<Message> = if dragging {
@@ -326,90 +340,102 @@ fn task_widget_view<'a>(
 			},
 			..Padding::ZERO
 		})
+
 		.into()
 	}
 	else {
 		Space::new(PADDING_AMOUNT, 0.0).into()
 	};
 
+	let edit_task_button_dummy: Element<Message> = if dragging {
+		edit_task_button(task_id).into()
+	}
+	else {
+		Space::new(ICON_BUTTON_WIDTH, 0.0).into()
+	};
+
 	let inner: Element<'a, Message> = row![
 		grip_icon_dummy,
-		container(
-			checkbox("", matches!(task_type, TaskType::Done))
-				.on_toggle(move |checked| {
-					if checked {
-						DatabaseMessage::SetTaskDone {
-							project_id,
-							task_id,
-						}
-						.into()
-					} else {
-						DatabaseMessage::SetTaskTodo {
-							project_id,
-							task_id,
-						}
-						.into()
-					}
-				})
-				.style(checkbox_style)
-		)
-		.padding(Padding {
-			top: if task.tags.is_empty() {
-				0.0
-			} else {
-				TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT
-			},
-			..Padding::ZERO
-		}),
-		Column::new()
-			.push_maybe(if task.tags.is_empty() {
-				None
-			} else {
-				Some(tags_element)
-			})
-			.push(inner_text_element)
-			.spacing(TINY_SPACING_AMOUNT),
-		Column::new().push_maybe(
-			if task.needed_time_minutes.is_some() || task.due_date.is_some() {
-				Some(
-					Column::new()
-						.push_maybe(task.needed_time_minutes.map(|duration_minutes| {
-							duration_widget(Cow::Owned(Duration::from_secs(
-								duration_minutes as u64 * 60,
-							)))
-						}))
-						.push_maybe(
-							task.due_date
-								.as_ref()
-								.map(|due_date| days_left_widget(*due_date)),
-						)
-						.push_maybe(stopwatch_label.map(|label| -> Element<Message> {
-							button(
-								row![
-									icon_to_text(Bootstrap::Stopwatch).size(SMALL_TEXT_SIZE),
-									text(label).style(|theme: &Theme| text::Style {
-										color: Some(theme.extended_palette().danger.base.color)
-									})
-								]
-								.align_y(Vertical::Center)
-								.spacing(TINY_SPACING_AMOUNT),
-							)
-							.padding(SMALL_HORIZONTAL_PADDING)
-							.style(secondary_button_style_default)
-							.on_press(Message::OpenStopwatch)
+		row![
+			container(
+				checkbox("", matches!(task_type, TaskType::Done))
+					.on_toggle(move |checked| {
+						if checked {
+							DatabaseMessage::SetTaskDone {
+								project_id,
+								task_id,
+							}
 							.into()
-						}))
-						.spacing(TINY_SPACING_AMOUNT)
-						.align_x(Alignment::End)
-						.into(),
-				) as Option<Element<Message>>
-			} else {
-				None
-			}
-		)
+						} else {
+							DatabaseMessage::SetTaskTodo {
+								project_id,
+								task_id,
+							}
+							.into()
+						}
+					})
+					.style(checkbox_style)
+			)
+			.padding(Padding {
+				top: if task.tags.is_empty() {
+					0.0
+				} else {
+					TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT
+				},
+				..Padding::ZERO
+			}),
+			Column::new()
+				.push_maybe(if task.tags.is_empty() {
+					None
+				} else {
+					Some(tags_element)
+				})
+				.push(inner_text_element)
+				.spacing(TINY_SPACING_AMOUNT),
+			Column::new().push_maybe(
+				if task.needed_time_minutes.is_some() || task.due_date.is_some() {
+					Some(
+						Column::new()
+							.push_maybe(task.needed_time_minutes.map(|duration_minutes| {
+								duration_widget(Cow::Owned(Duration::from_secs(
+									duration_minutes as u64 * 60,
+								)))
+							}))
+							.push_maybe(
+								task.due_date
+									.as_ref()
+									.map(|due_date| days_left_widget(*due_date)),
+							)
+							.push_maybe(stopwatch_label.map(|label| -> Element<Message> {
+								button(
+									row![
+										icon_to_text(Bootstrap::Stopwatch).size(SMALL_TEXT_SIZE),
+										text(label).style(|theme: &Theme| text::Style {
+											color: Some(theme.extended_palette().danger.base.color)
+										})
+									]
+									.align_y(Vertical::Center)
+									.spacing(TINY_SPACING_AMOUNT),
+								)
+								.padding(SMALL_HORIZONTAL_PADDING)
+								.style(secondary_button_style_default)
+								.on_press(Message::OpenStopwatch)
+								.into()
+							}))
+							.spacing(TINY_SPACING_AMOUNT)
+							.align_x(Alignment::End)
+							.into(),
+					) as Option<Element<Message>>
+				} else {
+					None
+				}
+			),
+			edit_task_button_dummy
+		]
+		.width(Fill)
+		.align_y(Alignment::Start)
 	]
-	.width(Fill)
-	.align_y(Alignment::Start)
+	.align_y(Vertical::Center)
 	.into();
 
 	column![
@@ -444,13 +470,12 @@ fn task_widget_view<'a>(
 				point,
 				rect
 			})
-			.on_click(ProjectPageMessage::PressTask(task_id).into())
 			.on_cancel(Message::CancelDragTask)
 			.drag_overlay(!just_minimal_dragging)
 			.drag_hide(!just_minimal_dragging)
 			.style(task_button_style),
 
-			grip_hover_icon
+			on_hover_view
 		)
 	]
 	.into()

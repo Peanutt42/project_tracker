@@ -141,6 +141,12 @@ pub fn project_context_menu_button(opened: bool) -> Element<'static, Message> {
 	.into()
 }
 
+pub fn edit_task_button(task_id: TaskId) -> Button<'static, Message> {
+	icon_button(Bootstrap::Pencil)
+		.on_press(ProjectPageMessage::EditTask(task_id).into())
+		.style(secondary_button_style_default)
+}
+
 pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, Message> {
 	icon_button(Bootstrap::Trash)
 		.on_press(

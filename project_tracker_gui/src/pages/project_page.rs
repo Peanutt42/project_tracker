@@ -94,7 +94,6 @@ pub enum ProjectPageMessage {
 
 	DragTask { task_id: TaskId, point: Point },
 	CancelDragTask,
-	PressTask(TaskId),
 	LeftClickReleased,
 
 	AnimateProgressbar,
@@ -212,7 +211,6 @@ pub struct ProjectPage {
 	show_color_picker: bool,
 	filter_task_tags: HashSet<TaskTagId>,
 	search_tasks_filter: Option<String>,
-	pressed_task: Option<TaskId>,
 	dragged_task: Option<TaskId>,
 	start_dragging_point: Option<Point>,
 	just_minimal_dragging: bool,
@@ -236,7 +234,6 @@ impl ProjectPage {
 			show_color_picker: false,
 			filter_task_tags: HashSet::new(),
 			search_tasks_filter: None,
-			pressed_task: None,
 			dragged_task: None,
 			start_dragging_point: None,
 			just_minimal_dragging: true,
@@ -648,29 +645,11 @@ impl ProjectPage {
 				self.just_minimal_dragging = true;
 				ProjectPageAction::None
 			}
-			ProjectPageMessage::PressTask(task_id) => {
-				self.pressed_task = Some(task_id);
-				ProjectPageAction::None
-			}
 			ProjectPageMessage::LeftClickReleased => {
-				let action = if self.just_minimal_dragging {
-					if let Some(pressed_task) = &self.pressed_task {
-						self.update(
-							ProjectPageMessage::EditTask(*pressed_task),
-							database,
-							preference,
-						)
-					} else {
-						ProjectPageAction::None
-					}
-				} else {
-					ProjectPageAction::None
-				};
-				self.pressed_task = None;
 				self.dragged_task = None;
 				self.start_dragging_point = None;
 				self.just_minimal_dragging = true;
-				action
+				ProjectPageAction::None
 			}
 
 			ProjectPageMessage::AnimateProgressbar => {
