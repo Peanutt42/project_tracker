@@ -79,7 +79,7 @@ pub enum ProjectPageMessage {
 	ConfirmDeleteProject,
 
 	EditTask(TaskId),
-	StopEditingTask,
+	FinishEditingTask,
 	TaskNameAction(text_editor::Action),
 	ToggleTaskTag(TaskTagId),
 	EditTaskNeededTime,
@@ -505,7 +505,7 @@ impl ProjectPage {
 				));
 				self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
 			}
-			ProjectPageMessage::StopEditingTask => {
+			ProjectPageMessage::FinishEditingTask => {
 				self.edited_task = None;
 				ProjectPageAction::None
 			}

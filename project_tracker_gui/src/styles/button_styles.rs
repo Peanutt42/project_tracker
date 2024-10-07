@@ -256,6 +256,34 @@ pub fn secondary_button_style(
 	}
 }
 
+pub fn finish_editing_task_button_style(theme: &Theme, status: Status) -> Style {
+	let active_style = Style {
+		background: Some(theme.extended_palette().secondary.base.color.into()),
+		text_color: theme.extended_palette().secondary.base.text,
+		border: rounded(Radius::default().left(BORDER_RADIUS)),
+		..Default::default()
+	};
+
+	match status {
+		Status::Active => active_style,
+		Status::Hovered => Style {
+			background: Some(theme.extended_palette().success.base.color.into()),
+			..active_style
+		},
+		Status::Pressed => Style {
+			background: Some(
+				color_average(
+					theme.extended_palette().background.base.color,
+					theme.extended_palette().success.weak.color,
+				)
+				.into(),
+			),
+			..active_style
+		},
+		Status::Disabled => active_style,
+	}
+}
+
 pub fn delete_button_style(
 	theme: &Theme,
 	status: Status,
@@ -306,7 +334,7 @@ pub fn selection_list_button_style(
 ) -> Style {
 	let active_style = Style {
 		background: Some(if selected {
-			theme.extended_palette().success.strong.color.into()
+			theme.extended_palette().primary.strong.color.into()
 		} else {
 			theme.extended_palette().secondary.base.color.into()
 		}),
@@ -316,7 +344,7 @@ pub fn selection_list_button_style(
 				.right(if round_right { BORDER_RADIUS } else { 0.0 }),
 		),
 		text_color: if selected {
-			theme.extended_palette().success.base.text
+			theme.extended_palette().primary.base.text
 		} else {
 			theme.extended_palette().secondary.base.text
 		},
@@ -327,7 +355,7 @@ pub fn selection_list_button_style(
 		Status::Active => active_style,
 		Status::Hovered => Style {
 			background: Some(if selected {
-				theme.extended_palette().success.strong.color.into()
+				theme.extended_palette().primary.strong.color.into()
 			} else {
 				theme.extended_palette().background.strong.color.into()
 			}),
@@ -419,12 +447,12 @@ pub fn task_button_style(theme: &Theme, status: Status) -> Style {
 pub fn settings_tab_button_style(theme: &Theme, status: Status, selected: bool) -> Style {
 	let active_style = Style {
 		background: if selected {
-			Some(theme.extended_palette().success.strong.color.into())
+			Some(theme.extended_palette().primary.strong.color.into())
 		} else {
 			None
 		},
 		text_color: if selected {
-			theme.extended_palette().success.strong.text
+			theme.extended_palette().primary.strong.text
 		} else {
 			theme.extended_palette().background.base.text
 		},
@@ -436,7 +464,7 @@ pub fn settings_tab_button_style(theme: &Theme, status: Status, selected: bool) 
 		Status::Active => active_style,
 		Status::Hovered => Style {
 			background: if selected {
-				Some(theme.extended_palette().success.strong.color.into())
+				Some(theme.extended_palette().primary.strong.color.into())
 			} else {
 				Some(theme.extended_palette().secondary.base.color.into())
 			},

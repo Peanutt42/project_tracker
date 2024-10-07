@@ -14,7 +14,7 @@ use crate::{
 	},
 	project_tracker::Message,
 	styles::{
-		circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, finish_editing_task_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	},
 	theme_mode::ThemeMode,
 };
@@ -145,6 +145,12 @@ pub fn edit_task_button(task_id: TaskId) -> Button<'static, Message> {
 	icon_button(Bootstrap::Pencil)
 		.on_press(ProjectPageMessage::EditTask(task_id).into())
 		.style(secondary_button_style_default)
+}
+
+pub fn finish_editing_task_button() -> Button<'static, Message> {
+	icon_button(Bootstrap::CheckLg)
+		.on_press(ProjectPageMessage::FinishEditingTask.into())
+		.style(finish_editing_task_button_style)
 }
 
 pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, Message> {

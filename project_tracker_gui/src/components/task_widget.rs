@@ -1,23 +1,23 @@
-use crate::components::{
-	add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button,
-	days_left_widget, delete_task_button, duration_text, duration_widget, edit_due_date_button,
-	in_between_dropzone, start_task_timer_button, task_tags_buttons, unfocusable,
-};
-use crate::icons::{icon_to_text, Bootstrap};
-use crate::pages::ProjectPageMessage;
-use crate::project_tracker::Message;
-use crate::styles::{link_color, PADDING_AMOUNT};
 use crate::{
 	core::{
 		DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag,
 		TaskTagId, TaskType, TASK_TAG_QUAD_HEIGHT,
 	},
-	pages::{EditTaskState, SidebarPageMessage},
+	pages::{EditTaskState, ProjectPageMessage, SidebarPageMessage},
+	components::{
+		add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button,
+		days_left_widget, delete_task_button, duration_text, duration_widget, edit_due_date_button,
+		in_between_dropzone, start_task_timer_button, task_tags_buttons, unfocusable,
+		edit_task_button, finish_editing_task_button, ICON_BUTTON_WIDTH
+	},
+	icons::{icon_to_text, Bootstrap},
+	project_tracker::Message,
 	styles::{
 		checkbox_style, secondary_button_style_default, secondary_button_style_only_round_bottom,
 		shadow_container_style, task_background_container_style, task_button_style,
 		text_editor_style, text_input_style, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
-		SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT, DARK_THEME
+		SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT, DARK_THEME,
+		link_color, PADDING_AMOUNT
 	},
 };
 use iced::keyboard::{self, key};
@@ -37,8 +37,6 @@ use iced_aw::{date_picker, date_picker::Date};
 use iced_drop::droppable;
 use once_cell::sync::Lazy;
 use std::{borrow::Cow, str::FromStr, time::Duration};
-
-use super::{edit_task_button, ICON_BUTTON_WIDTH};
 
 pub static EDIT_NEEDED_TIME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 pub static EDIT_DUE_DATE_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -97,14 +95,13 @@ fn edit_task_widget_view<'a>(
 				.get_key_at_order(0)
 				.map(|tag_id| !task.tags.contains(tag_id))
 				.unwrap_or(true);
-		let round_bottom_right = edit_task_state.new_name.line_count() > 1; // multiline?
 
 		unfocusable(
 			container(
 				text_editor(&edit_task_state.new_name)
 					.on_action(move |action| ProjectPageMessage::TaskNameAction(action).into())
 					.style(move |t, s| {
-						text_editor_style(t, s, round_top_left, false, false, round_bottom_right)
+						text_editor_style(t, s, round_top_left, true, false, true)
 					})
 					.key_binding(|key_press| {
 						let KeyPress {
@@ -121,7 +118,7 @@ fn edit_task_widget_view<'a>(
 						match key {
 							keyboard::Key::Named(key::Named::Delete) => Some(
 								if modifiers.command() {
-									Binding::Sequence(vec![
+									Binding::<Message>::Sequence(vec![
 										Binding::Select(Motion::WordRight),
 										Binding::Delete,
 									])
@@ -131,17 +128,17 @@ fn edit_task_widget_view<'a>(
 								}
 							),
 							keyboard::Key::Named(key::Named::Backspace) if modifiers.command() => Some(
-								Binding::Sequence(vec![
-									Binding::Select(Motion::WordLeft),
+								Binding::<Message>::Sequence(vec![
+									Binding::<Message>::Select(Motion::WordLeft),
 									Binding::Backspace,
 								])
 							),
-							_ => Binding::from_key_press(key_press)
+							_ => Binding::<Message>::from_key_press(key_press)
 						}
-					}),
+					})
 			)
 			.style(shadow_container_style),
-			ProjectPageMessage::StopEditingTask.into(),
+			ProjectPageMessage::FinishEditingTask.into(),
 		)
 		.into()
 	};
@@ -170,7 +167,7 @@ fn edit_task_widget_view<'a>(
 							&edit_task_state.new_needed_time_minutes
 						{
 							let stop_editing_task_message: Message =
-								ProjectPageMessage::StopEditingTask.into();
+								ProjectPageMessage::FinishEditingTask.into();
 
 							let edit_needed_time_element = unfocusable(
 								text_input(
@@ -260,6 +257,9 @@ fn edit_task_widget_view<'a>(
 					.spacing(SPACING_AMOUNT),
 				])
 				.align_y(Alignment::Start),
+
+			finish_editing_task_button(),
+
 			delete_task_button(project_id, task_id)
 		]
 		.align_y(Alignment::Start)

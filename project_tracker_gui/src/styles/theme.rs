@@ -21,7 +21,7 @@ pub static DARK_THEME: Lazy<Theme> = Lazy::new(|| {
 		background: Color::from_rgb(0.1, 0.1, 0.1),
 		text: Color::from_rgb(0.9, 0.9, 0.9),
 		primary: Color::from_rgb8(0, 41, 229),
-		success: Color::from_rgb8(0, 41, 229),
+		success: Color::from_rgb8(48, 211, 48),
 		danger: Color::from_rgb(0.9, 0.0, 0.0),
 	};
 
@@ -40,7 +40,7 @@ pub static LIGHT_THEME: Lazy<Theme> = Lazy::new(|| {
 		background: Color::from_rgb(0.9, 0.9, 0.9),
 		text: Color::from_rgb(0.1, 0.1, 0.1),
 		primary: Color::from_rgb8(0, 40, 219),
-		success: Color::from_rgb8(0, 40, 219),
+		success: Color::from_rgb8(48, 211, 48),
 		danger: Color::from_rgb(0.9, 0.0, 0.0),
 	};
 
