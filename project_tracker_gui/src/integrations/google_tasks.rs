@@ -7,7 +7,7 @@ use chrono::{DateTime, Datelike};
 use iced::Color;
 use serde::{Deserialize, Serialize};
 
-use crate::core::{generate_task_id, Project, SerializableDate, Task};
+use crate::core::{Project, SerializableDate, Task, TaskId};
 
 #[derive(Debug)]
 pub enum ImportGoogleTasksError {
@@ -89,7 +89,7 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 						.ok()
 				});
 
-				let task_id = generate_task_id();
+				let task_id = TaskId::generate();
 
 				if is_todo {
 					project.todo_tasks.insert(task_id, task);

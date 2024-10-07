@@ -4,7 +4,7 @@ use crate::{
 		ScalarAnimation, ICON_BUTTON_WIDTH,
 	}, core::{
 		Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage,
-		Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId,
+		Preferences, OptionalPreference, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId,
 	}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
 	}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
@@ -22,7 +22,7 @@ use iced::{
 	Padding, Point, Rectangle, Subscription, Task, Theme,
 };
 use std::{
-	collections::HashSet, path::PathBuf, rc::Rc, time::{Duration, Instant}
+	path::PathBuf, rc::Rc, time::{Duration, Instant}
 };
 
 pub struct ProjectTrackerApp {
@@ -744,12 +744,7 @@ impl ProjectTrackerApp {
 				}
 			}
 			Message::ToggleSidebar => {
-				let old_show_sidebar = self
-					.preferences
-					.as_ref()
-					.map(|pref| pref.show_sidebar())
-					.unwrap_or(true);
-				self.sidebar_animation = if old_show_sidebar {
+				self.sidebar_animation = if self.preferences.show_sidebar() {
 					ScalarAnimation::start(SidebarPage::SPLIT_LAYOUT_PERCENTAGE, 0.0, 0.15)
 				} else {
 					ScalarAnimation::start(0.0, SidebarPage::SPLIT_LAYOUT_PERCENTAGE, 0.15)
@@ -796,7 +791,7 @@ impl ProjectTrackerApp {
 						task_id,
 						task_name,
 						task_tags,
-						create_at_top: self.preferences.as_ref().map(|pref| pref.create_new_tasks_at_top()).unwrap_or(true),
+						create_at_top: self.preferences.create_new_tasks_at_top(),
 					}.into())
 				}
 			},

@@ -409,3 +409,37 @@ impl DateFormatting {
 		}
 	}
 }
+
+
+pub trait OptionalPreference {
+	fn show_sidebar(&self) -> bool;
+	fn date_formatting(&self) -> DateFormatting;
+	fn create_new_tasks_at_top(&self) -> bool;
+}
+
+impl OptionalPreference for Option<Preferences> {
+	fn show_sidebar(&self) -> bool {
+		if let Some(preferences) = self {
+			preferences.show_sidebar
+		}
+		else {
+			default_show_sidebar()
+		}
+	}
+	fn date_formatting(&self) -> DateFormatting {
+		if let Some(preferences) = self {
+			preferences.date_formatting
+		}
+		else {
+			DateFormatting::default()
+		}
+	}
+	fn create_new_tasks_at_top(&self) -> bool {
+		if let Some(preferences) = self {
+			preferences.create_new_tasks_at_top
+		}
+		else {
+			default_create_new_tasks_at_top()
+		}
+	}
+}

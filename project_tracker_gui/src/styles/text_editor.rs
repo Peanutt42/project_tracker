@@ -1,4 +1,4 @@
-use crate::{project_tracker::Message, styles::{selection_color, BORDER_RADIUS}};
+use crate::styles::{selection_color, BORDER_RADIUS};
 use iced::{
 	border::Radius, keyboard::{self, key}, widget::text_editor::{Binding, KeyPress, Motion, Status, Style}, Border, Theme
 };

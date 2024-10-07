@@ -1,10 +1,10 @@
 use crate::{
 	components::{
-		cancel_search_tasks_button, color_palette, completion_bar, open_create_task_modal_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING, TASK_LIST_ID
+		cancel_search_tasks_button, color_palette, completion_bar, open_create_task_modal_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING
 	},
 	core::{
-		generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId,
-		SerializableDate, Task, TaskId, TaskTagId,
+		Database, DatabaseMessage, Project, ProjectId,
+		SerializableDate, Task, TaskId, TaskTagId, OptionalPreference
 	},
 	icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT},
 	project_tracker::{ProjectTrackerApp, Message},
@@ -20,7 +20,6 @@ use iced::{
 	keyboard, mouse,
 	widget::{
 		column, container, row,
-		scrollable::{self, RelativeOffset},
 		text, text_editor, text_input, Row, Space,
 	},
 	Color, Element, Event,
@@ -285,7 +284,7 @@ impl ProjectPage {
 						if let Some(project) = projects.get_mut(&self.project_id) {
 							project.source_code_todos.clear();
 							for task in todos {
-								project.source_code_todos.insert(generate_task_id(), task);
+								project.source_code_todos.insert(TaskId::generate(), task);
 							}
 						}
 					})
@@ -619,10 +618,7 @@ impl ProjectPage {
 						self.show_done_tasks,
 						self.show_source_code_todos,
 						&app.stopwatch_page,
-						app.preferences
-							.as_ref()
-							.map(|pref| pref.date_formatting())
-							.unwrap_or_default(),
+						app.preferences.date_formatting(),
 						app.is_theme_dark()
 					),
 				]

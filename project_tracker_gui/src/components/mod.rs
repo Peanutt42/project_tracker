@@ -21,7 +21,7 @@ pub use buttons::{
 };
 
 mod task_list;
-pub use task_list::{task_list, TASK_LIST_ID};
+pub use task_list::task_list;
 
 mod task_widget;
 pub use task_widget::{task_widget, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID};

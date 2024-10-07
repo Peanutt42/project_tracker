@@ -4,7 +4,7 @@ pub use database::{Database, DatabaseMessage, LoadDatabaseResult, SyncDatabaseRe
 mod preferences;
 pub use preferences::{
 	DateFormatting, LoadPreferencesResult, PreferenceMessage, Preferences, SerializedContentPage,
-	StopwatchProgress,
+	StopwatchProgress, OptionalPreference
 };
 
 mod ordered_hash_map;
@@ -14,7 +14,7 @@ mod project;
 pub use project::{Project, ProjectId, SerializableColor};
 
 mod task;
-pub use task::{generate_task_id, SerializableDate, Task, TaskId, TaskType};
+pub use task::{SerializableDate, Task, TaskId, TaskType};
 
 mod task_tag;
 pub use task_tag::{TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT};

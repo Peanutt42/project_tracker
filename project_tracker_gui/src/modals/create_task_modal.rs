@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use crate::{
-	components::{close_create_new_task_modal_button, create_new_task_modal_button, horizontal_scrollable, task_tag_button}, core::{generate_task_id, Database, ProjectId, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, LARGE_TEXT_SIZE, SPACING_AMOUNT}
+	components::{close_create_new_task_modal_button, create_new_task_modal_button, horizontal_scrollable, task_tag_button}, core::{Database, ProjectId, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, LARGE_TEXT_SIZE, SPACING_AMOUNT}
 };
 use iced::{
 	keyboard, widget::{column, row, text, text_editor, text_editor::Action, Row, Space}, Element, Length::Fill, Subscription
@@ -68,7 +68,7 @@ impl CreateTaskModal {
 				let action = match self {
 					CreateTaskModal::Opened { project_id, new_task_name, task_tags } => CreateTaskModalAction::CreateTask{
 						project_id: *project_id,
-						task_id: generate_task_id(),
+						task_id: TaskId::generate(),
 						task_name: new_task_name.text(),
 						task_tags: task_tags.clone(),
 					},

@@ -1,5 +1,5 @@
 use project_tracker_gui::core::{
-	generate_task_id, Database, LoadDatabaseResult, Project, ProjectId, SerializableColor,
+	Database, LoadDatabaseResult, Project, ProjectId, SerializableColor, TaskId,
 };
 use std::{collections::HashSet, path::PathBuf};
 
@@ -14,7 +14,7 @@ async fn test_database_serialization() {
 
 		for j in 0..100 {
 			project.add_task(
-				generate_task_id(),
+				TaskId::generate(),
 				format!("Task Nr. {j}"),
 				HashSet::new(),
 				false,

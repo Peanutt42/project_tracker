@@ -4,10 +4,13 @@ use iced_aw::date_picker::Date;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-pub type TaskId = usize;
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
+pub struct TaskId(pub usize);
 
-pub fn generate_task_id() -> TaskId {
-	rand::random()
+impl TaskId {
+	pub fn generate() -> Self {
+		Self(rand::random())
+	}
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

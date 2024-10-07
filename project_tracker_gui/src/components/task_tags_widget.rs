@@ -1,6 +1,5 @@
 use crate::{
 	core::{OrderedHashMap, TaskTag, TaskTagId},
-	project_tracker::Message,
 	styles::TINY_SPACING_AMOUNT,
 };
 use iced::{widget::Row, Element};

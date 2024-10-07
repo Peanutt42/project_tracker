@@ -1,13 +1,11 @@
 use crate::components::{
 	delete_all_done_tasks_button, in_between_dropzone,
 	reimport_source_code_todos_button, show_done_tasks_button, show_source_code_todos_button,
-	task_tags_buttons, task_widget, unfocusable, vertical_scrollable,
+	task_widget, vertical_scrollable,
 };
 use crate::core::{ProjectId, Task, TaskId};
-use crate::pages::ProjectPageMessage;
-use crate::styles::{text_input_style, SPACING_AMOUNT};
 use crate::{
-	core::{DateFormatting, Project, TaskTagId, TaskType},
+	core::{DateFormatting, Project, TaskType},
 	pages::{
 		CachedTaskList, EditTaskState, StopwatchPage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
 	},
@@ -15,8 +13,8 @@ use crate::{
 	styles::PADDING_AMOUNT,
 };
 use iced::{
-	alignment::{Alignment, Horizontal},
-	widget::{column, container, row, scrollable, text::LineHeight, text_input, Column},
+	alignment::Horizontal,
+	widget::{column, container, row, scrollable, Column},
 	Element,
 	Length::Fill,
 	Padding,
