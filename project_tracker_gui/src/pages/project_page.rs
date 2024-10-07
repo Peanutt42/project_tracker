@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		cancel_search_tasks_button, color_palette, completion_bar, create_new_task_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, CREATE_NEW_TASK_NAME_INPUT_ID, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING, TASK_LIST_ID
+		cancel_search_tasks_button, color_palette, completion_bar, open_create_task_modal_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING, TASK_LIST_ID
 	},
 	core::{
 		generate_task_id, Database, DatabaseMessage, Preferences, Project, ProjectId,
@@ -42,12 +42,6 @@ static SEARCH_TASKS_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::
 
 #[derive(Clone, Debug)]
 pub enum ProjectPageMessage {
-	OpenCreateNewTask,
-	CloseCreateNewTask,
-	ChangeCreateNewTaskName(String),
-	ToggleCreateNewTaskTag(TaskTagId),
-	CreateNewTask,
-
 	ShowContextMenu,
 	HideContextMenu,
 	OpenManageTaskTagsModal,
@@ -204,7 +198,6 @@ pub struct ProjectPage {
 	pub project_id: ProjectId,
 	pub cached_task_list: CachedTaskList,
 	edited_project_name: Option<String>,
-	pub create_new_task: Option<(String, HashSet<TaskTagId>)>,
 	edited_task: Option<EditTaskState>,
 	show_done_tasks: bool,
 	show_source_code_todos: bool,
@@ -227,7 +220,6 @@ impl ProjectPage {
 			project_id,
 			cached_task_list,
 			edited_project_name: None,
-			create_new_task: None,
 			edited_task: None,
 			show_done_tasks: false,
 			show_source_code_todos: true,
@@ -246,97 +238,9 @@ impl ProjectPage {
 	pub fn update(
 		&mut self,
 		message: ProjectPageMessage,
-		database: &mut Option<Database>,
-		preference: &Option<Preferences>,
+		database: &mut Option<Database>
 	) -> ProjectPageAction {
 		let command = match message {
-			ProjectPageMessage::OpenCreateNewTask => {
-				self.create_new_task = Some((String::new(), HashSet::new()));
-				let create_new_tasks_at_top = preference
-					.as_ref()
-					.map(|pref| pref.create_new_tasks_at_top())
-					.unwrap_or(true);
-				let create_new_task_element_relative_y_offset = if create_new_tasks_at_top {
-					0.0
-				} else {
-					database
-						.as_ref()
-						.and_then(|db| db.get_project(&self.project_id))
-						.map(|project| {
-							let mut total_tasks_shown = project.todo_tasks.len();
-							if self.show_source_code_todos {
-								total_tasks_shown += project.source_code_todos.len()
-							}
-							if self.show_done_tasks {
-								total_tasks_shown += project.done_tasks.len();
-							}
-
-							if total_tasks_shown == 0 {
-								1.0
-							} else {
-								project.todo_tasks.len() as f32 / total_tasks_shown as f32
-							}
-						})
-						.unwrap_or(1.0)
-				};
-				self.edited_task = None;
-
-				iced::Task::batch([
-					text_input::focus(CREATE_NEW_TASK_NAME_INPUT_ID.clone()),
-					scrollable::snap_to(
-						TASK_LIST_ID.clone(),
-						RelativeOffset {
-							x: 0.0,
-							y: create_new_task_element_relative_y_offset,
-						},
-					)
-				])
-				.into()
-			}
-			ProjectPageMessage::CloseCreateNewTask => {
-				self.create_new_task = None;
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::ChangeCreateNewTaskName(new_task_name) => {
-				if let Some((create_new_task_name, _create_new_task_tags)) =
-					&mut self.create_new_task
-				{
-					*create_new_task_name = new_task_name;
-				}
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::ToggleCreateNewTaskTag(tag_id) => {
-				if let Some((_create_new_task_name, create_new_task_tags)) =
-					&mut self.create_new_task
-				{
-					if create_new_task_tags.contains(&tag_id) {
-						create_new_task_tags.remove(&tag_id);
-					} else {
-						create_new_task_tags.insert(tag_id);
-					}
-				}
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::CreateNewTask => {
-				if let Some((create_new_task_name, create_new_task_tags)) =
-					&mut self.create_new_task
-				{
-					if let Some(db) = database {
-						db.update(DatabaseMessage::CreateTask {
-							project_id: self.project_id,
-							task_id: generate_task_id(),
-							task_name: std::mem::take(create_new_task_name),
-							task_tags: std::mem::take(create_new_task_tags),
-							create_at_top: preference
-								.as_ref()
-								.map(|pref| pref.create_new_tasks_at_top())
-								.unwrap_or(true),
-						});
-					}
-				}
-				self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
-			},
-
 			ProjectPageMessage::ShowContextMenu => { self.show_context_menu = true; ProjectPageAction::None },
 			ProjectPageMessage::HideContextMenu => { self.show_context_menu = false; ProjectPageAction::None },
 			ProjectPageMessage::OpenManageTaskTagsModal => { self.show_context_menu = false; ProjectPageAction::OpenManageTaskTagsModal(self.project_id) },
@@ -466,15 +370,13 @@ impl ProjectPage {
 						});
 						return self.update(
 							ProjectPageMessage::StopEditingProjectName,
-							database,
-							preference,
+							database
 						);
 					}
 				}
 				self.update(
 					ProjectPageMessage::StopEditingProjectName,
-					database,
-					preference,
+					database
 				)
 			},
 			ProjectPageMessage::ConfirmDeleteProject => {
@@ -503,7 +405,7 @@ impl ProjectPage {
 					task_id,
 					text_editor::Content::with_text(&task_name),
 				));
-				self.update(ProjectPageMessage::CloseCreateNewTask, database, preference)
+				ProjectPageAction::None
 			}
 			ProjectPageMessage::FinishEditingTask => {
 				self.edited_task = None;
@@ -686,19 +588,16 @@ impl ProjectPage {
 			iced::event::listen_with(move |event, _status, _id| match event {
 				Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
 					Some(ProjectPageMessage::LeftClickReleased)
-				}
+				},
 				_ => None,
 			}),
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
 				keyboard::Key::Character("r") if modifiers.command() => {
 					Some(ProjectPageMessage::EditProjectName)
-				}
+				},
 				keyboard::Key::Character("f") if modifiers.command() => {
 					Some(ProjectPageMessage::OpenSearchTasks)
-				}
-				keyboard::Key::Character("n") if modifiers.command() && !modifiers.shift() => {
-					Some(ProjectPageMessage::OpenCreateNewTask)
-				}
+				},
 				_ => None,
 			}),
 		])
@@ -719,16 +618,11 @@ impl ProjectPage {
 						app.sidebar_page.task_dropzone_hovered,
 						self.show_done_tasks,
 						self.show_source_code_todos,
-						&self.create_new_task,
 						&app.stopwatch_page,
 						app.preferences
 							.as_ref()
 							.map(|pref| pref.date_formatting())
 							.unwrap_or_default(),
-						app.preferences
-							.as_ref()
-							.map(|pref| pref.create_new_tasks_at_top())
-							.unwrap_or(true),
 						app.is_theme_dark()
 					),
 				]
@@ -790,14 +684,13 @@ impl ProjectPage {
 		.alignment(drop_down::Alignment::End)
 		.on_dismiss(ProjectPageMessage::HideColorPicker.into());
 
-		let mut task_tags_list: Vec<Element<Message>> = Vec::new();
-		for (tag_id, tag) in project.task_tags.iter() {
-			task_tags_list.push(
+		let task_tags_list: Vec<Element<Message>> = project.task_tags.iter()
+			.map(|(tag_id, tag)| {
 				task_tag_button(tag, self.filter_task_tags.contains(&tag_id), true, true)
 					.on_press(ProjectPageMessage::ToggleFilterTaskTag(tag_id).into())
-					.into(),
-			);
-		}
+					.into()
+			})
+			.collect();
 
 		let search_tasks_element: Element<Message> = if let Some(search_tasks_filter) =
 			&self.search_tasks_filter
@@ -871,7 +764,7 @@ impl ProjectPage {
 					(project.get_completion_percentage() * 100.0).round()
 				))
 				.width(Fill),
-				container(create_new_task_button(self.create_new_task.is_none()))
+				container(open_create_task_modal_button())
 					.width(Fill)
 					.align_x(Horizontal::Right),
 			]

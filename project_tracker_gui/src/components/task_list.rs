@@ -1,5 +1,5 @@
 use crate::components::{
-	cancel_create_task_button, delete_all_done_tasks_button, in_between_dropzone,
+	delete_all_done_tasks_button, in_between_dropzone,
 	reimport_source_code_todos_button, show_done_tasks_button, show_source_code_todos_button,
 	task_tags_buttons, task_widget, unfocusable, vertical_scrollable,
 };
@@ -22,10 +22,8 @@ use iced::{
 	Padding,
 };
 use once_cell::sync::Lazy;
-use std::collections::HashSet;
 
 pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
-pub static CREATE_NEW_TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
 pub fn task_list<'a>(
@@ -38,10 +36,8 @@ pub fn task_list<'a>(
 	hovered_task_dropzone: Option<TaskDropzone>,
 	show_done_tasks: bool,
 	show_source_code_todos: bool,
-	create_new_task: &'a Option<(String, HashSet<TaskTagId>)>,
 	stopwatch_page: &'a StopwatchPage,
 	date_formatting: DateFormatting,
-	create_new_tasks_at_top: bool,
 	is_theme_dark: bool
 ) -> Element<'a, Message> {
 	let mut todo_task_elements = Vec::new();
@@ -89,30 +85,12 @@ pub fn task_list<'a>(
 		)
 	};
 
-	if create_new_tasks_at_top {
-		if let Some((create_new_task_name, create_new_task_tags)) = create_new_task {
-			todo_task_elements.push(create_new_task_element(
-				project,
-				create_new_task_name,
-				create_new_task_tags,
-			));
-		}
-	}
 	for task_id in cached_task_list.todo.iter() {
 		if let Some(task) = project.todo_tasks.get(task_id) {
 			todo_task_elements.push(task_view(*task_id, task, TaskType::Todo));
 		}
 	}
 
-	if !create_new_tasks_at_top {
-		if let Some((create_new_task_name, create_new_task_tags)) = create_new_task {
-			todo_task_elements.push(create_new_task_element(
-				project,
-				create_new_task_name,
-				create_new_task_tags,
-			));
-		}
-	}
 	if show_done_tasks {
 		for task_id in cached_task_list.done.iter() {
 			if let Some(task) = project.done_tasks.get(task_id) {
@@ -206,48 +184,5 @@ pub fn task_list<'a>(
 	])
 	.id(TASK_LIST_ID.clone())
 	.height(Fill)
-	.into()
-}
-
-fn create_new_task_element<'a>(
-	project: &'a Project,
-	create_new_task_name: &'a str,
-	create_new_task_tags: &'a HashSet<TaskTagId>,
-) -> Element<'a, Message> {
-	column![
-		task_tags_buttons(&project.task_tags, create_new_task_tags, |tag_id| {
-			ProjectPageMessage::ToggleCreateNewTaskTag(tag_id).into()
-		}),
-		row![
-			unfocusable(
-				text_input("New task name", create_new_task_name)
-					.id(CREATE_NEW_TASK_NAME_INPUT_ID.clone())
-					.line_height(LineHeight::Relative(1.2))
-					.on_input(|input| ProjectPageMessage::ChangeCreateNewTaskName(input).into())
-					.on_submit(ProjectPageMessage::CreateNewTask.into())
-					.style(move |t, s| text_input_style(
-						t,
-						s,
-						// is the first tag enabled?
-						project
-							.task_tags
-							.iter()
-							.next()
-							.map(|(tag_id, _tag)| !create_new_task_tags.contains(&tag_id))
-							.unwrap_or(true),
-						false,
-						false,
-						true
-					)),
-				ProjectPageMessage::CloseCreateNewTask.into()
-			),
-			cancel_create_task_button(),
-		]
-		.align_y(Alignment::Center)
-	]
-	.padding(Padding {
-		top: SPACING_AMOUNT as f32,
-		..Padding::ZERO
-	})
 	.into()
 }

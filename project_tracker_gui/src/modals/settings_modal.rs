@@ -10,9 +10,10 @@ use crate::{
 		clear_synchronization_filepath_button, dangerous_button, export_database_button,
 		file_location, filepath_widget, horizontal_seperator_padded, import_database_button,
 		import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button,
-		sync_database_button, vertical_seperator, copy_to_clipboard_button, open_link_button, ErrorMsgModalMessage,
+		sync_database_button, vertical_seperator, copy_to_clipboard_button, open_link_button,
 		HORIZONTAL_SCROLLABLE_PADDING,
 	},
+	modals::ErrorMsgModalMessage,
 	integrations::{import_google_tasks_dialog, ImportGoogleTasksError},
 	styles::{card_style, GREY, PADDING_AMOUNT},
 };

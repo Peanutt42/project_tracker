@@ -8,7 +8,7 @@ use std::collections::HashSet;
 
 use super::task_tag_button;
 
-pub fn task_tags_buttons<'a>(
+pub fn task_tags_buttons<'a, Message: 'a + Clone>(
 	available_tags: &'a OrderedHashMap<TaskTagId, TaskTag>,
 	tags: &'a HashSet<TaskTagId>,
 	on_press: impl Fn(TaskTagId) -> Message,

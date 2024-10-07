@@ -18,7 +18,7 @@ pub const HORIZONTAL_SCROLLABLE_PADDING: Padding = Padding {
 	..Padding::ZERO
 };
 
-pub fn horizontal_scrollable<'a>(
+pub fn horizontal_scrollable<'a, Message: 'a>(
 	content: impl Into<Element<'a, Message>>,
 ) -> Scrollable<'a, Message> {
 	scrollable(container(content).padding(Padding {

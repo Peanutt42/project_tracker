@@ -1,28 +1,14 @@
 use crate::{
-	core::{
+	components::{
+		add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, days_left_widget, delete_task_button, duration_text, duration_widget, edit_due_date_button, edit_task_button, finish_editing_task_button, in_between_dropzone, start_task_timer_button, task_tags_buttons, unfocusable, ICON_BUTTON_WIDTH
+	}, core::{
 		DatabaseMessage, DateFormatting, OrderedHashMap, ProjectId, Task, TaskId, TaskTag,
 		TaskTagId, TaskType, TASK_TAG_QUAD_HEIGHT,
-	},
-	pages::{EditTaskState, ProjectPageMessage, SidebarPageMessage},
-	components::{
-		add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button,
-		days_left_widget, delete_task_button, duration_text, duration_widget, edit_due_date_button,
-		in_between_dropzone, start_task_timer_button, task_tags_buttons, unfocusable,
-		edit_task_button, finish_editing_task_button, ICON_BUTTON_WIDTH
-	},
-	icons::{icon_to_text, Bootstrap},
-	project_tracker::Message,
-	styles::{
-		checkbox_style, secondary_button_style_default, secondary_button_style_only_round_bottom,
-		shadow_container_style, task_background_container_style, task_button_style,
-		text_editor_style, text_input_style, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
-		SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT, DARK_THEME,
-		link_color, PADDING_AMOUNT
-	},
+	}, icons::{icon_to_text, Bootstrap}, pages::{EditTaskState, ProjectPageMessage, SidebarPageMessage}, project_tracker::Message, styles::{
+		checkbox_style, link_color, secondary_button_style_default, secondary_button_style_only_round_bottom, shadow_container_style, task_background_container_style, task_button_style, text_editor_keybindings, text_editor_style, text_input_style, DARK_THEME, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT
+	}
 };
-use iced::keyboard::{self, key};
 use iced::widget::{hover, markdown, Space};
-use iced::widget::text_editor::{Binding, KeyPress, Motion, Status};
 use iced::{
 	alignment::Vertical,
 	widget::{
@@ -103,39 +89,7 @@ fn edit_task_widget_view<'a>(
 					.style(move |t, s| {
 						text_editor_style(t, s, round_top_left, true, false, true)
 					})
-					.key_binding(|key_press| {
-						let KeyPress {
-							key,
-							modifiers,
-							status,
-							..
-						} = &key_press;
-
-						if *status != Status::Focused {
-							return None;
-						}
-
-						match key {
-							keyboard::Key::Named(key::Named::Delete) => Some(
-								if modifiers.command() {
-									Binding::<Message>::Sequence(vec![
-										Binding::Select(Motion::WordRight),
-										Binding::Delete,
-									])
-								}
-								else {
-									Binding::Delete
-								}
-							),
-							keyboard::Key::Named(key::Named::Backspace) if modifiers.command() => Some(
-								Binding::<Message>::Sequence(vec![
-									Binding::<Message>::Select(Motion::WordLeft),
-									Binding::Backspace,
-								])
-							),
-							_ => Binding::<Message>::from_key_press(key_press)
-						}
-					})
+					.key_binding(text_editor_keybindings)
 			)
 			.style(shadow_container_style),
 			ProjectPageMessage::FinishEditingTask.into(),

@@ -1,17 +1,13 @@
 use crate::{
 	components::{
-		toggle_sidebar_button, vertical_seperator, ConfirmModal, ConfirmModalMessage,
-		ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage,
-		ScalarAnimation, SettingsModal, SettingsModalMessage, ICON_BUTTON_WIDTH,
-	},
-	core::{
+		toggle_sidebar_button, vertical_seperator,
+		ScalarAnimation, ICON_BUTTON_WIDTH,
+	}, core::{
 		Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage,
 		Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId,
-	},
-	pages::{
+	}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
-	},
-	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
+	}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 use iced::{
 	clipboard,
@@ -26,9 +22,7 @@ use iced::{
 	Padding, Point, Rectangle, Subscription, Task, Theme,
 };
 use std::{
-	path::PathBuf,
-	rc::Rc,
-	time::{Duration, Instant},
+	collections::HashSet, path::PathBuf, rc::Rc, time::{Duration, Instant}
 };
 
 pub struct ProjectTrackerApp {
@@ -45,6 +39,7 @@ pub struct ProjectTrackerApp {
 	pub error_msg_modal: ErrorMsgModal,
 	pub settings_modal: SettingsModal,
 	pub manage_tags_modal: ManageTaskTagsModal,
+	pub create_task_modal: CreateTaskModal,
 	pub is_system_theme_dark: bool,
 }
 
@@ -106,6 +101,8 @@ pub enum Message {
 	ToggleSidebar,
 	AnimateSidebar,
 	SettingsModalMessage(SettingsModalMessage),
+	OpenCreateTaskModal,
+	CreateTaskModalMessage(CreateTaskModalMessage),
 	ManageTaskTagsModalMessage(ManageTaskTagsModalMessage),
 }
 
@@ -129,9 +126,7 @@ impl ProjectTrackerApp {
 	pub fn get_theme(&self) -> &'static Theme {
 		get_theme(self.is_theme_dark())
 	}
-}
 
-impl ProjectTrackerApp {
 	pub fn new() -> (Self, Task<Message>) {
 		(
 			Self {
@@ -148,6 +143,7 @@ impl ProjectTrackerApp {
 				error_msg_modal: ErrorMsgModal::Closed,
 				settings_modal: SettingsModal::Closed,
 				manage_tags_modal: ManageTaskTagsModal::Closed,
+				create_task_modal: CreateTaskModal::Closed,
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Task::batch([
@@ -217,6 +213,7 @@ impl ProjectTrackerApp {
 			self.settings_modal
 				.subscription()
 				.map(Message::SettingsModalMessage),
+			self.create_task_modal.subscription(),
 			time::every(Duration::from_secs(1)).map(|_| Message::SaveChangedFiles),
 			system_theme_subscription(),
 		])
@@ -241,6 +238,9 @@ impl ProjectTrackerApp {
 				}
 				if matches!(self.manage_tags_modal, ManageTaskTagsModal::Opened { .. }) {
 					return self.update(ManageTaskTagsModalMessage::Close.into());
+				}
+				if matches!(self.create_task_modal, CreateTaskModal::Opened { .. }) {
+					return self.update(CreateTaskModalMessage::Close.into());
 				}
 				if self.project_page.is_some() {
 					self.update(ProjectPageMessage::HideColorPicker.into())
@@ -666,8 +666,7 @@ impl ProjectTrackerApp {
 						.map(|project_page| {
 							project_page.update(
 								ProjectPageMessage::DragTask { task_id, point },
-								&mut self.database,
-								&self.preferences,
+								&mut self.database
 							)
 						})
 						.map(|action| self.perform_project_page_action(action))
@@ -701,8 +700,7 @@ impl ProjectTrackerApp {
 						.map(|project_page| {
 							project_page.update(
 								ProjectPageMessage::CancelDragTask,
-								&mut self.database,
-								&self.preferences,
+								&mut self.database
 							)
 						})
 						.map(|action| self.perform_project_page_action(action))
@@ -723,7 +721,7 @@ impl ProjectTrackerApp {
 			}
 			Message::ProjectPageMessage(message) => match &mut self.project_page {
 				Some(project_page) => {
-					let action = project_page.update(message, &mut self.database, &self.preferences);
+					let action = project_page.update(message, &mut self.database);
 					self.perform_project_page_action(action)
 				},
 				None => Task::none(),
@@ -781,15 +779,33 @@ impl ProjectTrackerApp {
 							let action = self.project_page.as_mut().map(|project_page| {
 								project_page.update(
 									ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id),
-									&mut self.database,
-									&self.preferences,
+									&mut self.database
 								)
 							});
 							action.map(|action| self.perform_project_page_action(action))
 						})
 						.unwrap_or(Task::none()),
 				])
+			},
+			Message::CreateTaskModalMessage(message) => {
+				let action = self.create_task_modal.update(message);
+				match action {
+					CreateTaskModalAction::None => Task::none(),
+					CreateTaskModalAction::CreateTask{ project_id, task_id, task_name, task_tags } => self.update(DatabaseMessage::CreateTask {
+						project_id,
+						task_id,
+						task_name,
+						task_tags,
+						create_at_top: self.preferences.as_ref().map(|pref| pref.create_new_tasks_at_top()).unwrap_or(true),
+					}.into())
+				}
+			},
+			Message::OpenCreateTaskModal => if let Some(project_id) = self.project_page.as_ref().map(|project_page| project_page.project_id) {
+				self.update(CreateTaskModalMessage::Open(project_id).into())
 			}
+			else {
+				Task::none()
+			},
 		}
 	}
 
@@ -807,7 +823,7 @@ impl ProjectTrackerApp {
 		}
 	}
 
-	fn modal(
+	fn modal<Message: 'static + Clone>(
 		content: Option<Element<Message>>,
 		on_close: Message,
 	) -> Option<Element<Message>> {
@@ -910,6 +926,11 @@ impl ProjectTrackerApp {
 
 		Stack::new()
 			.push(underlay)
+			.push_maybe(Self::modal(
+				self.create_task_modal.view(&self.database),
+				CreateTaskModalMessage::Close,
+			)
+			.map(|element| element.map(Message::CreateTaskModalMessage)))
 			.push_maybe(Self::modal(
 				self.manage_tags_modal.view(self),
 				ManageTaskTagsModalMessage::Close.into(),

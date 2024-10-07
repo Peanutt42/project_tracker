@@ -1,22 +1,15 @@
 use crate::{
-	components::{
-		date_text, ConfirmModalMessage, ManageTaskTagsModalMessage, SettingTab,
-		SettingsModalMessage,
-	},
-	core::{
+	components::date_text, core::{
 		DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId,
 		TaskTag, TaskTagId,
-	},
-	icons::{icon_to_text, Bootstrap},
-	pages::{
+	}, icons::{icon_to_text, Bootstrap}, modals::{
+		ConfirmModalMessage, CreateTaskModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage
+	}, pages::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
 		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
-	},
-	project_tracker::Message,
-	styles::{
-		circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, finish_editing_task_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
-	},
-	theme_mode::ThemeMode,
+	}, project_tracker::Message, styles::{
+		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, finish_editing_task_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+	}, theme_mode::ThemeMode
 };
 use iced::{
 	alignment::{Horizontal, Vertical},
@@ -72,26 +65,30 @@ pub fn create_new_project_button(enabled: bool) -> Button<'static, Message> {
 		.style(primary_button_style)
 }
 
-pub fn create_new_task_button(enabled: bool) -> Button<'static, Message> {
+pub fn open_create_task_modal_button() -> Button<'static, Message> {
 	large_icon_button(Bootstrap::PlusLg)
-		.on_press_maybe(if enabled {
-			Some(ProjectPageMessage::OpenCreateNewTask.into())
-		} else {
-			None
-		})
+		.on_press(Message::OpenCreateTaskModal)
 		.style(circle_button_style)
+}
+
+pub fn create_new_task_modal_button() -> Button<'static, CreateTaskModalMessage> {
+	button(text("Create").align_x(Horizontal::Center))
+    	.width(Fill)
+		.on_press(CreateTaskModalMessage::CreateTask)
+		.style(create_task_modal_ok_button_style)
+}
+
+pub fn close_create_new_task_modal_button() -> Button<'static, CreateTaskModalMessage> {
+	button(text("Cancel").align_x(Horizontal::Center))
+		.width(Fill)
+		.on_press(CreateTaskModalMessage::Close)
+		.style(secondary_button_style_default)
 }
 
 pub fn cancel_create_project_button() -> Button<'static, Message> {
 	icon_button(Bootstrap::XLg)
 		.on_press(SidebarPageMessage::CloseCreateNewProject.into())
 		.style(secondary_button_style_default)
-}
-
-pub fn cancel_create_task_button() -> Button<'static, Message> {
-	icon_button(Bootstrap::XLg)
-		.on_press(ProjectPageMessage::CloseCreateNewTask.into())
-		.style(secondary_button_style_only_round_right)
 }
 
 fn delete_project_button() -> Button<'static, Message> {
@@ -451,7 +448,7 @@ pub fn sync_database_button(
 	.into()
 }
 
-pub fn task_tag_button(
+pub fn task_tag_button<Message>(
 	task_tag: &TaskTag,
 	toggled: bool,
 	round_bottom: bool,

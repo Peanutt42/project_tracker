@@ -1,6 +1,7 @@
 mod components;
 pub mod core;
 mod pages;
+mod modals;
 mod project_tracker;
 mod styles;
 pub use project_tracker::ProjectTrackerApp;

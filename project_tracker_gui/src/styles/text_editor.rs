@@ -1,8 +1,6 @@
-use crate::styles::{BORDER_RADIUS, selection_color};
+use crate::{project_tracker::Message, styles::{selection_color, BORDER_RADIUS}};
 use iced::{
-	border::Radius,
-	widget::text_editor::{Status, Style},
-	Border, Theme,
+	border::Radius, keyboard::{self, key}, widget::text_editor::{Binding, KeyPress, Motion, Status, Style}, Border, Theme
 };
 
 pub fn text_editor_style(
@@ -52,5 +50,40 @@ pub fn text_editor_style(
 			value,
 			selection,
 		},
+	}
+}
+
+
+pub fn text_editor_keybindings<Message>(key_press: KeyPress) -> Option<Binding<Message>> {
+	let KeyPress {
+		key,
+		modifiers,
+		status,
+		..
+	} = &key_press;
+
+	if *status != Status::Focused {
+		return None;
+	}
+
+	match key {
+		keyboard::Key::Named(key::Named::Delete) => Some(
+			if modifiers.command() {
+				Binding::Sequence(vec![
+					Binding::Select(Motion::WordRight),
+					Binding::Delete,
+				])
+			}
+			else {
+				Binding::Delete
+			}
+		),
+		keyboard::Key::Named(key::Named::Backspace) if modifiers.command() => Some(
+			Binding::Sequence(vec![
+				Binding::<Message>::Select(Motion::WordLeft),
+				Binding::Backspace,
+			])
+		),
+		_ => Binding::<Message>::from_key_press(key_press)
 	}
 }
