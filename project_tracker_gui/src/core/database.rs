@@ -58,6 +58,7 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		task_name: String,
+		task_description: String,
 		task_tags: HashSet<TaskTagId>,
 		create_at_top: bool,
 	},
@@ -65,6 +66,11 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		new_task_name: String,
+	},
+	ChangeTaskDescription {
+		project_id: ProjectId,
+		task_id: TaskId,
+		new_task_description: String,
 	},
 	SetTaskTodo {
 		project_id: ProjectId,
@@ -219,7 +225,7 @@ impl Database {
 				name,
 				color,
 			} => self.modify(|projects| {
-				projects.insert(project_id, Project::new(name, color));
+				projects.insert(project_id, Project::new(name, color, OrderedHashMap::new()));
 			}),
 			DatabaseMessage::ChangeProjectName {
 				project_id,
@@ -320,11 +326,12 @@ impl Database {
 				project_id,
 				task_id,
 				task_name,
+				task_description,
 				task_tags,
 				create_at_top,
 			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
-					project.add_task(task_id, task_name, task_tags, create_at_top);
+					project.add_task(task_id, task_name, task_description, task_tags, create_at_top);
 				}
 			}),
 			DatabaseMessage::ChangeTaskName {
@@ -334,6 +341,15 @@ impl Database {
 			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.set_task_name(task_id, new_task_name);
+				}
+			}),
+			DatabaseMessage::ChangeTaskDescription {
+				project_id,
+				task_id,
+				new_task_description,
+			} => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.set_task_description(task_id, new_task_description);
 				}
 			}),
 			DatabaseMessage::SetTaskTodo {

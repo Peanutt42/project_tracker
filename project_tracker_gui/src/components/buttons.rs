@@ -1,25 +1,22 @@
 use crate::{
-	components::date_text, core::{
+	components::{date_text, duration_text},
+	core::{
 		DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId,
 		TaskTag, TaskTagId,
 	}, icons::{icon_to_text, Bootstrap}, modals::{
-		ConfirmModalMessage, CreateTaskModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage
+		ConfirmModalMessage, CreateTaskModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage
 	}, pages::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
 		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
 	}, project_tracker::Message, styles::{
-		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, finish_editing_task_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, finish_editing_task_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
-	alignment::{Horizontal, Vertical},
-	border::rounded,
-	widget::{button, column, container, row, text, tooltip, tooltip::Position, Button},
-	Alignment, Color, Element,
-	Length::{self, Fill}, Shadow,
+	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, row, text, tooltip, Button}, Alignment, Color, Element, Length::{self, Fill}, Shadow
 };
 use iced_aw::{drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
-use std::path::PathBuf;
+use std::{borrow::Cow, path::PathBuf, time::Duration};
 
 const ICON_FONT_SIZE: f32 = 16.0;
 pub const ICON_BUTTON_WIDTH: f32 = ICON_FONT_SIZE * 1.8;
@@ -73,14 +70,12 @@ pub fn open_create_task_modal_button() -> Button<'static, Message> {
 
 pub fn create_new_task_modal_button() -> Button<'static, CreateTaskModalMessage> {
 	button(text("Create").align_x(Horizontal::Center))
-    	.width(Fill)
 		.on_press(CreateTaskModalMessage::CreateTask)
 		.style(create_task_modal_ok_button_style)
 }
 
 pub fn close_create_new_task_modal_button() -> Button<'static, CreateTaskModalMessage> {
 	button(text("Cancel").align_x(Horizontal::Center))
-		.width(Fill)
 		.on_press(CreateTaskModalMessage::Close)
 		.style(secondary_button_style_default)
 }
@@ -138,28 +133,40 @@ pub fn project_context_menu_button(opened: bool) -> Element<'static, Message> {
 	.into()
 }
 
-pub fn edit_task_button(task_id: TaskId) -> Button<'static, Message> {
-	icon_button(Bootstrap::Pencil)
-		.on_press(ProjectPageMessage::EditTask(task_id).into())
-		.style(secondary_button_style_default)
+pub fn edit_task_description_button() -> Element<'static, Message> {
+	tooltip(
+		icon_button(Bootstrap::PencilSquare)
+			.on_press(TaskModalMessage::EditDescription.into())
+			.style(secondary_button_style_default),
+
+		text("Edit description").size(SMALL_TEXT_SIZE),
+
+		tooltip::Position::Bottom,
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
 }
 
-pub fn finish_editing_task_button() -> Button<'static, Message> {
-	icon_button(Bootstrap::CheckLg)
-		.on_press(ProjectPageMessage::FinishEditingTask.into())
-		.style(finish_editing_task_button_style)
+pub fn stop_editing_task_description_button() -> Element<'static, Message> {
+	tooltip(
+		icon_button(Bootstrap::CheckLg)
+			.on_press(TaskModalMessage::StopEditingDescription.into())
+			.style(finish_editing_task_button_style),
+
+		text("Stop editing").size(SMALL_TEXT_SIZE),
+
+		tooltip::Position::Bottom,
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
 }
 
-pub fn delete_task_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, Message> {
-	icon_button(Bootstrap::Trash)
-		.on_press(
-			DatabaseMessage::DeleteTask {
-				project_id,
-				task_id,
-			}
-			.into(),
-		)
-		.style(move |t, s| delete_button_style(t, s, false, true, false, true))
+pub fn delete_task_button() -> Button<'static, Message> {
+	icon_label_button("Delete", Bootstrap::Trash)
+		.on_press(TaskModalMessage::DeleteTask.into())
+		.style(move |t, s| delete_button_style(t, s, true, true, true, true))
 }
 
 pub fn delete_all_done_tasks_button(
@@ -294,7 +301,7 @@ pub fn select_synchronization_filepath_button() -> Element<'static, Message> {
 			.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
 			.style(secondary_button_style_default),
 		text("Select file").size(SMALL_TEXT_SIZE),
-		Position::Bottom,
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -307,7 +314,7 @@ pub fn clear_synchronization_filepath_button() -> Element<'static, Message> {
 			.on_press(PreferenceMessage::SetSynchronizationFilepath(None).into())
 			.style(secondary_button_style_default),
 		text("Clear").size(SMALL_TEXT_SIZE),
-		Position::Bottom,
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -333,7 +340,7 @@ pub fn copy_to_clipboard_button(copied_text: String) -> Element<'static, Message
 			.on_press(Message::CopyToClipboard(copied_text))
 			.style(secondary_button_style_default),
 		text("Copy to clipboard").size(SMALL_TEXT_SIZE),
-		Position::Bottom,
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -355,7 +362,7 @@ pub fn toggle_sidebar_button(round_all_sides: bool) -> Element<'static, Message>
 				)
 			}),
 		text("Toggle sidebar (Ctrl + B)").size(SMALL_TEXT_SIZE),
-		Position::Bottom,
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -472,7 +479,7 @@ fn manage_task_tags_button() -> Element<'static, Message> {
 			.on_press(ProjectPageMessage::OpenManageTaskTagsModal.into())
 			.style(secondary_button_style_only_round_top),
 		text("Manage tags").size(SMALL_TEXT_SIZE),
-		Position::Bottom,
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -499,15 +506,33 @@ pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, Message
 
 pub fn clear_task_needed_time_button() -> Button<'static, Message> {
 	icon_button(Bootstrap::XLg)
-		.on_press(ProjectPageMessage::ClearTaskNeededTime.into())
-		.style(move |t, s| secondary_button_style(t, s, false, false, false, true))
+		.on_press(TaskModalMessage::ClearTaskNeededTime.into())
+		.style(secondary_button_style_only_round_right)
 }
 
-pub fn clear_task_due_date_button() -> Button<'static, Message> {
+pub fn edit_task_needed_time_button(needed_time_minutes: Option<usize>) -> Button<'static, Message> {
+	button(
+		if let Some(needed_time_minutes) = needed_time_minutes
+		{
+			duration_text(Cow::Owned(Duration::from_secs(
+				needed_time_minutes as u64 * 60
+			)))
+		} else {
+			text("Add needed time")
+		}
+	)
+	.on_press(TaskModalMessage::EditNeededTime.into())
+	.style(secondary_button_style_default)
+}
+
+pub fn clear_task_due_date_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, Message> {
 	icon_button(Bootstrap::XLg)
-		.padding(SMALL_HORIZONTAL_PADDING)
-		.on_press(ProjectPageMessage::ClearTaskDueDate.into())
-		.style(move |t, s| secondary_button_style(t, s, false, false, false, true))
+		.on_press(DatabaseMessage::ChangeTaskDueDate {
+			project_id,
+			task_id,
+			new_due_date: None
+		}.into())
+		.style(secondary_button_style_only_round_right)
 }
 
 pub fn add_due_date_button() -> Button<'static, Message> {
@@ -515,9 +540,8 @@ pub fn add_due_date_button() -> Button<'static, Message> {
 		row![icon_to_text(Bootstrap::CalendarCheck), text("Add due date")]
 			.spacing(SMALL_SPACING_AMOUNT),
 	)
-	.padding(SMALL_HORIZONTAL_PADDING)
-	.on_press(ProjectPageMessage::EditTaskDueDate.into())
-	.style(secondary_button_style_only_round_bottom)
+	.on_press(TaskModalMessage::EditDueDate.into())
+	.style(secondary_button_style_default)
 }
 
 pub fn edit_due_date_button(
@@ -531,9 +555,8 @@ pub fn edit_due_date_button(
 		]
 		.spacing(SMALL_SPACING_AMOUNT),
 	)
-	.padding(SMALL_HORIZONTAL_PADDING)
-	.on_press(ProjectPageMessage::EditTaskDueDate.into())
-	.style(move |t, s| secondary_button_style(t, s, false, true, false, false))
+	.on_press(TaskModalMessage::EditDueDate.into())
+	.style(secondary_button_style_only_round_left)
 }
 
 pub fn edit_color_palette_button(
@@ -544,7 +567,7 @@ pub fn edit_color_palette_button(
 	tooltip(
 		color_palette_item_button(color, editing, true, true, on_press),
 		text("Edit color").size(SMALL_TEXT_SIZE),
-		Position::Bottom,
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -617,7 +640,7 @@ fn import_source_code_todos_button() -> Element<'static, Message> {
 			.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
 			.style(secondary_button_style_no_rounding),
 		text("Import TODO's").size(SMALL_TEXT_SIZE),
-		Position::Bottom,
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -655,7 +678,20 @@ pub fn edit_project_name_button() -> Element<'static, Message> {
 			.on_press(ProjectPageMessage::EditProjectName.into())
 			.style(hidden_secondary_button_style),
 		text("Edit name").size(SMALL_TEXT_SIZE),
-		Position::Bottom,
+		tooltip::Position::Bottom,
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
+}
+
+pub fn edit_task_name_button() -> Element<'static, Message> {
+	tooltip(
+		icon_button(Bootstrap::PencilSquare)
+			.on_press(TaskModalMessage::EditName.into())
+			.style(hidden_secondary_button_style),
+		text("Edit name").size(SMALL_TEXT_SIZE),
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -729,8 +765,7 @@ pub fn complete_task_timer_button() -> Button<'static, Message> {
 
 pub fn start_task_timer_button<'a>(
 	project_id: ProjectId,
-	task_id: TaskId,
-	round_top_left: bool,
+	task_id: TaskId
 ) -> Element<'a, Message> {
 	tooltip(
 		icon_button(Bootstrap::Stopwatch)
@@ -740,9 +775,9 @@ pub fn start_task_timer_button<'a>(
 				}
 				.into(),
 			)
-			.style(move |t, s| secondary_button_style(t, s, round_top_left, true, false, false)),
+			.style(secondary_button_style_default),
 		text("Start a timer for this task"),
-		Position::Bottom,
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -763,7 +798,7 @@ pub fn open_link_button(url: String) -> Element<'static, Message> {
 
 		text("Open link").size(SMALL_TEXT_SIZE),
 
-		Position::Bottom
+		tooltip::Position::Bottom
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)

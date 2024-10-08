@@ -1,18 +1,13 @@
 use crate::{
 	components::{
-		cancel_search_tasks_button, color_palette, completion_bar, open_create_task_modal_button, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID, HORIZONTAL_SCROLLABLE_PADDING
-	},
-	core::{
-		Database, DatabaseMessage, Project, ProjectId,
-		SerializableDate, Task, TaskId, TaskTagId, OptionalPreference
-	},
-	icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT},
-	project_tracker::{ProjectTrackerApp, Message},
-	styles::{
+		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, open_create_task_modal_button, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING
+	}, core::{
+		Database, DatabaseMessage, Project, ProjectId, Task, TaskId, TaskTagId
+	}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, project_tracker::{Message, ProjectTrackerApp}, styles::{
 		text_input_style_default, text_input_style_only_round_left, LARGE_PADDING_AMOUNT,
 		MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT,
 		TITLE_TEXT_SIZE,
-	},
+	}
 };
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use iced::{
@@ -20,7 +15,7 @@ use iced::{
 	keyboard, mouse,
 	widget::{
 		column, container, row,
-		text, text_editor, text_input, Row, Space,
+		text, text_input, Row, Space,
 	},
 	Color, Element, Event,
 	Length::Fill,
@@ -71,22 +66,9 @@ pub enum ProjectPageMessage {
 
 	ConfirmDeleteProject,
 
-	EditTask(TaskId),
-	FinishEditingTask,
-	TaskNameAction(text_editor::Action),
-	ToggleTaskTag(TaskTagId),
-	EditTaskNeededTime,
-	ClearTaskNeededTime,
-	ChangeNewTaskNeededTimeInput(Option<usize>),
-	InvalidNeededTimeInput,
-	ChangeTaskNeededTime,
-	EditTaskDueDate,
-	ChangeTaskDueDate(SerializableDate),
-	ClearTaskDueDate,
-	StopEditingTaskDueDate,
-
 	DragTask { task_id: TaskId, point: Point },
 	CancelDragTask,
+	PressTask(TaskId),
 	LeftClickReleased,
 
 	AnimateProgressbar,
@@ -95,25 +77,6 @@ pub enum ProjectPageMessage {
 impl From<ProjectPageMessage> for Message {
 	fn from(value: ProjectPageMessage) -> Self {
 		Message::ProjectPageMessage(value)
-	}
-}
-
-#[derive(Debug)]
-pub struct EditTaskState {
-	pub task_id: TaskId,
-	pub new_name: text_editor::Content,
-	pub new_needed_time_minutes: Option<Option<usize>>, // first option is if editing, second is if any time is enterered
-	pub edit_due_date: bool,
-}
-
-impl EditTaskState {
-	pub fn new(task_id: TaskId, new_name: text_editor::Content) -> Self {
-		Self {
-			task_id,
-			new_name,
-			new_needed_time_minutes: None,
-			edit_due_date: false,
-		}
 	}
 }
 
@@ -184,6 +147,10 @@ pub enum ProjectPageAction {
 		project_id: ProjectId,
 		project_name: String,
 	},
+	OpenTaskModal{
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
 }
 
 impl From<iced::Task<Message>> for ProjectPageAction {
@@ -197,12 +164,12 @@ pub struct ProjectPage {
 	pub project_id: ProjectId,
 	pub cached_task_list: CachedTaskList,
 	edited_project_name: Option<String>,
-	edited_task: Option<EditTaskState>,
 	show_done_tasks: bool,
 	show_source_code_todos: bool,
 	show_color_picker: bool,
 	filter_task_tags: HashSet<TaskTagId>,
 	search_tasks_filter: Option<String>,
+	pressed_task: Option<TaskId>,
 	dragged_task: Option<TaskId>,
 	start_dragging_point: Option<Point>,
 	just_minimal_dragging: bool,
@@ -219,12 +186,12 @@ impl ProjectPage {
 			project_id,
 			cached_task_list,
 			edited_project_name: None,
-			edited_task: None,
 			show_done_tasks: false,
 			show_source_code_todos: true,
 			show_color_picker: false,
 			filter_task_tags: HashSet::new(),
 			search_tasks_filter: None,
+			pressed_task: None,
 			dragged_task: None,
 			start_dragging_point: None,
 			just_minimal_dragging: true,
@@ -390,142 +357,7 @@ impl ProjectPage {
 					project_id: self.project_id,
 					project_name,
 				}
-			}
-
-			ProjectPageMessage::EditTask(task_id) => {
-				let task_name = database
-					.as_ref()
-					.and_then(|db| {
-						db.get_task(&self.project_id, &task_id)
-							.map(|task| task.name().clone())
-					})
-					.unwrap_or_default();
-				self.edited_task = Some(EditTaskState::new(
-					task_id,
-					text_editor::Content::with_text(&task_name),
-				));
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::FinishEditingTask => {
-				self.edited_task = None;
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::TaskNameAction(action) => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					let is_edit = action.is_edit();
-					edit_task_state.new_name.perform(action);
-					if is_edit {
-						if let Some(database) = database {
-							database.update(DatabaseMessage::ChangeTaskName {
-								project_id: self.project_id,
-								task_id: edit_task_state.task_id,
-								new_task_name: edit_task_state.new_name.text(),
-							});
-						}
-					}
-				}
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::ToggleTaskTag(task_tag_id) => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					if let Some(database) = database {
-						database.update(DatabaseMessage::ToggleTaskTag {
-							project_id: self.project_id,
-							task_id: edit_task_state.task_id,
-							task_tag_id,
-						});
-					}
-				}
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::EditTaskNeededTime => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					let previous_task_needed_minutes = database.as_ref().and_then(|db| {
-						db.get_task(&self.project_id, &edit_task_state.task_id)
-							.and_then(|task| task.needed_time_minutes)
-					});
-
-					edit_task_state.new_needed_time_minutes = Some(previous_task_needed_minutes);
-				}
-				text_input::focus(EDIT_NEEDED_TIME_TEXT_INPUT_ID.clone()).into()
-			}
-			ProjectPageMessage::ClearTaskNeededTime => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					edit_task_state.new_needed_time_minutes = None;
-					if let Some(database) = database {
-						database.update(DatabaseMessage::ChangeTaskNeededTime {
-							project_id: self.project_id,
-							task_id: edit_task_state.task_id,
-							new_needed_time_minutes: None,
-						});
-					}
-				}
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::ChangeNewTaskNeededTimeInput(new_needed_time_minutes) => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					edit_task_state.new_needed_time_minutes = Some(new_needed_time_minutes);
-				}
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::InvalidNeededTimeInput => ProjectPageAction::None,
-			ProjectPageMessage::ChangeTaskNeededTime => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					if let Some(new_needed_time_minutes) = edit_task_state.new_needed_time_minutes {
-						if let Some(database) = database {
-							database.modify(|projects| {
-								if let Some(project) = projects.get_mut(&self.project_id) {
-									if let Some(task) =
-										project.get_task_mut(&edit_task_state.task_id)
-									{
-										task.needed_time_minutes = new_needed_time_minutes;
-									}
-								}
-							});
-						}
-					}
-					edit_task_state.new_needed_time_minutes = None;
-				}
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::EditTaskDueDate => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					edit_task_state.edit_due_date = true;
-				}
-				text_input::focus(EDIT_DUE_DATE_TEXT_INPUT_ID.clone()).into()
-			}
-			ProjectPageMessage::ChangeTaskDueDate(new_due_date) => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					edit_task_state.edit_due_date = false;
-					if let Some(database) = database {
-						database.update(DatabaseMessage::ChangeTaskDueDate {
-							project_id: self.project_id,
-							task_id: edit_task_state.task_id,
-							new_due_date: new_due_date.into(),
-						});
-					}
-				}
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::ClearTaskDueDate => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					edit_task_state.edit_due_date = false;
-					if let Some(database) = database {
-						database.update(DatabaseMessage::ChangeTaskDueDate {
-							project_id: self.project_id,
-							task_id: edit_task_state.task_id,
-							new_due_date: None,
-						});
-					}
-				}
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::StopEditingTaskDueDate => {
-				if let Some(edit_task_state) = &mut self.edited_task {
-					edit_task_state.edit_due_date = false;
-				}
-				ProjectPageAction::None
-			}
+			},
 
 			ProjectPageMessage::DragTask { task_id, point } => {
 				self.dragged_task = Some(task_id);
@@ -546,11 +378,28 @@ impl ProjectPage {
 				self.just_minimal_dragging = true;
 				ProjectPageAction::None
 			}
+			ProjectPageMessage::PressTask(task_id) => {
+				self.pressed_task = Some(task_id);
+				ProjectPageAction::None
+			},
 			ProjectPageMessage::LeftClickReleased => {
+				let action = if self.just_minimal_dragging {
+					if let Some(pressed_task) = &self.pressed_task {
+						ProjectPageAction::OpenTaskModal {
+							project_id: self.project_id,
+							task_id: *pressed_task
+						}
+					} else {
+						ProjectPageAction::None
+					}
+				} else {
+					ProjectPageAction::None
+				};
+				self.pressed_task = None;
 				self.dragged_task = None;
 				self.start_dragging_point = None;
 				self.just_minimal_dragging = true;
-				ProjectPageAction::None
+				action
 			}
 
 			ProjectPageMessage::AnimateProgressbar => {
@@ -611,15 +460,12 @@ impl ProjectPage {
 						self.project_id,
 						project,
 						&self.cached_task_list,
-						&self.edited_task,
 						self.dragged_task,
 						self.just_minimal_dragging,
 						app.sidebar_page.task_dropzone_hovered,
 						self.show_done_tasks,
 						self.show_source_code_todos,
-						&app.stopwatch_page,
-						app.preferences.date_formatting(),
-						app.is_theme_dark()
+						&app.stopwatch_page
 					),
 				]
 				// .spacing(SPACING_AMOUNT) this is not needed since every task in the list has a SPACING_AMOUNT height dropzone
@@ -852,7 +698,8 @@ impl ProjectPage {
 										let source = entry.path().display();
 										let line_number = i + 1;
 										todos.push(Task::new(
-											format!("{line}:\n    {source} on line {line_number}"),
+											line.to_string(),
+											format!("{source} on line {line_number}"),
 											None,
 											None,
 											HashSet::new()

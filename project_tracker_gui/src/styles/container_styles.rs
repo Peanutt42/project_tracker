@@ -118,14 +118,10 @@ pub fn task_background_container_style(theme: &Theme, dragging: bool) -> Style {
 	}
 }
 
-pub fn shadow_container_style(theme: &Theme) -> Style {
+pub fn markdown_background_container_style(theme: &Theme) -> Style {
 	Style {
+		background: Some(mix_color(theme.extended_palette().background.base.color, theme.extended_palette().background.strong.color, 0.25).into()),
 		border: rounded(BORDER_RADIUS),
-		shadow: Shadow {
-			color: background_shadow_color(theme.extended_palette()),
-			blur_radius: BLUR_RADIUS,
-			..Default::default()
-		},
 		..Default::default()
 	}
 }

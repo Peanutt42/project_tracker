@@ -31,11 +31,11 @@ pub struct Project {
 }
 
 impl Project {
-	pub fn new(name: String, color: SerializableColor) -> Self {
+	pub fn new(name: String, color: SerializableColor, task_tags: OrderedHashMap<TaskTagId, TaskTag>) -> Self {
 		Self {
 			name,
 			color,
-			task_tags: OrderedHashMap::new(),
+			task_tags,
 			todo_tasks: OrderedHashMap::new(),
 			done_tasks: IndexMap::new(),
 			source_code_todos: IndexMap::new(),
@@ -64,10 +64,11 @@ impl Project {
 		&mut self,
 		task_id: TaskId,
 		name: String,
+		description: String,
 		tags: HashSet<TaskTagId>,
 		create_at_top: bool,
 	) {
-		let task = Task::new(name, None, None, tags);
+		let task = Task::new(name, description, None, None, tags);
 
 		if create_at_top {
 			self.todo_tasks.insert_at_top(task_id, task);
@@ -94,6 +95,12 @@ impl Project {
 	pub fn set_task_name(&mut self, task_id: TaskId, new_name: String) {
 		if let Some(task) = self.get_task_mut(&task_id) {
 			task.set_name(new_name);
+		}
+	}
+
+	pub fn set_task_description(&mut self, task_id: TaskId, new_description: String) {
+		if let Some(task) = self.get_task_mut(&task_id) {
+			task.set_description(new_description);
 		}
 	}
 

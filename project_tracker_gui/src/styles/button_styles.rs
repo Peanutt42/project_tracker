@@ -191,16 +191,16 @@ pub fn secondary_button_style_no_rounding(theme: &Theme, status: Status) -> Styl
 	secondary_button_style(theme, status, false, false, false, false)
 }
 
+pub fn secondary_button_style_only_round_left(theme: &Theme, status: Status) -> Style {
+	secondary_button_style(theme, status, true, true, false, false)
+}
+
 pub fn secondary_button_style_only_round_right(theme: &Theme, status: Status) -> Style {
 	secondary_button_style(theme, status, false, false, true, true)
 }
 
 pub fn secondary_button_style_only_round_top(theme: &Theme, status: Status) -> Style {
 	secondary_button_style(theme, status, true, false, true, false)
-}
-
-pub fn secondary_button_style_only_round_bottom(theme: &Theme, status: Status) -> Style {
-	secondary_button_style(theme, status, false, true, false, true)
 }
 
 pub fn secondary_button_style(
@@ -288,7 +288,7 @@ pub fn finish_editing_task_button_style(theme: &Theme, status: Status) -> Style 
 	let active_style = Style {
 		background: Some(theme.extended_palette().secondary.base.color.into()),
 		text_color: theme.extended_palette().secondary.base.text,
-		border: rounded(Radius::default().left(BORDER_RADIUS)),
+		border: rounded(BORDER_RADIUS),
 		..Default::default()
 	};
 

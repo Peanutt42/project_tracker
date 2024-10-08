@@ -1,18 +1,22 @@
 use std::collections::HashSet;
 use crate::{
-	components::{close_create_new_task_modal_button, create_new_task_modal_button, horizontal_scrollable, task_tag_button}, core::{Database, ProjectId, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, LARGE_TEXT_SIZE, SPACING_AMOUNT}
+	components::{close_create_new_task_modal_button, create_new_task_modal_button, horizontal_scrollable, task_tag_button}, core::{Database, ProjectId, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, text_input_style_default, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}
 };
 use iced::{
-	keyboard, widget::{column, row, text, text_editor, text_editor::Action, Row, Space}, Element, Length::Fill, Subscription
+	alignment::Horizontal, keyboard, widget::{column, container, row, text, text_editor, text_editor::Action, text_input, Row, Space}, Element, Length::Fill, Subscription
 };
 use iced_aw::card;
+use once_cell::sync::Lazy;
+
+static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
 #[derive(Debug, Clone)]
 pub enum CreateTaskModalMessage {
 	Open(ProjectId),
 	Close,
 	CreateTask,
-	TaskNameAction(Action),
+	ChangeTaskName(String),
+	TaskDescriptionAction(Action),
 	ToggleTaskTag(TaskTagId),
 }
 
@@ -22,13 +26,14 @@ impl From<CreateTaskModalMessage> for Message {
 	}
 }
 
-#[derive(Debug, Clone)]
 pub enum CreateTaskModalAction {
 	None,
+	Task(iced::Task<CreateTaskModalMessage>),
 	CreateTask {
 		project_id: ProjectId,
 		task_id: TaskId,
 		task_name: String,
+		task_description: String,
 		task_tags: HashSet<TaskTagId>,
 	},
 }
@@ -36,7 +41,8 @@ pub enum CreateTaskModalAction {
 pub enum CreateTaskModal {
 	Opened {
 		project_id: ProjectId,
-		new_task_name: text_editor::Content,
+		task_name: String,
+		task_description: text_editor::Content,
 		task_tags: HashSet<TaskTagId>,
 	},
 	Closed,
@@ -58,18 +64,20 @@ impl CreateTaskModal {
 			CreateTaskModalMessage::Open(project_id) => {
 				*self = Self::Opened {
 					project_id,
-					new_task_name: text_editor::Content::new(),
+					task_name: String::new(),
+					task_description: text_editor::Content::new(),
 					task_tags: HashSet::new(),
 				};
-				CreateTaskModalAction::None
+				CreateTaskModalAction::Task(text_input::focus(TASK_NAME_INPUT_ID.clone()))
 			},
 			CreateTaskModalMessage::Close => { *self = Self::Closed; CreateTaskModalAction::None },
 			CreateTaskModalMessage::CreateTask => {
 				let action = match self {
-					CreateTaskModal::Opened { project_id, new_task_name, task_tags } => CreateTaskModalAction::CreateTask{
+					CreateTaskModal::Opened { project_id, task_name, task_description, task_tags } => CreateTaskModalAction::CreateTask{
 						project_id: *project_id,
 						task_id: TaskId::generate(),
-						task_name: new_task_name.text(),
+						task_name: task_name.clone(),
+						task_description: task_description.text(),
 						task_tags: task_tags.clone(),
 					},
 					CreateTaskModal::Closed => CreateTaskModalAction::None
@@ -77,9 +85,15 @@ impl CreateTaskModal {
 				*self = CreateTaskModal::Closed;
 				action
 			},
-			CreateTaskModalMessage::TaskNameAction(action) => {
-				if let CreateTaskModal::Opened { new_task_name, .. } = self {
-					new_task_name.perform(action);
+			CreateTaskModalMessage::ChangeTaskName(new_task_name) => {
+				if let CreateTaskModal::Opened { task_name, .. } = self {
+					*task_name = new_task_name;
+				}
+				CreateTaskModalAction::None
+			}
+			CreateTaskModalMessage::TaskDescriptionAction(action) => {
+				if let CreateTaskModal::Opened { task_description, .. } = self {
+					task_description.perform(action);
 				}
 				CreateTaskModalAction::None
 			},
@@ -100,7 +114,7 @@ impl CreateTaskModal {
 	pub fn view<'a>(&'a self, database: &'a Option<Database>) -> Option<Element<'a, CreateTaskModalMessage>> {
 		match self {
 			Self::Closed => None,
-			Self::Opened { new_task_name, task_tags, project_id } => Some(
+			Self::Opened { task_name, task_description, task_tags, project_id } => Some(
 				card(
 					if let Some(project) = database.as_ref().and_then(|db| db.get_project(project_id)) {
 						text(format!("Create Task in {}", project.name))
@@ -131,23 +145,38 @@ impl CreateTaskModal {
 							Element::new(text("<invalid project id>"))
 						},
 
-						text_editor(new_task_name)
-							.on_action(CreateTaskModalMessage::TaskNameAction)
+						Space::new(0.0, SPACING_AMOUNT),
+
+						text_input("task name", task_name)
+							.id(TASK_NAME_INPUT_ID.clone())
+							.on_input(CreateTaskModalMessage::ChangeTaskName)
+							.style(text_input_style_default),
+
+						Space::new(0.0, LARGE_SPACING_AMOUNT),
+
+						text_editor(task_description)
+							.on_action(CreateTaskModalMessage::TaskDescriptionAction)
 							.style(move |t, s| {
 								text_editor_style(t, s, true, true, true, true)
 							})
 							.key_binding(text_editor_keybindings),
 
-						Space::new(0.0, SPACING_AMOUNT),
+						Space::new(0.0, LARGE_SPACING_AMOUNT),
 
-						row![
-							create_new_task_modal_button(),
-							close_create_new_task_modal_button()
-						]
-						.spacing(SPACING_AMOUNT)
+						container(
+							row![
+								create_new_task_modal_button(),
+								close_create_new_task_modal_button()
+							]
+							.spacing(SPACING_AMOUNT)
+						)
+						.width(Fill)
+						.align_x(Horizontal::Right)
 					],
 				)
 				.max_width(600.0)
+				.close_size(LARGE_TEXT_SIZE)
+				.on_close(CreateTaskModalMessage::Close)
 				.style(card_style)
 				.into(),
 			),

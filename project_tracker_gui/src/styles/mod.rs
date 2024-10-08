@@ -4,15 +4,15 @@ pub use button_styles::{
 	delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style,
 	project_preview_style, secondary_button_style, secondary_button_style_default,
 	secondary_button_style_no_rounding, secondary_button_style_only_round_top,
-	secondary_button_style_only_round_bottom, secondary_button_style_only_round_right, selection_list_button_style,
+	secondary_button_style_only_round_left, secondary_button_style_only_round_right, selection_list_button_style,
 	settings_tab_button_style, task_button_style, task_tag_button_style, timer_button_style,
 };
 
 mod container_styles;
 pub use container_styles::{
 	dropzone_container_style, in_between_dropzone_container_style, palette_container_style,
-	project_preview_background_container_style, rounded_container_style, shadow_container_style,
-	task_background_container_style, task_tag_container_style, tooltip_container_style,
+	project_preview_background_container_style, rounded_container_style,
+	task_background_container_style, task_tag_container_style, tooltip_container_style, markdown_background_container_style
 };
 
 mod completion_bar_style;
@@ -58,4 +58,4 @@ mod text;
 pub use text::text_color;
 
 mod theme;
-pub use theme::{ProjectTrackerTheme, DARK_THEME};
+pub use theme::ProjectTrackerTheme;

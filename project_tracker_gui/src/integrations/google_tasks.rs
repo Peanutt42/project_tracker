@@ -7,7 +7,7 @@ use chrono::{DateTime, Datelike};
 use iced::Color;
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Project, SerializableDate, Task, TaskId};
+use crate::core::{OrderedHashMap, Project, SerializableDate, Task, TaskId};
 
 #[derive(Debug)]
 pub enum ImportGoogleTasksError {
@@ -61,7 +61,7 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 		.items
 		.into_iter()
 		.map(|google_tasks_list| {
-			let mut project = Project::new(google_tasks_list.title, Color::WHITE.into());
+			let mut project = Project::new(google_tasks_list.title, Color::WHITE.into(), OrderedHashMap::new());
 
 			for google_tasks_task in google_tasks_list.items {
 				let is_todo = google_tasks_task
@@ -69,13 +69,9 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 					.map(|status| status == "needsAction")
 					.unwrap_or(true);
 
-				let mut task_name = google_tasks_task.title;
-				if let Some(notes) = google_tasks_task.notes {
-					task_name.push('\n');
-					task_name.push_str(&notes);
-				}
-
-				let mut task = Task::new(task_name, None, None, HashSet::new());
+				let task_name = google_tasks_task.title;
+				let task_description = google_tasks_task.notes.unwrap_or_default();
+				let mut task = Task::new(task_name, task_description, None, None, HashSet::new());
 				task.due_date = google_tasks_task.due.and_then(|due_date_str| {
 					DateTime::parse_from_rfc3339(&due_date_str)
 						.map(|parsed_due_date| {

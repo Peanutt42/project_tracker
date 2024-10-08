@@ -354,8 +354,8 @@ impl SettingsModal {
 				.max_width(900.0)
 				.max_height(475.0)
 				.close_size(LARGE_TEXT_SIZE)
-				.style(card_style)
 				.on_close(SettingsModalMessage::Close.into())
+				.style(card_style)
 				.into()
 			}),
 		}

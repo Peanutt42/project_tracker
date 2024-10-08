@@ -5,9 +5,9 @@ use crate::components::{
 };
 use crate::core::{ProjectId, Task, TaskId};
 use crate::{
-	core::{DateFormatting, Project, TaskType},
+	core::{Project, TaskType},
 	pages::{
-		CachedTaskList, EditTaskState, StopwatchPage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
+		CachedTaskList, StopwatchPage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
 	},
 	project_tracker::Message,
 	styles::PADDING_AMOUNT,
@@ -28,25 +28,18 @@ pub fn task_list<'a>(
 	project_id: ProjectId,
 	project: &'a Project,
 	cached_task_list: &'a CachedTaskList,
-	edit_task_state: &'a Option<EditTaskState>,
 	dragged_task: Option<TaskId>,
 	just_minimal_dragging: bool,
 	hovered_task_dropzone: Option<TaskDropzone>,
 	show_done_tasks: bool,
 	show_source_code_todos: bool,
-	stopwatch_page: &'a StopwatchPage,
-	date_formatting: DateFormatting,
-	is_theme_dark: bool
+	stopwatch_page: &'a StopwatchPage
 ) -> Element<'a, Message> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
 	let mut source_code_todo_elements = Vec::new(); // only gets populated when 'show_source_code_todos'
 
 	let task_view = |task_id: TaskId, task: &'a Task, task_type: TaskType| {
-		let edit_task_state = match edit_task_state {
-			Some(edit_task_state) if task_id == edit_task_state.task_id => Some(edit_task_state),
-			_ => None,
-		};
 		let dragging = match dragged_task {
 			Some(dragged_task_id) => dragged_task_id == task_id,
 			_ => false,
@@ -73,13 +66,10 @@ pub fn task_list<'a>(
 			task_type,
 			project_id,
 			&project.task_tags,
-			edit_task_state,
 			dragging,
 			just_minimal_dragging,
 			highlight,
-			stopwatch_label,
-			date_formatting,
-			is_theme_dark
+			stopwatch_label
 		)
 	};
 

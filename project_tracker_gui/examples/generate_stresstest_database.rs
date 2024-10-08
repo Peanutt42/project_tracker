@@ -1,16 +1,16 @@
 use std::{collections::HashSet, path::PathBuf};
 
-use project_tracker_gui::core::{Database, Project, ProjectId, SerializableColor, Task, TaskId};
+use project_tracker_gui::core::{Database, OrderedHashMap, Project, ProjectId, SerializableColor, Task, TaskId};
 
 #[tokio::main]
 async fn main() {
 	let mut db = Database::default();
 
 	for i in 0..1000 {
-		let mut project = Project::new(format!("{i}. Project"), SerializableColor::default());
+		let mut project = Project::new(format!("{i}. Project"), SerializableColor::default(), OrderedHashMap::new());
 		for j in 0..1000 {
 			let task_id = TaskId::generate();
-			let task = Task::new(format!("{j}. Task"), None, None, HashSet::new());
+			let task = Task::new(format!("{j}. Task"), "A detailed description of the task".to_string(), None, None, HashSet::new());
 			if j % 2 == 0 {
 				project.todo_tasks.insert(task_id, task);
 			} else {

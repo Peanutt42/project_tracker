@@ -3,15 +3,15 @@ pub use completion_bar::completion_bar;
 
 mod buttons;
 pub use buttons::{
-	add_due_date_button, cancel_create_new_task_tag_button, cancel_create_project_button,
+	cancel_create_new_task_tag_button, cancel_create_project_button,
 	cancel_search_tasks_button, clear_synchronization_filepath_button,
-	clear_task_due_date_button, clear_task_needed_time_button, color_palette_item_button,
+	color_palette_item_button,
 	complete_task_timer_button, confirm_cancel_button, confirm_ok_button, copy_to_clipboard_button,
 	create_new_project_button, open_create_task_modal_button, create_new_task_modal_button, close_create_new_task_modal_button, create_new_task_tags_button,
 	dangerous_button, date_formatting_button, delete_all_done_tasks_button,
-	project_context_menu_button, edit_task_button, finish_editing_task_button, delete_task_button, delete_task_tag_button, edit_color_palette_button,
-	edit_due_date_button, edit_project_name_button, export_database_button, import_database_button,
-	import_google_tasks_button,
+	project_context_menu_button, delete_task_button, clear_task_needed_time_button, edit_task_needed_time_button, clear_task_due_date_button, add_due_date_button, edit_due_date_button, delete_task_tag_button, edit_color_palette_button,
+	edit_project_name_button, edit_task_name_button, export_database_button, import_database_button,
+	import_google_tasks_button, edit_task_description_button, stop_editing_task_description_button,
 	pause_timer_button, reimport_source_code_todos_button, resume_timer_button,
 	search_tasks_button, select_synchronization_filepath_button, settings_button,
 	settings_tab_button, show_done_tasks_button, show_source_code_todos_button,
@@ -24,10 +24,7 @@ mod task_list;
 pub use task_list::task_list;
 
 mod task_widget;
-pub use task_widget::{task_widget, EDIT_DUE_DATE_TEXT_INPUT_ID, EDIT_NEEDED_TIME_TEXT_INPUT_ID};
-
-mod task_tags_widget;
-pub use task_tags_widget::task_tags_buttons;
+pub use task_widget::task_widget;
 
 mod duration_widget;
 pub use duration_widget::{duration_text, duration_widget};

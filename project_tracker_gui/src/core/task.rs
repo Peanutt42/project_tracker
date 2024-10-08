@@ -23,41 +23,48 @@ pub enum TaskType {
 #[derive(Clone, Debug, Serialize)]
 pub struct Task {
 	name: String,
+	description: String,
 	pub needed_time_minutes: Option<usize>,
 	pub due_date: Option<SerializableDate>,
 	pub tags: HashSet<TaskTagId>,
 
-	#[serde(skip_serializing, default = "Id::unique")]
+	#[serde(skip_serializing)]
 	pub dropzone_id: Id,
 
-	#[serde(skip_serializing, default = "widget::Id::unique")]
+	#[serde(skip_serializing)]
 	pub droppable_id: widget::Id,
 
 	#[serde(skip_serializing)]
-	markdown_items: Vec<markdown::Item>,
+	description_markdown_items: Vec<markdown::Item>,
 }
 
 impl Task {
-	pub fn new(name: String, needed_time_minutes: Option<usize>, due_date: Option<SerializableDate>, tags: HashSet<TaskTagId>) -> Self {
-		let markdown_items = markdown::parse(&name).collect();
+	pub fn new(name: String, description: String, needed_time_minutes: Option<usize>, due_date: Option<SerializableDate>, tags: HashSet<TaskTagId>) -> Self {
+		let description_markdown_items = markdown::parse(&description).collect();
 
 		Self {
 			name,
+			description,
 			needed_time_minutes,
 			due_date,
 			tags,
 			dropzone_id: Id::unique(),
 			droppable_id: widget::Id::unique(),
-			markdown_items,
+			description_markdown_items,
 		}
 	}
 
 	pub fn name(&self) -> &String { &self.name }
-	pub fn markdown_items(&self) -> &Vec<markdown::Item> { &self.markdown_items }
+	pub fn description(&self) -> &String { &self.description }
+	pub fn description_markdown_items(&self) -> &Vec<markdown::Item> { &self.description_markdown_items }
 
 	pub fn set_name(&mut self, new_name: String) {
 		self.name = new_name;
-		self.markdown_items = markdown::parse(&self.name).collect();
+	}
+
+	pub fn set_description(&mut self, new_description: String) {
+		self.description = new_description;
+		self.description_markdown_items = markdown::parse(&self.description).collect();
 	}
 
 	pub fn has_same_content_as(&self, other: &Task) -> bool {
@@ -95,6 +102,7 @@ impl<'de> Deserialize<'de> for Task {
 		#[derive(Deserialize)]
 		struct SerializedTask {
 			pub name: String,
+			pub description: String,
 			pub needed_time_minutes: Option<usize>,
 			pub due_date: Option<SerializableDate>,
 			pub tags: HashSet<TaskTagId>,
@@ -103,6 +111,7 @@ impl<'de> Deserialize<'de> for Task {
 		let serialized_task = SerializedTask::deserialize(deserializer)?;
 		Ok(Task::new(
 			serialized_task.name,
+			serialized_task.description,
 			serialized_task.needed_time_minutes,
 			serialized_task.due_date,
 			serialized_task.tags

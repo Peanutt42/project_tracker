@@ -3,9 +3,8 @@ use crate::{
 		toggle_sidebar_button, vertical_seperator,
 		ScalarAnimation, ICON_BUTTON_WIDTH,
 	}, core::{
-		Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, PreferenceMessage,
-		Preferences, OptionalPreference, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId,
-	}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage}, pages::{
+		Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, OptionalPreference, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId
+	}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
 	}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -40,6 +39,7 @@ pub struct ProjectTrackerApp {
 	pub settings_modal: SettingsModal,
 	pub manage_tags_modal: ManageTaskTagsModal,
 	pub create_task_modal: CreateTaskModal,
+	pub task_modal: TaskModal,
 	pub is_system_theme_dark: bool,
 }
 
@@ -103,6 +103,7 @@ pub enum Message {
 	SettingsModalMessage(SettingsModalMessage),
 	OpenCreateTaskModal,
 	CreateTaskModalMessage(CreateTaskModalMessage),
+	TaskModalMessage(TaskModalMessage),
 	ManageTaskTagsModalMessage(ManageTaskTagsModalMessage),
 }
 
@@ -144,6 +145,7 @@ impl ProjectTrackerApp {
 				settings_modal: SettingsModal::Closed,
 				manage_tags_modal: ManageTaskTagsModal::Closed,
 				create_task_modal: CreateTaskModal::Closed,
+				task_modal: TaskModal::Closed,
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Task::batch([
@@ -241,6 +243,9 @@ impl ProjectTrackerApp {
 				}
 				if matches!(self.create_task_modal, CreateTaskModal::Opened { .. }) {
 					return self.update(CreateTaskModalMessage::Close.into());
+				}
+				if matches!(self.task_modal, TaskModal::Opened { .. }) {
+					return self.update(TaskModalMessage::Close.into());
 				}
 				if self.project_page.is_some() {
 					self.update(ProjectPageMessage::HideColorPicker.into())
@@ -545,6 +550,9 @@ impl ProjectTrackerApp {
 			}
 			Message::OpenStopwatch => self.update(Message::SelectProject(None)),
 			Message::StopwatchPageMessage(message) => {
+				if matches!(message, StopwatchPageMessage::Start { .. }) {
+					self.task_modal = TaskModal::Closed;
+				}
 				let messages = self.stopwatch_page.update(
 					message,
 					&self.database,
@@ -786,10 +794,12 @@ impl ProjectTrackerApp {
 				let action = self.create_task_modal.update(message);
 				match action {
 					CreateTaskModalAction::None => Task::none(),
-					CreateTaskModalAction::CreateTask{ project_id, task_id, task_name, task_tags } => self.update(DatabaseMessage::CreateTask {
+					CreateTaskModalAction::Task(task) => task.map(Message::CreateTaskModalMessage),
+					CreateTaskModalAction::CreateTask{ project_id, task_id, task_name, task_description, task_tags } => self.update(DatabaseMessage::CreateTask {
 						project_id,
 						task_id,
 						task_name,
+						task_description,
 						task_tags,
 						create_at_top: self.preferences.create_new_tasks_at_top(),
 					}.into())
@@ -801,6 +811,7 @@ impl ProjectTrackerApp {
 			else {
 				Task::none()
 			},
+			Message::TaskModalMessage(message) => self.task_modal.update(message, &mut self.database).map(Message::TaskModalMessage),
 		}
 	}
 
@@ -814,7 +825,11 @@ impl ProjectTrackerApp {
 			ProjectPageAction::ConfirmDeleteProject { project_id, project_name } => self.update(ConfirmModalMessage::open(
 				format!("Delete Project '{project_name}'?"),
 				DatabaseMessage::DeleteProject(project_id),
-			))
+			)),
+			ProjectPageAction::OpenTaskModal { project_id, task_id } => self.update(TaskModalMessage::Open {
+				project_id,
+				task_id
+			}.into()),
 		}
 	}
 
@@ -926,6 +941,10 @@ impl ProjectTrackerApp {
 				CreateTaskModalMessage::Close,
 			)
 			.map(|element| element.map(Message::CreateTaskModalMessage)))
+			.push_maybe(Self::modal(
+				self.task_modal.view(self),
+				TaskModalMessage::Close.into(),
+			))
 			.push_maybe(Self::modal(
 				self.manage_tags_modal.view(self),
 				ManageTaskTagsModalMessage::Close.into(),
