@@ -60,7 +60,7 @@ pub fn scrollable_style(theme: &Theme, status: Status) -> Style {
 				background: None,
 				border: Border::default(),
 				scroller: scrollable::Scroller {
-					color: theme.extended_palette().success.base.color,
+					color: theme.extended_palette().primary.base.color,
 					border: rounded(f32::MAX),
 				},
 			};

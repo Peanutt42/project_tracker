@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use crate::{
-	components::{close_create_new_task_modal_button, create_new_task_modal_button, horizontal_scrollable, task_tag_button}, core::{Database, ProjectId, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, text_input_style_default, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}
+	components::{close_create_new_task_modal_button, create_new_task_modal_button, horizontal_scrollable, task_tag_button}, core::{Database, ProjectId, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, text_input_style_default, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}
 };
 use iced::{
-	alignment::Horizontal, keyboard, widget::{column, container, row, text, text_editor, text_editor::Action, text_input, Row, Space}, Element, Length::Fill, Subscription
+	alignment::Horizontal, font, keyboard, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::Fill, Subscription
 };
 use iced_aw::card;
 use once_cell::sync::Lazy;
@@ -16,7 +16,7 @@ pub enum CreateTaskModalMessage {
 	Close,
 	CreateTask,
 	ChangeTaskName(String),
-	TaskDescriptionAction(Action),
+	TaskDescriptionAction(text_editor::Action),
 	ToggleTaskTag(TaskTagId),
 }
 
@@ -150,9 +150,16 @@ impl CreateTaskModal {
 						text_input("task name", task_name)
 							.id(TASK_NAME_INPUT_ID.clone())
 							.on_input(CreateTaskModalMessage::ChangeTaskName)
-							.style(text_input_style_default),
+							.style(text_input_style_default)
+							.size(HEADING_TEXT_SIZE)
+							.font(Font {
+								weight: font::Weight::Bold,
+								..Default::default()
+							}),
 
-						Space::new(0.0, LARGE_SPACING_AMOUNT),
+						Space::new(0.0, SPACING_AMOUNT),
+
+						text("Description:"),
 
 						text_editor(task_description)
 							.on_action(CreateTaskModalMessage::TaskDescriptionAction)
