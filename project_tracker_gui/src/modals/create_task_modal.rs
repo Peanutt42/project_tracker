@@ -134,18 +134,21 @@ impl CreateTaskModal {
 								})
 								.collect();
 
-							horizontal_scrollable(
-								Row::with_children(task_tags_list)
-									.spacing(SPACING_AMOUNT)
-							)
-							.width(Fill)
-							.into()
+							if task_tags_list.is_empty() {
+								Element::new(Space::new(0.0, 0.0))
+							}
+							else {
+								horizontal_scrollable(
+									Row::with_children(task_tags_list)
+										.spacing(SPACING_AMOUNT)
+								)
+								.width(Fill)
+								.into()
+							}
 						}
 						else {
 							Element::new(text("<invalid project id>"))
 						},
-
-						Space::new(0.0, SPACING_AMOUNT),
 
 						text_input("task name", task_name)
 							.id(TASK_NAME_INPUT_ID.clone())

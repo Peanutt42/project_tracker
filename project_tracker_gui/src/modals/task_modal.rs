@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use iced::{advanced::graphics::core::font, alignment::{Horizontal, Vertical}, widget::{column, container, markdown, row, stack, text, text_editor, text_input, Row, Space}, Alignment, Element, Font, Length::{Fill, Fixed}};
+use iced::{advanced::graphics::core::font, alignment::{Horizontal, Vertical}, widget::{column, container, markdown, row, stack, text, text_editor, text_input, Row, Space}, Element, Font, Length::{Fill, Fixed}};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
 use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_name_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, stop_editing_task_description_button, task_tag_button, unfocusable}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, link_color, markdown_background_container_style, text_editor_keybindings, text_editor_style, text_input_style, text_input_style_default, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
@@ -389,31 +389,39 @@ impl TaskModal {
 								.into()
 							}
 							else {
-								text(task.name())
-									.size(HEADING_TEXT_SIZE)
-									.font(bold_font)
-									.into()
+								stack![
+									container(
+										text(task.name())
+											.size(HEADING_TEXT_SIZE)
+											.font(bold_font)
+									)
+									.width(Fill),
+
+									container(edit_task_name_button())
+										.width(Fill)
+										.height(Fill)
+										.align_x(Horizontal::Right)
+										.align_y(Vertical::Top)
+								]
+								.into()
 							};
 
 							column![
-								horizontal_scrollable(
-									Row::with_children(task_tags_list)
-										.spacing(SPACING_AMOUNT)
-								)
-								.width(Fill),
-
 								Space::new(0.0, SPACING_AMOUNT),
 
-								Row::new()
-									.push(name_text)
-									.push_maybe(if *edit_name {
-										None
-									}
-									else {
-										Some(edit_task_name_button())
-									})
-									.spacing(SPACING_AMOUNT)
-									.align_y(Alignment::Center),
+								if task_tags_list.is_empty() {
+									Element::new(Space::new(0.0, 0.0))
+								}
+								else {
+									horizontal_scrollable(
+										Row::with_children(task_tags_list)
+											.spacing(SPACING_AMOUNT)
+									)
+									.width(Fill)
+									.into()
+								},
+
+								name_text,
 
 								Space::new(0.0, LARGE_SPACING_AMOUNT),
 

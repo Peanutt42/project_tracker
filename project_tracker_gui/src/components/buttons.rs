@@ -689,7 +689,7 @@ pub fn edit_task_name_button() -> Element<'static, Message> {
 	tooltip(
 		icon_button(Bootstrap::PencilSquare)
 			.on_press(TaskModalMessage::EditName.into())
-			.style(hidden_secondary_button_style),
+			.style(secondary_button_style_default),
 		text("Edit name").size(SMALL_TEXT_SIZE),
 		tooltip::Position::Bottom,
 	)
