@@ -62,3 +62,30 @@ pub fn text_input_style(
 		},
 	}
 }
+
+pub fn text_input_style_borderless(theme: &Theme, status: Status) -> Style {
+	let placeholder = theme.extended_palette().background.strong.color;
+	let value = theme.extended_palette().background.base.text;
+	let selection = selection_color(theme.extended_palette());
+
+	let border = Border::default();
+
+	match status {
+		Status::Active | Status::Hovered | Status::Focused => Style {
+			background: theme.extended_palette().background.base.color.into(),
+			border,
+			icon: theme.extended_palette().background.weak.text,
+			placeholder,
+			value,
+			selection,
+		},
+		Status::Disabled => Style {
+			background: theme.extended_palette().background.weak.color.into(),
+			icon: theme.extended_palette().background.strong.color,
+			border,
+			placeholder,
+			value,
+			selection,
+		},
+	}
+}

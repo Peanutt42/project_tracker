@@ -1,6 +1,6 @@
 use crate::styles::{selection_color, BORDER_RADIUS};
 use iced::{
-	border::Radius, keyboard::{self, key}, widget::text_editor::{Binding, KeyPress, Motion, Status, Style}, Border, Theme
+	border::{rounded, Radius}, keyboard::{self, key}, widget::text_editor::{Binding, KeyPress, Motion, Status, Style}, Border, Theme
 };
 
 pub fn text_editor_style(
@@ -50,6 +50,24 @@ pub fn text_editor_style(
 			value,
 			selection,
 		},
+	}
+}
+
+
+pub fn description_text_editor_style(theme: &Theme, _status: Status) -> Style {
+	let placeholder = theme.extended_palette().background.strong.color;
+	let value = theme.extended_palette().background.base.text;
+	let selection = selection_color(theme.extended_palette());
+
+	let border = rounded(BORDER_RADIUS);
+
+	Style {
+		background: theme.extended_palette().background.weak.color.into(),
+		icon: theme.extended_palette().background.weak.text,
+		border,
+		placeholder,
+		value,
+		selection,
 	}
 }
 

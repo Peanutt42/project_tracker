@@ -9,7 +9,7 @@ use crate::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
 		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
 	}, project_tracker::Message, styles::{
-		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, finish_editing_task_button_style, hidden_secondary_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, finish_editing_task_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
@@ -670,32 +670,6 @@ pub fn show_source_code_todos_button(
 	)
 	.on_press(ProjectPageMessage::ShowSourceCodeTodos(!show).into())
 	.style(secondary_button_style_default)
-}
-
-pub fn edit_project_name_button() -> Element<'static, Message> {
-	tooltip(
-		icon_button(Bootstrap::PencilSquare)
-			.on_press(ProjectPageMessage::EditProjectName.into())
-			.style(hidden_secondary_button_style),
-		text("Edit name").size(SMALL_TEXT_SIZE),
-		tooltip::Position::Bottom,
-	)
-	.gap(GAP)
-	.style(tooltip_container_style)
-	.into()
-}
-
-pub fn edit_task_name_button() -> Element<'static, Message> {
-	tooltip(
-		icon_button(Bootstrap::PencilSquare)
-			.on_press(TaskModalMessage::EditName.into())
-			.style(secondary_button_style_default),
-		text("Edit name").size(SMALL_TEXT_SIZE),
-		tooltip::Position::Bottom,
-	)
-	.gap(GAP)
-	.style(tooltip_container_style)
-	.into()
 }
 
 pub fn start_timer_button() -> Button<'static, Message> {

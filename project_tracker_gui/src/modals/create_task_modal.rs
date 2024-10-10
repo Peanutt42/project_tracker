@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use crate::{
-	components::{close_create_new_task_modal_button, create_new_task_modal_button, horizontal_scrollable, task_tag_button}, core::{Database, ProjectId, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, text_input_style_default, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}
+	components::{close_create_new_task_modal_button, create_new_task_modal_button, horizontal_scrollable, task_tag_button}, core::{Database, ProjectId, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, description_text_editor_style, text_editor_keybindings, text_input_style_borderless, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}
 };
 use iced::{
 	alignment::Horizontal, font, keyboard, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::Fill, Subscription
@@ -153,7 +153,8 @@ impl CreateTaskModal {
 						text_input("task name", task_name)
 							.id(TASK_NAME_INPUT_ID.clone())
 							.on_input(CreateTaskModalMessage::ChangeTaskName)
-							.style(text_input_style_default)
+							.on_submit(CreateTaskModalMessage::CreateTask)
+							.style(text_input_style_borderless)
 							.size(HEADING_TEXT_SIZE)
 							.font(Font {
 								weight: font::Weight::Bold,
@@ -166,9 +167,7 @@ impl CreateTaskModal {
 
 						text_editor(task_description)
 							.on_action(CreateTaskModalMessage::TaskDescriptionAction)
-							.style(move |t, s| {
-								text_editor_style(t, s, true, true, true, true)
-							})
+							.style(description_text_editor_style)
 							.key_binding(text_editor_keybindings),
 
 						Space::new(0.0, LARGE_SPACING_AMOUNT),

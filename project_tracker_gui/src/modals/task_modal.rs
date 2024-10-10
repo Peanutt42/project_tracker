@@ -2,7 +2,7 @@ use std::str::FromStr;
 use iced::{advanced::graphics::core::font, alignment::{Horizontal, Vertical}, widget::{column, container, markdown, row, stack, text, text_editor, text_input, Row, Space}, Element, Font, Length::{Fill, Fixed}};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
-use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_name_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, stop_editing_task_description_button, task_tag_button, unfocusable}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, link_color, markdown_background_container_style, text_editor_keybindings, text_editor_style, text_input_style, text_input_style_default, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, stop_editing_task_description_button, task_tag_button, unfocusable}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, link_color, markdown_background_container_style, text_editor_keybindings, text_editor_style, text_input_style, text_input_style_borderless, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
 
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -14,9 +14,6 @@ pub enum TaskModalMessage {
 		task_id: TaskId,
 	},
 	Close,
-
-	EditName,
-	StopEditingName,
 
 	EditDescription,
 	StopEditingDescription,
@@ -46,7 +43,6 @@ pub enum TaskModal {
 	Opened {
 		project_id: ProjectId,
 		task_id: TaskId,
-		edit_name: bool,
 		new_description: Option<text_editor::Content>,
 		edit_due_date: bool,
 		new_needed_time_minutes: Option<Option<usize>>,
@@ -61,7 +57,6 @@ impl TaskModal {
 				*self = TaskModal::Opened {
 					project_id,
 					task_id,
-					edit_name: false,
 					new_description: None,
 					edit_due_date: false,
 					new_needed_time_minutes: None
@@ -70,19 +65,6 @@ impl TaskModal {
 			},
 			TaskModalMessage::Close => {
 				*self = TaskModal::Closed;
-				iced::Task::none()
-			},
-
-			TaskModalMessage::EditName => {
-				if let TaskModal::Opened { edit_name, .. } = self {
-					*edit_name = true;
-				}
-				text_input::focus(TASK_NAME_INPUT_ID.clone())
-			},
-			TaskModalMessage::StopEditingName => {
-				if let TaskModal::Opened { edit_name, .. } = self {
-					*edit_name = false;
-				}
 				iced::Task::none()
 			},
 
@@ -212,7 +194,7 @@ impl TaskModal {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
 		match self {
 			Self::Closed => None,
-			Self::Opened { project_id, task_id, edit_name, new_description, edit_due_date, new_needed_time_minutes } => Some(
+			Self::Opened { project_id, task_id, new_description, edit_due_date, new_needed_time_minutes } => Some(
 				card(
 					Space::new(0.0, 0.0),
 
@@ -369,42 +351,18 @@ impl TaskModal {
 								..Default::default()
 							};
 
-							let name_text: Element<'a, Message> = if *edit_name {
-								unfocusable(
-									text_input("Input task name", task.name())
-										.id(TASK_NAME_INPUT_ID.clone())
-										.on_input(|new_task_name| DatabaseMessage::ChangeTaskName {
-											project_id: *project_id,
-											task_id: *task_id,
-											new_task_name
-										}
-										.into())
-										.on_submit(TaskModalMessage::StopEditingName.into())
-										.style(text_input_style_default)
-										.size(HEADING_TEXT_SIZE)
-										.font(bold_font),
-
-									TaskModalMessage::StopEditingName.into()
-								)
-								.into()
-							}
-							else {
-								stack![
-									container(
-										text(task.name())
-											.size(HEADING_TEXT_SIZE)
-											.font(bold_font)
-									)
-									.width(Fill),
-
-									container(edit_task_name_button())
-										.width(Fill)
-										.height(Fill)
-										.align_x(Horizontal::Right)
-										.align_y(Vertical::Top)
-								]
-								.into()
-							};
+							let name_text: Element<'a, Message> = text_input("Input task name", task.name())
+								.id(TASK_NAME_INPUT_ID.clone())
+								.on_input(|new_task_name| DatabaseMessage::ChangeTaskName {
+									project_id: *project_id,
+									task_id: *task_id,
+									new_task_name
+								}
+								.into())
+								.style(text_input_style_borderless)
+								.size(HEADING_TEXT_SIZE)
+								.font(bold_font)
+								.into();
 
 							column![
 								Space::new(0.0, SPACING_AMOUNT),

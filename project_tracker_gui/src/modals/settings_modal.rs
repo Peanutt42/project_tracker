@@ -172,7 +172,6 @@ impl SettingTab {
 						shortcut("Open Settings:", "Ctrl + ,"),
 						shortcut("Open Stopwatch:", "Ctrl + H"),
 						shortcut("New Project:", "Ctrl + Shift + N"),
-						shortcut("Rename Project:", "Ctrl + R"),
 						shortcut("Search Tasks:", "Ctrl + F"),
 						shortcut("Delete Project:", "Ctrl + Del"),
 						shortcut("Switch to lower Project:", "Ctrl + Tab"),

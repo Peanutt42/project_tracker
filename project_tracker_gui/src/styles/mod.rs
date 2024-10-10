@@ -27,11 +27,11 @@ pub use checkbox_style::checkbox_style;
 
 mod text_input;
 pub use text_input::{
-	text_input_style, text_input_style_default, text_input_style_only_round_left,
+	text_input_style, text_input_style_default, text_input_style_only_round_left, text_input_style_borderless
 };
 
 mod text_editor;
-pub use text_editor::{text_editor_style, text_editor_keybindings};
+pub use text_editor::{text_editor_style, description_text_editor_style, text_editor_keybindings};
 
 mod scrollable;
 pub use scrollable::scrollable_style;

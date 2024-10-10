@@ -1,12 +1,10 @@
 use crate::{
 	components::{
-		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button, edit_project_name_button, horizontal_scrollable, open_create_task_modal_button, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING
+		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button, horizontal_scrollable, open_create_task_modal_button, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING
 	}, core::{
 		Database, DatabaseMessage, Project, ProjectId, Task, TaskId, TaskTagId
 	}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, project_tracker::{Message, ProjectTrackerApp}, styles::{
-		text_input_style_default, text_input_style_only_round_left, LARGE_PADDING_AMOUNT,
-		MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT,
-		TITLE_TEXT_SIZE,
+		text_input_style_borderless, text_input_style_only_round_left, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE
 	}
 };
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
@@ -36,6 +34,8 @@ static SEARCH_TASKS_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::
 
 #[derive(Clone, Debug)]
 pub enum ProjectPageMessage {
+	RefreshCachedTaskList,
+
 	ShowContextMenu,
 	HideContextMenu,
 	OpenManageTaskTagsModal,
@@ -58,11 +58,6 @@ pub enum ProjectPageMessage {
 	ShowColorPicker,
 	HideColorPicker,
 	ChangeProjectColor(Color),
-
-	EditProjectName,
-	StopEditingProjectName,
-	ChangeEditedProjectName(String),
-	ChangeProjectName,
 
 	ConfirmDeleteProject,
 
@@ -163,7 +158,6 @@ impl From<iced::Task<Message>> for ProjectPageAction {
 pub struct ProjectPage {
 	pub project_id: ProjectId,
 	pub cached_task_list: CachedTaskList,
-	edited_project_name: Option<String>,
 	show_done_tasks: bool,
 	show_source_code_todos: bool,
 	show_color_picker: bool,
@@ -185,7 +179,6 @@ impl ProjectPage {
 		Self {
 			project_id,
 			cached_task_list,
-			edited_project_name: None,
 			show_done_tasks: false,
 			show_source_code_todos: true,
 			show_color_picker: false,
@@ -207,6 +200,8 @@ impl ProjectPage {
 		database: &mut Option<Database>
 	) -> ProjectPageAction {
 		let command = match message {
+			ProjectPageMessage::RefreshCachedTaskList => ProjectPageAction::None,
+
 			ProjectPageMessage::ShowContextMenu => { self.show_context_menu = true; ProjectPageAction::None },
 			ProjectPageMessage::HideContextMenu => { self.show_context_menu = false; ProjectPageAction::None },
 			ProjectPageMessage::OpenManageTaskTagsModal => { self.show_context_menu = false; ProjectPageAction::OpenManageTaskTagsModal(self.project_id) },
@@ -308,43 +303,6 @@ impl ProjectPage {
 				ProjectPageAction::None
 			}
 
-			ProjectPageMessage::EditProjectName => {
-				let project_name = database
-					.as_ref()
-					.and_then(|db| {
-						db.get_project(&self.project_id)
-							.map(|project| project.name.clone())
-					})
-					.unwrap_or_default();
-				self.edited_project_name = Some(project_name);
-				text_input::focus(PROJECT_NAME_TEXT_INPUT_ID.clone()).into()
-			}
-			ProjectPageMessage::ChangeEditedProjectName(edited_name) => {
-				self.edited_project_name = Some(edited_name);
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::StopEditingProjectName => {
-				self.edited_project_name = None;
-				ProjectPageAction::None
-			}
-			ProjectPageMessage::ChangeProjectName => {
-				if let Some(db) = database {
-					if let Some(edited_project_name) = &mut self.edited_project_name {
-						db.update(DatabaseMessage::ChangeProjectName {
-							project_id: self.project_id,
-							new_name: std::mem::take(edited_project_name),
-						});
-						return self.update(
-							ProjectPageMessage::StopEditingProjectName,
-							database
-						);
-					}
-				}
-				self.update(
-					ProjectPageMessage::StopEditingProjectName,
-					database
-				)
-			},
 			ProjectPageMessage::ConfirmDeleteProject => {
 				self.show_context_menu = false;
 
@@ -440,9 +398,6 @@ impl ProjectPage {
 				_ => None,
 			}),
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
-				keyboard::Key::Character("r") if modifiers.command() => {
-					Some(ProjectPageMessage::EditProjectName)
-				},
 				keyboard::Key::Character("f") if modifiers.command() => {
 					Some(ProjectPageMessage::OpenSearchTasks)
 				},
@@ -482,28 +437,18 @@ impl ProjectPage {
 
 	fn project_details_view<'a>(&'a self, project: &'a Project) -> Element<'a, Message> {
 		let project_name: Element<Message> =
-			if let Some(edited_project_name) = &self.edited_project_name {
-				unfocusable(
-					text_input("New project name", edited_project_name)
-						.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
-						.size(TITLE_TEXT_SIZE)
-						.on_input(|edited_name| {
-							ProjectPageMessage::ChangeEditedProjectName(edited_name).into()
-						})
-						.on_submit(ProjectPageMessage::ChangeProjectName.into())
-						.style(text_input_style_default),
-					ProjectPageMessage::StopEditingProjectName.into(),
-				)
-				.into()
-			} else {
-				row![
-					text(&project.name).size(TITLE_TEXT_SIZE),
-					edit_project_name_button(),
-				]
-				.spacing(SPACING_AMOUNT)
-				.align_y(Alignment::Center)
-				.into()
-			};
+			text_input("New project name", &project.name)
+				.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
+				.size(TITLE_TEXT_SIZE)
+				.on_input(|edited_name| {
+					DatabaseMessage::ChangeProjectName {
+						project_id: self.project_id,
+						new_name: edited_name.clone(),
+					}
+					.into()
+				})
+				.style(text_input_style_borderless)
+				.into();//text_input_style_default),
 
 		let show_color_picker_button = edit_color_palette_button(
 			project.color.into(),
@@ -556,10 +501,6 @@ impl ProjectPage {
 				),
 				cancel_search_tasks_button(),
 			]
-			.padding(Padding {
-				left: LARGE_PADDING_AMOUNT + LARGE_PADDING_AMOUNT,
-				..Padding::ZERO
-			})
 			.into()
 		} else {
 			search_tasks_button().into()
@@ -578,14 +519,7 @@ impl ProjectPage {
 			column![row![
 				color_picker,
 				project_name,
-				if self.edited_project_name.is_some() {
-					quick_actions
-				} else {
-					container(quick_actions)
-						.width(Fill)
-						.align_x(Horizontal::Right)
-						.into()
-				}
+				quick_actions
 			]
 			.spacing(SPACING_AMOUNT)
 			.align_y(Alignment::Center)]

@@ -795,14 +795,17 @@ impl ProjectTrackerApp {
 				match action {
 					CreateTaskModalAction::None => Task::none(),
 					CreateTaskModalAction::Task(task) => task.map(Message::CreateTaskModalMessage),
-					CreateTaskModalAction::CreateTask{ project_id, task_id, task_name, task_description, task_tags } => self.update(DatabaseMessage::CreateTask {
-						project_id,
-						task_id,
-						task_name,
-						task_description,
-						task_tags,
-						create_at_top: self.preferences.create_new_tasks_at_top(),
-					}.into())
+					CreateTaskModalAction::CreateTask{ project_id, task_id, task_name, task_description, task_tags } => Task::batch([
+						self.update(DatabaseMessage::CreateTask {
+							project_id,
+							task_id,
+							task_name,
+							task_description,
+							task_tags,
+							create_at_top: self.preferences.create_new_tasks_at_top(),
+						}.into()),
+						self.update(ProjectPageMessage::RefreshCachedTaskList.into()),
+					]),
 				}
 			},
 			Message::OpenCreateTaskModal => if let Some(project_id) = self.project_page.as_ref().map(|project_page| project_page.project_id) {

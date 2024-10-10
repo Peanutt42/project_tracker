@@ -10,7 +10,7 @@ pub use buttons::{
 	create_new_project_button, open_create_task_modal_button, create_new_task_modal_button, close_create_new_task_modal_button, create_new_task_tags_button,
 	dangerous_button, date_formatting_button, delete_all_done_tasks_button,
 	project_context_menu_button, delete_task_button, clear_task_needed_time_button, edit_task_needed_time_button, clear_task_due_date_button, add_due_date_button, edit_due_date_button, delete_task_tag_button, edit_color_palette_button,
-	edit_project_name_button, edit_task_name_button, export_database_button, import_database_button,
+	export_database_button, import_database_button,
 	import_google_tasks_button, edit_task_description_button, stop_editing_task_description_button,
 	pause_timer_button, reimport_source_code_todos_button, resume_timer_button,
 	search_tasks_button, select_synchronization_filepath_button, settings_button,
