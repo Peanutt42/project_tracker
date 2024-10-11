@@ -1,4 +1,4 @@
-use iced::Color;
+use iced::{font::Weight, Color, Font};
 
 pub fn text_color(background: Color) -> Color {
 	let brightness = 0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b;
@@ -8,3 +8,8 @@ pub fn text_color(background: Color) -> Color {
 		Color::from_rgb(0.9, 0.9, 0.9)
 	}
 }
+
+pub const BOLD_FONT: Font = Font {
+	weight: Weight::Bold,
+	..Font::DEFAULT
+};

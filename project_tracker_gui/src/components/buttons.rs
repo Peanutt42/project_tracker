@@ -258,7 +258,7 @@ pub fn stopwatch_button(
 		button(
 			row![
 				icon_to_text(Bootstrap::Stopwatch).size(LARGE_TEXT_SIZE),
-				text("Stopwatch").size(LARGE_TEXT_SIZE).width(Fill)
+				text("Stopwatch").size(LARGE_TEXT_SIZE)
 			]
 			.push_maybe(stopwatch_label.map(|stopwatch_label| {
 				container(text(stopwatch_label).size(SMALL_TEXT_SIZE))
@@ -458,18 +458,12 @@ pub fn sync_database_button(
 pub fn task_tag_button<Message>(
 	task_tag: &TaskTag,
 	toggled: bool,
-	round_bottom: bool,
-	tall: bool,
 ) -> Button<Message> {
 	let button = button(text(&task_tag.name)).style(move |t, s| {
-		task_tag_button_style(t, s, task_tag.color.into(), toggled, round_bottom)
+		task_tag_button_style(t, s, task_tag.color.into(), toggled)
 	});
 
-	if tall {
-		button
-	} else {
-		button.padding(SMALL_HORIZONTAL_PADDING)
-	}
+	button
 }
 
 fn manage_task_tags_button() -> Element<'static, Message> {

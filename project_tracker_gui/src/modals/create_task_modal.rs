@@ -128,7 +128,7 @@ impl CreateTaskModal {
 						if let Some(project) = database.as_ref().and_then(|db| db.get_project(project_id)) {
 							let task_tags_list: Vec<Element<CreateTaskModalMessage>> = project.task_tags.iter()
 								.map(|(tag_id, tag)| {
-									task_tag_button(tag, task_tags.contains(&tag_id), true, true)
+									task_tag_button(tag, task_tags.contains(&tag_id))
 										.on_press(CreateTaskModalMessage::ToggleTaskTag(tag_id))
 										.into()
 								})

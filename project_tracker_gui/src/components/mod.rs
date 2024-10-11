@@ -26,6 +26,9 @@ pub use task_list::task_list;
 mod task_widget;
 pub use task_widget::task_widget;
 
+mod task_description;
+pub use task_description::task_description;
+
 mod duration_widget;
 pub use duration_widget::{duration_text, duration_widget};
 
@@ -36,7 +39,7 @@ mod loading_screen;
 pub use loading_screen::loading_screen;
 
 mod project_preview;
-pub use project_preview::{custom_project_preview, project_color_block, project_preview};
+pub use project_preview::{custom_project_preview, project_preview};
 
 mod seperator;
 pub use seperator::{horizontal_seperator, horizontal_seperator_padded, vertical_seperator};

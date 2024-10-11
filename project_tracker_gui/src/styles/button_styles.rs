@@ -399,7 +399,6 @@ pub fn task_tag_button_style(
 	status: Status,
 	color: Color,
 	toggled: bool,
-	round_bottom: bool,
 ) -> Style {
 	let active_style = Style {
 		background: Some(if toggled {
@@ -415,11 +414,7 @@ pub fn task_tag_button_style(
 		border: Border {
 			color,
 			width: 1.0,
-			radius: if round_bottom {
-				LARGE_BORDER_RADIUS.into()
-			} else {
-				Radius::default().top(LARGE_BORDER_RADIUS).bottom(0.0)
-			},
+			radius: LARGE_BORDER_RADIUS.into(),
 		},
 		..Default::default()
 	};

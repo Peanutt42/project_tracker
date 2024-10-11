@@ -1,8 +1,8 @@
 use std::str::FromStr;
-use iced::{advanced::graphics::core::font, alignment::{Horizontal, Vertical}, widget::{column, container, markdown, row, stack, text, text_editor, text_input, Row, Space}, Element, Font, Length::{Fill, Fixed}};
+use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::{Fill, Fixed}};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
-use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, stop_editing_task_description_button, task_tag_button, unfocusable}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, link_color, markdown_background_container_style, text_editor_keybindings, text_editor_style, text_input_style, text_input_style_borderless, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, stop_editing_task_description_button, task_description, task_tag_button, unfocusable}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, text_input_style, text_input_style_borderless, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}, ProjectTrackerApp};
 
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -202,7 +202,7 @@ impl TaskModal {
 						if let Some(task) = project.get_task(task_id) {
 							let task_tags_list: Vec<Element<Message>> = project.task_tags.iter()
 								.map(|(task_tag_id, task_tag)| {
-									task_tag_button(task_tag, task.tags.contains(&task_tag_id), true, true)
+									task_tag_button(task_tag, task.tags.contains(&task_tag_id))
 										.on_press(DatabaseMessage::ToggleTaskTag{
 											project_id: *project_id,
 											task_id: *task_id,
@@ -323,32 +323,7 @@ impl TaskModal {
 									.into()
 							}
 							else {
-								container(
-									if task.description_markdown_items().is_empty() {
-										text("No description")
-											.width(Fill)
-											.into()
-									}
-									else {
-										markdown(
-											task.description_markdown_items(),
-											markdown::Settings::default(),
-											markdown::Style {
-												link_color: link_color(app.is_theme_dark()),
-												..markdown::Style::from_palette(app.theme().palette())
-											}
-										)
-										.map(|markdown_url| Message::OpenUrl(markdown_url.to_string()))
-									}
-								)
-								.padding(PADDING_AMOUNT)
-								.style(markdown_background_container_style)
-								.into()
-							};
-
-							let bold_font = Font {
-								weight: font::Weight::Bold,
-								..Default::default()
+								task_description(task, app)
 							};
 
 							let name_text: Element<'a, Message> = text_input("Input task name", task.name())
@@ -361,7 +336,7 @@ impl TaskModal {
 								.into())
 								.style(text_input_style_borderless)
 								.size(HEADING_TEXT_SIZE)
-								.font(bold_font)
+								.font(BOLD_FONT)
 								.into();
 
 							column![

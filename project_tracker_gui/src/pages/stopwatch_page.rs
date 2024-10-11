@@ -1,24 +1,15 @@
 use crate::{
 	components::{
-		complete_task_timer_button, days_left_widget, pause_timer_button, project_color_block,
-		resume_timer_button, start_timer_button, stop_timer_button, StopwatchClock,
+		complete_task_timer_button, days_left_widget, pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, task_description, StopwatchClock
 	},
-	core::{Database, DatabaseMessage, PreferenceMessage, ProjectId, StopwatchProgress, TaskId},
+	core::{Database, DatabaseMessage, PreferenceMessage, Project, ProjectId, StopwatchProgress, Task, TaskId},
 	project_tracker::Message,
 	styles::{
-		task_tag_container_style, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE,
-		PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT,
-	},
+		task_tag_container_style, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT
+	}, ProjectTrackerApp,
 };
 use iced::{
-	advanced::graphics::futures::backend::default::time,
-	alignment::{Horizontal, Vertical},
-	keyboard,
-	padding::{left, top},
-	widget::{canvas, column, container, row, text, Column, Row},
-	window, Alignment, Element, Font,
-	Length::{self, Fill},
-	Subscription,
+	advanced::graphics::futures::backend::default::time, alignment::{Horizontal, Vertical}, keyboard, padding::{left, top}, widget::{canvas, column, container, row, text, Column, Row}, window, Alignment, Element, Font, Length::{self, Fill}, Padding, Subscription
 };
 use notify_rust::Notification;
 use std::time::{Duration, Instant};
@@ -297,11 +288,16 @@ impl StopwatchPage {
 		}
 	}
 
-	pub fn view<'a>(&'a self, database: &'a Option<Database>) -> Element<'a, Message> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
 		container(match self {
-			StopwatchPage::Idle => column![text("Start any task!").size(90), start_timer_button()]
-				.align_x(Alignment::Center)
-				.spacing(LARGE_SPACING_AMOUNT),
+			StopwatchPage::Idle => Element::new(column![
+				text("Start any task!")
+					.size(90),
+				start_timer_button()
+			]
+			.align_x(Alignment::Center)
+			.spacing(LARGE_SPACING_AMOUNT)),
+
 			StopwatchPage::Ticking {
 				elapsed_time,
 				task,
@@ -312,7 +308,7 @@ impl StopwatchPage {
 				let mut project_ref = None;
 				let mut task_ref = None;
 				if let Some((project_id, task_id)) = &task {
-					if let Some(database) = database {
+					if let Some(database) = &app.database {
 						if let Some(project) = database.get_project(project_id) {
 							project_ref = Some(project);
 							task_ref = project.get_task(task_id);
@@ -336,56 +332,86 @@ impl StopwatchPage {
 					.into()
 				};
 
-				column![
-					clock,
-					row![
-						if *paused {
-							resume_timer_button()
-						} else {
-							pause_timer_button()
-						},
-						stop_timer_button()
+				row![
+					column![
+						clock,
+						row![
+							if *paused {
+								resume_timer_button()
+							} else {
+								pause_timer_button()
+							},
+							stop_timer_button()
+						]
+						.push_maybe(task.map(|_| { complete_task_timer_button() }))
+						.spacing(LARGE_SPACING_AMOUNT)
 					]
-					.push_maybe(task.map(|_| { complete_task_timer_button() }))
+					.align_x(Alignment::Center)
 					.spacing(LARGE_SPACING_AMOUNT)
+					.width(Fill),
 				]
-				.push_maybe(task_ref.map(|task| {
-					Column::new()
-						.push_maybe(project_ref.map(|project| {
-							row![
-								project_color_block(project.color.into()),
-								text(format!("{}:", project.name)).size(LARGE_TEXT_SIZE),
-								Row::with_children(task.tags.iter().map(|tag_id| {
-									if let Some(tag) = project.task_tags.get(tag_id) {
-										container(text(&tag.name))
-											.style(|t| {
-												task_tag_container_style(t, tag.color.into())
-											})
-											.padding(SMALL_PADDING_AMOUNT)
-											.into()
-									} else {
-										"<invalid tag id>".into()
-									}
-								}))
-								.spacing(SPACING_AMOUNT)
-								.padding(left(PADDING_AMOUNT))
-							]
-							.spacing(TINY_SPACING_AMOUNT)
-							.align_y(Vertical::Center)
-						}))
-						.push(text(task.name()).size(LARGE_TEXT_SIZE))
-						.push_maybe(task.due_date.map(days_left_widget))
-						.spacing(SPACING_AMOUNT)
-						.padding(top(LARGE_PADDING_AMOUNT))
-				}))
-				.align_x(Alignment::Center)
+				.push_maybe(task_info(task_ref, project_ref, app))
 				.spacing(LARGE_SPACING_AMOUNT)
+				.into()
 			}
 		})
 		.center_x(Fill)
 		.center_y(Fill)
 		.into()
 	}
+}
+
+fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
+	task.map(|task| {
+		Column::new()
+			.push(
+				text(task.name())
+					.size(HEADING_TEXT_SIZE)
+					.font(BOLD_FONT)
+			)
+			.push_maybe(task.due_date.map(days_left_widget))
+			.push(task_description(task, app))
+			.push_maybe(project.map(|project| {
+				row![
+					container(
+						text(format!("{}:", project.name))
+					)
+					.style(|t| {
+						task_tag_container_style(t, project.color.into())
+					})
+					.padding(
+						Padding::new(SMALL_PADDING_AMOUNT)
+							.left(PADDING_AMOUNT)
+							.right(PADDING_AMOUNT)
+					),
+
+					Row::with_children(task.tags.iter().map(|tag_id| {
+						if let Some(tag) = project.task_tags.get(tag_id) {
+							container(text(&tag.name))
+								.style(|t| {
+									task_tag_container_style(t, tag.color.into())
+								})
+								.padding(
+									Padding::new(SMALL_PADDING_AMOUNT)
+										.left(PADDING_AMOUNT)
+										.right(PADDING_AMOUNT)
+								)
+								.into()
+						} else {
+							"<invalid tag id>".into()
+						}
+					}))
+					.spacing(SPACING_AMOUNT)
+					.padding(left(PADDING_AMOUNT))
+				]
+				.spacing(TINY_SPACING_AMOUNT)
+				.align_y(Vertical::Center)
+			}))
+			.spacing(LARGE_SPACING_AMOUNT)
+			.padding(top(LARGE_PADDING_AMOUNT))
+			.align_x(Horizontal::Center)
+			.into()
+	})
 }
 
 pub fn format_stopwatch_duration(total_seconds: i64) -> String {

@@ -55,7 +55,7 @@ pub use constants::{
 };
 
 mod text;
-pub use text::text_color;
+pub use text::{text_color, BOLD_FONT};
 
 mod theme;
 pub use theme::ProjectTrackerTheme;

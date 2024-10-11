@@ -971,6 +971,6 @@ impl ProjectTrackerApp {
 		self.project_page
 			.as_ref()
 			.map(|project_page| project_page.view(self))
-			.unwrap_or(self.stopwatch_page.view(&self.database))
+			.unwrap_or(self.stopwatch_page.view(self))
 	}
 }

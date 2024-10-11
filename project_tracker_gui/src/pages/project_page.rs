@@ -473,7 +473,7 @@ impl ProjectPage {
 
 		let task_tags_list: Vec<Element<Message>> = project.task_tags.iter()
 			.map(|(tag_id, tag)| {
-				task_tag_button(tag, self.filter_task_tags.contains(&tag_id), true, true)
+				task_tag_button(tag, self.filter_task_tags.contains(&tag_id))
 					.on_press(ProjectPageMessage::ToggleFilterTaskTag(tag_id).into())
 					.into()
 			})
