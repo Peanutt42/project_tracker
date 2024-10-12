@@ -9,7 +9,7 @@ use iced::{
 	Padding,
 };
 
-const DROPZONE_HEIGHT: f32 = 2.0;
+const DROPZONE_HEIGHT: f32 = 3.5;
 const DROPZONE_PADDING: f32 = (SPACING_AMOUNT as f32 - DROPZONE_HEIGHT) / 2.0;
 
 pub fn in_between_dropzone(id: Id, highlight: bool) -> Element<'static, Message> {

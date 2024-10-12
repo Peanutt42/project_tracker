@@ -1,8 +1,10 @@
 use crate::styles::{
-	background_shadow_color, color_average, mix_color, text_color, selection_color, BLUR_RADIUS, BORDER_RADIUS,
+	background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS,
 	LARGE_BORDER_RADIUS,
 };
 use iced::{border::rounded, widget::container::Style, Border, Color, Shadow, Theme, Vector};
+
+use super::link_color;
 
 pub fn rounded_container_style(theme: &Theme) -> Style {
 	Style {
@@ -60,8 +62,8 @@ pub fn dropzone_container_style(theme: &Theme, highlight: bool) -> Style {
 	Style {
 		background: None,
 		border: Border {
-			color: selection_color(theme.extended_palette()),
-			width: if highlight { 2.0 } else { 0.0 },
+			color: link_color(theme.extended_palette().is_dark),
+			width: if highlight { 3.5 } else { 0.0 },
 			radius: BORDER_RADIUS.into(),
 		},
 		..Default::default()
@@ -71,7 +73,7 @@ pub fn dropzone_container_style(theme: &Theme, highlight: bool) -> Style {
 pub fn in_between_dropzone_container_style(theme: &Theme, highlight: bool) -> Style {
 	Style {
 		background: if highlight {
-			Some(selection_color(theme.extended_palette()).into())
+			Some(link_color(theme.extended_palette().is_dark).into())
 		} else {
 			None
 		},
