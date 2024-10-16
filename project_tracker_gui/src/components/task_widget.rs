@@ -134,7 +134,7 @@ pub fn task_widget<'a>(
 				}
 				else {
 					Some(
-						icon_to_text(Bootstrap::CardText)
+						icon_to_text(Bootstrap::JustifyLeft)
 							.size(SMALL_TEXT_SIZE)
 							.into()
 					)
