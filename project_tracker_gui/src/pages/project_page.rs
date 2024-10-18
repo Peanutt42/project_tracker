@@ -110,6 +110,8 @@ impl CachedTaskList {
 					.map(|search_filter| {
 						SkimMatcherV2::default()
 							.fuzzy_match(task.name(), search_filter)
+							.or(SkimMatcherV2::default()
+								.fuzzy_match(task.description(), search_filter))
 							.is_some()
 					})
 					.unwrap_or(true)
