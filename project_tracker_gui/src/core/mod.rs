@@ -3,7 +3,7 @@ pub use database::{Database, DatabaseMessage, LoadDatabaseResult, SyncDatabaseRe
 
 mod preferences;
 pub use preferences::{
-	DateFormatting, LoadPreferencesResult, PreferenceMessage, Preferences, SerializedContentPage,
+	DateFormatting, LoadPreferencesResult, PreferenceMessage, PreferenceAction, Preferences, SerializedContentPage,
 	StopwatchProgress, OptionalPreference
 };
 
@@ -11,7 +11,7 @@ mod ordered_hash_map;
 pub use ordered_hash_map::OrderedHashMap;
 
 mod project;
-pub use project::{Project, ProjectId, SerializableColor};
+pub use project::{Project, ProjectId, SerializableColor, SortMode};
 
 mod task;
 pub use task::{SerializableDate, Task, TaskId, TaskType};

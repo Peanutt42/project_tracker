@@ -1,8 +1,8 @@
-use crate::core::{OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType};
+use crate::{core::{OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType}, icons::Bootstrap};
 use iced::{widget::container::Id, Color};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::{cmp::Ordering, collections::HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
 pub struct ProjectId(pub usize);
@@ -13,10 +13,19 @@ impl ProjectId {
 	}
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SortMode {
+	#[default]
+	Manual,
+	DueDate,
+	NeededTime,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Project {
 	pub name: String,
 	pub color: SerializableColor,
+	pub sort_mode: SortMode,
 	pub task_tags: OrderedHashMap<TaskTagId, TaskTag>,
 	pub todo_tasks: OrderedHashMap<TaskId, Task>,
 	#[serde(with = "indexmap::map::serde_seq")]
@@ -31,11 +40,12 @@ pub struct Project {
 }
 
 impl Project {
-	pub fn new(name: String, color: SerializableColor, task_tags: OrderedHashMap<TaskTagId, TaskTag>) -> Self {
+	pub fn new(name: String, color: SerializableColor, task_tags: OrderedHashMap<TaskTagId, TaskTag>, sort_mode: SortMode) -> Self {
 		Self {
 			name,
 			color,
 			task_tags,
+			sort_mode,
 			todo_tasks: OrderedHashMap::new(),
 			done_tasks: IndexMap::new(),
 			source_code_todos: IndexMap::new(),
@@ -160,7 +170,7 @@ impl Project {
 
 	// ignores iced unique id's, probably only for tests
 	pub fn has_same_content_as(&self, other: &Project) -> bool {
-		if self.name != other.name || self.color != other.color || self.task_tags != other.task_tags
+		if self.name != other.name || self.color != other.color || self.sort_mode != other.sort_mode || self.task_tags != other.task_tags
 		{
 			return false;
 		}
@@ -198,6 +208,87 @@ impl Project {
 		true
 	}
 }
+
+
+impl SortMode {
+	pub const ALL: &[SortMode] = &[
+		SortMode::Manual,
+		SortMode::DueDate,
+		SortMode::NeededTime,
+	];
+
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			Self::Manual => "Manual",
+			Self::DueDate => "Due Date",
+			Self::NeededTime => "Needed Time",
+		}
+	}
+
+	pub fn icon(&self) -> Bootstrap {
+		match self {
+			Self::Manual => Bootstrap::SortDown,
+			Self::DueDate | Self::NeededTime => Bootstrap::SortNumericDown,
+		}
+	}
+
+	pub fn sort(&self, project: &Project, tasks: &mut [TaskId], sort_unspecified_tasks_at_bottom: bool) {
+		match self {
+			Self::Manual => {},
+			Self::DueDate => {
+				tasks.sort_unstable_by(|task_id_a, task_id_b| {
+					if let (Some(task_a), Some(task_b)) = (project.get_task(task_id_a), project.get_task(task_id_b)) {
+						match (&task_a.due_date, &task_b.due_date) {
+							(Some(due_date_a), Some(due_date_b)) => due_date_a.cmp(due_date_b),
+							(Some(_due_date_a), None) => if sort_unspecified_tasks_at_bottom {
+								Ordering::Less
+							}
+							else {
+								Ordering::Greater
+							},
+							(None, Some(_due_date_b)) => if sort_unspecified_tasks_at_bottom {
+								Ordering::Greater
+							}
+							else {
+								Ordering::Less
+							},
+							(None, None) => Ordering::Equal,
+						}
+					}
+					else {
+						Ordering::Equal
+					}
+				});
+			},
+			Self::NeededTime => {
+				tasks.sort_unstable_by(|task_id_a, task_id_b| {
+					if let (Some(task_a), Some(task_b)) = (project.get_task(task_id_a), project.get_task(task_id_b)) {
+						match (&task_a.needed_time_minutes, &task_b.needed_time_minutes) {
+							(Some(needed_time_minutes_a), Some(needed_time_minutes_b)) => needed_time_minutes_a.cmp(needed_time_minutes_b),
+							(Some(_due_date_a), None) => if sort_unspecified_tasks_at_bottom {
+								Ordering::Less
+							}
+							else {
+								Ordering::Greater
+							},
+							(None, Some(_due_date_b)) => if sort_unspecified_tasks_at_bottom {
+								Ordering::Greater
+							}
+							else {
+								Ordering::Less
+							},
+							(None, None) => Ordering::Equal,
+						}
+					}
+					else {
+						Ordering::Equal
+					}
+				});
+			},
+		}
+	}
+}
+
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct SerializableColor(pub [u8; 3]);

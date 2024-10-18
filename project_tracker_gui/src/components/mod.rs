@@ -17,7 +17,7 @@ pub use buttons::{
 	settings_tab_button, show_done_tasks_button, show_source_code_todos_button,
 	start_task_timer_button, start_timer_button, stop_timer_button, stopwatch_button,
 	sync_database_button, task_tag_button, theme_mode_button, toggle_sidebar_button,
-	open_link_button, ICON_BUTTON_WIDTH,
+	open_link_button, sort_dropdown_button, ICON_BUTTON_WIDTH,
 };
 
 mod task_list;

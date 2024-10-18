@@ -21,12 +21,9 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Instant;
 
-fn default_show_sidebar() -> bool {
-	true
-}
-fn default_create_new_tasks_at_top() -> bool {
-	true
-}
+fn default_show_sidebar() -> bool { true }
+fn default_create_new_tasks_at_top() -> bool { true }
+fn default_sort_unspecified_tasks_at_bottom() -> bool { true }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
@@ -36,6 +33,9 @@ pub struct Preferences {
 
 	#[serde(default = "default_create_new_tasks_at_top")]
 	create_new_tasks_at_top: bool,
+
+	#[serde(default = "default_sort_unspecified_tasks_at_bottom")]
+	sort_unspecified_tasks_at_bottom: bool,
 
 	#[serde(default = "default_show_sidebar")]
 	show_sidebar: bool,
@@ -59,6 +59,7 @@ impl Default for Preferences {
 			theme_mode: ThemeMode::default(),
 			date_formatting: DateFormatting::default(),
 			create_new_tasks_at_top: default_create_new_tasks_at_top(),
+			sort_unspecified_tasks_at_bottom: default_sort_unspecified_tasks_at_bottom(),
 			show_sidebar: default_show_sidebar(),
 			selected_content_page: SerializedContentPage::default(),
 			stopwatch_progress: None,
@@ -101,11 +102,24 @@ pub enum PreferenceMessage {
 	SetSynchronizationFilepath(Option<PathBuf>),
 	SetDateFormatting(DateFormatting),
 	SetCreateNewTaskAtTop(bool),
+	SetSortUnspecifiedTasksAtBottom(bool),
 }
 
 impl From<PreferenceMessage> for Message {
 	fn from(value: PreferenceMessage) -> Self {
 		Message::PreferenceMessage(value)
+	}
+}
+
+pub enum PreferenceAction {
+	None,
+	Task(Task<Message>),
+	RefreshCachedTaskList,
+}
+
+impl From<Task<Message>> for PreferenceAction {
+	fn from(value: Task<Message>) -> Self {
+		PreferenceAction::Task(value)
 	}
 }
 
@@ -140,6 +154,9 @@ impl Preferences {
 	pub fn create_new_tasks_at_top(&self) -> bool {
 		self.create_new_tasks_at_top
 	}
+	pub fn sort_unspecified_tasks_at_bottom(&self) -> bool {
+		self.sort_unspecified_tasks_at_bottom
+	}
 
 	pub fn modify(&mut self, f: impl FnOnce(&mut Preferences)) {
 		f(self);
@@ -154,22 +171,23 @@ impl Preferences {
 		self.last_changed_time > self.last_saved_time
 	}
 
-	pub fn update(&mut self, message: PreferenceMessage) -> Task<Message> {
+	pub fn update(&mut self, message: PreferenceMessage) -> PreferenceAction {
 		match message {
 			PreferenceMessage::Save => {
 				Task::perform(Self::save(self.to_json()), |result| match result {
 					Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
 					Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
 				})
+				.into()
 			}
 			PreferenceMessage::Saved(begin_time) => {
 				self.last_saved_time = begin_time;
-				Task::none()
+				PreferenceAction::None
 			}
 			PreferenceMessage::Reset => {
 				*self = Preferences::default();
 				self.modified();
-				Task::none()
+				PreferenceAction::None
 			}
 			PreferenceMessage::Export => Task::perform(
 				Self::export_file_dialog(self.to_json()),
@@ -177,8 +195,9 @@ impl Preferences {
 					Ok(_) => PreferenceMessage::Exported.into(),
 					Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
 				},
-			),
-			PreferenceMessage::Exported => Task::none(),
+			)
+			.into(),
+			PreferenceMessage::Exported => PreferenceAction::None,
 			PreferenceMessage::Import => {
 				Task::perform(Preferences::import_file_dialog(), |result| {
 					if let Some(load_preference_result) = result {
@@ -187,42 +206,48 @@ impl Preferences {
 						PreferenceMessage::ImportFailed.into()
 					}
 				})
+				.into()
 			}
-			PreferenceMessage::ImportFailed => Task::none(),
+			PreferenceMessage::ImportFailed => PreferenceAction::None,
 
 			PreferenceMessage::SetThemeMode(theme_mode) => {
 				self.modify(|pref| pref.theme_mode = theme_mode);
-				Task::none()
+				PreferenceAction::None
 			}
 
 			PreferenceMessage::ToggleShowSidebar => {
 				self.modify(|pref| pref.show_sidebar = !pref.show_sidebar);
-				Task::none()
+				PreferenceAction::None
 			}
 
 			PreferenceMessage::SetContentPage(content_page) => {
 				self.modify(|pref| pref.selected_content_page = content_page);
-				Task::none()
+				PreferenceAction::None
 			}
 
 			PreferenceMessage::SetStopwatchProgress(progress) => {
 				self.modify(|pref| pref.stopwatch_progress = progress);
-				Task::none()
+				PreferenceAction::None
 			}
 
 			PreferenceMessage::SetSynchronizationFilepath(filepath) => {
 				self.modify(|pref| pref.synchronization_filepath = filepath);
-				Task::none()
+				PreferenceAction::None
 			}
 
 			PreferenceMessage::SetDateFormatting(date_formatting) => {
 				self.modify(|pref| pref.date_formatting = date_formatting);
-				Task::none()
+				PreferenceAction::None
 			}
 
 			PreferenceMessage::SetCreateNewTaskAtTop(create_at_top) => {
 				self.modify(|pref| pref.create_new_tasks_at_top = create_at_top);
-				Task::none()
+				PreferenceAction::None
+			}
+
+			PreferenceMessage::SetSortUnspecifiedTasksAtBottom(sort_unspecified_tasks_at_bottom) => {
+				self.modify(|pref| pref.sort_unspecified_tasks_at_bottom = sort_unspecified_tasks_at_bottom);
+				PreferenceAction::RefreshCachedTaskList
 			}
 		}
 	}
@@ -356,6 +381,15 @@ impl Preferences {
 					.into())
 					.size(27.5)
 			),
+			Self::setting_item(
+				"Sort unspecified tasks at the bottom",
+				toggler(self.sort_unspecified_tasks_at_bottom)
+					.on_toggle(|sort_unspecified_tasks_at_bottom| PreferenceMessage::SetSortUnspecifiedTasksAtBottom(
+						sort_unspecified_tasks_at_bottom
+					)
+					.into())
+					.size(27.5)
+			),
 			horizontal_seperator_padded(),
 			Self::setting_item(
 				container("Preferences file location:").padding(HORIZONTAL_SCROLLABLE_PADDING),
@@ -415,6 +449,7 @@ pub trait OptionalPreference {
 	fn show_sidebar(&self) -> bool;
 	fn date_formatting(&self) -> DateFormatting;
 	fn create_new_tasks_at_top(&self) -> bool;
+	fn sort_unspecified_tasks_at_bottom(&self) -> bool;
 }
 
 impl OptionalPreference for Option<Preferences> {
@@ -440,6 +475,14 @@ impl OptionalPreference for Option<Preferences> {
 		}
 		else {
 			default_create_new_tasks_at_top()
+		}
+	}
+	fn sort_unspecified_tasks_at_bottom(&self) -> bool {
+		if let Some(preferences) = self {
+			preferences.sort_unspecified_tasks_at_bottom
+		}
+		else {
+			default_sort_unspecified_tasks_at_bottom()
 		}
 	}
 }

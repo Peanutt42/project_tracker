@@ -1,19 +1,18 @@
 use crate::{
 	components::{date_text, duration_text},
 	core::{
-		DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, TaskId,
-		TaskTag, TaskTagId,
+		DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId
 	}, icons::{icon_to_text, Bootstrap}, modals::{
 		ConfirmModalMessage, CreateTaskModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage
 	}, pages::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
 		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
 	}, project_tracker::Message, styles::{
-		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, finish_editing_task_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, BLUR_RADIUS, BORDER_RADIUS, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, finish_editing_task_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
-	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, row, text, tooltip, Button}, Alignment, Color, Element, Length::{self, Fill}, Shadow
+	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, row, text, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}
 };
 use iced_aw::{drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
 use std::{borrow::Cow, path::PathBuf, time::Duration};
@@ -112,17 +111,7 @@ pub fn project_context_menu_button(opened: bool) -> Element<'static, Message> {
 			]
 			.width(Length::Fixed(150.0))
 		)
-		.style(|theme| -> container::Style {
-			container::Style {
-				text_color: None,
-				background: Some(theme.extended_palette().background.base.color.into()),
-				border: rounded(BORDER_RADIUS),
-				shadow: Shadow {
-					blur_radius: BLUR_RADIUS,
-					..Default::default()
-				}
-			}
-		}),
+		.style(dropdown_container_style),
 
 		opened
 	)
@@ -770,5 +759,59 @@ pub fn open_link_button(url: String) -> Element<'static, Message> {
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
+	.into()
+}
+
+pub fn sort_dropdown_button(opened: bool, sort_mode: SortMode) -> Element<'static, Message> {
+	DropDown::new(
+		button(
+			row![
+				icon_to_text(if opened {
+					Bootstrap::CaretDownFill
+				} else {
+					Bootstrap::CaretRightFill
+				})
+				.size(ICON_FONT_SIZE),
+				text("Sort:"),
+				icon_to_text(sort_mode.icon()).size(ICON_FONT_SIZE),
+				text(sort_mode.as_str()),
+			]
+			.spacing(SMALL_SPACING_AMOUNT)
+			.align_y(Vertical::Center)
+		)
+		.on_press(if opened {
+			ProjectPageMessage::CloseSortModeDropdown.into()
+		}
+		else {
+			ProjectPageMessage::OpenSortModeDropdown.into()
+		})
+		.style(secondary_button_style_default),
+
+		container(
+			Column::with_children(SortMode::ALL.iter().enumerate().map(|(i, mode)| {
+				icon_label_button(
+					mode.as_str(),
+					mode.icon()
+				)
+				.width(Fill)
+				.style(move |t, s| enum_dropdown_button_style(
+					t,
+					s,
+					sort_mode == *mode,
+					i == 0,
+					i == SortMode::ALL.len() - 1
+				))
+				.on_press(ProjectPageMessage::SetSortMode(*mode).into())
+				.into()
+			}))
+		)
+		.style(dropdown_container_style),
+
+		opened
+	)
+	.width(Fixed(140.0))
+	.alignment(drop_down::Alignment::Bottom)
+	.offset(0.0)
+	.on_dismiss(ProjectPageMessage::CloseSortModeDropdown.into())
 	.into()
 }

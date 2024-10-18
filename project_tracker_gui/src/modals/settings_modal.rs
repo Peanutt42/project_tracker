@@ -1,4 +1,4 @@
-use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceMessage, Preferences};
+use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceAction, PreferenceMessage, Preferences};
 use crate::icons::Bootstrap;
 use crate::project_tracker::{ProjectTrackerApp, Message};
 use crate::styles::{
@@ -268,17 +268,17 @@ impl SettingsModal {
 		&mut self,
 		message: SettingsModalMessage,
 		preferences: &mut Option<Preferences>,
-	) -> Task<Message> {
+	) -> PreferenceAction {
 		match message {
 			SettingsModalMessage::Open => {
 				*self = SettingsModal::Opened {
 					selected_tab: SettingTab::default(),
 				};
-				Task::none()
+				PreferenceAction::None
 			}
 			SettingsModalMessage::Close => {
 				*self = SettingsModal::Closed;
-				Task::none()
+				PreferenceAction::None
 			}
 
 			SettingsModalMessage::BrowseSynchronizationFilepath => {
@@ -288,8 +288,9 @@ impl SettingsModal {
 					}
 					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
 				})
+				.into()
 			}
-			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => Task::none(),
+			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => PreferenceAction::None,
 
 			SettingsModalMessage::ImportGoogleTasksFileDialog => {
 				Task::perform(import_google_tasks_dialog(), move |result| {
@@ -308,14 +309,15 @@ impl SettingsModal {
 						None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
 					}
 				})
+				.into()
 			}
-			SettingsModalMessage::ImportGoogleTasksFileDialogCanceled => Task::none(),
+			SettingsModalMessage::ImportGoogleTasksFileDialogCanceled => PreferenceAction::None,
 
 			SettingsModalMessage::SetDateFormatting(date_formatting) => {
 				if let Some(preferences) = preferences {
 					preferences.update(PreferenceMessage::SetDateFormatting(date_formatting))
 				} else {
-					Task::none()
+					PreferenceAction::None
 				}
 			}
 
@@ -323,7 +325,7 @@ impl SettingsModal {
 				if let SettingsModal::Opened { selected_tab } = self {
 					*selected_tab = new_tab;
 				}
-				Task::none()
+				PreferenceAction::None
 			}
 		}
 	}

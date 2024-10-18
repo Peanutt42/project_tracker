@@ -2,7 +2,7 @@ use crate::core::TaskTagId;
 use iced::{widget::{container::Id, markdown}, advanced::widget};
 use iced_aw::date_picker::Date;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::{cmp::Ordering, collections::HashSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
 pub struct TaskId(pub usize);
@@ -125,6 +125,28 @@ pub struct SerializableDate {
 	pub month: u32,
 	pub day: u32,
 }
+
+impl PartialOrd for SerializableDate {
+	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+// 2024.cmp(2025) -> Less
+impl Ord for SerializableDate {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+		match self.year.cmp(&other.year) {
+			Ordering::Equal => {
+				match self.month.cmp(&other.month) {
+					Ordering::Equal => self.day.cmp(&other.day),
+					other => other,
+				}
+			},
+			other => other
+		}
+	}
+}
+
 
 impl From<SerializableDate> for Date {
 	fn from(value: SerializableDate) -> Self {

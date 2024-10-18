@@ -1,8 +1,8 @@
 use crate::{
 	components::{
-		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button, horizontal_scrollable, open_create_task_modal_button, project_context_menu_button, search_tasks_button, task_list, task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING
+		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button, horizontal_scrollable, open_create_task_modal_button, project_context_menu_button, search_tasks_button, sort_dropdown_button, task_list, task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING
 	}, core::{
-		Database, DatabaseMessage, Project, ProjectId, Task, TaskId, TaskTagId
+		Database, DatabaseMessage, OptionalPreference, Preferences, Project, ProjectId, SortMode, Task, TaskId, TaskTagId
 	}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, project_tracker::{Message, ProjectTrackerApp}, styles::{
 		text_input_style_borderless, text_input_style_only_round_left, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE
 	}
@@ -35,6 +35,10 @@ static SEARCH_TASKS_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::
 #[derive(Clone, Debug)]
 pub enum ProjectPageMessage {
 	RefreshCachedTaskList,
+
+	OpenSortModeDropdown,
+	CloseSortModeDropdown,
+	SetSortMode(SortMode),
 
 	ShowContextMenu,
 	HideContextMenu,
@@ -97,6 +101,7 @@ impl CachedTaskList {
 		project: &Project,
 		task_tag_filter: &HashSet<TaskTagId>,
 		search_filter: &Option<String>,
+		sort_unspecified_tasks_at_bottom: bool
 	) -> Self {
 		let matches = |task: &Task| {
 			task.matches_filter(task_tag_filter)
@@ -128,6 +133,11 @@ impl CachedTaskList {
 				source_code_todo_list.push(*task_id);
 			}
 		}
+
+		project.sort_mode.sort(project, &mut todo_list, sort_unspecified_tasks_at_bottom);
+		project.sort_mode.sort(project, &mut done_list, sort_unspecified_tasks_at_bottom);
+		project.sort_mode.sort(project, &mut source_code_todo_list, sort_unspecified_tasks_at_bottom);
+
 		Self::new(todo_list, done_list, source_code_todo_list)
 	}
 }
@@ -170,11 +180,12 @@ pub struct ProjectPage {
 	progressbar_animation: ScalarAnimation,
 	previous_project_progress: f32,
 	show_context_menu: bool,
+	show_sort_mode_dropdown: bool,
 }
 
 impl ProjectPage {
-	pub fn new(project_id: ProjectId, project: &Project) -> Self {
-		let cached_task_list = CachedTaskList::generate(project, &HashSet::new(), &None);
+	pub fn new(project_id: ProjectId, project: &Project, preferences: &Option<Preferences>) -> Self {
+		let cached_task_list = CachedTaskList::generate(project, &HashSet::new(), &None, preferences.sort_unspecified_tasks_at_bottom());
 
 		Self {
 			project_id,
@@ -191,16 +202,33 @@ impl ProjectPage {
 			progressbar_animation: ScalarAnimation::Idle,
 			previous_project_progress: project.get_completion_percentage(),
 			show_context_menu: false,
+			show_sort_mode_dropdown: false,
 		}
 	}
 
 	pub fn update(
 		&mut self,
 		message: ProjectPageMessage,
-		database: &mut Option<Database>
+		database: &mut Option<Database>,
+		preferences: &Option<Preferences>
 	) -> ProjectPageAction {
 		let command = match message {
 			ProjectPageMessage::RefreshCachedTaskList => ProjectPageAction::None,
+
+			ProjectPageMessage::OpenSortModeDropdown => { self.show_sort_mode_dropdown = true; ProjectPageAction::None },
+			ProjectPageMessage::CloseSortModeDropdown => { self.show_sort_mode_dropdown = false; ProjectPageAction::None },
+			ProjectPageMessage::SetSortMode(new_sort_mode) => {
+				if let Some(database) = database {
+					database.modify(|projects| {
+						if let Some(project) = projects.get_mut(&self.project_id) {
+							project.sort_mode = new_sort_mode;
+						}
+					});
+					self.generate_cached_task_list(database, preferences);
+					self.show_sort_mode_dropdown = false;
+				}
+				ProjectPageAction::None
+			}
 
 			ProjectPageMessage::ShowContextMenu => { self.show_context_menu = true; ProjectPageAction::None },
 			ProjectPageMessage::HideContextMenu => { self.show_context_menu = false; ProjectPageAction::None },
@@ -209,21 +237,21 @@ impl ProjectPage {
 			ProjectPageMessage::OpenSearchTasks => {
 				self.search_tasks_filter = Some(String::new());
 				if let Some(database) = database {
-					self.generate_cached_task_list(database);
+					self.generate_cached_task_list(database, preferences);
 				}
 				text_input::focus(SEARCH_TASKS_TEXT_INPUT_ID.clone()).into()
 			}
 			ProjectPageMessage::CloseSearchTasks => {
 				self.search_tasks_filter = None;
 				if let Some(database) = database {
-					self.generate_cached_task_list(database);
+					self.generate_cached_task_list(database, preferences);
 				}
 				ProjectPageAction::None
 			}
 			ProjectPageMessage::ChangeSearchTasksFilter(new_filter) => {
 				self.search_tasks_filter = Some(new_filter);
 				if let Some(database) = database {
-					self.generate_cached_task_list(database);
+					self.generate_cached_task_list(database, preferences);
 				}
 				ProjectPageAction::None
 			}
@@ -271,14 +299,14 @@ impl ProjectPage {
 					self.filter_task_tags.insert(task_tag_id);
 				}
 				if let Some(database) = database {
-					self.generate_cached_task_list(database);
+					self.generate_cached_task_list(database, preferences);
 				}
 				ProjectPageAction::None
 			}
 			ProjectPageMessage::UnsetFilterTaskTag(task_tag_id) => {
 				self.filter_task_tags.remove(&task_tag_id);
 				if let Some(database) = database {
-					self.generate_cached_task_list(database);
+					self.generate_cached_task_list(database, preferences);
 				}
 				ProjectPageAction::None
 			}
@@ -368,7 +396,7 @@ impl ProjectPage {
 
 		if let Some(database_ref) = database {
 			if self.cached_task_list.cache_time < *database_ref.last_changed_time() {
-				self.generate_cached_task_list(database_ref);
+				self.generate_cached_task_list(database_ref, preferences);
 			}
 
 			if let Some(project) = database_ref.get_project(&self.project_id) {
@@ -529,6 +557,10 @@ impl ProjectPage {
 				container("Tags:").padding(HORIZONTAL_SCROLLABLE_PADDING),
 				horizontal_scrollable(Row::with_children(task_tags_list).spacing(SPACING_AMOUNT))
 					.width(Fill),
+				container(
+					sort_dropdown_button(self.show_sort_mode_dropdown, project.sort_mode)
+				)
+				.padding(HORIZONTAL_SCROLLABLE_PADDING),
 			]
 			.spacing(SPACING_AMOUNT)
 			.align_y(Alignment::Center),
@@ -567,10 +599,14 @@ impl ProjectPage {
 			ScalarAnimation::start(start_percentage, target_percentage, 0.125);
 	}
 
-	fn generate_cached_task_list(&mut self, database: &Database) {
+	pub fn generate_cached_task_list(&mut self, database: &Database, preferences: &Option<Preferences>) {
 		if let Some(project) = database.get_project(&self.project_id) {
-			self.cached_task_list =
-				CachedTaskList::generate(project, &self.filter_task_tags, &self.search_tasks_filter)
+			self.cached_task_list = CachedTaskList::generate(
+				project,
+				&self.filter_task_tags,
+				&self.search_tasks_filter,
+				preferences.sort_unspecified_tasks_at_bottom()
+			);
 		}
 	}
 

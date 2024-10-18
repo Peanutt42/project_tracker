@@ -3,7 +3,7 @@ use crate::{
 		toggle_sidebar_button, vertical_seperator,
 		ScalarAnimation, ICON_BUTTON_WIDTH,
 	}, core::{
-		Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, OptionalPreference, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId
+		Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId
 	}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
 	}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
@@ -282,7 +282,8 @@ impl ProjectTrackerApp {
 				}
 				if let Some(preferences) = &mut self.preferences {
 					if preferences.has_unsaved_changes() {
-						commands.push(preferences.update(PreferenceMessage::Save));
+						let action = preferences.update(PreferenceMessage::Save);
+						commands.push(self.perform_preference_action(action));
 					}
 				}
 				Task::batch(commands)
@@ -542,11 +543,12 @@ impl ProjectTrackerApp {
 				}
 			}
 			Message::PreferenceMessage(preference_message) => {
-				if let Some(preferences) = &mut self.preferences {
+				let action = if let Some(preferences) = &mut self.preferences {
 					preferences.update(preference_message)
 				} else {
-					Task::none()
-				}
+					PreferenceAction::None
+				};
+				self.perform_preference_action(action)
 			}
 			Message::OpenStopwatch => self.update(Message::SelectProject(None)),
 			Message::StopwatchPageMessage(message) => {
@@ -577,7 +579,7 @@ impl ProjectTrackerApp {
 					None
 				};
 				if let Some((project_id, project)) = open_project_info {
-					self.project_page = Some(ProjectPage::new(project_id, project));
+					self.project_page = Some(ProjectPage::new(project_id, project, &self.preferences));
 					self.update(
 						PreferenceMessage::SetContentPage(SerializedContentPage::Project(
 							project_id,
@@ -674,7 +676,8 @@ impl ProjectTrackerApp {
 						.map(|project_page| {
 							project_page.update(
 								ProjectPageMessage::DragTask { task_id, point },
-								&mut self.database
+								&mut self.database,
+								&self.preferences
 							)
 						})
 						.map(|action| self.perform_project_page_action(action))
@@ -708,7 +711,8 @@ impl ProjectTrackerApp {
 						.map(|project_page| {
 							project_page.update(
 								ProjectPageMessage::CancelDragTask,
-								&mut self.database
+								&mut self.database,
+								&self.preferences
 							)
 						})
 						.map(|action| self.perform_project_page_action(action))
@@ -729,7 +733,7 @@ impl ProjectTrackerApp {
 			}
 			Message::ProjectPageMessage(message) => match &mut self.project_page {
 				Some(project_page) => {
-					let action = project_page.update(message, &mut self.database);
+					let action = project_page.update(message, &mut self.database, &self.preferences);
 					self.perform_project_page_action(action)
 				},
 				None => Task::none(),
@@ -765,8 +769,9 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::SettingsModalMessage(message) => {
-				self.settings_modal.update(message, &mut self.preferences)
-			}
+				let action = self.settings_modal.update(message, &mut self.preferences);
+				self.perform_preference_action(action)
+			},
 			Message::ManageTaskTagsModalMessage(message) => {
 				let deleted_task_tag_id =
 					if let ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) = &message {
@@ -782,7 +787,8 @@ impl ProjectTrackerApp {
 							let action = self.project_page.as_mut().map(|project_page| {
 								project_page.update(
 									ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id),
-									&mut self.database
+									&mut self.database,
+									&self.preferences
 								)
 							});
 							action.map(|action| self.perform_project_page_action(action))
@@ -833,6 +839,21 @@ impl ProjectTrackerApp {
 				project_id,
 				task_id
 			}.into()),
+		}
+	}
+
+	fn perform_preference_action(&mut self, action: PreferenceAction) -> Task<Message> {
+		match action {
+			PreferenceAction::None => Task::none(),
+			PreferenceAction::Task(task) => task,
+			PreferenceAction::RefreshCachedTaskList => {
+				if let Some(project_page) = &mut self.project_page {
+					if let Some(database) = &self.database {
+						project_page.generate_cached_task_list(database, &self.preferences);
+					}
+				}
+				Task::none()
+			},
 		}
 	}
 

@@ -7,7 +7,7 @@ use chrono::{DateTime, Datelike};
 use iced::Color;
 use serde::{Deserialize, Serialize};
 
-use crate::core::{OrderedHashMap, Project, SerializableDate, Task, TaskId};
+use crate::core::{OrderedHashMap, Project, SerializableDate, SortMode, Task, TaskId};
 
 #[derive(Debug)]
 pub enum ImportGoogleTasksError {
@@ -61,7 +61,7 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 		.items
 		.into_iter()
 		.map(|google_tasks_list| {
-			let mut project = Project::new(google_tasks_list.title, Color::WHITE.into(), OrderedHashMap::new());
+			let mut project = Project::new(google_tasks_list.title, Color::WHITE.into(), OrderedHashMap::new(), SortMode::default());
 
 			for google_tasks_task in google_tasks_list.items {
 				let is_todo = google_tasks_task

@@ -4,7 +4,7 @@ use crate::styles::{
 };
 use iced::{border::rounded, widget::container::Style, Border, Color, Shadow, Theme, Vector};
 
-use super::link_color;
+use super::{link_color, LARGE_BLUR_RADIUS};
 
 pub fn rounded_container_style(theme: &Theme) -> Style {
 	Style {
@@ -28,6 +28,26 @@ pub fn tooltip_container_style(theme: &Theme) -> Style {
 				..background_shadow_color(theme.extended_palette())
 			},
 			blur_radius: BLUR_RADIUS,
+			..Default::default()
+		},
+		..Default::default()
+	}
+}
+
+pub fn dropdown_container_style(theme: &Theme) -> Style {
+	Style {
+		background: None,
+		border: rounded(BORDER_RADIUS),
+		shadow: Shadow {
+			color: Color {
+				a: if theme.extended_palette().is_dark {
+					0.5
+				} else {
+					1.0
+				},
+				..background_shadow_color(theme.extended_palette())
+			},
+			blur_radius: LARGE_BLUR_RADIUS,
 			..Default::default()
 		},
 		..Default::default()

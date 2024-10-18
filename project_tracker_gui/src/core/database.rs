@@ -1,5 +1,5 @@
 use crate::core::{
-	OrderedHashMap, Project, ProjectId, SerializableColor, SerializableDate, Task, TaskId, TaskTag,
+	OrderedHashMap, Project, ProjectId, SortMode, SerializableColor, SerializableDate, Task, TaskId, TaskTag,
 	TaskTagId, TaskType,
 };
 use crate::project_tracker::Message;
@@ -225,7 +225,7 @@ impl Database {
 				name,
 				color,
 			} => self.modify(|projects| {
-				projects.insert(project_id, Project::new(name, color, OrderedHashMap::new()));
+				projects.insert(project_id, Project::new(name, color, OrderedHashMap::new(), SortMode::default()));
 			}),
 			DatabaseMessage::ChangeProjectName {
 				project_id,

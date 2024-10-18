@@ -394,6 +394,47 @@ pub fn selection_list_button_style(
 	}
 }
 
+pub fn enum_dropdown_button_style(
+	theme: &Theme,
+	status: Status,
+	selected: bool,
+	round_top: bool,
+	round_bottom: bool,
+) -> Style {
+	let active_style = Style {
+		background: Some(if selected {
+			theme.extended_palette().primary.strong.color.into()
+		} else {
+			theme.extended_palette().secondary.base.color.into()
+		}),
+		border: rounded(
+			Radius::default()
+				.top(if round_top { BORDER_RADIUS } else { 0.0 })
+				.bottom(if round_bottom { BORDER_RADIUS } else { 0.0 }),
+		),
+		text_color: if selected {
+			theme.extended_palette().primary.base.text
+		} else {
+			theme.extended_palette().secondary.base.text
+		},
+		..Default::default()
+	};
+
+	match status {
+		Status::Active => active_style,
+		Status::Hovered => Style {
+			background: Some(if selected {
+				theme.extended_palette().primary.strong.color.into()
+			} else {
+				theme.extended_palette().background.strong.color.into()
+			}),
+			..active_style
+		},
+		Status::Pressed => active_style,
+		Status::Disabled => active_style, // No disabled state defined
+	}
+}
+
 pub fn task_tag_button_style(
 	theme: &Theme,
 	status: Status,

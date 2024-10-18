@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use project_tracker_gui::core::{Database, LoadDatabaseResult, OrderedHashMap, Project, ProjectId, Task};
+use project_tracker_gui::core::{Database, LoadDatabaseResult, OrderedHashMap, Project, ProjectId, SortMode, Task};
 
 
 
@@ -30,7 +30,7 @@ async fn main() {
 				};
 
 				for (project_id, project) in db.projects().iter() {
-					let mut migrated_project = Project::new(project.name.clone(), project.color, project.task_tags.clone());
+					let mut migrated_project = Project::new(project.name.clone(), project.color, project.task_tags.clone(), SortMode::default());
 
 					for (task_id, task) in project.todo_tasks.iter() {
 						migrated_project.todo_tasks.insert(task_id, migrate_task(task));
