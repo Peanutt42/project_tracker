@@ -25,7 +25,7 @@ use std::{
 	collections::HashSet,
 	fs::File,
 	io::{self, BufRead},
-	time::Instant,
+	time::SystemTime,
 };
 use walkdir::WalkDir;
 
@@ -84,7 +84,7 @@ pub struct CachedTaskList {
 	pub todo: Vec<TaskId>,
 	pub done: Vec<TaskId>,
 	pub source_code_todo: Vec<TaskId>,
-	cache_time: Instant,
+	cache_time: SystemTime,
 }
 
 impl CachedTaskList {
@@ -93,7 +93,7 @@ impl CachedTaskList {
 			todo,
 			done,
 			source_code_todo,
-			cache_time: Instant::now(),
+			cache_time: SystemTime::now(),
 		}
 	}
 

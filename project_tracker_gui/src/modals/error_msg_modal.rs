@@ -1,7 +1,5 @@
 use crate::{
-	components::copy_to_clipboard_button,
-	project_tracker::Message,
-	styles::{card_style, dangerous_button_style},
+	components::copy_to_clipboard_button, project_tracker::Message, styles::{card_style, dangerous_button_style}
 };
 use iced::{
 	alignment::Horizontal,
@@ -10,6 +8,7 @@ use iced::{
 	Length::Fill,
 };
 use iced_aw::card;
+use project_tracker_server::ServerError;
 
 pub enum ErrorMsgModal {
 	Open { error_msg: String },
@@ -31,6 +30,22 @@ impl ErrorMsgModalMessage {
 impl From<ErrorMsgModalMessage> for Message {
 	fn from(value: ErrorMsgModalMessage) -> Self {
 		Message::ErrorMsgModalMessage(value)
+	}
+}
+
+impl From<ServerError> for Message {
+	fn from(value: ServerError) -> Self {
+		match value {
+			ServerError::ConnectionError(io_error) => {
+				ErrorMsgModalMessage::open(format!("Failed to sync with server\nConnection error: {io_error}"))
+			},
+			ServerError::ParseError(parse_error) => {
+				ErrorMsgModalMessage::open(format!("Failed to parse server response\nParse error: {parse_error}"))
+			},
+			ServerError::InvalidResponse => {
+				ErrorMsgModalMessage::open("Invalid server response".to_string())
+			}
+		}
 	}
 }
 

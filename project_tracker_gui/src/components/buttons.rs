@@ -1,8 +1,7 @@
 use crate::{
-	components::{date_text, duration_text},
-	core::{
+	components::{date_text, duration_text}, core::{
 		DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId
-	}, icons::{icon_to_text, Bootstrap}, modals::{
+	}, icons::{icon_to_text, Bootstrap}, integrations::ServerConfig, modals::{
 		ConfirmModalMessage, CreateTaskModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage
 	}, pages::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
@@ -442,6 +441,30 @@ pub fn sync_database_button(
 	.on_press_maybe(synchronization_filepath.map(Message::SyncDatabase))
 	.style(dangerous_button_style)
 	.into()
+}
+
+pub fn sync_database_from_server_button(downloading: bool, config: &Option<ServerConfig>) -> Button<'static, Message> {
+	button(
+		row![
+			if downloading {
+				Element::new(
+					Spinner::new()
+						.width(Length::Fixed(16.0))
+						.height(Length::Fixed(16.0))
+						.circle_radius(2.0),
+				)
+			} else {
+				icon_to_text(Bootstrap::ArrowClockwise)
+					.align_y(Vertical::Center)
+					.into()
+			},
+			text("Sync")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_y(Alignment::Center)
+	)
+	.on_press_maybe(config.as_ref().map(|_config| Message::SyncDatabaseFromServer))
+	.style(dangerous_button_style)
 }
 
 pub fn task_tag_button<Message>(

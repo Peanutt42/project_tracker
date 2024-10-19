@@ -1,4 +1,5 @@
 use crate::icons::Bootstrap;
+use crate::integrations::ServerConfig;
 use crate::{
 	components::{
 		dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded,
@@ -46,6 +47,8 @@ pub struct Preferences {
 
 	synchronization_filepath: Option<PathBuf>,
 
+	server_synchronization: Option<ServerConfig>,
+
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
 
@@ -64,6 +67,7 @@ impl Default for Preferences {
 			selected_content_page: SerializedContentPage::default(),
 			stopwatch_progress: None,
 			synchronization_filepath: None,
+			server_synchronization: None,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
@@ -135,6 +139,12 @@ impl Preferences {
 
 	pub fn synchronization_filepath(&self) -> &Option<PathBuf> {
 		&self.synchronization_filepath
+	}
+	pub fn server_synchronization(&self) -> &Option<ServerConfig> {
+		&self.server_synchronization
+	}
+	pub fn set_server_synchronization(&mut self, config: Option<ServerConfig>) {
+		self.modify(|pref| pref.server_synchronization = config);
 	}
 	pub fn theme_mode(&self) -> &ThemeMode {
 		&self.theme_mode
@@ -450,6 +460,7 @@ pub trait OptionalPreference {
 	fn date_formatting(&self) -> DateFormatting;
 	fn create_new_tasks_at_top(&self) -> bool;
 	fn sort_unspecified_tasks_at_bottom(&self) -> bool;
+	fn server_synchronization(&self) -> Option<&ServerConfig>;
 }
 
 impl OptionalPreference for Option<Preferences> {
@@ -483,6 +494,14 @@ impl OptionalPreference for Option<Preferences> {
 		}
 		else {
 			default_sort_unspecified_tasks_at_bottom()
+		}
+	}
+	fn server_synchronization(&self) -> Option<&ServerConfig> {
+		if let Some(preferences) = self {
+			preferences.server_synchronization.as_ref()
+		}
+		else {
+			None
 		}
 	}
 }

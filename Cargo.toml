@@ -5,7 +5,11 @@ edition = "2021"
 repository = "https://github.com/Peanutt42/project_tracker"
 
 [workspace]
-members = ["project_tracker_gui", "iced_drop"]
+members = [
+	"project_tracker_gui",
+	"project_tracker_server",
+	"iced_drop"
+]
 
 [dependencies]
 project_tracker_gui = { path = "project_tracker_gui" }
@@ -17,6 +21,11 @@ image = "0.24"
 [workspace.dependencies]
 iced = { version = "0.13.1", features = ["image", "tokio", "canvas", "advanced", "lazy", "markdown", "highlighter"] }
 iced_aw = { version = "0.11", default-features = false, features = ["spinner", "card", "quad", "date_picker", "drop_down"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4.38", features = ["serde"] }
+filetime = "0.2"
+thiserror = "1.0"
 
 [build-dependencies]
 winresource = "0.1.17"

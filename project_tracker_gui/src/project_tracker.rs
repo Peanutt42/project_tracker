@@ -4,7 +4,7 @@ use crate::{
 		ScalarAnimation, ICON_BUTTON_WIDTH,
 	}, core::{
 		Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId
-	}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
+	}, integrations::{download_database_from_server, sync_database_from_server, upload_database_to_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
 	}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -21,7 +21,7 @@ use iced::{
 	Padding, Point, Rectangle, Subscription, Task, Theme,
 };
 use std::{
-	path::PathBuf, rc::Rc, time::{Duration, Instant}
+	path::PathBuf, rc::Rc, time::{Duration, SystemTime}
 };
 
 pub struct ProjectTrackerApp {
@@ -33,6 +33,7 @@ pub struct ProjectTrackerApp {
 	pub importing_database: bool,
 	pub exporting_database: bool,
 	pub syncing_database: bool,
+	pub syncing_database_from_server: bool,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
 	pub error_msg_modal: ErrorMsgModal,
@@ -62,7 +63,7 @@ pub enum Message {
 	ConfirmModalConfirmed(Box<Message>),
 	ErrorMsgModalMessage(ErrorMsgModalMessage),
 	SaveDatabase,
-	DatabaseSaved(Instant), // begin_time since saving
+	DatabaseSaved(SystemTime), // begin_time since saving
 	ExportDatabase(PathBuf),
 	ExportDatabaseDialog,
 	ExportDatabaseFailed(String),
@@ -77,6 +78,10 @@ pub enum Message {
 	SyncDatabaseFailed(String), // error_msg
 	LoadedDatabase(LoadDatabaseResult),
 	LoadedPreferences(LoadPreferencesResult),
+	SyncDatabaseFromServer,
+	DownloadDatabaseFromServer,
+	UploadDatabaseToServer,
+	DatabaseUploadedToServer,
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
 	SelectProject(Option<ProjectId>),
@@ -139,6 +144,7 @@ impl ProjectTrackerApp {
 				importing_database: false,
 				exporting_database: false,
 				syncing_database: false,
+				syncing_database_from_server: false,
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
 				error_msg_modal: ErrorMsgModal::Closed,
@@ -413,6 +419,7 @@ impl ProjectTrackerApp {
 						self.database = Some(database);
 						self.importing_database = false;
 						self.syncing_database = false;
+						self.syncing_database_from_server = false;
 						let task = if let Some(preferences) = &self.preferences {
 							let stopwatch_progress_message: Option<Message> =
 								preferences.stopwatch_progress().as_ref().map(|progress| {
@@ -492,7 +499,7 @@ impl ProjectTrackerApp {
 							self.update(Message::SaveDatabase),
 							self.show_error_msg(format!("Parsing Error:\nFailed to load previous projects in\n\"{}\"\n\nOld corrupted database saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
 						])
-					}
+					},
 				}
 			}
 			Message::LoadedPreferences(load_preferences_result) => {
@@ -525,7 +532,61 @@ impl ProjectTrackerApp {
 						])
 					}
 				}
-			}
+			},
+			Message::SyncDatabaseFromServer => {
+				if let Some(server_config) = self.preferences.server_synchronization().cloned() {
+					if let Some(database) = &self.database {
+						self.syncing_database_from_server = true;
+
+						return Task::perform(
+							sync_database_from_server(
+								server_config,
+								(*database.last_changed_time()).into()
+							),
+							|result| match result {
+								Ok(sync_response) => match sync_response {
+									SyncServerDatabaseResponse::DownloadDatabase => Message::DownloadDatabaseFromServer,
+									SyncServerDatabaseResponse::UploadDatabase => Message::UploadDatabaseToServer,
+								},
+								Err(e) => e.into(),
+							}
+						);
+					}
+				}
+				Task::none()
+			},
+			Message::DownloadDatabaseFromServer => {
+				if let Some(server_config) = self.preferences.server_synchronization().cloned() {
+					Task::perform(
+						download_database_from_server(server_config),
+						|result| match result {
+							Ok(database) => Message::LoadedDatabase(LoadDatabaseResult::Ok(database)),
+							Err(e) => e.into(),
+						}
+					)
+				}
+				else {
+					Task::none()
+				}
+			},
+			Message::UploadDatabaseToServer => {
+				if let Some(database) = &self.database {
+					if let Some(server_config) = self.preferences.server_synchronization().cloned() {
+						return Task::perform(
+							upload_database_to_server(server_config, database.to_json()),
+							|result| match result {
+								Ok(_) => Message::DatabaseUploadedToServer,
+								Err(e) => e.into(),
+							}
+						);
+					}
+				}
+				Task::none()
+			},
+			Message::DatabaseUploadedToServer => {
+				self.syncing_database_from_server = false;
+				Task::none()
+			},
 			Message::DatabaseMessage(database_message) => {
 				if let Some(database) = &mut self.database {
 					database.update(database_message.clone());

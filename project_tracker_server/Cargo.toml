@@ -1,0 +1,11 @@
+[package]
+name = "project_tracker_server"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/Peanutt42/project_tracker"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+filetime = { workspace = true }
+thiserror = { workspace = true }

@@ -6,17 +6,17 @@ use crate::project_tracker::Message;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::SystemTime;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Database {
 	projects: OrderedHashMap<ProjectId, Project>,
 
-	#[serde(skip, default = "Instant::now")]
-	last_changed_time: Instant,
+	#[serde(skip, default = "SystemTime::now")]
+	last_changed_time: SystemTime,
 
-	#[serde(skip, default = "Instant::now")]
-	pub last_saved_time: Instant,
+	#[serde(skip, default = "SystemTime::now")]
+	pub last_saved_time: SystemTime,
 }
 
 #[derive(Clone, Debug)]
@@ -152,8 +152,8 @@ impl Database {
 	pub fn new(projects: OrderedHashMap<ProjectId, Project>) -> Self {
 		Self {
 			projects,
-			last_changed_time: Instant::now(),
-			last_saved_time: Instant::now(),
+			last_changed_time: SystemTime::now(),
+			last_saved_time: SystemTime::now(),
 		}
 	}
 
@@ -171,7 +171,7 @@ impl Database {
 			.and_then(|project| project.get_task(task_id))
 	}
 
-	pub fn last_changed_time(&self) -> &Instant {
+	pub fn last_changed_time(&self) -> &SystemTime {
 		&self.last_changed_time
 	}
 
@@ -199,7 +199,7 @@ impl Database {
 	}
 
 	fn modified(&mut self) {
-		self.last_changed_time = Instant::now();
+		self.last_changed_time = SystemTime::now();
 	}
 
 	pub fn has_unsaved_changes(&self) -> bool {
@@ -504,8 +504,8 @@ impl Database {
 	}
 
 	// returns begin time of saving
-	pub async fn save(json: String) -> Result<Instant, String> {
-		let begin_time = Instant::now();
+	pub async fn save(json: String) -> Result<SystemTime, String> {
+		let begin_time = SystemTime::now();
 		Self::save_to(Self::get_and_ensure_filepath().await, json).await?;
 		Ok(begin_time)
 	}

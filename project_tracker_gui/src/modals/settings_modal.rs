@@ -1,9 +1,11 @@
+use std::str::FromStr;
+use crate::components::sync_database_from_server_button;
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceAction, PreferenceMessage, Preferences};
 use crate::icons::Bootstrap;
+use crate::integrations::ServerConfig;
 use crate::project_tracker::{ProjectTrackerApp, Message};
 use crate::styles::{
-	rounded_container_style, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING,
-	SMALL_SPACING_AMOUNT, SPACING_AMOUNT,
+	rounded_container_style, text_input_style_default, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SPACING_AMOUNT
 };
 use crate::{
 	components::{
@@ -18,6 +20,7 @@ use crate::{
 	styles::{card_style, GREY, PADDING_AMOUNT},
 };
 use iced::alignment::Vertical;
+use iced::widget::{text_input, toggler};
 use iced::{
 	alignment::Horizontal,
 	keyboard,
@@ -42,6 +45,12 @@ pub enum SettingsModalMessage {
 
 	ImportGoogleTasksFileDialog,
 	ImportGoogleTasksFileDialogCanceled,
+
+	EnableServerSynchronization,
+	DisableServerSynchronization,
+	SetServerHostname(String),
+	SetServerPort(usize),
+	InvalidPortInput,
 }
 
 impl From<SettingsModalMessage> for Message {
@@ -70,7 +79,7 @@ impl SettingTab {
 	fn view<'a>(
 		&'a self,
 		app: &'a ProjectTrackerApp,
-		preferences: &'a Preferences,
+		preferences: &'a Preferences
 	) -> Element<'a, Message> {
 		match self {
 			SettingTab::General => preferences.view(),
@@ -127,6 +136,81 @@ impl SettingTab {
 					)
 					.width(Fill)
 					.align_x(Horizontal::Right),
+
+					horizontal_seperator_padded(),
+
+					column![
+						row![
+							container("Server Synchronization: ")
+								.padding(HORIZONTAL_SCROLLABLE_PADDING),
+
+							container(
+								toggler(preferences.server_synchronization().is_some())
+									.size(27.5)
+									.on_toggle(|enable| if enable {
+										SettingsModalMessage::EnableServerSynchronization.into()
+									}
+									else {
+										SettingsModalMessage::DisableServerSynchronization.into()
+									})
+							)
+							.width(Fill)
+							.align_x(Horizontal::Right)
+						]
+						.spacing(SPACING_AMOUNT),
+
+						if let Some(server_config) = preferences.server_synchronization() {
+							row![
+								column![
+									row![
+										text("Hostname: "),
+										text_input("ex. 127.0.0.1 or raspberrypi.local", &server_config.hostname)
+											.on_input(|hostname| SettingsModalMessage::SetServerHostname(hostname).into())
+											.style(text_input_style_default),
+									]
+									.align_y(Vertical::Center),
+									row![
+										text("Port: "),
+										text_input("ex. 8080", &format!("{}", server_config.port))
+											.on_input(|input| {
+												let new_port = match usize::from_str(&input) {
+													Ok(new_port) => {
+														Some(new_port)
+													}
+													Err(_) => {
+														if input.is_empty() {
+															Some(8080)
+														} else {
+															None
+														}
+													}
+												};
+												match new_port {
+													Some(new_port) => SettingsModalMessage::SetServerPort(new_port).into(),
+													None => SettingsModalMessage::InvalidPortInput.into(),
+												}
+											})
+											.style(text_input_style_default),
+									]
+									.align_y(Vertical::Center),
+								]
+								.spacing(SPACING_AMOUNT),
+
+								container(
+									sync_database_from_server_button(app.syncing_database_from_server, preferences.server_synchronization())
+								)
+								.width(Fill)
+								.align_x(Horizontal::Right)
+							]
+							.padding(Padding::default().left(PADDING_AMOUNT))
+							.spacing(SPACING_AMOUNT)
+							.into()
+						}
+						else {
+							Element::new(Space::new(0.0, 0.0))
+						},
+					]
+					.spacing(SPACING_AMOUNT),
 
 					horizontal_seperator_padded(),
 
@@ -322,11 +406,50 @@ impl SettingsModal {
 			}
 
 			SettingsModalMessage::SwitchSettingsTab(new_tab) => {
-				if let SettingsModal::Opened { selected_tab } = self {
+				if let SettingsModal::Opened { selected_tab, .. } = self {
 					*selected_tab = new_tab;
 				}
 				PreferenceAction::None
-			}
+			},
+
+
+			SettingsModalMessage::EnableServerSynchronization => {
+				if let Some(preferences) = preferences {
+					if preferences.server_synchronization().is_none() {
+						preferences.set_server_synchronization(Some(ServerConfig::default()));
+					}
+				}
+				PreferenceAction::None
+			},
+			SettingsModalMessage::DisableServerSynchronization => {
+				if let Some(preferences) = preferences {
+					preferences.set_server_synchronization(None);
+				}
+				PreferenceAction::None
+			},
+			SettingsModalMessage::SetServerHostname(new_hostname) => {
+				if let Some(preferences) = preferences {
+					if let Some(config) = preferences.server_synchronization() {
+						preferences.set_server_synchronization(Some(ServerConfig {
+							hostname: new_hostname,
+							..*config
+						}));
+					}
+				}
+				PreferenceAction::None
+			},
+			SettingsModalMessage::SetServerPort(new_port) => {
+				if let Some(preferences) = preferences {
+					if let Some(config) = preferences.server_synchronization() {
+						preferences.set_server_synchronization(Some(ServerConfig {
+							port: new_port,
+							..config.clone()
+						}));
+					}
+				}
+				PreferenceAction::None
+			},
+			SettingsModalMessage::InvalidPortInput => PreferenceAction::None,
 		}
 	}
 
@@ -353,7 +476,7 @@ impl SettingsModal {
 					],
 				)
 				.max_width(900.0)
-				.max_height(475.0)
+				.max_height(550.0)
 				.close_size(LARGE_TEXT_SIZE)
 				.on_close(SettingsModalMessage::Close.into())
 				.style(card_style)

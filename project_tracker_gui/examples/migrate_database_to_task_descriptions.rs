@@ -70,7 +70,7 @@ async fn main() {
 			},
 			LoadDatabaseResult::FailedToParse(filepath) => {
 				eprintln!("failed to parse database in: {}", filepath.display());
-			}
+			},
 		}
 	}
 	else {
