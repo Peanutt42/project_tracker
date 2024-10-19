@@ -8,7 +8,7 @@ use iced::{
 	Font, Size,
 };
 use iced_fonts::REQUIRED_FONT_BYTES;
-use project_tracker_gui::{icons::BOOTSTRAP_FONT_BYTES, ProjectTrackerApp};
+use project_tracker::{icons::BOOTSTRAP_FONT_BYTES, ProjectTrackerApp};
 
 fn main() -> Result<(), iced::Error> {
 	iced::application(

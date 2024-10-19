@@ -13,7 +13,7 @@ use iced::{
 	event::Status,
 	keyboard, time,
 	widget::{
-		center, container, focus_next, focus_previous, mouse_area, opaque, responsive, row, stack,
+		center, container, mouse_area, opaque, responsive, row, stack,
 		Space, Stack,
 	},
 	window, Color, Element, Event,
@@ -53,8 +53,6 @@ pub enum Message {
 	EnterPressed,
 	CopyToClipboard(String),
 	OpenUrl(String),
-	FocusNext,
-	FocusPrevious,
 	SaveChangedFiles,
 	OpenFolderLocation(PathBuf),
 	SystemTheme {
@@ -183,17 +181,13 @@ impl ProjectTrackerApp {
 				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => {
 					Some(Message::DeleteSelectedProject)
 				},
-				keyboard::Key::Named(keyboard::key::Named::Tab) => Some(if modifiers.command() {
+				keyboard::Key::Named(keyboard::key::Named::Tab) if modifiers.command() => Some(
 					if modifiers.shift() {
 						Message::SwitchToUpperProject
 					} else {
 						Message::SwitchToLowerProject
 					}
-				} else if modifiers.shift() {
-					Message::FocusPrevious
-				} else {
-					Message::FocusNext
-				}),
+				),
 				_ => None,
 			}),
 			iced::event::listen_with(move |event, status, id| match event {
@@ -279,8 +273,6 @@ impl ProjectTrackerApp {
 				let _ = open::that_detached(url.as_str());
 				Task::none()
 			}
-			Message::FocusNext => focus_next(),
-			Message::FocusPrevious => focus_previous(),
 			Message::SaveChangedFiles => {
 				let mut commands = Vec::new();
 				if let Some(database) = &mut self.database {

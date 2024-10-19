@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use project_tracker_gui::core::{Database, LoadDatabaseResult, OrderedHashMap, Project, ProjectId, SortMode, Task};
+use project_tracker::core::{Database, LoadDatabaseResult, OrderedHashMap, Project, ProjectId, SortMode, Task};
 
 
 

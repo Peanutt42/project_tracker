@@ -3056,18 +3056,6 @@ checksum = "43d84d1d7a6ac92673717f9f6d1518374ef257669c24ebc5ac25d5033828be58"
 name = "project_tracker"
 version = "0.1.0"
 dependencies = [
- "iced",
- "iced_aw",
- "iced_fonts",
- "image",
- "project_tracker_gui",
- "winresource",
-]
-
-[[package]]
-name = "project_tracker_gui"
-version = "0.1.0"
-dependencies = [
  "chrono",
  "dark-light",
  "directories",
@@ -3076,6 +3064,8 @@ dependencies = [
  "iced",
  "iced_aw",
  "iced_drop",
+ "iced_fonts",
+ "image",
  "indexmap",
  "libc",
  "notify-rust",
@@ -3089,6 +3079,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "walkdir",
+ "winresource",
 ]
 
 [[package]]

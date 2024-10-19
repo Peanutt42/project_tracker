@@ -4,7 +4,7 @@ use iced::{
 };
 use std::fmt::{Display, Formatter, Result};
 
-pub const BOOTSTRAP_FONT_BYTES: &[u8] = include_bytes!("../../../assets/bootstrap-icons.ttf");
+pub const BOOTSTRAP_FONT_BYTES: &[u8] = include_bytes!("../../assets/bootstrap-icons.ttf");
 
 pub const BOOTSTRAP_FONT: Font = Font::with_name("bootstrap-icons");
 

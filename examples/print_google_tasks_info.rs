@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use project_tracker_gui::integrations::import_google_tasks;
+use project_tracker::integrations::import_google_tasks;
 
 #[tokio::main]
 async fn main() {

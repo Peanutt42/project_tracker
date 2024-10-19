@@ -1,6 +1,6 @@
 use std::{collections::HashSet, path::PathBuf};
 
-use project_tracker_gui::core::{Database, OrderedHashMap, Project, SortMode, ProjectId, SerializableColor, Task, TaskId};
+use project_tracker::core::{Database, OrderedHashMap, Project, SortMode, ProjectId, SerializableColor, Task, TaskId};
 
 #[tokio::main]
 async fn main() {
