@@ -25,17 +25,9 @@ impl ErrorMsgModalMessage {
 	pub fn open(error_msg: String) -> Message {
 		Self::Open(error_msg).into()
 	}
-}
 
-impl From<ErrorMsgModalMessage> for Message {
-	fn from(value: ErrorMsgModalMessage) -> Self {
-		Message::ErrorMsgModalMessage(value)
-	}
-}
-
-impl From<ServerError> for Message {
-	fn from(value: ServerError) -> Self {
-		match value {
+	pub fn from_server_error(server_error: &ServerError) -> Message{
+		match server_error {
 			ServerError::ConnectionError(io_error) => {
 				ErrorMsgModalMessage::open(format!("Failed to sync with server\nConnection error: {io_error}"))
 			},
@@ -46,6 +38,18 @@ impl From<ServerError> for Message {
 				ErrorMsgModalMessage::open("Invalid server response".to_string())
 			}
 		}
+	}
+}
+
+impl From<ErrorMsgModalMessage> for Message {
+	fn from(value: ErrorMsgModalMessage) -> Self {
+		Message::ErrorMsgModalMessage(value)
+	}
+}
+
+impl From<ServerError> for Message {
+	fn from(value: ServerError) -> Self {
+		ErrorMsgModalMessage::from_server_error(&value)
 	}
 }
 

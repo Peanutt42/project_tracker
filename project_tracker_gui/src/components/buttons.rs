@@ -458,7 +458,7 @@ pub fn sync_database_from_server_button(downloading: bool, config: &Option<Serve
 					.align_y(Vertical::Center)
 					.into()
 			},
-			text("Sync")
+			text("Synchronize")
 		]
 		.spacing(SMALL_SPACING_AMOUNT)
 		.align_y(Alignment::Center)

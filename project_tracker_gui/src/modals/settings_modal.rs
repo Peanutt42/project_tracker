@@ -163,14 +163,19 @@ impl SettingTab {
 							row![
 								column![
 									row![
-										text("Hostname: "),
+										container("Hostname: ")
+											.width(100.0),
+
 										text_input("ex. 127.0.0.1 or raspberrypi.local", &server_config.hostname)
 											.on_input(|hostname| SettingsModalMessage::SetServerHostname(hostname).into())
 											.style(text_input_style_default),
 									]
 									.align_y(Vertical::Center),
+
 									row![
-										text("Port: "),
+										container("Port: ")
+											.width(100.0),
+
 										text_input("ex. 8080", &format!("{}", server_config.port))
 											.on_input(|input| {
 												let new_port = match usize::from_str(&input) {
@@ -190,7 +195,8 @@ impl SettingTab {
 													None => SettingsModalMessage::InvalidPortInput.into(),
 												}
 											})
-											.style(text_input_style_default),
+											.style(text_input_style_default)
+											.width(55.0),
 									]
 									.align_y(Vertical::Center),
 								]

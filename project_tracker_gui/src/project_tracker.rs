@@ -20,8 +20,9 @@ use iced::{
 	Length::Fill,
 	Padding, Point, Rectangle, Subscription, Task, Theme,
 };
+use project_tracker_server::ServerError;
 use std::{
-	path::PathBuf, rc::Rc, time::{Duration, SystemTime}
+	path::PathBuf, sync::Arc, rc::Rc, time::{Duration, SystemTime}
 };
 
 pub struct ProjectTrackerApp {
@@ -82,6 +83,7 @@ pub enum Message {
 	DownloadDatabaseFromServer,
 	UploadDatabaseToServer,
 	DatabaseUploadedToServer,
+	ServerError(Arc<ServerError>),
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
 	SelectProject(Option<ProjectId>),
@@ -548,7 +550,7 @@ impl ProjectTrackerApp {
 									SyncServerDatabaseResponse::DownloadDatabase => Message::DownloadDatabaseFromServer,
 									SyncServerDatabaseResponse::UploadDatabase => Message::UploadDatabaseToServer,
 								},
-								Err(e) => e.into(),
+								Err(e) => Message::ServerError(Arc::new(e)),
 							}
 						);
 					}
@@ -561,7 +563,7 @@ impl ProjectTrackerApp {
 						download_database_from_server(server_config),
 						|result| match result {
 							Ok(database) => Message::LoadedDatabase(LoadDatabaseResult::Ok(database)),
-							Err(e) => e.into(),
+							Err(e) => Message::ServerError(Arc::new(e)),
 						}
 					)
 				}
@@ -576,12 +578,16 @@ impl ProjectTrackerApp {
 							upload_database_to_server(server_config, database.to_json()),
 							|result| match result {
 								Ok(_) => Message::DatabaseUploadedToServer,
-								Err(e) => e.into(),
+								Err(e) => Message::ServerError(Arc::new(e)),
 							}
 						);
 					}
 				}
 				Task::none()
+			},
+			Message::ServerError(e) => {
+				self.syncing_database_from_server = false;
+				self.update(ErrorMsgModalMessage::from_server_error(e.as_ref()))
 			},
 			Message::DatabaseUploadedToServer => {
 				self.syncing_database_from_server = false;
