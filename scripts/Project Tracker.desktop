@@ -2,11 +2,13 @@
 Version=1.0
 Type=Application
 Name=Project Tracker
-Exec=/home/peter/github/project_tracker/target/release/project_tracker
-Icon=/home/peter/github/project_tracker/assets/icon.svg
 Terminal=false
 Categories=Utility;
 StartupWMClass=Project Tracker
 StartupNotify=true
 X-GNOME-UsesNotifications=true
 X-GNOME-SingleWindow=true
+
+# this gets added when running install_project_tracker_linux.sh:
+# Exec=$project_root/target/release/project_tracker
+# Icon=$project_root/assets/icon.svg
