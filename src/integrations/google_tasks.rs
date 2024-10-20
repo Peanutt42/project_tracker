@@ -1,18 +1,27 @@
 use std::{
 	collections::HashSet,
-	path::{Path, PathBuf},
+	path::PathBuf,
 };
 
 use chrono::{DateTime, Datelike};
 use iced::Color;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::core::{OrderedHashMap, Project, SerializableDate, SortMode, Task, TaskId};
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ImportGoogleTasksError {
-	IoError(std::io::Error),
-	ParseError(serde_json::Error),
+	#[error("failed to open google tasks file: {filepath}, error: {error}")]
+	FailedToOpenFile {
+		filepath: PathBuf,
+		error: std::io::Error,
+	},
+	#[error("failed to parse google tasks: {filepath}, error: {error}")]
+	ParseError{
+		filepath: PathBuf,
+		error: serde_json::Error
+	},
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,13 +54,18 @@ struct GoogleTasksTask {
 }
 
 pub async fn import_google_tasks(
-	filepath: impl AsRef<Path>,
+	filepath: PathBuf,
 ) -> Result<Vec<Project>, ImportGoogleTasksError> {
-	let json = tokio::fs::read_to_string(filepath)
-		.await
-		.map_err(ImportGoogleTasksError::IoError)?;
+	let json = tokio::fs::read_to_string(&filepath).await
+		.map_err(|error| ImportGoogleTasksError::FailedToOpenFile {
+			filepath: filepath.clone(),
+			error,
+		})?;
 
-	import_google_tasks_json(&json).map_err(ImportGoogleTasksError::ParseError)
+	import_google_tasks_json(&json).map_err(|error| ImportGoogleTasksError::ParseError {
+		filepath,
+		error,
+	})
 }
 
 pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::Error> {
@@ -101,8 +115,7 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 	Ok(projects)
 }
 
-pub async fn import_google_tasks_dialog(
-) -> Option<(Result<Vec<Project>, ImportGoogleTasksError>, PathBuf)> {
+pub async fn import_google_tasks_dialog() -> Option<Result<Vec<Project>, ImportGoogleTasksError>> {
 	let file_dialog_result = rfd::AsyncFileDialog::new()
 		.set_title("Import Google Tasks Takeout")
 		.add_filter("Tasks.json (.json)", &["json"])
@@ -111,7 +124,7 @@ pub async fn import_google_tasks_dialog(
 
 	if let Some(file_handle) = file_dialog_result {
 		let filepath = file_handle.path().to_path_buf();
-		Some((import_google_tasks(&filepath).await, filepath))
+		Some(import_google_tasks(filepath).await)
 	} else {
 		None
 	}

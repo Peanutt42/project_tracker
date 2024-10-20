@@ -19,7 +19,9 @@ use iced::{
 	Task,
 };
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 
 fn default_show_sidebar() -> bool { true }
@@ -127,12 +129,21 @@ impl From<Task<Message>> for PreferenceAction {
 	}
 }
 
-#[derive(Clone, Debug)]
-pub enum LoadPreferencesResult {
-	Ok(Preferences),
-	FailedToOpenFile(PathBuf),
-	FailedToParse(PathBuf),
+#[derive(Debug, Error)]
+pub enum LoadPreferencesError {
+	#[error("failed to open prefrences file: {filepath}, error: {error}")]
+	FailedToOpenFile {
+		filepath: PathBuf,
+		error: std::io::Error,
+	},
+	#[error("failed to parse preferences from: {filepath}, error: {error}")]
+	FailedToParse {
+		filepath: PathBuf,
+		error: serde_json::Error,
+	},
 }
+
+pub type LoadPreferencesResult = Result<Preferences, LoadPreferencesError>;
 
 impl Preferences {
 	const FILE_NAME: &'static str = "preferences.json";
@@ -211,7 +222,7 @@ impl Preferences {
 			PreferenceMessage::Import => {
 				Task::perform(Preferences::import_file_dialog(), |result| {
 					if let Some(load_preference_result) = result {
-						Message::LoadedPreferences(load_preference_result)
+						Message::LoadedPreferences(load_preference_result.map_err(Arc::new))
 					} else {
 						PreferenceMessage::ImportFailed.into()
 					}
@@ -283,16 +294,17 @@ impl Preferences {
 	}
 
 	async fn load_from(filepath: PathBuf) -> LoadPreferencesResult {
-		let file_content = if let Ok(file_content) = tokio::fs::read_to_string(&filepath).await {
-			file_content
-		} else {
-			return LoadPreferencesResult::FailedToOpenFile(filepath);
-		};
+		let file_content = tokio::fs::read_to_string(&filepath).await
+			.map_err(|error| LoadPreferencesError::FailedToOpenFile {
+				filepath: filepath.clone(),
+				error
+			})?;
 
-		match serde_json::from_str(&file_content) {
-			Ok(preferences) => LoadPreferencesResult::Ok(preferences),
-			Err(_) => LoadPreferencesResult::FailedToParse(filepath),
-		}
+		serde_json::from_str(&file_content)
+			.map_err(|error| LoadPreferencesError::FailedToParse {
+				filepath,
+				error
+			})
 	}
 
 	pub async fn load() -> LoadPreferencesResult {

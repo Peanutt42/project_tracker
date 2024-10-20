@@ -1,9 +1,9 @@
 mod database;
-pub use database::{Database, DatabaseMessage, LoadDatabaseResult, SyncDatabaseResult};
+pub use database::{Database, DatabaseMessage, LoadDatabaseResult, LoadDatabaseError, SyncDatabaseResult};
 
 mod preferences;
 pub use preferences::{
-	DateFormatting, LoadPreferencesResult, PreferenceMessage, PreferenceAction, Preferences, SerializedContentPage,
+	DateFormatting, LoadPreferencesResult, LoadPreferencesError, PreferenceMessage, PreferenceAction, Preferences, SerializedContentPage,
 	StopwatchProgress, OptionalPreference
 };
 

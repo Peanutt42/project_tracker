@@ -16,7 +16,7 @@ use crate::{
 		HORIZONTAL_SCROLLABLE_PADDING,
 	},
 	modals::ErrorMsgModalMessage,
-	integrations::{import_google_tasks_dialog, ImportGoogleTasksError},
+	integrations::import_google_tasks_dialog,
 	styles::{card_style, GREY, PADDING_AMOUNT},
 };
 use iced::alignment::Vertical;
@@ -385,16 +385,9 @@ impl SettingsModal {
 			SettingsModalMessage::ImportGoogleTasksFileDialog => {
 				Task::perform(import_google_tasks_dialog(), move |result| {
 					match result {
-						Some((result, filepath)) => match result {
+						Some(result) => match result {
 							Ok(projects) => DatabaseMessage::ImportProjects(projects).into(),
-							Err(import_error) => match import_error {
-								ImportGoogleTasksError::IoError(io_error) => ErrorMsgModalMessage::open(
-									format!("Failed to open google tasks takeout .json file\nLocation: {}\nError: {io_error}", filepath.display())
-								),
-								ImportGoogleTasksError::ParseError(parse_error) => ErrorMsgModalMessage::open(
-									format!("Failed to parse google tasks takeout .json file\nLocation: {}\nError: {parse_error}", filepath.display())
-								),
-							}
+							Err(import_error) => ErrorMsgModalMessage::open(format!("{import_error}")),
 						},
 						None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
 					}

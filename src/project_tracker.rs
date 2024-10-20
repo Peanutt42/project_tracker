@@ -3,7 +3,7 @@ use crate::{
 		toggle_sidebar_button, vertical_seperator,
 		ScalarAnimation, ICON_BUTTON_WIDTH,
 	}, core::{
-		Database, DatabaseMessage, LoadDatabaseResult, LoadPreferencesResult, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId
+		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId
 	}, integrations::{download_database_from_server, sync_database_from_server, upload_database_to_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
 	}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
@@ -75,8 +75,8 @@ pub enum Message {
 	SyncDatabaseUpload(PathBuf),
 	SyncDatabaseUploaded,
 	SyncDatabaseFailed(String), // error_msg
-	LoadedDatabase(LoadDatabaseResult),
-	LoadedPreferences(LoadPreferencesResult),
+	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
+	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	SyncDatabaseFromServer,
 	DownloadDatabaseFromServer,
 	UploadDatabaseToServer,
@@ -155,8 +155,8 @@ impl ProjectTrackerApp {
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Task::batch([
-				Task::perform(Preferences::load(), Message::LoadedPreferences),
-				Task::perform(Database::load(), Message::LoadedDatabase),
+				Task::perform(Preferences::load(), |result| Message::LoadedPreferences(result.map_err(Arc::new))),
+				Task::perform(Database::load(), |result| Message::LoadedDatabase(result.map_err(Arc::new))),
 			]),
 		)
 	}
@@ -370,7 +370,7 @@ impl ProjectTrackerApp {
 			}
 			Message::ImportDatabase(filepath) => {
 				self.importing_database = true;
-				Task::perform(Database::load_from(filepath), Message::LoadedDatabase)
+				Task::perform(Database::load_from(filepath), |result| Message::LoadedDatabase(result.map_err(Arc::new)))
 			}
 			Message::SyncDatabase(filepath) => {
 				self.syncing_database = true;
@@ -409,7 +409,7 @@ impl ProjectTrackerApp {
 			}
 			Message::LoadedDatabase(load_database_result) => {
 				match load_database_result {
-					LoadDatabaseResult::Ok(database) => {
+					Ok(database) => {
 						self.database = Some(database);
 						self.importing_database = false;
 						self.syncing_database = false;
@@ -460,71 +460,67 @@ impl ProjectTrackerApp {
 						};
 
 						Task::batch([task, self.update(Message::SaveDatabase)])
-					}
-					LoadDatabaseResult::FailedToOpenFile(filepath) => {
-						self.importing_database = false;
-						self.syncing_database = false;
-						let command = if self.database.is_none() {
-							self.database = Some(Database::default());
-							self.update(Message::SaveDatabase)
-						} else {
-							Task::none()
-						};
-
-						Task::batch([
-							command,
-							self.show_error_msg(format!(
-								"Failed to open database file:\n{}",
-								filepath.display()
-							)),
-						])
-					}
-					LoadDatabaseResult::FailedToParse(filepath) => {
-						// saves the corrupted database, just so we don't lose the progress and can correct it afterwards
-						let saved_corrupted_filepath = Database::get_filepath()
-							.parent()
-							.unwrap()
-							.join("corrupted - database.json");
-						let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
-						if self.database.is_none() {
-							self.database = Some(Database::default());
-						}
-						Task::batch([
-							self.update(Message::SaveDatabase),
-							self.show_error_msg(format!("Parsing Error:\nFailed to load previous projects in\n\"{}\"\n\nOld corrupted database saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
-						])
+					},
+					Err(error) => match error.as_ref() {
+						LoadDatabaseError::FailedToOpenFile { .. } => {
+							self.importing_database = false;
+							self.syncing_database = false;
+							if self.database.is_none() {
+								self.database = Some(Database::default());
+								self.update(Message::SaveDatabase)
+							} else {
+								self.show_error_msg(format!("{error}"))
+							}
+						},
+						LoadDatabaseError::FailedToParse{ filepath, .. } => {
+							// saves the corrupted database, just so we don't lose the progress and can correct it afterwards
+							let saved_corrupted_filepath = Database::get_filepath()
+								.parent()
+								.unwrap()
+								.join("corrupted - database.json");
+							let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
+							if self.database.is_none() {
+								self.database = Some(Database::default());
+							}
+							Task::batch([
+								self.update(Message::SaveDatabase),
+								self.show_error_msg(format!("{error}"))
+							])
+						},
 					},
 				}
 			}
 			Message::LoadedPreferences(load_preferences_result) => {
 				match load_preferences_result {
-					LoadPreferencesResult::Ok(preferences) => {
+					Ok(preferences) => {
 						self.preferences = Some(preferences);
 						self.update(PreferenceMessage::Save.into())
-					}
-					LoadPreferencesResult::FailedToOpenFile(_) => {
-						if self.preferences.is_none() {
-							self.preferences = Some(Preferences::default());
-							self.update(PreferenceMessage::Save.into())
-						} else {
-							Task::none()
+					},
+					Err(error) => match error.as_ref() {
+						LoadPreferencesError::FailedToOpenFile{ .. } => {
+							if self.preferences.is_none() {
+								self.preferences = Some(Preferences::default());
+								self.update(PreferenceMessage::Save.into())
+							} else {
+								self.show_error_msg(format!("{error}"))
+							}
 						}
-					}
-					LoadPreferencesResult::FailedToParse(filepath) => {
-						// saves the corrupted preferences, just so we don't lose the progress and can correct it afterwards
-						let saved_corrupted_filepath = Preferences::get_filepath()
-							.parent()
-							.unwrap()
-							.join("corrupted - preferences.json");
-						let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
-						if self.preferences.is_none() {
-							self.preferences = Some(Preferences::default());
-						}
-						Task::batch([
-							self.update(PreferenceMessage::Save.into()),
-							self.show_error_msg(format!("Parsing Error:\nFailed to load preferences in\n\"{}\"\n\nOld corrupted preferences saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
-						])
-					}
+						LoadPreferencesError::FailedToParse{ filepath, .. } => {
+							// saves the corrupted preferences, just so we don't lose the progress and can correct it afterwards
+							let saved_corrupted_filepath = Preferences::get_filepath()
+								.parent()
+								.unwrap()
+								.join("corrupted - preferences.json");
+							let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
+							if self.preferences.is_none() {
+								self.preferences = Some(Preferences::default());
+							}
+							Task::batch([
+								self.update(PreferenceMessage::Save.into()),
+								self.show_error_msg(format!("Parsing Error:\nFailed to load preferences in\n\"{}\"\n\nOld corrupted preferences saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
+							])
+						},
+					},
 				}
 			},
 			Message::SyncDatabaseFromServer => {
@@ -554,7 +550,7 @@ impl ProjectTrackerApp {
 					Task::perform(
 						download_database_from_server(server_config),
 						|result| match result {
-							Ok(database) => Message::LoadedDatabase(LoadDatabaseResult::Ok(database)),
+							Ok(database) => Message::LoadedDatabase(Ok(database)),
 							Err(e) => Message::ServerError(Arc::new(e)),
 						}
 					)
@@ -579,7 +575,7 @@ impl ProjectTrackerApp {
 			},
 			Message::ServerError(e) => {
 				self.syncing_database_from_server = false;
-				self.update(ErrorMsgModalMessage::from_server_error(e.as_ref()))
+				self.update(ErrorMsgModalMessage::open(format!("{e}")))
 			},
 			Message::DatabaseUploadedToServer => {
 				self.syncing_database_from_server = false;

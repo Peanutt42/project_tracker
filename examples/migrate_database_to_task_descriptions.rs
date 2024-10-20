@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use project_tracker::core::{Database, LoadDatabaseResult, OrderedHashMap, Project, ProjectId, SortMode, Task};
+use project_tracker::core::{Database, OrderedHashMap, Project, ProjectId, SortMode, Task};
 
 
 
@@ -11,7 +11,7 @@ async fn main() {
 	if let Some(filepath) = args.nth(1) {
 		let filepath_buf = PathBuf::from(filepath);
 		match Database::load_from(filepath_buf.clone()).await {
-			LoadDatabaseResult::Ok(db) => {
+			Ok(db) => {
 				let mut migrated_projects: OrderedHashMap<ProjectId, Project> = OrderedHashMap::new();
 
 				let migrate_task = |task: &Task| -> Task {
@@ -65,12 +65,7 @@ async fn main() {
 					),
 				}
 			},
-			LoadDatabaseResult::FailedToOpenFile(filepath) => {
-				eprintln!("failed to open filepath: {}", filepath.display());
-			},
-			LoadDatabaseResult::FailedToParse(filepath) => {
-				eprintln!("failed to parse database in: {}", filepath.display());
-			},
+			Err(e) => eprintln!("{e}"),
 		}
 	}
 	else {

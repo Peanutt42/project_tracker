@@ -1,5 +1,5 @@
 use project_tracker::core::{
-	Database, LoadDatabaseResult, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId
+	Database, LoadDatabaseError, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId
 };
 use std::{collections::HashSet, path::PathBuf};
 
@@ -32,11 +32,11 @@ async fn test_database_serialization() {
 		.unwrap();
 
 	match Database::load_from(output_filepath.clone()).await {
-		LoadDatabaseResult::Ok(database) => assert!(database.has_same_content_as(&original)),
-		LoadDatabaseResult::FailedToOpenFile(_) => {
-			panic!("Failed to find serialized file, maybe database.save_to failed?")
+		Ok(database) => assert!(database.has_same_content_as(&original)),
+		Err(e) => match e {
+			LoadDatabaseError::FailedToOpenFile{ .. } => panic!("Failed to find serialized file, maybe database.save_to failed?"),
+			LoadDatabaseError::FailedToParse{ .. } => panic!("Failed to parse serialized file!"),
 		}
-		LoadDatabaseResult::FailedToParse(_) => panic!("Failed to parse serialized file!"),
 	};
 
 	tokio::fs::remove_file(&output_filepath)

@@ -4,6 +4,7 @@ use crate::core::{
 };
 use crate::project_tracker::Message;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -132,12 +133,21 @@ impl From<DatabaseMessage> for Message {
 	}
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum LoadDatabaseResult {
-	Ok(Database),
-	FailedToOpenFile(PathBuf),
-	FailedToParse(PathBuf),
+#[derive(Debug, Error)]
+pub enum LoadDatabaseError {
+	#[error("failed to open file: {filepath}, error: {error}")]
+	FailedToOpenFile {
+		filepath: PathBuf,
+		error: std::io::Error,
+	},
+	#[error("failed to parse database: {filepath}, error: {error}")]
+	FailedToParse {
+		filepath: PathBuf,
+		error: serde_json::Error,
+	},
 }
+
+pub type LoadDatabaseResult = Result<Database, LoadDatabaseError>;
 
 #[derive(Clone, Debug)]
 pub enum SyncDatabaseResult {
@@ -475,16 +485,17 @@ impl Database {
 	}
 
 	pub async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
-		let file_content = if let Ok(file_content) = tokio::fs::read_to_string(&filepath).await {
-			file_content
-		} else {
-			return LoadDatabaseResult::FailedToOpenFile(filepath);
-		};
+		let file_content = tokio::fs::read_to_string(&filepath).await
+			.map_err(|error| LoadDatabaseError::FailedToOpenFile{
+				filepath: filepath.clone(),
+				error
+			})?;
 
-		match serde_json::from_str(&file_content) {
-			Ok(database) => LoadDatabaseResult::Ok(database),
-			Err(_) => LoadDatabaseResult::FailedToParse(filepath),
-		}
+		serde_json::from_str(&file_content)
+			.map_err(|error| LoadDatabaseError::FailedToParse{
+				filepath: filepath.clone(),
+				error
+			})
 	}
 
 	pub async fn load() -> LoadDatabaseResult {

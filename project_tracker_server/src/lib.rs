@@ -7,11 +7,11 @@ pub const DEFAULT_PORT: usize = 8080;
 
 #[derive(Debug, Error)]
 pub enum ServerError {
-	#[error("connection error")]
+	#[error("connection failed with server: {0}")]
 	ConnectionError(#[from] std::io::Error),
-	#[error("failed to parse")]
+	#[error("failed to parse server response: {0}")]
 	ParseError(#[from] serde_json::Error),
-	#[error("invalid response")]
+	#[error("invalid response from server")]
 	InvalidResponse,
 }
 
