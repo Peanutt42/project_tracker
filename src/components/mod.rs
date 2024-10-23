@@ -4,8 +4,7 @@ pub use completion_bar::completion_bar;
 mod buttons;
 pub use buttons::{
 	cancel_create_new_task_tag_button, cancel_create_project_button,
-	cancel_search_tasks_button, clear_synchronization_filepath_button,
-	color_palette_item_button,
+	cancel_search_tasks_button,	color_palette_item_button,
 	complete_task_timer_button, confirm_cancel_button, confirm_ok_button, copy_to_clipboard_button,
 	create_new_project_button, open_create_task_modal_button, create_new_task_modal_button, close_create_new_task_modal_button, create_new_task_tags_button,
 	dangerous_button, date_formatting_button, delete_all_done_tasks_button,

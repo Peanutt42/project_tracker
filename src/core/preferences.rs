@@ -151,6 +151,9 @@ impl Preferences {
 	pub fn synchronization_filepath(&self) -> &Option<PathBuf> {
 		&self.synchronization_filepath
 	}
+	pub fn set_synchronization_filepath(&mut self, filepath: Option<PathBuf>) {
+		self.modify(|pref| pref.synchronization_filepath = filepath);
+	}
 	pub fn server_synchronization(&self) -> &Option<ServerConfig> {
 		&self.server_synchronization
 	}
@@ -472,6 +475,7 @@ pub trait OptionalPreference {
 	fn date_formatting(&self) -> DateFormatting;
 	fn create_new_tasks_at_top(&self) -> bool;
 	fn sort_unspecified_tasks_at_bottom(&self) -> bool;
+	fn synchronization_filepath(&self) -> Option<&PathBuf>;
 	fn server_synchronization(&self) -> Option<&ServerConfig>;
 }
 
@@ -508,12 +512,10 @@ impl OptionalPreference for Option<Preferences> {
 			default_sort_unspecified_tasks_at_bottom()
 		}
 	}
+	fn synchronization_filepath(&self) -> Option<&PathBuf> {
+		self.as_ref().and_then(|preferences| preferences.synchronization_filepath.as_ref())
+	}
 	fn server_synchronization(&self) -> Option<&ServerConfig> {
-		if let Some(preferences) = self {
-			preferences.server_synchronization.as_ref()
-		}
-		else {
-			None
-		}
+		self.as_ref().and_then(|preferences| preferences.server_synchronization.as_ref())
 	}
 }

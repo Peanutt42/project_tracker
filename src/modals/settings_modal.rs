@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use crate::components::sync_database_from_server_button;
-use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceAction, PreferenceMessage, Preferences};
+use crate::core::{Database, DatabaseMessage, DateFormatting, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences};
 use crate::icons::Bootstrap;
 use crate::integrations::ServerConfig;
 use crate::project_tracker::{ProjectTrackerApp, Message};
@@ -9,7 +9,7 @@ use crate::styles::{
 };
 use crate::{
 	components::{
-		clear_synchronization_filepath_button, dangerous_button, export_database_button,
+		dangerous_button, export_database_button,
 		file_location, filepath_widget, horizontal_seperator_padded, import_database_button,
 		import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button,
 		sync_database_button, vertical_seperator, copy_to_clipboard_button, open_link_button,
@@ -42,6 +42,8 @@ pub enum SettingsModalMessage {
 
 	BrowseSynchronizationFilepath,
 	BrowseSynchronizationFilepathCanceled,
+	EnableSynchronizationFilepath,
+	DisableSynchronizationFilepath,
 
 	ImportGoogleTasksFileDialog,
 	ImportGoogleTasksFileDialogCanceled,
@@ -111,38 +113,52 @@ impl SettingTab {
 
 					horizontal_seperator_padded(),
 
-					row![
-						container("Synchronization file location: ")
-							.padding(HORIZONTAL_SCROLLABLE_PADDING),
+					column![
+						row![
+							text("Synchronization file location: "),
 
-						if let Some(filepath) = preferences.synchronization_filepath() {
-							Element::new(filepath_widget(filepath.clone()).width(Fill))
-						}
-						else {
-							"not specified".into()
-						},
-
-						container(clear_synchronization_filepath_button())
-							.padding(HORIZONTAL_SCROLLABLE_PADDING),
-
-						container(select_synchronization_filepath_button())
-							.padding(HORIZONTAL_SCROLLABLE_PADDING),
+							container(
+								toggler(preferences.synchronization_filepath().is_some())
+									.size(27.5)
+									.on_toggle(|enable| if enable {
+										SettingsModalMessage::EnableSynchronizationFilepath.into()
+									}
+									else {
+										SettingsModalMessage::DisableSynchronizationFilepath.into()
+									})
+							)
+							.width(Fill)
+							.align_x(Horizontal::Right)
+						]
+						.spacing(SPACING_AMOUNT)
+						.align_y(Alignment::Center)
 					]
-					.spacing(SPACING_AMOUNT)
-					.align_y(Alignment::Center),
+					.push_maybe(
+						preferences.synchronization_filepath().as_ref().map(|filepath| {
+							row![
+								filepath_widget(filepath.clone())
+									.width(Fill),
 
-					container(
-						sync_database_button(app.syncing_database, preferences.synchronization_filepath().clone())
+								container(select_synchronization_filepath_button())
+									.padding(HORIZONTAL_SCROLLABLE_PADDING),
+
+								container(
+									sync_database_button(app.syncing_database, preferences.synchronization_filepath().clone())
+								)
+								.width(Fill)
+								.align_x(Horizontal::Right)
+							]
+							.spacing(SPACING_AMOUNT)
+							.align_y(Alignment::Center)
+						})
 					)
-					.width(Fill)
-					.align_x(Horizontal::Right),
+					.spacing(SPACING_AMOUNT),
 
 					horizontal_seperator_padded(),
 
 					column![
 						row![
-							container("Server Synchronization: ")
-								.padding(HORIZONTAL_SCROLLABLE_PADDING),
+							text("Server Synchronization: "),
 
 							container(
 								toggler(preferences.server_synchronization().is_some())
@@ -158,8 +174,9 @@ impl SettingTab {
 							.align_x(Horizontal::Right)
 						]
 						.spacing(SPACING_AMOUNT),
-
-						if let Some(server_config) = preferences.server_synchronization() {
+					]
+					.push_maybe(preferences.server_synchronization().as_ref().map(|server_config| {
+						Element::new(
 							row![
 								column![
 									row![
@@ -203,19 +220,15 @@ impl SettingTab {
 								.spacing(SPACING_AMOUNT),
 
 								container(
-									sync_database_from_server_button(app.syncing_database_from_server, preferences.server_synchronization())
+									sync_database_from_server_button(app.syncing_database_from_server)
 								)
 								.width(Fill)
 								.align_x(Horizontal::Right)
 							]
 							.padding(Padding::default().left(PADDING_AMOUNT))
 							.spacing(SPACING_AMOUNT)
-							.into()
-						}
-						else {
-							Element::new(Space::new(0.0, 0.0))
-						},
-					]
+						)
+					}))
 					.spacing(SPACING_AMOUNT),
 
 					horizontal_seperator_padded(),
@@ -371,6 +384,18 @@ impl SettingsModal {
 				PreferenceAction::None
 			}
 
+			SettingsModalMessage::EnableSynchronizationFilepath => {
+				if preferences.synchronization_filepath().is_none() {
+					return self.update(SettingsModalMessage::BrowseSynchronizationFilepath, preferences);
+				}
+				PreferenceAction::None
+			},
+			SettingsModalMessage::DisableSynchronizationFilepath => {
+				if let Some(preferences) = preferences {
+					preferences.set_synchronization_filepath(None);
+				}
+				PreferenceAction::None
+			}
 			SettingsModalMessage::BrowseSynchronizationFilepath => {
 				Task::perform(Database::export_file_dialog(), |filepath| match filepath {
 					Some(filepath) => {

@@ -1,7 +1,7 @@
 use crate::{
 	components::{date_text, duration_text}, core::{
 		DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId
-	}, icons::{icon_to_text, Bootstrap}, integrations::ServerConfig, modals::{
+	}, icons::{icon_to_text, Bootstrap}, modals::{
 		ConfirmModalMessage, CreateTaskModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage
 	}, pages::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
@@ -296,19 +296,6 @@ pub fn select_synchronization_filepath_button() -> Element<'static, Message> {
 	.into()
 }
 
-pub fn clear_synchronization_filepath_button() -> Element<'static, Message> {
-	tooltip(
-		icon_button(Bootstrap::XLg)
-			.on_press(PreferenceMessage::SetSynchronizationFilepath(None).into())
-			.style(secondary_button_style_default),
-		text("Clear").size(SMALL_TEXT_SIZE),
-		tooltip::Position::Bottom,
-	)
-	.gap(GAP)
-	.style(tooltip_container_style)
-	.into()
-}
-
 pub fn date_formatting_button<'a>(
 	format: &'a DateFormatting,
 	selected_format: &'a DateFormatting,
@@ -443,7 +430,7 @@ pub fn sync_database_button(
 	.into()
 }
 
-pub fn sync_database_from_server_button(downloading: bool, config: &Option<ServerConfig>) -> Button<'static, Message> {
+pub fn sync_database_from_server_button(downloading: bool) -> Button<'static, Message> {
 	button(
 		row![
 			if downloading {
@@ -463,7 +450,7 @@ pub fn sync_database_from_server_button(downloading: bool, config: &Option<Serve
 		.spacing(SMALL_SPACING_AMOUNT)
 		.align_y(Alignment::Center)
 	)
-	.on_press_maybe(config.as_ref().map(|_config| Message::SyncDatabaseFromServer))
+	.on_press(Message::SyncDatabaseFromServer)
 	.style(dangerous_button_style)
 }
 
