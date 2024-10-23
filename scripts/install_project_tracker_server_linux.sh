@@ -15,7 +15,7 @@ cargo b --release
 
 cd "$project_root/scripts"
 
-database_file="$project_root/project_tracker_server/database.json"
+database_file="/srv/project_tracker_server/database.json"
 
 echo "Enabling systemd service..."
 

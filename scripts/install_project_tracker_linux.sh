@@ -18,11 +18,12 @@ cd "$project_root/scripts"
 echo "Creating Desktop Entry..."
 
 # Copy base .desktop entry
-cp "Project Tracker.desktop" "$HOME/.local/share/applications"
-
 desktop_entry_filepath="$HOME/.local/share/applications/Project Tracker.desktop"
 
+cp "Project Tracker Base.desktop" "$desktop_entry_filepath"
+
 # Add user specific installation paths
+echo "" >> "$desktop_entry_filepath"
 echo "Exec=$project_root/target/release/project_tracker" >> "$desktop_entry_filepath"
 echo "Icon=$project_root/assets/icon.svg" >> "$desktop_entry_filepath"
 
