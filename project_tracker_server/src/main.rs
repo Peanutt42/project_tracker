@@ -6,6 +6,9 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::thread;
 
+#[cfg(feature = "dashboard")]
+mod dashboard;
+
 const PORT: usize = DEFAULT_PORT;
 
 fn read_request(stream: &mut TcpStream) -> Option<Request> {
@@ -83,40 +86,55 @@ fn handle_client(mut stream: TcpStream, filepath: PathBuf) {
 	}
 }
 
-fn main() {
-	let mut args = std::env::args();
+fn run_server(filepath: PathBuf) {
+	let listener = TcpListener::bind(format!("0.0.0.0:{}", PORT)).expect("Failed to bind to port");
 
-	if let Some(filepath_str) = args.nth(1) {
-		let filepath = PathBuf::from(filepath_str);
+	println!("Server is listening on port {}", PORT);
 
-		if !filepath.exists() {
-			if let Err(e) = File::create(&filepath) {
-				eprintln!("failed to create/open database file: {}, error: {e}", filepath.display());
-				exit(1);
+	for stream in listener.incoming() {
+		match stream {
+			Ok(stream) => {
+				let filepath_clone = filepath.clone();
+
+				thread::spawn(move || {
+					handle_client(stream, filepath_clone);
+				});
 			}
-		}
-
-		let listener = TcpListener::bind(format!("0.0.0.0:{}", PORT)).expect("Failed to bind to port");
-
-		println!("Server is listening on port {}", PORT);
-
-		for stream in listener.incoming() {
-			match stream {
-				Ok(stream) => {
-					let filepath_clone = filepath.clone();
-
-					thread::spawn(move || {
-						handle_client(stream, filepath_clone);
-					});
-				}
-				Err(e) => {
-					eprintln!("Failed to establish a connection: {e}");
-				}
+			Err(e) => {
+				eprintln!("Failed to establish a connection: {e}");
 			}
 		}
 	}
-	else {
+}
+
+fn main() {
+	let mut args = std::env::args();
+
+	let filepath_str = args.nth(1).unwrap_or_else(|| {
 		eprintln!("usage: project_tracker_server [DATABASE_FILEPATH]");
 		exit(1);
+	});
+
+	let filepath = PathBuf::from(filepath_str);
+
+	if !filepath.exists() {
+		if let Err(e) = File::create(&filepath) {
+			eprintln!("failed to create/open database file: {}, error: {e}", filepath.display());
+			exit(1);
+		}
+	}
+
+	#[cfg(feature = "dashboard")]
+	{
+		let server_thread = thread::spawn(move || run_server(filepath));
+
+		dashboard::run_dashboard();
+
+		server_thread.join().expect("failed to join with server thread");
+	}
+
+	#[cfg(not(feature = "dashboard"))]
+	{
+		run_server(filepath);
 	}
 }

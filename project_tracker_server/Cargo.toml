@@ -9,3 +9,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 filetime = { workspace = true }
 thiserror = { workspace = true }
+iced = { workspace = true, optional = true }
+
+[features]
+dashboard = [
+	"iced"
+]
