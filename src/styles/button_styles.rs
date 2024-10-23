@@ -488,7 +488,7 @@ pub fn task_button_style(theme: &Theme, status: Status) -> Style {
 
 	match status {
 		Status::Active => active_style,
-		Status::Hovered => Style {
+		Status::Hovered | Status::Pressed => Style {
 			background: Some(
 				color_average(
 					theme.extended_palette().background.weak.color,
@@ -503,7 +503,6 @@ pub fn task_button_style(theme: &Theme, status: Status) -> Style {
 			},
 			..active_style
 		},
-		Status::Pressed => active_style,
 		Status::Disabled => active_style,
 	}
 }

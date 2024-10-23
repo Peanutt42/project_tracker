@@ -65,7 +65,7 @@ pub fn task_list<'a>(
 			task_id,
 			task_type,
 			project_id,
-			&project.task_tags,
+			project,
 			dragging,
 			just_minimal_dragging,
 			highlight,

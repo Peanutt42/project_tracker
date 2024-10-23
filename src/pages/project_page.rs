@@ -69,6 +69,7 @@ pub enum ProjectPageMessage {
 	CancelDragTask,
 	PressTask(TaskId),
 	LeftClickReleased,
+	OpenTask(TaskId),
 
 	AnimateProgressbar,
 }
@@ -370,6 +371,7 @@ impl ProjectPage {
 				self.pressed_task = Some(task_id);
 				ProjectPageAction::None
 			},
+			ProjectPageMessage::OpenTask(task_id) => ProjectPageAction::OpenTaskModal { project_id: self.project_id, task_id },
 			ProjectPageMessage::LeftClickReleased => {
 				let action = if self.just_minimal_dragging {
 					if let Some(pressed_task) = &self.pressed_task {
