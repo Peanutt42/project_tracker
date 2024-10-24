@@ -1,15 +1,15 @@
 use crate::{
 	components::{
-		complete_task_timer_button, days_left_widget, pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, task_description, StopwatchClock
+		complete_task_timer_button, days_left_widget, horizontal_scrollable, pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, task_description, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING
 	},
 	core::{Database, DatabaseMessage, PreferenceMessage, Project, ProjectId, StopwatchProgress, Task, TaskId},
 	project_tracker::Message,
 	styles::{
-		task_tag_container_style, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT
+		task_tag_container_style, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT
 	}, ProjectTrackerApp,
 };
 use iced::{
-	advanced::graphics::futures::backend::default::time, alignment::{Horizontal, Vertical}, keyboard, padding::{left, top}, widget::{canvas, column, container, row, text, Column, Row}, window, Alignment, Element, Font, Length::{self, Fill}, Padding, Subscription
+	advanced::graphics::futures::backend::default::time, alignment::{Horizontal, Vertical}, keyboard, padding::top, widget::{canvas, column, container, responsive, row, text, Column, Row}, window, Alignment, Element, Font, Length::{self, Fill}, Padding, Subscription
 };
 use notify_rust::Notification;
 use std::time::{Duration, Instant};
@@ -316,24 +316,24 @@ impl StopwatchPage {
 					}
 				}
 
-				let clock: Element<Message> = if task_ref.is_some() {
-					canvas(clock)
-						.width(Length::Fixed(300.0))
-						.height(Length::Fixed(300.0))
+				responsive(move |size| -> Element<Message> {
+					let clock: Element<Message> = if task_ref.is_some() {
+						canvas(clock)
+							.width(Length::Fixed(300.0))
+							.height(Length::Fixed(300.0))
+							.into()
+					} else {
+						text(format_stopwatch_duration(
+							elapsed_time.as_secs_f64().round_ties_even() as i64,
+						))
+						.font(Font::DEFAULT)
+						.size(90)
+						.width(Fill)
+						.align_x(Horizontal::Center)
 						.into()
-				} else {
-					text(format_stopwatch_duration(
-						elapsed_time.as_secs_f64().round_ties_even() as i64,
-					))
-					.font(Font::DEFAULT)
-					.size(90)
-					.width(Fill)
-					.align_x(Horizontal::Center)
-					.into()
-				};
+					};
 
-				row![
-					column![
+					let clock_side = column![
 						clock,
 						row![
 							if *paused {
@@ -348,15 +348,31 @@ impl StopwatchPage {
 					]
 					.align_x(Alignment::Center)
 					.spacing(LARGE_SPACING_AMOUNT)
-					.width(Fill),
-				]
-				.push_maybe(task_info(task_ref, project_ref, app))
-				.spacing(LARGE_SPACING_AMOUNT)
+					.width(Fill);
+
+					if size.width > size.height {
+						row![
+							clock_side,
+						]
+						.push_maybe(task_info(task_ref, project_ref, app))
+						.spacing(LARGE_SPACING_AMOUNT)
+						.into()
+					}
+					else {
+						column![
+							clock_side,
+						]
+						.push_maybe(task_info(task_ref, project_ref, app))
+						.spacing(LARGE_SPACING_AMOUNT)
+						.into()
+					}
+				})
 				.into()
 			}
 		})
 		.center_x(Fill)
 		.center_y(Fill)
+		.padding(LARGE_PADDING_AMOUNT)
 		.into()
 	}
 }
@@ -374,37 +390,41 @@ fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a 
 			.push_maybe(project.map(|project| {
 				row![
 					container(
-						text(format!("{}:", project.name))
+						container(
+							text(format!("{}:", project.name))
+						)
+						.style(|t| {
+							task_tag_container_style(t, project.color.into())
+						})
+						.padding(
+							Padding::new(SMALL_PADDING_AMOUNT)
+								.left(PADDING_AMOUNT)
+								.right(PADDING_AMOUNT)
+						)
 					)
-					.style(|t| {
-						task_tag_container_style(t, project.color.into())
-					})
-					.padding(
-						Padding::new(SMALL_PADDING_AMOUNT)
-							.left(PADDING_AMOUNT)
-							.right(PADDING_AMOUNT)
-					),
+					.padding(HORIZONTAL_SCROLLABLE_PADDING),
 
-					Row::with_children(task.tags.iter().map(|tag_id| {
-						if let Some(tag) = project.task_tags.get(tag_id) {
-							container(text(&tag.name))
-								.style(|t| {
-									task_tag_container_style(t, tag.color.into())
-								})
-								.padding(
-									Padding::new(SMALL_PADDING_AMOUNT)
-										.left(PADDING_AMOUNT)
-										.right(PADDING_AMOUNT)
-								)
-								.into()
-						} else {
-							"<invalid tag id>".into()
-						}
-					}))
-					.spacing(SPACING_AMOUNT)
-					.padding(left(PADDING_AMOUNT))
+					horizontal_scrollable(
+						Row::with_children(task.tags.iter().map(|tag_id| {
+							if let Some(tag) = project.task_tags.get(tag_id) {
+								container(text(&tag.name))
+									.style(|t| {
+										task_tag_container_style(t, tag.color.into())
+									})
+									.padding(
+										Padding::new(SMALL_PADDING_AMOUNT)
+											.left(PADDING_AMOUNT)
+											.right(PADDING_AMOUNT)
+									)
+									.into()
+							} else {
+								"<invalid tag id>".into()
+							}
+						}))
+						.spacing(SPACING_AMOUNT)
+					),
 				]
-				.spacing(TINY_SPACING_AMOUNT)
+				.spacing(SPACING_AMOUNT)
 				.align_y(Vertical::Center)
 			}))
 			.spacing(LARGE_SPACING_AMOUNT)
