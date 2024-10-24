@@ -48,3 +48,10 @@ impl From<SystemTime> for ModifiedDate {
 		}
 	}
 }
+
+#[derive(Debug, Clone)]
+pub enum ServerEvent {
+	UpdatedDatabase,
+	SentDatabase,
+	Error(String),
+}

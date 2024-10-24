@@ -10,6 +10,7 @@ serde_json = { workspace = true }
 filetime = { workspace = true }
 thiserror = { workspace = true }
 iced = { workspace = true, optional = true }
+tokio = { workspace = true }
 
 [features]
 dashboard = [
