@@ -1,6 +1,5 @@
-use iced::stream;
 use project_tracker_server::ServerEvent;
-use iced::{Task, Element, Subscription, window, widget::text};
+use iced::{Task, Element, Subscription, Theme, window, widget::text, stream};
 use iced::futures::{SinkExt, Stream};
 use std::path::PathBuf;
 use crate::server::{self, create_server};
@@ -42,6 +41,10 @@ impl Dashboard {
 		Subscription::run_with_id("ProjectTrackerServer", server_subscription(self.database_filepath.clone()))
 			.map(Message::ServerEvent)
 	}
+
+	fn theme(&self) -> Theme {
+		Theme::Dark
+	}
 }
 
 pub fn run_dashboard(filepath: PathBuf) {
@@ -53,6 +56,7 @@ pub fn run_dashboard(filepath: PathBuf) {
 		Dashboard::view
 	)
 	.subscription(Dashboard::subscription)
+	.theme(Dashboard::theme)
 	.run_with(|| Dashboard::new(filepath));
 
 	if let Err(e) = result {
