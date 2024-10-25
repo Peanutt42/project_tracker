@@ -350,7 +350,7 @@ impl StopwatchPage {
 					.spacing(LARGE_SPACING_AMOUNT)
 					.width(Fill);
 
-					if size.width > size.height {
+					let page_view: Element<Message> = if size.width > size.height {
 						row![
 							clock_side,
 						]
@@ -365,13 +365,18 @@ impl StopwatchPage {
 						.push_maybe(task_info(task_ref, project_ref, app))
 						.spacing(LARGE_SPACING_AMOUNT)
 						.into()
-					}
+					};
+
+					container(
+						page_view
+					)
+					.center(Fill)
+					.into()
 				})
 				.into()
 			}
 		})
-		.center_x(Fill)
-		.center_y(Fill)
+		.center(Fill)
 		.padding(LARGE_PADDING_AMOUNT)
 		.into()
 	}
