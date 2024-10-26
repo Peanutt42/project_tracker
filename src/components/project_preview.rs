@@ -140,6 +140,7 @@ pub fn custom_project_preview(
 			.on_cancel(SidebarPageMessage::CancelDragProject.into())
 			.drag_overlay(!just_minimal_dragging)
 			.drag_hide(!just_minimal_dragging)
+			.drag_mode(false, true)
 			.style(move |t, s| project_preview_style(
 				t,
 				s,
