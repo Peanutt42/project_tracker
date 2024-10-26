@@ -44,7 +44,7 @@ pub enum StopwatchPageMessage {
 	Resume,
 	Toggle,
 	CompleteTask,
-	RedrawClock,
+	UpdateClock,
 }
 
 impl From<StopwatchPageMessage> for Message {
@@ -66,9 +66,9 @@ impl StopwatchPage {
 			StopwatchPage::Idle => Subscription::none(),
 			StopwatchPage::Ticking { .. } => {
 				if opened {
-					window::frames().map(|_| StopwatchPageMessage::RedrawClock)
+					window::frames().map(|_| StopwatchPageMessage::UpdateClock)
 				} else {
-					time::every(Duration::from_secs(1)).map(|_| StopwatchPageMessage::RedrawClock)
+					time::every(Duration::from_secs(1)).map(|_| StopwatchPageMessage::UpdateClock)
 				}
 			}
 		};
@@ -138,7 +138,10 @@ impl StopwatchPage {
 					clock: StopwatchClock::new(0.0, String::new(), String::new()),
 					finished_notification_sent,
 				};
-				Some(vec![Message::OpenStopwatch])
+				Some(vec![
+					StopwatchPageMessage::UpdateClock.into(),
+					Message::OpenStopwatch
+				])
 			}
 			StopwatchPageMessage::Stop => {
 				*self = StopwatchPage::Idle;
@@ -217,7 +220,7 @@ impl StopwatchPage {
 					database_action.map(|db_action| vec![db_action])
 				}
 			}
-			StopwatchPageMessage::RedrawClock => {
+			StopwatchPageMessage::UpdateClock => {
 				if let StopwatchPage::Ticking {
 					clock,
 					task,
