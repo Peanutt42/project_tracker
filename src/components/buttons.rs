@@ -1,6 +1,6 @@
 use crate::{
 	components::{date_text, duration_text}, core::{
-		DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId
+		DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, SynchronizationSetting, TaskId, TaskTag, TaskTagId
 	}, icons::{icon_to_text, Bootstrap}, modals::{
 		ConfirmModalMessage, CreateTaskModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage
 	}, pages::{
@@ -16,7 +16,7 @@ use iced::{
 use iced_aw::{drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
 use std::{borrow::Cow, path::PathBuf, time::Duration};
 
-const ICON_FONT_SIZE: f32 = 16.0;
+pub const ICON_FONT_SIZE: f32 = 16.0;
 pub const ICON_BUTTON_WIDTH: f32 = ICON_FONT_SIZE * 1.8;
 
 fn icon_button(icon: Bootstrap) -> Button<'static, Message> {
@@ -283,17 +283,10 @@ pub fn settings_button() -> Button<'static, Message> {
 		.style(secondary_button_style_default)
 }
 
-pub fn select_synchronization_filepath_button() -> Element<'static, Message> {
-	tooltip(
-		icon_button(Bootstrap::Folder)
-			.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
-			.style(secondary_button_style_default),
-		text("Select file").size(SMALL_TEXT_SIZE),
-		tooltip::Position::Bottom,
-	)
-	.gap(GAP)
-	.style(tooltip_container_style)
-	.into()
+pub fn select_synchronization_filepath_button() -> Button<'static, Message> {
+	icon_label_button("Select file", Bootstrap::Folder)
+		.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
+		.style(secondary_button_style_default)
 }
 
 pub fn date_formatting_button<'a>(
@@ -824,4 +817,22 @@ pub fn sort_dropdown_button(opened: bool, sort_mode: SortMode) -> Element<'stati
 	.offset(0.0)
 	.on_dismiss(ProjectPageMessage::CloseSortModeDropdown.into())
 	.into()
+}
+
+pub fn synchronization_type_button(synchronization_setting: SynchronizationSetting, selected_setting: &SynchronizationSetting, round_left: bool, round_right: bool) -> Button<'static, Message> {
+	let selected = synchronization_setting.is_same_type(selected_setting);
+	let name: &'static str = synchronization_setting.as_str();
+
+	button(text(name).align_x(Horizontal::Center))
+		.style(move |t, s| {
+			selection_list_button_style(
+				t,
+				s,
+				selected,
+				round_left,
+				round_right,
+			)
+		})
+		.width(80.0)
+		.on_press(PreferenceMessage::SetSynchronization(Some(synchronization_setting)).into())
 }

@@ -3,7 +3,7 @@ use crate::{
 		toggle_sidebar_button, vertical_seperator,
 		ScalarAnimation, ICON_BUTTON_WIDTH,
 	}, core::{
-		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, TaskId
+		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, SynchronizationSetting, TaskId
 	}, integrations::{download_database_from_server, sync_database_from_server, upload_database_to_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
 	}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
@@ -524,7 +524,7 @@ impl ProjectTrackerApp {
 				}
 			},
 			Message::SyncDatabaseFromServer => {
-				if let Some(server_config) = self.preferences.server_synchronization().cloned() {
+				if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
 					if let Some(database) = &self.database {
 						self.syncing_database_from_server = true;
 
@@ -546,7 +546,7 @@ impl ProjectTrackerApp {
 				Task::none()
 			},
 			Message::DownloadDatabaseFromServer => {
-				if let Some(server_config) = self.preferences.server_synchronization().cloned() {
+				if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
 					Task::perform(
 						download_database_from_server(server_config),
 						|result| match result {
@@ -561,7 +561,7 @@ impl ProjectTrackerApp {
 			},
 			Message::UploadDatabaseToServer => {
 				if let Some(database) = &self.database {
-					if let Some(server_config) = self.preferences.server_synchronization().cloned() {
+					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
 						return Task::perform(
 							upload_database_to_server(server_config, database.to_json()),
 							|result| match result {

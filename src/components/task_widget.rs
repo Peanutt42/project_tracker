@@ -47,7 +47,6 @@ pub fn task_widget<'a>(
 		text::Style::default()
 	};
 
-	// TODO: how should markdown look on done tasks?
 	let inner_text_element: Element<'a, Message> =
 		text(task.name())
 			.width(Fill)

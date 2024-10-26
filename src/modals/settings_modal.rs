@@ -1,11 +1,11 @@
 use std::str::FromStr;
-use crate::components::sync_database_from_server_button;
-use crate::core::{Database, DatabaseMessage, DateFormatting, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences};
-use crate::icons::Bootstrap;
+use crate::components::{sync_database_from_server_button, synchronization_type_button};
+use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
+use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
 use crate::project_tracker::{ProjectTrackerApp, Message};
 use crate::styles::{
-	rounded_container_style, text_input_style_default, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SPACING_AMOUNT
+	rounded_container_style, text_input_style_default, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 };
 use crate::{
 	components::{
@@ -13,14 +13,14 @@ use crate::{
 		file_location, filepath_widget, horizontal_seperator_padded, import_database_button,
 		import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button,
 		sync_database_button, vertical_seperator, copy_to_clipboard_button, open_link_button,
-		HORIZONTAL_SCROLLABLE_PADDING,
+		HORIZONTAL_SCROLLABLE_PADDING, ICON_FONT_SIZE,
 	},
 	modals::ErrorMsgModalMessage,
 	integrations::import_google_tasks_dialog,
 	styles::{card_style, GREY, PADDING_AMOUNT},
 };
 use iced::alignment::Vertical;
-use iced::widget::{text_input, toggler};
+use iced::widget::{text_input, toggler, tooltip};
 use iced::{
 	alignment::Horizontal,
 	keyboard,
@@ -42,14 +42,12 @@ pub enum SettingsModalMessage {
 
 	BrowseSynchronizationFilepath,
 	BrowseSynchronizationFilepathCanceled,
-	EnableSynchronizationFilepath,
-	DisableSynchronizationFilepath,
 
 	ImportGoogleTasksFileDialog,
 	ImportGoogleTasksFileDialogCanceled,
 
-	EnableServerSynchronization,
-	DisableServerSynchronization,
+	EnableSynchronization,
+	DisableSynchronization,
 	SetServerHostname(String),
 	SetServerPort(usize),
 	InvalidPortInput,
@@ -115,16 +113,16 @@ impl SettingTab {
 
 					column![
 						row![
-							text("Synchronization file location: "),
+							text("Synchronization:"),
 
 							container(
-								toggler(preferences.synchronization_filepath().is_some())
+								toggler(preferences.synchronization().is_some())
 									.size(27.5)
 									.on_toggle(|enable| if enable {
-										SettingsModalMessage::EnableSynchronizationFilepath.into()
+										SettingsModalMessage::EnableSynchronization.into()
 									}
 									else {
-										SettingsModalMessage::DisableSynchronizationFilepath.into()
+										SettingsModalMessage::DisableSynchronization.into()
 									})
 							)
 							.width(Fill)
@@ -134,101 +132,130 @@ impl SettingTab {
 						.align_y(Alignment::Center)
 					]
 					.push_maybe(
-						preferences.synchronization_filepath().as_ref().map(|filepath| {
-							row![
-								filepath_widget(filepath.clone())
-									.width(Fill),
+						preferences.synchronization().as_ref().map(|synchronization_setting| {
+							column![
+								row![
+									text("Type: "),
+									tooltip(
+										icon_to_text(Bootstrap::QuestionCircleFill).size(ICON_FONT_SIZE),
+										text("Either a filepath or a server
+Filepath: select a file on a different drive, a network shared drive or your own cloud like onedrive, google drive, etc.
+Server: your own hosted ProjectTracker-server"
+										)
+										.size(SMALL_TEXT_SIZE),
+										tooltip::Position::Bottom,
+									)
+									.gap(GAP)
+									.style(tooltip_container_style),
+									container(
+										row![
+											synchronization_type_button(
+												SynchronizationSetting::Filepath(None),
+												synchronization_setting,
+												true,
+												false
+											),
+											synchronization_type_button(
+												SynchronizationSetting::Server(ServerConfig::default()),
+												synchronization_setting,
+												false,
+												true
+											),
+										]
+									)
+									.width(Fill)
+									.align_x(Horizontal::Right),
+								]
+								.align_y(Alignment::Center),
 
-								container(select_synchronization_filepath_button())
-									.padding(HORIZONTAL_SCROLLABLE_PADDING),
+								match synchronization_setting {
+									SynchronizationSetting::Filepath(filepath) => {
+										let horizontal_scrollable_padding = if filepath.is_some() {
+											HORIZONTAL_SCROLLABLE_PADDING
+										}
+										else {
+											Padding::ZERO
+										};
 
-								container(
-									sync_database_button(app.syncing_database, preferences.synchronization_filepath().clone())
-								)
-								.width(Fill)
-								.align_x(Horizontal::Right)
+										row![
+											if let Some(filepath) = filepath {
+												filepath_widget(filepath.clone())
+													.width(Fill)
+													.into()
+											}
+											else {
+												Element::new(text("Filepath not specified!"))
+											},
+
+											container(select_synchronization_filepath_button())
+												.padding(horizontal_scrollable_padding),
+
+											container(
+												sync_database_button(app.syncing_database, filepath.clone())
+											)
+											.width(Fill)
+											.padding(horizontal_scrollable_padding)
+											.align_x(Horizontal::Right)
+										]
+										.spacing(SPACING_AMOUNT)
+										.align_y(Alignment::Center)
+									},
+									SynchronizationSetting::Server(server_config) => {
+										row![
+											column![
+												row![
+													container("Hostname: ")
+														.width(100.0),
+
+													text_input("ex. 127.0.0.1 or raspberrypi.local", &server_config.hostname)
+														.on_input(|hostname| SettingsModalMessage::SetServerHostname(hostname).into())
+														.style(text_input_style_default),
+												]
+												.align_y(Vertical::Center),
+
+												row![
+													container("Port: ")
+														.width(100.0),
+
+													text_input("ex. 8080", &format!("{}", server_config.port))
+														.on_input(|input| {
+															let new_port = match usize::from_str(&input) {
+																Ok(new_port) => {
+																	Some(new_port)
+																}
+																Err(_) => {
+																	if input.is_empty() {
+																		Some(8080)
+																	} else {
+																		None
+																	}
+																}
+															};
+															match new_port {
+																Some(new_port) => SettingsModalMessage::SetServerPort(new_port).into(),
+																None => SettingsModalMessage::InvalidPortInput.into(),
+															}
+														})
+														.style(text_input_style_default)
+														.width(55.0),
+												]
+												.align_y(Vertical::Center),
+											]
+											.spacing(SPACING_AMOUNT),
+
+											container(
+												sync_database_from_server_button(app.syncing_database_from_server)
+											)
+											.width(Fill)
+											.align_x(Horizontal::Right)
+										]
+										.spacing(SPACING_AMOUNT)
+									},
+								}
 							]
 							.spacing(SPACING_AMOUNT)
-							.align_y(Alignment::Center)
 						})
 					)
-					.spacing(SPACING_AMOUNT),
-
-					horizontal_seperator_padded(),
-
-					column![
-						row![
-							text("Server Synchronization: "),
-
-							container(
-								toggler(preferences.server_synchronization().is_some())
-									.size(27.5)
-									.on_toggle(|enable| if enable {
-										SettingsModalMessage::EnableServerSynchronization.into()
-									}
-									else {
-										SettingsModalMessage::DisableServerSynchronization.into()
-									})
-							)
-							.width(Fill)
-							.align_x(Horizontal::Right)
-						]
-						.spacing(SPACING_AMOUNT),
-					]
-					.push_maybe(preferences.server_synchronization().as_ref().map(|server_config| {
-						Element::new(
-							row![
-								column![
-									row![
-										container("Hostname: ")
-											.width(100.0),
-
-										text_input("ex. 127.0.0.1 or raspberrypi.local", &server_config.hostname)
-											.on_input(|hostname| SettingsModalMessage::SetServerHostname(hostname).into())
-											.style(text_input_style_default),
-									]
-									.align_y(Vertical::Center),
-
-									row![
-										container("Port: ")
-											.width(100.0),
-
-										text_input("ex. 8080", &format!("{}", server_config.port))
-											.on_input(|input| {
-												let new_port = match usize::from_str(&input) {
-													Ok(new_port) => {
-														Some(new_port)
-													}
-													Err(_) => {
-														if input.is_empty() {
-															Some(8080)
-														} else {
-															None
-														}
-													}
-												};
-												match new_port {
-													Some(new_port) => SettingsModalMessage::SetServerPort(new_port).into(),
-													None => SettingsModalMessage::InvalidPortInput.into(),
-												}
-											})
-											.style(text_input_style_default)
-											.width(55.0),
-									]
-									.align_y(Vertical::Center),
-								]
-								.spacing(SPACING_AMOUNT),
-
-								container(
-									sync_database_from_server_button(app.syncing_database_from_server)
-								)
-								.width(Fill)
-								.align_x(Horizontal::Right)
-							]
-							.padding(Padding::default().left(PADDING_AMOUNT))
-							.spacing(SPACING_AMOUNT)
-						)
-					}))
 					.spacing(SPACING_AMOUNT),
 
 					horizontal_seperator_padded(),
@@ -384,22 +411,10 @@ impl SettingsModal {
 				PreferenceAction::None
 			}
 
-			SettingsModalMessage::EnableSynchronizationFilepath => {
-				if preferences.synchronization_filepath().is_none() {
-					return self.update(SettingsModalMessage::BrowseSynchronizationFilepath, preferences);
-				}
-				PreferenceAction::None
-			},
-			SettingsModalMessage::DisableSynchronizationFilepath => {
-				if let Some(preferences) = preferences {
-					preferences.set_synchronization_filepath(None);
-				}
-				PreferenceAction::None
-			}
 			SettingsModalMessage::BrowseSynchronizationFilepath => {
 				Task::perform(Database::export_file_dialog(), |filepath| match filepath {
 					Some(filepath) => {
-						PreferenceMessage::SetSynchronizationFilepath(Some(filepath)).into()
+						PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Filepath(Some(filepath)))).into()
 					}
 					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
 				})
@@ -436,39 +451,36 @@ impl SettingsModal {
 				PreferenceAction::None
 			},
 
-
-			SettingsModalMessage::EnableServerSynchronization => {
+			SettingsModalMessage::EnableSynchronization => {
 				if let Some(preferences) = preferences {
-					if preferences.server_synchronization().is_none() {
-						preferences.set_server_synchronization(Some(ServerConfig::default()));
-					}
+					preferences.set_synchronization(Some(SynchronizationSetting::Filepath(None)));
 				}
 				PreferenceAction::None
 			},
-			SettingsModalMessage::DisableServerSynchronization => {
+			SettingsModalMessage::DisableSynchronization => {
 				if let Some(preferences) = preferences {
-					preferences.set_server_synchronization(None);
+					preferences.set_synchronization(None);
 				}
 				PreferenceAction::None
 			},
 			SettingsModalMessage::SetServerHostname(new_hostname) => {
 				if let Some(preferences) = preferences {
-					if let Some(config) = preferences.server_synchronization() {
-						preferences.set_server_synchronization(Some(ServerConfig {
+					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
+						preferences.set_synchronization(Some(SynchronizationSetting::Server(ServerConfig {
 							hostname: new_hostname,
 							..*config
-						}));
+						})));
 					}
 				}
 				PreferenceAction::None
 			},
 			SettingsModalMessage::SetServerPort(new_port) => {
 				if let Some(preferences) = preferences {
-					if let Some(config) = preferences.server_synchronization() {
-						preferences.set_server_synchronization(Some(ServerConfig {
+					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
+						preferences.set_synchronization(Some(SynchronizationSetting::Server(ServerConfig {
 							port: new_port,
 							..config.clone()
-						}));
+						})));
 					}
 				}
 				PreferenceAction::None

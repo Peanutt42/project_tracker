@@ -4,7 +4,7 @@ pub use database::{Database, DatabaseMessage, LoadDatabaseResult, LoadDatabaseEr
 mod preferences;
 pub use preferences::{
 	DateFormatting, LoadPreferencesResult, LoadPreferencesError, PreferenceMessage, PreferenceAction, Preferences, SerializedContentPage,
-	StopwatchProgress, OptionalPreference
+	StopwatchProgress, OptionalPreference, SynchronizationSetting
 };
 
 mod ordered_hash_map;

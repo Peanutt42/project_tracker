@@ -29,6 +29,28 @@ fn default_create_new_tasks_at_top() -> bool { true }
 fn default_sort_unspecified_tasks_at_bottom() -> bool { true }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum SynchronizationSetting {
+	Filepath(Option<PathBuf>),
+	Server(ServerConfig),
+}
+
+impl SynchronizationSetting {
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			SynchronizationSetting::Filepath(_) => "Filepath",
+			SynchronizationSetting::Server(_) => "Server",
+		}
+	}
+
+	pub fn is_same_type(&self, other: &Self) -> bool {
+		match self {
+			SynchronizationSetting::Filepath(_) => matches!(other, SynchronizationSetting::Filepath(_)),
+			SynchronizationSetting::Server(_) => matches!(other, SynchronizationSetting::Server(_)),
+		}
+	}
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
 	theme_mode: ThemeMode,
 
@@ -47,9 +69,7 @@ pub struct Preferences {
 
 	stopwatch_progress: Option<StopwatchProgress>,
 
-	synchronization_filepath: Option<PathBuf>,
-
-	server_synchronization: Option<ServerConfig>,
+	synchronization: Option<SynchronizationSetting>,
 
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
@@ -68,8 +88,7 @@ impl Default for Preferences {
 			show_sidebar: default_show_sidebar(),
 			selected_content_page: SerializedContentPage::default(),
 			stopwatch_progress: None,
-			synchronization_filepath: None,
-			server_synchronization: None,
+			synchronization: None,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
@@ -105,7 +124,7 @@ pub enum PreferenceMessage {
 	ToggleShowSidebar,
 	SetContentPage(SerializedContentPage),
 	SetStopwatchProgress(Option<StopwatchProgress>),
-	SetSynchronizationFilepath(Option<PathBuf>),
+	SetSynchronization(Option<SynchronizationSetting>),
 	SetDateFormatting(DateFormatting),
 	SetCreateNewTaskAtTop(bool),
 	SetSortUnspecifiedTasksAtBottom(bool),
@@ -148,17 +167,11 @@ pub type LoadPreferencesResult = Result<Preferences, LoadPreferencesError>;
 impl Preferences {
 	const FILE_NAME: &'static str = "preferences.json";
 
-	pub fn synchronization_filepath(&self) -> &Option<PathBuf> {
-		&self.synchronization_filepath
+	pub fn synchronization(&self) -> &Option<SynchronizationSetting> {
+		&self.synchronization
 	}
-	pub fn set_synchronization_filepath(&mut self, filepath: Option<PathBuf>) {
-		self.modify(|pref| pref.synchronization_filepath = filepath);
-	}
-	pub fn server_synchronization(&self) -> &Option<ServerConfig> {
-		&self.server_synchronization
-	}
-	pub fn set_server_synchronization(&mut self, config: Option<ServerConfig>) {
-		self.modify(|pref| pref.server_synchronization = config);
+	pub fn set_synchronization(&mut self, setting: Option<SynchronizationSetting>) {
+		self.modify(|pref| pref.synchronization = setting);
 	}
 	pub fn theme_mode(&self) -> &ThemeMode {
 		&self.theme_mode
@@ -254,8 +267,8 @@ impl Preferences {
 				PreferenceAction::None
 			}
 
-			PreferenceMessage::SetSynchronizationFilepath(filepath) => {
-				self.modify(|pref| pref.synchronization_filepath = filepath);
+			PreferenceMessage::SetSynchronization(setting) => {
+				self.modify(|pref| pref.synchronization = setting);
 				PreferenceAction::None
 			}
 
@@ -475,8 +488,7 @@ pub trait OptionalPreference {
 	fn date_formatting(&self) -> DateFormatting;
 	fn create_new_tasks_at_top(&self) -> bool;
 	fn sort_unspecified_tasks_at_bottom(&self) -> bool;
-	fn synchronization_filepath(&self) -> Option<&PathBuf>;
-	fn server_synchronization(&self) -> Option<&ServerConfig>;
+	fn synchronization(&self) -> Option<&SynchronizationSetting>;
 }
 
 impl OptionalPreference for Option<Preferences> {
@@ -512,10 +524,7 @@ impl OptionalPreference for Option<Preferences> {
 			default_sort_unspecified_tasks_at_bottom()
 		}
 	}
-	fn synchronization_filepath(&self) -> Option<&PathBuf> {
-		self.as_ref().and_then(|preferences| preferences.synchronization_filepath.as_ref())
-	}
-	fn server_synchronization(&self) -> Option<&ServerConfig> {
-		self.as_ref().and_then(|preferences| preferences.server_synchronization.as_ref())
+	fn synchronization(&self) -> Option<&SynchronizationSetting> {
+		self.as_ref().and_then(|preferences| preferences.synchronization.as_ref())
 	}
 }

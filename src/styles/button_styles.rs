@@ -90,11 +90,10 @@ pub fn dangerous_button_style(theme: &Theme, status: Status) -> Style {
 			background: Some(Color::from_rgb(0.8, 0.0, 0.0).into()),
 			..dangerous_button_style(theme, Status::Active)
 		},
-		Status::Pressed => Style {
+		Status::Pressed | Status::Disabled => Style {
 			background: Some(Color::from_rgb(0.6, 0.0, 0.0).into()),
 			..dangerous_button_style(theme, Status::Active)
 		},
-		Status::Disabled => Style::default(),
 	}
 }
 
