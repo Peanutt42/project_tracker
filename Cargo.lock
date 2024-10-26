@@ -3088,11 +3088,9 @@ name = "project_tracker_server"
 version = "0.1.0"
 dependencies = [
  "filetime",
- "iced",
  "serde",
  "serde_json",
  "thiserror",
- "tokio",
 ]
 
 [[package]]

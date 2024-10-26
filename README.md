@@ -11,20 +11,14 @@ personal project todo list tracker
 ## Prerequisites
 - Rust (programing lanuage): https://www.rust-lang.org/tools/install
 
-## Installation - Project Tracker GUI (also Client) (Linux)
+## Installation - Project Tracker GUI (Linux)
 ```bash
 cd scripts
 ./install_linux.sh
 ```
 
 ## Installation - Project Tracker Server (Linux)
-Headless:
 ```bash
 cd scripts
 ./install_server_linux.sh
-```
-With dashboard ui:
-```bash
-cd scripts
-./install_server_with_dashboard_linux.sh
 ```
