@@ -324,6 +324,7 @@ Server: your own hosted ProjectTracker-server"
 						content,
 					]
 					.spacing(SMALL_SPACING_AMOUNT)
+					.align_y(Vertical::Center)
 				};
 
 				let repository = env!("CARGO_PKG_REPOSITORY");
