@@ -3,6 +3,8 @@ personal project todo list tracker
 
 ![](Screenshot.png)
 
+![](Screenshot_Stopwatch.png)
+
 ## Platform support
 - Linux, Windows, Macos (untested, but should work)
 - Installation scripts are linux only for now
