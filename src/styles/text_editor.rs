@@ -1,58 +1,7 @@
-use crate::styles::{selection_color, BORDER_RADIUS};
+use crate::styles::{selection_color, mix_color, BORDER_RADIUS};
 use iced::{
-	border::{rounded, Radius}, keyboard::{self, key}, widget::text_editor::{Action, Binding, Content, Edit, KeyPress, Motion, Status, Style}, Border, Theme
+	border::rounded, keyboard::{self, key}, widget::text_editor::{Action, Binding, Content, Edit, KeyPress, Motion, Status, Style}, Theme
 };
-
-pub fn text_editor_style(
-	theme: &Theme,
-	status: Status,
-	round_top_left: bool,
-	round_top_right: bool,
-	round_bottom_left: bool,
-	round_bottom_right: bool,
-) -> Style {
-	let placeholder = theme.extended_palette().background.strong.color;
-	let value = theme.extended_palette().background.base.text;
-	let selection = selection_color(theme.extended_palette());
-
-	let border = Border {
-		radius: Radius::default()
-			.top_left(if round_top_left { BORDER_RADIUS } else { 0.0 })
-			.top_right(if round_top_right { BORDER_RADIUS } else { 0.0 })
-			.bottom_left(if round_bottom_left {
-				BORDER_RADIUS
-			} else {
-				0.0
-			})
-			.bottom_right(if round_bottom_right {
-				BORDER_RADIUS
-			} else {
-				0.0
-			}),
-		width: 1.0,
-		color: theme.extended_palette().background.strong.color,
-	};
-
-	match status {
-		Status::Active | Status::Hovered | Status::Focused => Style {
-			background: theme.extended_palette().background.base.color.into(),
-			icon: theme.extended_palette().background.weak.text,
-			border,
-			placeholder,
-			value,
-			selection,
-		},
-		Status::Disabled => Style {
-			background: theme.extended_palette().background.weak.color.into(),
-			icon: theme.extended_palette().background.strong.text,
-			border,
-			placeholder,
-			value,
-			selection,
-		},
-	}
-}
-
 
 pub fn description_text_editor_style(theme: &Theme, _status: Status) -> Style {
 	let placeholder = theme.extended_palette().background.strong.color;
@@ -62,7 +11,7 @@ pub fn description_text_editor_style(theme: &Theme, _status: Status) -> Style {
 	let border = rounded(BORDER_RADIUS);
 
 	Style {
-		background: theme.extended_palette().background.weak.color.into(),
+		background: mix_color(theme.extended_palette().background.base.color, theme.extended_palette().background.strong.color, 0.25).into(),
 		icon: theme.extended_palette().background.weak.text,
 		border,
 		placeholder,
