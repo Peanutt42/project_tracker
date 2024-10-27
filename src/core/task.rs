@@ -20,6 +20,12 @@ pub enum TaskType {
 	SourceCodeTodo,
 }
 
+impl TaskType {
+	pub fn is_done(&self) -> bool {
+		matches!(self, Self::Done)
+	}
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct Task {
 	name: String,

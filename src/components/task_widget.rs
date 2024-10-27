@@ -153,7 +153,7 @@ pub fn task_widget<'a>(
 								.push_maybe(
 									task.due_date
 										.as_ref()
-										.map(|due_date| days_left_widget(*due_date)),
+										.map(|due_date| days_left_widget(*due_date, task_type.is_done())),
 								)
 								.push_maybe(stopwatch_label.map(|label| -> Element<Message> {
 									button(

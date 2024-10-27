@@ -400,7 +400,7 @@ fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a 
 					.size(HEADING_TEXT_SIZE)
 					.font(BOLD_FONT)
 			)
-			.push_maybe(task.due_date.map(days_left_widget))
+			.push_maybe(task.due_date.map(|date| days_left_widget(date, false)))
 			.push(task_description(task, app))
 			.push_maybe(project.map(|project| {
 				row![
