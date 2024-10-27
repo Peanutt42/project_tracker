@@ -1,8 +1,8 @@
 use std::str::FromStr;
-use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::{Fill, Fixed}};
+use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::{Fill, Fixed}, Padding};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
-use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, view_task_description_button}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, description_text_editor_style, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, view_task_description_button, ICON_BUTTON_WIDTH}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
 
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -334,6 +334,7 @@ impl TaskModal {
 									.on_action(|action| TaskModalMessage::EditDescriptionAction(action).into())
 									.style(description_text_editor_style)
 									.key_binding(|key_press| text_editor_keybindings(key_press, TaskModalMessage::UnindentDescription.into()))
+									.padding(PADDING_AMOUNT)
 									.into()
 							}
 							else {
@@ -373,7 +374,9 @@ impl TaskModal {
 								Space::new(0.0, LARGE_SPACING_AMOUNT),
 
 								stack![
-									description_text,
+									container(description_text)
+										.padding(Padding::ZERO.right(ICON_BUTTON_WIDTH * 2.0))
+										.style(markdown_background_container_style),
 									description_hover_button
 								],
 
