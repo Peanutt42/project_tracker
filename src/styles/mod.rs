@@ -33,7 +33,7 @@ pub use text_input::{
 };
 
 mod text_editor;
-pub use text_editor::{text_editor_style, description_text_editor_style, text_editor_keybindings};
+pub use text_editor::{text_editor_style, description_text_editor_style, text_editor_keybindings, unindent_text};
 
 mod scrollable;
 pub use scrollable::scrollable_style;

@@ -2,7 +2,7 @@ use std::str::FromStr;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::{Fill, Fixed}};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
-use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, stop_editing_task_description_button, task_description, task_tag_button, unfocusable}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, text_input_style, text_input_style_borderless, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, stop_editing_task_description_button, task_description, task_tag_button, unfocusable}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, text_input_style, text_input_style_borderless, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}, ProjectTrackerApp};
 
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -18,6 +18,7 @@ pub enum TaskModalMessage {
 	EditDescription,
 	StopEditingDescription,
 	EditDescriptionAction(text_editor::Action),
+	UnindentDescription,
 
 	EditDueDate,
 	StopEditingDueDate,
@@ -96,6 +97,19 @@ impl TaskModal {
 				}
 				iced::Task::none()
 			},
+			TaskModalMessage::UnindentDescription => {
+				if let TaskModal::Opened { new_description: Some(new_description), project_id, task_id, .. } = self {
+					unindent_text(new_description);
+					if let Some(database) = database {
+						database.update(DatabaseMessage::ChangeTaskDescription {
+							project_id: *project_id,
+							task_id: *task_id,
+							new_task_description: new_description.text(),
+						});
+					}
+				}
+				iced::Task::none()
+			}
 
 			TaskModalMessage::EditDueDate => {
 				if let TaskModal::Opened { edit_due_date, .. } = self {
@@ -319,7 +333,7 @@ impl TaskModal {
 									.style(move |t, s| {
 										text_editor_style(t, s, true, true, true, true)
 									})
-									.key_binding(text_editor_keybindings)
+									.key_binding(|key_press| text_editor_keybindings(key_press, TaskModalMessage::UnindentDescription.into()))
 									.into()
 							}
 							else {
