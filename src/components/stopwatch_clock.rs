@@ -6,7 +6,7 @@ use iced::{
 	Color, Font, Point, Radians, Renderer, Theme,
 };
 
-use crate::project_tracker::Message;
+use crate::{pages::format_stopwatch_duration, project_tracker::Message};
 
 #[derive(Debug)]
 pub struct StopwatchClock {
@@ -17,11 +17,11 @@ pub struct StopwatchClock {
 }
 
 impl StopwatchClock {
-	pub fn new(percentage: f32, label: String, sub_label: String) -> Self {
+	pub fn new(percentage: f32, seconds_left: f32, needed_seconds: f32) -> Self {
 		Self {
 			percentage,
-			label,
-			sub_label,
+			label: format_stopwatch_duration(seconds_left.round_ties_even() as i64),
+			sub_label: format_stopwatch_duration(needed_seconds.round_ties_even() as i64),
 			cache: Cache::new(),
 		}
 	}
@@ -35,13 +35,13 @@ impl StopwatchClock {
 		self.cache.clear();
 	}
 
-	pub fn set_label(&mut self, label: String) {
-		self.label = label;
+	pub fn set_seconds_left(&mut self, seconds_left: f32) {
+		self.label = format_stopwatch_duration(seconds_left.round_ties_even() as i64);
 		self.cache.clear();
 	}
 
-	pub fn set_sub_label(&mut self, sub_label: String) {
-		self.sub_label = sub_label;
+	pub fn set_needed_seconds(&mut self, needed_seconds: f32) {
+		self.sub_label = format_stopwatch_duration(needed_seconds.round_ties_even() as i64);
 		self.cache.clear();
 	}
 }

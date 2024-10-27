@@ -109,14 +109,29 @@ impl StopwatchPage {
 		database: &Option<Database>,
 		opened: bool,
 	) -> Option<Vec<Message>> {
+		let get_needed_seconds = |task: Option<(ProjectId, TaskId)>| -> f32 {
+			task.as_ref().and_then(|(project_id, task_id)|
+				database.as_ref().and_then(|database|
+					database.get_task(project_id, task_id)
+						.and_then(|task|
+							task.needed_time_minutes.as_ref()
+								.map(|needed_minutes| *needed_minutes as f32 * 60.0)
+						)
+				)
+			)
+			.unwrap_or(0.0)
+		};
+
 		match message {
 			StopwatchPageMessage::Start { task } => {
+				let needed_seconds = get_needed_seconds(task);
+
 				*self = StopwatchPage::Ticking {
 					elapsed_time: Duration::ZERO,
 					last_update: Instant::now(),
 					paused: false,
 					task,
-					clock: StopwatchClock::new(0.0, String::new(), String::new()),
+					clock: StopwatchClock::new(0.0, needed_seconds, needed_seconds),
 					finished_notification_sent: false,
 				};
 				Some(vec![
@@ -130,12 +145,14 @@ impl StopwatchPage {
 				paused,
 				finished_notification_sent,
 			} => {
+				let needed_seconds = get_needed_seconds(task);
+
 				*self = StopwatchPage::Ticking {
 					elapsed_time,
 					last_update: Instant::now(),
 					paused,
 					task,
-					clock: StopwatchClock::new(0.0, String::new(), String::new()),
+					clock: StopwatchClock::new(0.0, needed_seconds, needed_seconds),
 					finished_notification_sent,
 				};
 				Some(vec![
@@ -250,12 +267,8 @@ impl StopwatchPage {
 							let needed_seconds = needed_minutes as f32 * 60.0;
 							let seconds_left = needed_seconds - timer_seconds;
 							clock.set_percentage(timer_seconds / needed_seconds);
-							clock.set_label(format_stopwatch_duration(
-								seconds_left.round_ties_even() as i64,
-							));
-							clock.set_sub_label(format_stopwatch_duration(
-								needed_seconds.round_ties_even() as i64,
-							));
+							clock.set_seconds_left(seconds_left);
+							clock.set_needed_seconds(needed_seconds);
 
 							if seconds_left <= 0.0 && !*finished_notification_sent {
 								let summary = format!("{} min. timer finished!", needed_minutes);
@@ -283,7 +296,7 @@ impl StopwatchPage {
 							}
 						}
 					}
-					else {
+					else if task.is_some() {
 						*self = StopwatchPage::Idle;
 					}
 

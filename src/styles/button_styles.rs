@@ -55,6 +55,55 @@ pub fn project_preview_style(
 	}
 }
 
+pub fn stopwatch_page_button_style(theme: &Theme, status: Status, selected: bool, timer_ticking: bool, dropzone_highlight: bool) -> Style {
+	let border = rounded(BORDER_RADIUS);
+
+	let stopwatch_color = if timer_ticking || dropzone_highlight {
+		theme.extended_palette().danger.base.color
+	}
+	else {
+		theme.extended_palette().primary.base.color
+	};
+
+	match status {
+		Status::Active => {
+			let background_color = if selected || timer_ticking || dropzone_highlight {
+				stopwatch_color
+			} else {
+				mix_color(
+					theme.extended_palette().background.weak.color,
+					theme.extended_palette().background.base.color,
+					0.75,
+				)
+			};
+
+			Style {
+				background: Some(background_color.into()),
+				text_color: text_color(background_color),
+				border,
+				..Default::default()
+			}
+		}
+		Status::Hovered | Status::Pressed | Status::Disabled => {
+			let background_color = if selected || timer_ticking || dropzone_highlight {
+				stopwatch_color
+			} else {
+				color_average(
+					theme.extended_palette().background.weak.color,
+					theme.extended_palette().background.base.color,
+				)
+			};
+
+			Style {
+				background: Some(background_color.into()),
+				text_color: text_color(background_color),
+				border,
+				..Default::default()
+			}
+		}
+	}
+}
+
 pub fn hidden_secondary_button_style(theme: &Theme, status: Status) -> Style {
 	match status {
 		Status::Active => Style {

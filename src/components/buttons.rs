@@ -7,12 +7,11 @@ use crate::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
 		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
 	}, project_tracker::Message, styles::{
-		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
-	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, row, text, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}
-};
+	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, row, text, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
 use iced_aw::{drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
 use std::{borrow::Cow, path::PathBuf, time::Duration};
 
@@ -226,6 +225,7 @@ pub fn theme_mode_button(
 pub fn stopwatch_button(
 	stopwatch_page: &StopwatchPage,
 	selected: bool,
+	dropzone_highlight: bool
 ) -> Element<'static, Message> {
 	let stopwatch_label = match stopwatch_page {
 		StopwatchPage::Ticking {
@@ -261,17 +261,14 @@ pub fn stopwatch_button(
 		.width(Fill)
 		.on_press(Message::OpenStopwatch)
 		.style(move |t, s| {
-			project_preview_style(
+			stopwatch_page_button_style(
 				t,
 				s,
-				selected || stopwatch_ticking,
-				if stopwatch_ticking {
-					Some(Color::from_rgb(1.0, 0.0, 0.0))
-				} else {
-					None
-				},
+				selected,
+				stopwatch_ticking,
+				dropzone_highlight
 			)
-		}),
+		})
 	)
 	.id(STOPWATCH_TASK_DROPZONE_ID.clone())
 	.into()

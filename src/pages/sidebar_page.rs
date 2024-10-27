@@ -335,6 +335,9 @@ impl SidebarPage {
 						if is_hovered(BOTTOM_TODO_TASK_DROPZONE_ID.clone().into()) {
 							self.task_dropzone_hovered = Some(TaskDropzone::EndOfTodoTaskList);
 						}
+						if is_hovered(STOPWATCH_TASK_DROPZONE_ID.clone().into()) {
+							self.task_dropzone_hovered = Some(TaskDropzone::Stopwatch);
+						}
 					}
 				}
 				SidebarPageAction::None
@@ -589,7 +592,11 @@ impl SidebarPage {
 		column![
 			column![
 				row![
-					stopwatch_button(&app.stopwatch_page, app.project_page.is_none()),
+					stopwatch_button(
+						&app.stopwatch_page,
+						app.project_page.is_none(),
+						matches!(self.task_dropzone_hovered, Some(TaskDropzone::Stopwatch))
+					),
 					toggle_sidebar_button(true),
 				]
 				.align_y(Alignment::Center)
