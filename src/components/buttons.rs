@@ -7,7 +7,7 @@ use crate::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
 		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
 	}, project_tracker::Message, styles::{
-		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, finish_editing_task_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, primary_button_style, project_preview_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
@@ -121,11 +121,11 @@ pub fn project_context_menu_button(opened: bool) -> Element<'static, Message> {
 	.into()
 }
 
-pub fn edit_task_description_button() -> Element<'static, Message> {
+pub fn edit_task_description_button(editing: bool) -> Element<'static, Message> {
 	tooltip(
 		icon_button(Bootstrap::PencilSquare)
 			.on_press(TaskModalMessage::EditDescription.into())
-			.style(secondary_button_style_default),
+			.style(move |t, s| selection_list_button_style(t, s, editing, false, true)),
 
 		text("Edit description").size(SMALL_TEXT_SIZE),
 
@@ -136,13 +136,13 @@ pub fn edit_task_description_button() -> Element<'static, Message> {
 	.into()
 }
 
-pub fn stop_editing_task_description_button() -> Element<'static, Message> {
+pub fn view_task_description_button(viewing: bool) -> Element<'static, Message> {
 	tooltip(
-		icon_button(Bootstrap::CheckLg)
-			.on_press(TaskModalMessage::StopEditingDescription.into())
-			.style(finish_editing_task_button_style),
+		icon_button(Bootstrap::BodyText)
+			.on_press(TaskModalMessage::ViewDescription.into())
+			.style(move |t, s| selection_list_button_style(t, s, viewing, true, false)),
 
-		text("Stop editing").size(SMALL_TEXT_SIZE),
+		text("View description").size(SMALL_TEXT_SIZE),
 
 		tooltip::Position::Bottom,
 	)

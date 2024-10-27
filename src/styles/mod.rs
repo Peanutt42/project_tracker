@@ -1,6 +1,6 @@
 mod button_styles;
 pub use button_styles::{
-	circle_button_style, dangerous_button_style, delete_button_style, finish_editing_task_button_style, create_task_modal_ok_button_style,
+	circle_button_style, dangerous_button_style, delete_button_style, create_task_modal_ok_button_style,
 	delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style,
 	project_preview_style, secondary_button_style, secondary_button_style_default,
 	secondary_button_style_no_rounding, secondary_button_style_only_round_top,

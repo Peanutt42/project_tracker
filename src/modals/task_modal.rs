@@ -2,7 +2,7 @@ use std::str::FromStr;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::{Fill, Fixed}};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
-use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, stop_editing_task_description_button, task_description, task_tag_button, unfocusable}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, text_input_style, text_input_style_borderless, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, view_task_description_button}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, text_editor_keybindings, text_editor_style, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}, ProjectTrackerApp};
 
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -16,7 +16,7 @@ pub enum TaskModalMessage {
 	Close,
 
 	EditDescription,
-	StopEditingDescription,
+	ViewDescription,
 	EditDescriptionAction(text_editor::Action),
 	UnindentDescription,
 
@@ -78,7 +78,7 @@ impl TaskModal {
 				}
 				iced::Task::none()
 			},
-			TaskModalMessage::StopEditingDescription => {
+			TaskModalMessage::ViewDescription => {
 				if let TaskModal::Opened { new_description, .. } = self {
 					*new_description = None;
 				}
@@ -312,19 +312,21 @@ impl TaskModal {
 								add_due_date_button.into()
 							};
 
+							let editing_description = new_description.is_some();
+							let viewing_description = !editing_description;
 							let description_hover_button: Element<'a, Message> = container(
-								if new_description.is_some() {
-									stop_editing_task_description_button()
-								}
-								else {
-									edit_task_description_button()
-								}
+								container(
+									row![
+										view_task_description_button(viewing_description),
+										edit_task_description_button(editing_description),
+									]
+								)
+								.style(tooltip_container_style)
 							)
 							.width(Fill)
 							.height(Fill)
 							.align_x(Horizontal::Right)
 							.align_y(Vertical::Top)
-							//.padding(PADDING_AMOUNT)
 							.into();
 
 							let description_text: Element<'a, Message> = if let Some(new_description) = new_description {
