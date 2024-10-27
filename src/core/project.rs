@@ -62,6 +62,19 @@ impl Project {
 			.or(self.source_code_todos.get(task_id))
 	}
 
+	pub fn get_task_and_type(&self, task_id: &TaskId) -> Option<(&Task, TaskType)> {
+		self.todo_tasks.get(task_id)
+			.map(|t| (t, TaskType::Todo))
+			.or(
+				self.done_tasks.get(task_id)
+					.map(|t| (t, TaskType::Done))
+			)
+			.or(
+				self.source_code_todos.get(task_id)
+					.map(|t| (t, TaskType::SourceCodeTodo))
+			)
+	}
+
 	/// task can be todo or done or source code todos
 	pub fn get_task_mut(&mut self, task_id: &TaskId) -> Option<&mut Task> {
 		self.todo_tasks

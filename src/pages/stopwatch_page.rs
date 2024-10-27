@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		complete_task_timer_button, days_left_widget, horizontal_scrollable, pause_timer_button, resume_timer_button, start_timer_button, stop_timer_button, task_description, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING
 	},
-	core::{Database, DatabaseMessage, PreferenceMessage, Project, ProjectId, StopwatchProgress, Task, TaskId},
+	core::{Database, DatabaseMessage, PreferenceMessage, Project, ProjectId, StopwatchProgress, Task, TaskId, TaskType},
 	project_tracker::Message,
 	styles::{
 		task_tag_container_style, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT
@@ -235,14 +235,17 @@ impl StopwatchPage {
 					}
 					*last_update = Instant::now();
 
-					let task_ref = task.as_ref().and_then(|(project_id, task_id)| {
+					let task_and_type = task.as_ref().and_then(|(project_id, task_id)| {
 						database
 							.as_ref()
-							.and_then(|db| db.get_task(project_id, task_id))
+							.and_then(|db| db.get_task_and_type(project_id, task_id))
 					});
 
-					if let Some(task) = task_ref {
-						if let Some(needed_minutes) = task.needed_time_minutes {
+					if let Some((task, task_type)) = task_and_type {
+						if matches!(task_type, TaskType::Done) {
+							*self = StopwatchPage::Idle;
+						}
+						else if let Some(needed_minutes) = task.needed_time_minutes {
 							let timer_seconds = elapsed_time.as_secs_f32();
 							let needed_seconds = needed_minutes as f32 * 60.0;
 							let seconds_left = needed_seconds - timer_seconds;
@@ -280,6 +283,10 @@ impl StopwatchPage {
 							}
 						}
 					}
+					else {
+						*self = StopwatchPage::Idle;
+					}
+
 					Some(vec![PreferenceMessage::SetStopwatchProgress(
 						self.get_progress(),
 					)
