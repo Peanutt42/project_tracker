@@ -12,7 +12,7 @@ use iced::{
 	advanced::graphics::futures::backend::default::time, alignment::{Horizontal, Vertical}, keyboard, padding::top, widget::{canvas, column, container, responsive, row, text, Column, Row}, window, Alignment, Element, Font, Length::{self, Fill}, Padding, Subscription
 };
 use notify_rust::Notification;
-use std::time::{Duration, Instant};
+use std::{io::Cursor, thread, time::{Duration, Instant}};
 
 #[derive(Debug, Default)]
 pub enum StopwatchPage {
@@ -291,6 +291,20 @@ impl StopwatchPage {
 								{
 									let _ = Notification::new().summary(&summary).body(body).show();
 								}
+
+								// play notification sound
+								thread::spawn(|| {
+									match rodio::OutputStream::try_default() {
+										Ok((_stream, stream_handle)) => {
+											let notification_sound_data = include_bytes!("../../assets/message-new-instant.oga");
+											match stream_handle.play_once(Cursor::new(notification_sound_data)) {
+												Ok(sink) => sink.sleep_until_end(),
+												Err(e) => eprintln!("Failed to play notification sound: {e}"),
+											}
+										},
+										Err(e) => eprintln!("Failed to play notification sound: {e}"),
+									}
+								});
 
 								*finished_notification_sent = true;
 							}

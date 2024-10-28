@@ -6,21 +6,9 @@ personal project todo list tracker
 ![](Screenshot_Stopwatch.png)
 
 ## Platform support
-- Linux, Windows, Macos (untested, but should work)
-- Installation scripts are linux only for now
-- Server can run on Raspberrypi! (GUI has weird artifacts...)
+- Linux: tested ✅, with installation scripts available
+- Windows: tested ✅,
+- Macos: untested ❌, but should work
+- Raspberrypi: Server only ❗
 
-## Prerequisites
-- Rust (programing lanuage): https://www.rust-lang.org/tools/install
-
-## Installation - Project Tracker GUI (Linux)
-```bash
-cd scripts
-./install_linux.sh
-```
-
-## Installation - Project Tracker Server (Linux)
-```bash
-cd scripts
-./install_server_linux.sh
-```
+## Installation (see [INSTALL.md](INSTALL.md))
