@@ -138,7 +138,7 @@ pub fn custom_project_preview(
 			.into())
 			.on_click(SidebarPageMessage::ClickProject(project_id).into())
 			.on_cancel(SidebarPageMessage::CancelDragProject.into())
-			.drag_overlay(!just_minimal_dragging)
+			.drag_overlay(!just_minimal_dragging, None) // add override_overlay_content like with the tasks
 			.drag_hide(!just_minimal_dragging)
 			.drag_mode(false, true)
 			.style(move |t, s| project_preview_style(

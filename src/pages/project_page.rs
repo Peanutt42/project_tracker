@@ -174,7 +174,7 @@ pub struct ProjectPage {
 	show_done_tasks: bool,
 	show_source_code_todos: bool,
 	show_color_picker: bool,
-	filter_task_tags: HashSet<TaskTagId>,
+	pub filter_task_tags: HashSet<TaskTagId>,
 	search_tasks_filter: Option<String>,
 	pressed_task: Option<TaskId>,
 	dragged_task: Option<TaskId>,

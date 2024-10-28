@@ -3,8 +3,7 @@ use crate::styles::{
 	LARGE_BORDER_RADIUS,
 };
 use iced::{border::rounded, widget::container::Style, Border, Color, Shadow, Theme, Vector};
-
-use super::{link_color, LARGE_BLUR_RADIUS};
+use crate::styles::{link_color, LARGE_BLUR_RADIUS, GREY};
 
 pub fn rounded_container_style(theme: &Theme) -> Style {
 	Style {
@@ -113,17 +112,42 @@ pub fn project_preview_background_container_style(theme: &Theme, dragging: bool)
 	}
 }
 
-pub fn task_background_container_style(theme: &Theme, dragging: bool) -> Style {
+pub fn task_background_container_style(theme: &Theme, dragging: bool, drag_overlay: bool) -> Style {
 	Style {
-		background: if dragging {
+		background: if dragging || drag_overlay {
 			Some(
-				color_average(
-					theme.extended_palette().background.weak.color,
-					theme.extended_palette().background.base.color,
-				)
+				if drag_overlay {
+					color_average(
+						theme.extended_palette().background.weak.color,
+						theme.extended_palette().background.base.color,
+					)
+				}
+				else {
+					mix_color(
+						theme.extended_palette().background.weak.color,
+						theme.extended_palette().background.base.color,
+						0.85
+					)
+				}
 				.into(),
 			)
 		} else {
+			None
+		},
+		text_color: if dragging || drag_overlay {
+			Some(
+				if drag_overlay {
+					color_average(
+						theme.extended_palette().background.weak.text,
+						theme.extended_palette().background.base.text
+					)
+				}
+				else {
+					GREY
+				}
+			)
+		}
+		else {
 			None
 		},
 		border: rounded(BORDER_RADIUS),
@@ -135,8 +159,7 @@ pub fn task_background_container_style(theme: &Theme, dragging: bool) -> Style {
 			}
 		} else {
 			Shadow::default()
-		},
-		..Default::default()
+		}
 	}
 }
 

@@ -498,7 +498,7 @@ pub fn task_tag_button_style(
 	}
 }
 
-pub fn task_button_style(theme: &Theme, status: Status) -> Style {
+pub fn task_button_style(theme: &Theme, status: Status, dragging: bool) -> Style {
 	let active_style = Style {
 		background: None,
 		text_color: theme.palette().text,
@@ -516,10 +516,14 @@ pub fn task_button_style(theme: &Theme, status: Status) -> Style {
 				)
 				.into(),
 			),
-			shadow: Shadow {
-				color: background_shadow_color(theme.extended_palette()),
-				blur_radius: BLUR_RADIUS,
-				..Default::default()
+			shadow: if dragging {
+				Shadow::default()
+			} else {
+				Shadow {
+					color: background_shadow_color(theme.extended_palette()),
+					blur_radius: BLUR_RADIUS,
+					..Default::default()
+				}
 			},
 			..active_style
 		},

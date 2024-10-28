@@ -23,6 +23,7 @@ where
 	on_cancel: Option<Message>,
 	drag_mode: Option<(bool, bool)>,
 	drag_overlay: bool,
+	override_drag_overlay_content: Option<Element<'a, Message, Theme, Renderer>>,
 	drag_hide: bool,
 	drag_center: bool,
 	drag_size: Option<Size>,
@@ -39,6 +40,7 @@ where
 	pub fn new(content: impl Into<Element<'a, Message, Theme, Renderer>>) -> Self {
 		Self {
 			content: content.into(),
+			override_drag_overlay_content: None,
 			class: Theme::default(),
 			id: None,
 			on_click: None,
@@ -102,8 +104,9 @@ where
 	}
 
 	/// Sets whether the [`Droppable`] should be drawn under the cursor while dragging.
-	pub fn drag_overlay(mut self, drag_overlay: bool) -> Self {
+	pub fn drag_overlay(mut self, drag_overlay: bool, override_drag_overlay_content: Option<Element<'a, Message, Theme, Renderer>>) -> Self {
 		self.drag_overlay = drag_overlay;
+		self.override_drag_overlay_content = override_drag_overlay_content;
 		self
 	}
 
@@ -406,7 +409,7 @@ where
 		if self.drag_overlay {
 			if let Action::Drag(_, _) = state.action {
 				return Some(overlay::Element::new(Box::new(Overlay {
-					content: &self.content,
+					content: self.override_drag_overlay_content.as_ref().unwrap_or(&self.content),
 					tree: children.next().unwrap(),
 					overlay_bounds: state.overlay_bounds,
 				})));

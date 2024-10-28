@@ -725,6 +725,10 @@ impl ProjectTrackerApp {
 			} => {
 				let is_theme_dark = self.is_theme_dark();
 
+				let filtering_tags = self.project_page.as_ref()
+					.map(|project_page| !project_page.filter_task_tags.is_empty())
+					.unwrap_or(false);
+
 				Task::batch([
 					self.project_page
 						.as_mut()
@@ -737,11 +741,13 @@ impl ProjectTrackerApp {
 						})
 						.map(|action| self.perform_project_page_action(action))
 						.unwrap_or(Task::none()),
+
 					match self.sidebar_page.update(
 						SidebarPageMessage::DragTask {
 							project_id,
 							task_id,
 							task_is_todo,
+							filtering_tags,
 							point,
 							rect,
 						},
