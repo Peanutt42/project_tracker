@@ -1,6 +1,6 @@
 ## Prerequisites - Build from source
 - Rust (programing lanuage): https://www.rust-lang.org/tools/install
-- On linux with the GUI: install alsa development files, to play the notification sound:
+- On linux with the GUI/Client: install alsa development files, to play the notification sound:
 
 	- Debian/Ubuntu:
 		```bash
@@ -13,7 +13,7 @@
 
 
 ## Installation - Linux
-Project Tracker GUI:
+Project Tracker GUI/Client:
 ```bash
 cd scripts
 ./install_linux.sh
@@ -25,7 +25,7 @@ cd scripts
 ```
 
 ## Installation - Other
-Project Tracker GUI:
+Project Tracker GUI/Client:
 ```bash
 cargo r --release
 ```

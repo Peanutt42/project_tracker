@@ -11,4 +11,11 @@ personal project todo list tracker
 - Macos: untested ❌, but should work
 - Raspberrypi: Server only ❗
 
+| Platform    | GUI/Client | Server | Tested | Installation script |
+| ----------- | ---------- | ------ | ------ | ------------------- |
+| Linux       | ✅         | ✅     | ✅     | ✅                  |
+| Windows     | ✅         | ✅     | ✅     | ❌                  |
+| Macos       | ✅         | ❌     | ❌     | ❌                  |
+| Raspberrypi | ❌         | ✅     | ✅     | ✅                  |
+
 ## Installation (see [INSTALL.md](INSTALL.md))
