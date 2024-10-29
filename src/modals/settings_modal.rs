@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::components::{sync_database_from_server_button, synchronization_type_button};
+use crate::components::{hide_password_button, show_password_button, sync_database_from_server_button, synchronization_type_button};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
@@ -31,12 +31,16 @@ use iced::{
 	Padding, Subscription, Task,
 };
 use iced_aw::card;
+use project_tracker_server::DEFAULT_PASSWORD;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {
 	Open,
 	Close,
 	SwitchSettingsTab(SettingTab),
+
+	ShowPassword,
+	HidePassword,
 
 	SetDateFormatting(DateFormatting),
 
@@ -50,6 +54,7 @@ pub enum SettingsModalMessage {
 	DisableSynchronization,
 	SetServerHostname(String),
 	SetServerPort(usize),
+	SetServerPassword(String),
 	InvalidPortInput,
 }
 
@@ -79,7 +84,8 @@ impl SettingTab {
 	fn view<'a>(
 		&'a self,
 		app: &'a ProjectTrackerApp,
-		preferences: &'a Preferences
+		preferences: &'a Preferences,
+		show_password: bool,
 	) -> Element<'a, Message> {
 		match self {
 			SettingTab::General => preferences.view(),
@@ -240,6 +246,28 @@ Server: your own hosted ProjectTracker-server"
 														.width(55.0),
 												]
 												.align_y(Vertical::Center),
+
+												row![
+													container("Password: ")
+														.width(100.0),
+
+													if show_password {
+														row![
+															text_input(format!("default: {}", DEFAULT_PASSWORD).as_str(), &server_config.password)
+																.on_input(|password| SettingsModalMessage::SetServerPassword(password).into())
+																.style(text_input_style_default),
+
+															hide_password_button(),
+														]
+														.align_y(Vertical::Center)
+														.spacing(SPACING_AMOUNT)
+														.into()
+													}
+													else {
+														show_password_button()
+													},
+												]
+												.align_y(Vertical::Center),
 											]
 											.spacing(SPACING_AMOUNT),
 
@@ -376,6 +404,7 @@ Server: your own hosted ProjectTracker-server"
 pub enum SettingsModal {
 	Opened {
 		selected_tab: SettingTab,
+		show_password: bool,
 	},
 	#[default]
 	Closed,
@@ -404,11 +433,25 @@ impl SettingsModal {
 			SettingsModalMessage::Open => {
 				*self = SettingsModal::Opened {
 					selected_tab: SettingTab::default(),
+					show_password: false,
 				};
 				PreferenceAction::None
 			}
 			SettingsModalMessage::Close => {
 				*self = SettingsModal::Closed;
+				PreferenceAction::None
+			}
+
+			SettingsModalMessage::ShowPassword => {
+				if let SettingsModal::Opened { show_password, .. } = self {
+					*show_password = true;
+				}
+				PreferenceAction::None
+			}
+			SettingsModalMessage::HidePassword => {
+				if let SettingsModal::Opened { show_password, .. } = self {
+					*show_password = false;
+				}
 				PreferenceAction::None
 			}
 
@@ -446,8 +489,9 @@ impl SettingsModal {
 			}
 
 			SettingsModalMessage::SwitchSettingsTab(new_tab) => {
-				if let SettingsModal::Opened { selected_tab, .. } = self {
+				if let SettingsModal::Opened { selected_tab, show_password } = self {
 					*selected_tab = new_tab;
+					*show_password = false;
 				}
 				PreferenceAction::None
 			},
@@ -469,7 +513,7 @@ impl SettingsModal {
 					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
 						preferences.set_synchronization(Some(SynchronizationSetting::Server(ServerConfig {
 							hostname: new_hostname,
-							..*config
+							..config.clone()
 						})));
 					}
 				}
@@ -486,6 +530,17 @@ impl SettingsModal {
 				}
 				PreferenceAction::None
 			},
+			SettingsModalMessage::SetServerPassword(new_password) => {
+				if let Some(preferences) = preferences {
+					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
+						preferences.set_synchronization(Some(SynchronizationSetting::Server(ServerConfig {
+							password: new_password,
+							..config.clone()
+						})));
+					}
+				}
+				PreferenceAction::None
+			},
 			SettingsModalMessage::InvalidPortInput => PreferenceAction::None,
 		}
 	}
@@ -493,7 +548,7 @@ impl SettingsModal {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<Message>> {
 		match self {
 			SettingsModal::Closed => None,
-			SettingsModal::Opened { selected_tab } => app.preferences.as_ref().map(|preferences| {
+			SettingsModal::Opened { selected_tab, show_password } => app.preferences.as_ref().map(|preferences| {
 				let tabs: Vec<Element<Message>> = SettingTab::ALL
 					.iter()
 					.map(|tab| settings_tab_button(*tab, *selected_tab).into())
@@ -507,7 +562,7 @@ impl SettingsModal {
 							.spacing(SMALL_SPACING_AMOUNT)
 							.padding(right(PADDING_AMOUNT)),
 						vertical_seperator(),
-						container(selected_tab.view(app, preferences))
+						container(selected_tab.view(app, preferences, *show_password))
 							.width(Fill)
 							.padding(left(PADDING_AMOUNT))
 					],

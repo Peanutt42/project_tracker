@@ -4,26 +4,57 @@ use std::process::exit;
 use std::thread;
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
-use project_tracker_server::{ModifiedDate, Request, Response, DEFAULT_PORT};
+use project_tracker_server::{hash_password, ModifiedDate, Request, RequestType, Response, DEFAULT_PASSWORD, DEFAULT_PORT};
 
 const PORT: usize = DEFAULT_PORT;
 
 fn main() {
 	let mut args = std::env::args();
 
-	let filepath_str = args.nth(1).unwrap_or_else(|| {
-		eprintln!("usage: project_tracker_server [DATABASE_FILEPATH]");
+	let server_data_directory_str = args.nth(1).unwrap_or_else(|| {
+		eprintln!("usage: project_tracker_server [SERVER_DATA_DIRECTORY]");
 		exit(1);
 	});
 
-	let filepath = PathBuf::from(filepath_str);
+	let server_data_directory = PathBuf::from(server_data_directory_str);
 
-	if !filepath.exists() {
-		if let Err(e) = File::create(&filepath) {
-			eprintln!("failed to create/open database file: {}, error: {e}", filepath.display());
+	if !server_data_directory.exists() {
+		eprintln!("the supplied directory doesn't exist!");
+		exit(1);
+	}
+
+	let database_filepath = server_data_directory.join("database.json");
+	let password_filepath = server_data_directory.join("password.txt");
+
+	if !database_filepath.exists() {
+		if let Err(e) = File::create(&database_filepath) {
+			eprintln!("failed to create database file: {}, error: {e}", database_filepath.display());
 			exit(1);
 		}
 	}
+
+	if !password_filepath.exists() {
+		match File::create(&password_filepath) {
+			Ok(mut file) => {
+				if let Err(e) = file.write_all(DEFAULT_PASSWORD.as_bytes()) {
+					eprintln!("failed to write default password to password file: {}, error: {e}", password_filepath.display());
+					exit(1);
+				}
+			},
+			Err(e) => {
+				eprintln!("failed to create default password file: {}, error: {e}", password_filepath.display());
+				exit(1);
+			}
+		}
+	}
+
+	let password = read_to_string(&password_filepath)
+		.unwrap_or_else(|e| {
+			eprintln!("failed to read password file: {}, error: {e}", password_filepath.display());
+			exit(1);
+		});
+
+	let password_hash = hash_password(password);
 
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", PORT)).expect("Failed to bind to port");
 
@@ -32,8 +63,9 @@ fn main() {
 	for stream in listener.incoming() {
 		match stream {
 			Ok(stream) => {
-				let filepath_clone = filepath.clone();
-				thread::spawn(|| handle_client(stream, filepath_clone));
+				let database_filepath_clone = database_filepath.clone();
+				let password_hash_clone = password_hash.clone();
+				thread::spawn(|| handle_client(stream, database_filepath_clone, password_hash_clone));
 			}
 			Err(e) => {
 				eprintln!("Failed to establish a connection: {e}");
@@ -43,13 +75,19 @@ fn main() {
 }
 
 
-pub fn handle_client(mut stream: TcpStream, filepath: PathBuf) {
+pub fn handle_client(mut stream: TcpStream, database_filepath: PathBuf, password_hash: String) {
 	if let Some(request) = read_request(&mut stream) {
-		match request {
-			Request::GetModifiedDate => {
+		if request.password_hash != password_hash {
+			send_response(&mut stream, &Response::InvalidPassword);
+			println!("invalid password");
+			return;
+		}
+
+		match request.request_type {
+			RequestType::GetModifiedDate => {
 				use filetime::FileTime;
 
-				match filepath.metadata() {
+				match database_filepath.metadata() {
 					Ok(metadata) => {
 						let modification_file_time = FileTime::from_last_modification_time(&metadata);
 
@@ -57,11 +95,11 @@ pub fn handle_client(mut stream: TcpStream, filepath: PathBuf) {
 							seconds_since_epoch: modification_file_time.unix_seconds() as u64,
 						}));
 					},
-					Err(e) => panic!("cant access database file: {}, error: {e}", filepath.display()),
+					Err(e) => panic!("cant access database file: {}, error: {e}", database_filepath.display()),
 				}
 			},
-			Request::UpdateDatabase { database_json } => {
-				match std::fs::write(&filepath, database_json) {
+			RequestType::UpdateDatabase { database_json } => {
+				match std::fs::write(&database_filepath, database_json) {
 					Ok(_) => {
 						println!("Updated database file");
 					},
@@ -70,8 +108,8 @@ pub fn handle_client(mut stream: TcpStream, filepath: PathBuf) {
 					},
 				}
 			},
-			Request::DownloadDatabase => {
-				match read_to_string(&filepath) {
+			RequestType::DownloadDatabase => {
+				match read_to_string(&database_filepath) {
 					Ok(database_content) => {
 						send_response(&mut stream, &Response::Database {
 							database_json: database_content
@@ -79,7 +117,7 @@ pub fn handle_client(mut stream: TcpStream, filepath: PathBuf) {
 						println!("Sent database");
 					},
 					Err(e) => {
-						eprintln!("Failed to read {}: {e}", filepath.display());
+						eprintln!("Failed to read {}: {e}", database_filepath.display());
 					}
 				}
 			}

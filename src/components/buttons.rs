@@ -833,3 +833,33 @@ pub fn synchronization_type_button(synchronization_setting: SynchronizationSetti
 		.width(80.0)
 		.on_press(PreferenceMessage::SetSynchronization(Some(synchronization_setting)).into())
 }
+
+pub fn show_password_button() -> Element<'static, Message> {
+	tooltip(
+		icon_button(Bootstrap::EyeFill)
+			.on_press(SettingsModalMessage::ShowPassword.into())
+			.style(secondary_button_style_default),
+
+		text("Show password").size(SMALL_TEXT_SIZE),
+
+		tooltip::Position::Bottom
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
+}
+
+pub fn hide_password_button() -> Element<'static, Message> {
+	tooltip(
+		icon_button(Bootstrap::EyeSlashFill)
+			.on_press(SettingsModalMessage::HidePassword.into())
+			.style(secondary_button_style_default),
+
+		text("Hide password").size(SMALL_TEXT_SIZE),
+
+		tooltip::Position::Bottom
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
+}

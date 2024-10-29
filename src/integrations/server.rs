@@ -1,4 +1,4 @@
-use project_tracker_server::{ModifiedDate, Request, Response, ServerError, ServerResult, DEFAULT_HOSTNAME, DEFAULT_PORT};
+use project_tracker_server::{hash_password, ModifiedDate, Request, RequestType, Response, ServerError, ServerResult, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
 use serde::{Deserialize, Serialize};
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{tcp::{OwnedReadHalf, OwnedWriteHalf}, TcpStream}};
 use crate::core::Database;
@@ -7,6 +7,7 @@ use crate::core::Database;
 pub struct ServerConfig {
 	pub hostname: String,
 	pub port: usize,
+	pub password: String,
 }
 
 impl Default for ServerConfig {
@@ -14,6 +15,7 @@ impl Default for ServerConfig {
 		Self {
 			hostname: DEFAULT_HOSTNAME.to_string(),
 			port: DEFAULT_PORT,
+			password: DEFAULT_PASSWORD.to_string(),
 		}
 	}
 }
@@ -41,12 +43,16 @@ pub async fn sync_database_from_server(config: ServerConfig, database_last_modif
 	let stream = TcpStream::connect(format!("{}:{}", config.hostname, config.port)).await?;
 	let (read_half, write_half) = stream.into_split();
 
-	send_server_request(write_half, &Request::GetModifiedDate).await?;
+	send_server_request(write_half, &Request {
+		password_hash: hash_password(config.password),
+		request_type: RequestType::GetModifiedDate,
+	}).await?;
 
 	let server_modified_date = match read_server_response(read_half).await? {
 		Response::ModifiedDate(date) => date,
 		// should not send database when only asked for the modified date
 		Response::Database { .. } => return Err(ServerError::InvalidResponse),
+		Response::InvalidPassword => return Err(ServerError::InvalidPassword),
 	};
 
 	if server_modified_date > database_last_modified_date {
@@ -61,7 +67,10 @@ pub async fn download_database_from_server(config: ServerConfig) -> ServerResult
 	let stream = TcpStream::connect(format!("{}:{}", config.hostname, config.port)).await?;
 	let (read_half, write_half) = stream.into_split();
 
-	send_server_request(write_half, &Request::DownloadDatabase).await?;
+	send_server_request(write_half, &Request {
+		password_hash: hash_password(config.password),
+		request_type: RequestType::DownloadDatabase,
+	}).await?;
 
 	let response = read_server_response(read_half).await?;
 	match response {
@@ -71,12 +80,16 @@ pub async fn download_database_from_server(config: ServerConfig) -> ServerResult
 		},
 		// should not send database when only asked for the modified date
 		Response::ModifiedDate(_) => Err(ServerError::InvalidResponse),
+		Response::InvalidPassword => Err(ServerError::InvalidPassword),
 	}
 }
 
 pub async fn upload_database_to_server(config: ServerConfig, database_json: String) -> ServerResult<()> {
 	let stream = TcpStream::connect(format!("{}:{}", config.hostname, config.port)).await?;
 	let (_read_half, write_half) = stream.into_split();
-	send_server_request(write_half, &Request::UpdateDatabase { database_json }).await?;
+	send_server_request(write_half, &Request {
+		password_hash: hash_password(config.password),
+		request_type: RequestType::UpdateDatabase { database_json },
+	}).await?;
 	Ok(())
 }
