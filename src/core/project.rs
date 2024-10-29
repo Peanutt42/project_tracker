@@ -224,7 +224,7 @@ impl Project {
 
 
 impl SortMode {
-	pub const ALL: &[SortMode] = &[
+	pub const ALL: &'static [SortMode] = &[
 		SortMode::Manual,
 		SortMode::DueDate,
 		SortMode::NeededTime,

@@ -25,6 +25,12 @@ cd scripts
 ./set_server_password_linux.sh
 ```
 
+## Installation - Windows - GUI/Client only
+```bat
+cd .\scripts\
+.\install_windows.bat
+```
+
 ## Installation - Other
 Project Tracker GUI/Client:
 ```bash
