@@ -9,7 +9,7 @@ personal project todo list tracker
 | Platform    | GUI/Client | Server | Tested | Installation script |
 | ----------- | ---------- | ------ | ------ | ------------------- |
 | Linux       | ✅         | ✅     | ✅     | ✅                  |
-| Windows     | ✅         | ✅     | ✅     | ❌                  |
+| Windows     | ✅         | ❌     | ✅     | ❌                  |
 | Macos       | ✅         | ❌     | ❌     | ❌                  |
 | Raspberrypi | ❌         | ✅     | ✅     | ✅                  |
 
