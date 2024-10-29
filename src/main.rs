@@ -33,7 +33,7 @@ fn main() -> Result<(), iced::Error> {
 		size: Size::new(1200.0, 900.0),
 		#[cfg(target_os = "linux")]
 		platform_specific: PlatformSpecific {
-			application_id: "Project Tracker".to_string(),
+			application_id: "project_tracker".to_string(),
 			..Default::default()
 		},
 		..Default::default()

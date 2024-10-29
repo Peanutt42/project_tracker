@@ -10,5 +10,5 @@ X-GNOME-UsesNotifications=true
 X-GNOME-SingleWindow=true
 
 # this gets added when running install_project_tracker_linux.sh:
-# Exec=$project_root/target/release/project_tracker
-# Icon=$project_root/assets/icon.svg
+# Exec=...
+# Icon=...
