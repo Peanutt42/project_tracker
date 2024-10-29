@@ -414,7 +414,7 @@ impl ProjectTrackerApp {
 						self.importing_database = false;
 						self.syncing_database = false;
 						self.syncing_database_from_server = false;
-						let task = if let Some(preferences) = &self.preferences {
+						if let Some(preferences) = &self.preferences {
 							let stopwatch_progress_message: Option<Message> =
 								preferences.stopwatch_progress().as_ref().map(|progress| {
 									StopwatchPageMessage::StartupAgain {
@@ -457,9 +457,7 @@ impl ProjectTrackerApp {
 							])
 						} else {
 							Task::none()
-						};
-
-						Task::batch([task, self.update(Message::SaveDatabase)])
+						}
 					},
 					Err(error) => match error.as_ref() {
 						LoadDatabaseError::FailedToOpenFile { .. } => {
