@@ -1,4 +1,5 @@
-use project_tracker_server::{hash_password, ModifiedDate, Request, RequestType, Response, ServerError, ServerResult, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
+use chrono::{DateTime, Utc};
+use project_tracker_server::{hash_password, Request, RequestType, Response, ServerError, ServerResult, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
 use serde::{Deserialize, Serialize};
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{tcp::{OwnedReadHalf, OwnedWriteHalf}, TcpStream}};
 use crate::core::Database;
@@ -39,7 +40,7 @@ async fn read_server_response(mut read_half: OwnedReadHalf) -> ServerResult<Resp
 	Ok(response)
 }
 
-pub async fn sync_database_from_server(config: ServerConfig, database_last_modified_date: ModifiedDate) -> ServerResult<SyncServerDatabaseResponse> {
+pub async fn sync_database_from_server(config: ServerConfig, database_last_modified_date: DateTime<Utc>) -> ServerResult<SyncServerDatabaseResponse> {
 	let stream = TcpStream::connect(format!("{}:{}", config.hostname, config.port)).await?;
 	let (read_half, write_half) = stream.into_split();
 

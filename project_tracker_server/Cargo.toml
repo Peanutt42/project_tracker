@@ -8,4 +8,5 @@ repository = "https://github.com/Peanutt42/project_tracker"
 serde = { workspace = true }
 serde_json = { workspace = true }
 filetime = { workspace = true }
+chrono = { workspace = true }
 thiserror = { workspace = true }

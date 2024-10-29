@@ -1,5 +1,6 @@
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::hash::{DefaultHasher, Hash, Hasher};
+use chrono::{DateTime, Utc};
+use filetime::FileTime;
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
 
@@ -44,24 +45,19 @@ pub enum RequestType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Response {
-	ModifiedDate(ModifiedDate),
+	ModifiedDate(DateTime<Utc>),
 	Database {
 		database_json: String,
 	},
 	InvalidPassword,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ModifiedDate {
-	pub seconds_since_epoch: u64,
-}
+pub fn get_last_modification_date_time(metadata: &std::fs::Metadata) -> DateTime<Utc> {
+	let modified = FileTime::from_last_modification_time(metadata);
 
-impl From<SystemTime> for ModifiedDate {
-	fn from(value: SystemTime) -> Self {
-		let duration_since_epoch = value.duration_since(UNIX_EPOCH)
-			.expect("invalid system time!");
-		Self {
-			seconds_since_epoch: duration_since_epoch.as_secs(),
-		}
-	}
+	let unix_timestamp = modified.unix_seconds();
+	let nanos = modified.nanoseconds();
+
+	DateTime::from_timestamp(unix_timestamp, nanos)
+		.expect("invalid file modification date timestamp")
 }

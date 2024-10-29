@@ -4,7 +4,8 @@ use std::process::exit;
 use std::thread;
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
-use project_tracker_server::{hash_password, ModifiedDate, Request, RequestType, Response, DEFAULT_PASSWORD, DEFAULT_PORT};
+use chrono::{DateTime, Utc};
+use project_tracker_server::{get_last_modification_date_time, hash_password, Request, RequestType, Response, DEFAULT_PASSWORD, DEFAULT_PORT};
 
 const PORT: usize = DEFAULT_PORT;
 
@@ -85,23 +86,16 @@ pub fn handle_client(mut stream: TcpStream, database_filepath: PathBuf, password
 
 		match request.request_type {
 			RequestType::GetModifiedDate => {
-				use filetime::FileTime;
-
 				if !database_filepath.exists() {
 					// as the server doesn't have any database saved, any database of the client is more
-					// -> ask the client to send the database
-					send_response(&mut stream, &Response::ModifiedDate(ModifiedDate{
-						seconds_since_epoch: 0,
-					}));
+					// MIN_UTC is the oldest possible Date
+					// -> client will send the database
+					send_response(&mut stream, &Response::ModifiedDate(DateTime::<Utc>::MIN_UTC));
 				}
 
 				match database_filepath.metadata() {
 					Ok(metadata) => {
-						let modification_file_time = FileTime::from_last_modification_time(&metadata);
-
-						send_response(&mut stream, &Response::ModifiedDate(ModifiedDate{
-							seconds_since_epoch: modification_file_time.unix_seconds() as u64,
-						}));
+						send_response(&mut stream, &Response::ModifiedDate(get_last_modification_date_time(&metadata)));
 					},
 					Err(e) => panic!("cant access database file: {}, error: {e}", database_filepath.display()),
 				}
