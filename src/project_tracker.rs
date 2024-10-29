@@ -1,24 +1,16 @@
 use crate::{
 	components::{
-		toggle_sidebar_button, vertical_seperator,
-		ScalarAnimation, ICON_BUTTON_WIDTH,
+		create_empty_database_button, import_database_button, toggle_sidebar_button, vertical_seperator, ScalarAnimation, ICON_BUTTON_WIDTH
 	}, core::{
 		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, SynchronizationSetting, TaskId
 	}, integrations::{download_database_from_server, sync_database_from_server, upload_database_to_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
-	}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	}, styles::{HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 use iced::{
-	clipboard,
-	event::Status,
-	keyboard, time,
-	widget::{
-		center, container, mouse_area, opaque, responsive, row, stack,
-		Space, Stack,
-	},
-	window, Color, Element, Event,
-	Length::Fill,
-	Padding, Point, Rectangle, Subscription, Task, Theme,
+	alignment::Horizontal, clipboard, event::Status, keyboard, time, widget::{
+		center, column, container, mouse_area, opaque, responsive, row, stack, text, Space, Stack
+	}, window, Color, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme
 };
 use project_tracker_server::{get_last_modification_date_time, ServerError};
 use std::{
@@ -31,6 +23,7 @@ pub struct ProjectTrackerApp {
 	pub stopwatch_page: StopwatchPage,
 	pub project_page: Option<ProjectPage>,
 	pub database: Option<Database>,
+	pub loading_database: bool,
 	pub importing_database: bool,
 	pub exporting_database: bool,
 	pub syncing_database: bool,
@@ -142,6 +135,7 @@ impl ProjectTrackerApp {
 				stopwatch_page: StopwatchPage::default(),
 				project_page: None,
 				database: None,
+				loading_database: true,
 				importing_database: false,
 				exporting_database: false,
 				syncing_database: false,
@@ -411,12 +405,14 @@ impl ProjectTrackerApp {
 				self.show_error_msg(error_msg)
 			}
 			Message::LoadedDatabase(load_database_result) => {
+				self.loading_database = false;
+				self.importing_database = false;
+				self.syncing_database = false;
+				self.syncing_database_from_server = false;
+
 				match load_database_result {
 					Ok(database) => {
 						self.database = Some(database);
-						self.importing_database = false;
-						self.syncing_database = false;
-						self.syncing_database_from_server = false;
 						if let Some(preferences) = &self.preferences {
 							let stopwatch_progress_message: Option<Message> =
 								preferences.stopwatch_progress().as_ref().map(|progress| {
@@ -464,13 +460,11 @@ impl ProjectTrackerApp {
 					},
 					Err(error) => match error.as_ref() {
 						LoadDatabaseError::FailedToOpenFile { .. } => {
-							self.importing_database = false;
-							self.syncing_database = false;
-							if self.database.is_none() {
-								self.database = Some(Database::default());
-								self.update(Message::SaveDatabase)
-							} else {
+							if self.database.is_some() {
 								self.show_error_msg(format!("{error}"))
+							}
+							else {
+								Task::none()
 							}
 						},
 						LoadDatabaseError::FailedToParse{ filepath, .. } => {
@@ -962,7 +956,7 @@ impl ProjectTrackerApp {
 		let sidebar_animation_percentage = sidebar_animation_value
 			.map(|value| (1.0 - value / SidebarPage::SPLIT_LAYOUT_PERCENTAGE));
 
-		let underlay: Element<Message> = {
+		let underlay: Element<Message> = if self.database.is_some() || self.loading_database {
 			let sidebar_layout_percentage = sidebar_animation_value.unwrap_or(if show_sidebar {
 				SidebarPage::SPLIT_LAYOUT_PERCENTAGE
 			} else {
@@ -1025,6 +1019,22 @@ impl ProjectTrackerApp {
 				]
 				.into()
 			})
+			.into()
+		}
+		else {
+			container(
+				column![
+					text("Create new database or import existing?").size(HEADING_TEXT_SIZE),
+					row![
+						create_empty_database_button(),
+						import_database_button(self.importing_database),
+					]
+					.spacing(LARGE_SPACING_AMOUNT)
+				]
+				.spacing(LARGE_SPACING_AMOUNT)
+				.align_x(Horizontal::Center)
+			)
+			.center(Fill)
 			.into()
 		};
 

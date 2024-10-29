@@ -1,6 +1,6 @@
 use crate::{
 	components::{date_text, duration_text}, core::{
-		DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, SynchronizationSetting, TaskId, TaskTag, TaskTagId
+		Database, DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, SynchronizationSetting, TaskId, TaskTag, TaskTagId
 	}, icons::{icon_to_text, Bootstrap}, modals::{
 		ConfirmModalMessage, CreateTaskModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage
 	}, pages::{
@@ -331,6 +331,15 @@ pub fn toggle_sidebar_button(round_all_sides: bool) -> Element<'static, Message>
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
+	.into()
+}
+
+pub fn create_empty_database_button() -> Element<'static, Message> {
+	button(
+		text("Create new database")
+	)
+	.style(dangerous_button_style)
+	.on_press(Message::DatabaseImported(Ok(Database::default())))
 	.into()
 }
 

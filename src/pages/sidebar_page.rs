@@ -1,6 +1,5 @@
 use crate::components::{
-	create_new_project_button, custom_project_preview, loading_screen, project_preview,
-	settings_button, stopwatch_button, toggle_sidebar_button,
+	create_new_project_button, custom_project_preview, loading_screen, project_preview, settings_button, stopwatch_button, toggle_sidebar_button
 };
 use crate::core::{OrderedHashMap, Project, ProjectId};
 use crate::pages::StopwatchPage;
