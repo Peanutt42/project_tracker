@@ -69,6 +69,7 @@ pub enum Message {
 	ExportDatabaseDialogCanceled,
 	DatabaseExported,
 	ImportDatabase(PathBuf),
+	DatabaseImported(Result<Database, Arc<LoadDatabaseError>>),
 	ImportDatabaseDialog,
 	ImportDatabaseDialogCanceled,
 	SyncDatabase(PathBuf),
@@ -370,8 +371,10 @@ impl ProjectTrackerApp {
 			}
 			Message::ImportDatabase(filepath) => {
 				self.importing_database = true;
-				Task::perform(Database::load_from(filepath), |result| Message::LoadedDatabase(result.map_err(Arc::new)))
+				Task::perform(Database::load_from(filepath), |result| Message::DatabaseImported(result.map_err(Arc::new)))
 			}
+			Message::DatabaseImported(result) => self.update(Message::LoadedDatabase(result))
+				.chain(self.update(Message::SaveDatabase)),
 			Message::SyncDatabase(filepath) => {
 				self.syncing_database = true;
 				Task::perform(
