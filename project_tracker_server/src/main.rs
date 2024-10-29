@@ -87,6 +87,14 @@ pub fn handle_client(mut stream: TcpStream, database_filepath: PathBuf, password
 			RequestType::GetModifiedDate => {
 				use filetime::FileTime;
 
+				if !database_filepath.exists() {
+					// as the server doesn't have any database saved, any database of the client is more
+					// -> ask the client to send the database
+					send_response(&mut stream, &Response::ModifiedDate(ModifiedDate{
+						seconds_since_epoch: 0,
+					}));
+				}
+
 				match database_filepath.metadata() {
 					Ok(metadata) => {
 						let modification_file_time = FileTime::from_last_modification_time(&metadata);
