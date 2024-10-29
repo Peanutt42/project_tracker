@@ -32,5 +32,5 @@ cargo r --release
 Project Tracker Server:
 ```bash
 cd project_tracker_server
-cargo r --release
+cargo r --release -- [DATABASE_FILEPATH]
 ```
