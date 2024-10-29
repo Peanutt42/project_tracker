@@ -20,7 +20,7 @@ use iced::{
 	Length::Fill,
 	Padding, Point, Rectangle, Subscription, Task, Theme,
 };
-use project_tracker_server::ServerError;
+use project_tracker_server::{get_last_modification_date_time, ServerError};
 use std::{
 	path::PathBuf, sync::Arc, rc::Rc, time::{Duration, SystemTime}
 };
@@ -525,22 +525,30 @@ impl ProjectTrackerApp {
 			},
 			Message::SyncDatabaseFromServer => {
 				if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
-					if let Some(database) = &self.database {
-						self.syncing_database_from_server = true;
+					self.syncing_database_from_server = true;
 
-						return Task::perform(
-							sync_database_from_server(
-								server_config,
-								(*database.last_changed_time()).into()
-							),
-							|result| match result {
-								Ok(sync_response) => match sync_response {
-									SyncServerDatabaseResponse::DownloadDatabase => Message::DownloadDatabaseFromServer,
-									SyncServerDatabaseResponse::UploadDatabase => Message::UploadDatabaseToServer,
-								},
-								Err(e) => Message::ServerError(Arc::new(e)),
-							}
-						);
+					let database_filepath = Database::get_filepath();
+
+					match database_filepath.metadata() {
+						Ok(metadata) => {
+							return Task::perform(
+								sync_database_from_server(
+									server_config,
+									get_last_modification_date_time(&metadata)
+								),
+								|result| match result {
+									Ok(sync_response) => match sync_response {
+										SyncServerDatabaseResponse::DownloadDatabase => Message::DownloadDatabaseFromServer,
+										SyncServerDatabaseResponse::UploadDatabase => Message::UploadDatabaseToServer,
+									},
+									Err(e) => Message::ServerError(Arc::new(e)),
+								}
+							);
+						},
+						Err(e) => return self.show_error_msg(format!(
+							"failed to get metadata of database file: {}, error: {e}",
+							database_filepath.display()
+						)),
 					}
 				}
 				Task::none()
