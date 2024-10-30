@@ -304,34 +304,6 @@ pub fn secondary_button_style(
 	}
 }
 
-pub fn create_task_modal_ok_button_style(theme: &Theme, status: Status) -> Style {
-	let active_style = Style {
-		background: Some(theme.extended_palette().secondary.base.color.into()),
-		text_color: theme.extended_palette().secondary.base.text,
-		border: rounded(BORDER_RADIUS),
-		..Default::default()
-	};
-
-	match status {
-		Status::Active => active_style,
-		Status::Hovered => Style {
-			background: Some(theme.extended_palette().success.base.color.into()),
-			..active_style
-		},
-		Status::Pressed => Style {
-			background: Some(
-				color_average(
-					theme.extended_palette().background.base.color,
-					theme.extended_palette().success.weak.color,
-				)
-				.into(),
-			),
-			..active_style
-		},
-		Status::Disabled => active_style,
-	}
-}
-
 pub fn delete_button_style(
 	theme: &Theme,
 	status: Status,

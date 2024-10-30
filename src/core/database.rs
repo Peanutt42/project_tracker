@@ -61,6 +61,8 @@ pub enum DatabaseMessage {
 		task_name: String,
 		task_description: String,
 		task_tags: HashSet<TaskTagId>,
+		due_date: Option<SerializableDate>,
+		needed_time_minutes: Option<usize>,
 		create_at_top: bool,
 	},
 	ChangeTaskName {
@@ -344,10 +346,12 @@ impl Database {
 				task_name,
 				task_description,
 				task_tags,
+				due_date,
+				needed_time_minutes,
 				create_at_top,
 			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
-					project.add_task(task_id, task_name, task_description, task_tags, create_at_top);
+					project.add_task(task_id, task_name, task_description, task_tags, due_date, needed_time_minutes, create_at_top);
 				}
 			}),
 			DatabaseMessage::ChangeTaskName {

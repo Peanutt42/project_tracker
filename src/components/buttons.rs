@@ -7,7 +7,7 @@ use crate::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
 		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
 	}, project_tracker::Message, styles::{
-		circle_button_style, create_task_modal_ok_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
@@ -18,7 +18,7 @@ use std::{borrow::Cow, path::PathBuf, time::Duration};
 pub const ICON_FONT_SIZE: f32 = 16.0;
 pub const ICON_BUTTON_WIDTH: f32 = ICON_FONT_SIZE * 1.8;
 
-fn icon_button(icon: Bootstrap) -> Button<'static, Message> {
+fn icon_button<Message>(icon: Bootstrap) -> Button<'static, Message> {
 	button(
 		icon_to_text(icon)
 			.size(ICON_FONT_SIZE)
@@ -68,7 +68,7 @@ pub fn open_create_task_modal_button() -> Button<'static, Message> {
 pub fn create_new_task_modal_button() -> Button<'static, CreateTaskModalMessage> {
 	button(text("Create").align_x(Horizontal::Center))
 		.on_press(CreateTaskModalMessage::CreateTask)
-		.style(create_task_modal_ok_button_style)
+		.style(primary_button_style)
 }
 
 pub fn close_create_new_task_modal_button() -> Button<'static, CreateTaskModalMessage> {
@@ -496,13 +496,13 @@ pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, Message
 		.style(move |t, s| delete_button_style(t, s, true, true, true, true))
 }
 
-pub fn clear_task_needed_time_button() -> Button<'static, Message> {
+pub fn clear_task_needed_time_button<Message>(on_press: Message) -> Button<'static, Message> {
 	icon_button(Bootstrap::XLg)
-		.on_press(TaskModalMessage::ClearTaskNeededTime.into())
+		.on_press(on_press)
 		.style(secondary_button_style_only_round_right)
 }
 
-pub fn edit_task_needed_time_button(needed_time_minutes: Option<usize>) -> Button<'static, Message> {
+pub fn edit_task_needed_time_button<Message>(needed_time_minutes: Option<usize>, on_press: Message) -> Button<'static, Message> {
 	button(
 		if let Some(needed_time_minutes) = needed_time_minutes
 		{
@@ -513,32 +513,29 @@ pub fn edit_task_needed_time_button(needed_time_minutes: Option<usize>) -> Butto
 			text("Add needed time")
 		}
 	)
-	.on_press(TaskModalMessage::EditNeededTime.into())
+	.on_press(on_press)
 	.style(secondary_button_style_default)
 }
 
-pub fn clear_task_due_date_button(project_id: ProjectId, task_id: TaskId) -> Button<'static, Message> {
+pub fn clear_task_due_date_button<Message>(on_press: Message) -> Button<'static, Message> {
 	icon_button(Bootstrap::XLg)
-		.on_press(DatabaseMessage::ChangeTaskDueDate {
-			project_id,
-			task_id,
-			new_due_date: None
-		}.into())
+		.on_press(on_press)
 		.style(secondary_button_style_only_round_right)
 }
 
-pub fn add_due_date_button() -> Button<'static, Message> {
+pub fn add_due_date_button<Message: 'static>(on_press: Message) -> Button<'static, Message> {
 	button(
 		row![icon_to_text(Bootstrap::CalendarCheck), text("Add due date")]
 			.spacing(SMALL_SPACING_AMOUNT),
 	)
-	.on_press(TaskModalMessage::EditDueDate.into())
+	.on_press(on_press)
 	.style(secondary_button_style_default)
 }
 
-pub fn edit_due_date_button(
+pub fn edit_due_date_button<Message: 'static>(
 	due_date: &SerializableDate,
 	date_formatting: DateFormatting,
+	on_press: Message
 ) -> Button<'static, Message> {
 	button(
 		row![
@@ -547,7 +544,7 @@ pub fn edit_due_date_button(
 		]
 		.spacing(SMALL_SPACING_AMOUNT),
 	)
-	.on_press(TaskModalMessage::EditDueDate.into())
+	.on_press(on_press)
 	.style(secondary_button_style_only_round_left)
 }
 

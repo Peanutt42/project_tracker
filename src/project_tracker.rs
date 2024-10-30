@@ -865,13 +865,15 @@ impl ProjectTrackerApp {
 				match action {
 					CreateTaskModalAction::None => Task::none(),
 					CreateTaskModalAction::Task(task) => task.map(Message::CreateTaskModalMessage),
-					CreateTaskModalAction::CreateTask{ project_id, task_id, task_name, task_description, task_tags } => Task::batch([
+					CreateTaskModalAction::CreateTask{ project_id, task_id, task_name, task_description, task_tags, due_date, needed_time_minutes } => Task::batch([
 						self.update(DatabaseMessage::CreateTask {
 							project_id,
 							task_id,
 							task_name,
 							task_description,
 							task_tags,
+							due_date,
+							needed_time_minutes,
 							create_at_top: self.preferences.create_new_tasks_at_top(),
 						}.into()),
 						self.update(ProjectPageMessage::RefreshCachedTaskList.into()),
@@ -1041,7 +1043,7 @@ impl ProjectTrackerApp {
 		Stack::new()
 			.push(underlay)
 			.push_maybe(Self::modal(
-				self.create_task_modal.view(&self.database),
+				self.create_task_modal.view(&self.database, &self.preferences),
 				CreateTaskModalMessage::Close,
 			)
 			.map(|element| element.map(Message::CreateTaskModalMessage)))

@@ -18,6 +18,8 @@ async fn test_database_serialization() {
 				format!("Task Nr. {j}"),
 				"A detailed description of the task".to_string(),
 				HashSet::new(),
+				None,
+				None,
 				false,
 			);
 		}

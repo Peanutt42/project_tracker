@@ -83,15 +83,18 @@ impl Project {
 			.or(self.source_code_todos.get_mut(task_id))
 	}
 
+	#[allow(clippy::too_many_arguments)]
 	pub fn add_task(
 		&mut self,
 		task_id: TaskId,
 		name: String,
 		description: String,
 		tags: HashSet<TaskTagId>,
+		due_date: Option<SerializableDate>,
+		needed_time_minutes: Option<usize>,
 		create_at_top: bool,
 	) {
-		let task = Task::new(name, description, None, None, tags);
+		let task = Task::new(name, description, needed_time_minutes, due_date, tags);
 
 		if create_at_top {
 			self.todo_tasks.insert_at_top(task_id, task);

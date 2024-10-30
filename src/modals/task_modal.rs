@@ -1,8 +1,7 @@
-use std::str::FromStr;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::{Fill, Fixed}, Padding};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
-use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, view_task_description_button, ICON_BUTTON_WIDTH}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, view_task_description_button, ICON_BUTTON_WIDTH}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
 
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -240,29 +239,11 @@ impl TaskModal {
 									)
 									.id(EDIT_NEEDED_TIME_INPUT_ID.clone())
 									.width(Fixed(50.0))
-									.on_input(move |input| {
-										let new_needed_time_minutes = match usize::from_str(&input) {
-											Ok(new_needed_time_minutes) => {
-												Some(Some(new_needed_time_minutes))
-											}
-											Err(_) => {
-												if input.is_empty() {
-													Some(None)
-												} else {
-													None
-												}
-											}
-										};
-										match new_needed_time_minutes {
-											Some(new_needed_time_minutes) => {
-												TaskModalMessage::ChangeNeededTimeInput(
-													new_needed_time_minutes,
-												)
-												.into()
-											}
-											None => TaskModalMessage::InvalidNeededTimeInput.into(),
-										}
-									})
+									.on_input(move |input| on_number_input(
+										input,
+										|new_time| TaskModalMessage::ChangeNeededTimeInput(new_time).into(),
+										TaskModalMessage::InvalidNeededTimeInput.into(),
+									))
 									.on_submit(TaskModalMessage::ChangeNeededTime.into())
 									.style(move |t, s| {
 										text_input_style(t, s, true, false, false, true)
@@ -273,12 +254,15 @@ impl TaskModal {
 
 								row![
 									edit_needed_time_element,
-									clear_task_needed_time_button()
+									clear_task_needed_time_button(TaskModalMessage::ClearTaskNeededTime.into())
 								]
 								.into()
 							}
 							else {
-								edit_task_needed_time_button(task.needed_time_minutes).into()
+								edit_task_needed_time_button(
+									task.needed_time_minutes,
+									TaskModalMessage::EditNeededTime.into()
+								).into()
 							};
 
 							let needed_time_view = Row::new()
@@ -289,7 +273,7 @@ impl TaskModal {
 
 							let date_formatting = app.preferences.date_formatting();
 
-							let add_due_date_button = add_due_date_button();
+							let add_due_date_button = add_due_date_button(TaskModalMessage::EditDueDate.into());
 
 							let due_date_view: Element<'a, Message> = if *edit_due_date {
 								date_picker(
@@ -303,8 +287,14 @@ impl TaskModal {
 							}
 							else if let Some(due_date) = &task.due_date {
 								row![
-									edit_due_date_button(due_date, date_formatting),
-									clear_task_due_date_button(*project_id, *task_id),
+									edit_due_date_button(due_date, date_formatting, TaskModalMessage::EditDueDate.into()),
+									clear_task_due_date_button(
+										DatabaseMessage::ChangeTaskDueDate {
+											project_id: *project_id,
+											task_id: *task_id,
+											new_due_date: None
+										}.into()
+									),
 								]
 								.into()
 							}

@@ -1,6 +1,6 @@
 mod button_styles;
 pub use button_styles::{
-	circle_button_style, dangerous_button_style, delete_button_style, create_task_modal_ok_button_style,
+	circle_button_style, dangerous_button_style, delete_button_style,
 	delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style,
 	project_preview_style, stopwatch_page_button_style, secondary_button_style, secondary_button_style_default,
 	secondary_button_style_no_rounding, secondary_button_style_only_round_top,
@@ -29,7 +29,8 @@ pub use checkbox_style::checkbox_style;
 
 mod text_input;
 pub use text_input::{
-	text_input_style, text_input_style_default, text_input_style_only_round_left, text_input_style_borderless
+	text_input_style, text_input_style_default, text_input_style_only_round_left, text_input_style_borderless,
+	on_number_input
 };
 
 mod text_editor;
