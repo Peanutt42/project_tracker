@@ -228,24 +228,28 @@ pub fn stopwatch_button(
 	dropzone_highlight: bool
 ) -> Element<'static, Message> {
 	let stopwatch_label = match stopwatch_page {
-		StopwatchPage::Ticking {
-			clock,
-			elapsed_time,
-			..
-		} => Some(if clock.label().is_empty() {
-			format_stopwatch_duration(elapsed_time.as_secs_f64().round_ties_even() as i64)
-		} else {
+		StopwatchPage::StopTaskTime { clock, .. } | StopwatchPage::TakingBreak { clock, .. } => Some(
 			clock.label().to_string()
-		}),
-		_ => None,
+		),
+		StopwatchPage::TrackTime { elapsed_time, .. } => Some(
+			format_stopwatch_duration(elapsed_time.as_secs_f64().round_ties_even() as i64)
+		),
+		StopwatchPage::Idle => None,
 	};
 
-	let stopwatch_ticking = matches!(stopwatch_page, StopwatchPage::Ticking { .. });
+	// TODO: different colors for break, task, tracking time
+	let stopwatch_ticking = !matches!(stopwatch_page, StopwatchPage::Idle);
+
+	let stopwatch_icon = match stopwatch_page {
+		StopwatchPage::TakingBreak { .. } => Bootstrap::CupHot,
+		StopwatchPage::StopTaskTime { .. } => Bootstrap::HourglassSplit,
+		_ => Bootstrap::Stopwatch
+	};
 
 	container(
 		button(
 			row![
-				icon_to_text(Bootstrap::Stopwatch).size(LARGE_TEXT_SIZE),
+				icon_to_text(stopwatch_icon).size(LARGE_TEXT_SIZE),
 				text("Stopwatch").size(LARGE_TEXT_SIZE)
 			]
 			.push_maybe(stopwatch_label.map(|stopwatch_label| {
@@ -661,7 +665,7 @@ pub fn show_source_code_todos_button(
 	.style(secondary_button_style_default)
 }
 
-pub fn start_timer_button() -> Button<'static, Message> {
+pub fn track_time_button() -> Button<'static, Message> {
 	button(
 		icon_to_text(Bootstrap::PlayFill)
 			.size(45)
@@ -670,7 +674,7 @@ pub fn start_timer_button() -> Button<'static, Message> {
 	)
 	.width(Length::Fixed(1.75 * 45.0))
 	.height(Length::Fixed(1.75 * 45.0))
-	.on_press(StopwatchPageMessage::Start { task: None }.into())
+	.on_press(StopwatchPageMessage::StartTrackingTime.into())
 	.style(move |t, s| timer_button_style(t, s, false))
 }
 
@@ -733,8 +737,9 @@ pub fn start_task_timer_button<'a>(
 	tooltip(
 		icon_button(Bootstrap::Stopwatch)
 			.on_press(
-				StopwatchPageMessage::Start {
-					task: Some((project_id, task_id)),
+				StopwatchPageMessage::StopTask {
+					project_id,
+					task_id,
 				}
 				.into(),
 			)
@@ -868,4 +873,13 @@ pub fn hide_password_button() -> Element<'static, Message> {
 	.gap(GAP)
 	.style(tooltip_container_style)
 	.into()
+}
+
+pub fn take_break_button(minutes: usize) -> Button<'static, Message> {
+	button(
+		text(format!("{minutes} min"))
+			.size(45)
+	)
+	.on_press(StopwatchPageMessage::TakeBreak(minutes).into())
+	.style(move |t, s| timer_button_style(t, s, false))
 }

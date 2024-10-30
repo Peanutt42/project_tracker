@@ -49,16 +49,14 @@ pub fn task_list<'a>(
 			_ => false,
 		};
 		let stopwatch_label = match stopwatch_page {
-			StopwatchPage::Idle => None,
-			StopwatchPage::Ticking { task, clock, .. } => {
-				task.as_ref().and_then(|(timed_project_id, timed_task_id)| {
-					if *timed_project_id == project_id && *timed_task_id == task_id {
-						Some(clock.label())
-					} else {
-						None
-					}
-				})
-			}
+			StopwatchPage::StopTaskTime { project_id: timed_project_id, task_id: timed_task_id, clock, .. } => {
+				if *timed_project_id == project_id && *timed_task_id == task_id {
+					Some(clock.label())
+				} else {
+					None
+				}
+			},
+			_ => None,
 		};
 		task_widget(
 			task,

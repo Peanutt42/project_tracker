@@ -274,8 +274,9 @@ impl SidebarPage {
 						}
 						TaskDropzone::Stopwatch => {
 							stopwatch_page.update(
-								StopwatchPageMessage::Start {
-									task: Some((project_id, task_id)),
+								StopwatchPageMessage::StopTask {
+									project_id,
+									task_id,
 								},
 								database,
 								true,

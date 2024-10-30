@@ -96,11 +96,24 @@ impl Default for Preferences {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct StopwatchProgress {
-	pub task: Option<(ProjectId, TaskId)>,
-	pub elapsed_time_seconds: u64,
-	pub paused: bool,
-	pub finished_notification_sent: bool,
+pub enum StopwatchProgress {
+	Task {
+		project_id: ProjectId,
+		task_id: TaskId,
+		elapsed_time_seconds: u64,
+		paused: bool,
+		finished_notification_sent: bool,
+	},
+	TrackTime {
+		elapsed_time_seconds: u64,
+		paused: bool,
+	},
+	Break {
+		elapsed_time_seconds: u64,
+		paused: bool,
+		break_duration_minutes: usize,
+		break_over_notification_sent: bool,
+	}
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]

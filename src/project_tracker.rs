@@ -416,16 +416,7 @@ impl ProjectTrackerApp {
 						if let Some(preferences) = &self.preferences {
 							let stopwatch_progress_message: Option<Message> =
 								preferences.stopwatch_progress().as_ref().map(|progress| {
-									StopwatchPageMessage::StartupAgain {
-										task: progress.task,
-										elapsed_time: Duration::from_secs(
-											progress.elapsed_time_seconds,
-										),
-										paused: progress.paused,
-										finished_notification_sent: progress
-											.finished_notification_sent,
-									}
-									.into()
+									StopwatchPageMessage::StartupAgain(*progress).into()
 								});
 
 							let selected_content_page = *preferences.selected_content_page();
@@ -610,7 +601,7 @@ impl ProjectTrackerApp {
 			}
 			Message::OpenStopwatch => self.update(Message::SelectProject(None)),
 			Message::StopwatchPageMessage(message) => {
-				if matches!(message, StopwatchPageMessage::Start { .. }) {
+				if matches!(message, StopwatchPageMessage::StopTask { .. }) {
 					self.task_modal = TaskModal::Closed;
 				}
 				let messages = self.stopwatch_page.update(
