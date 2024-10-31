@@ -12,16 +12,16 @@ use crate::{pages::format_stopwatch_duration, project_tracker::Message};
 pub struct StopwatchClock {
 	percentage: f32,
 	label: String,
-	sub_label: String,
+	sub_label: Option<String>,
 	cache: Cache,
 }
 
 impl StopwatchClock {
-	pub fn new(percentage: f32, seconds_left: f32, needed_seconds: f32) -> Self {
+	pub fn new(percentage: f32, seconds_left: f32, needed_seconds: Option<f32>) -> Self {
 		Self {
 			percentage,
 			label: format_stopwatch_duration(seconds_left.round_ties_even() as i64),
-			sub_label: format_stopwatch_duration(needed_seconds.round_ties_even() as i64),
+			sub_label: needed_seconds.map(|needed_seconds| format_stopwatch_duration(needed_seconds.round_ties_even() as i64)),
 			cache: Cache::new(),
 		}
 	}
@@ -41,7 +41,7 @@ impl StopwatchClock {
 	}
 
 	pub fn set_needed_seconds(&mut self, needed_seconds: f32) {
-		self.sub_label = format_stopwatch_duration(needed_seconds.round_ties_even() as i64);
+		self.sub_label = Some(format_stopwatch_duration(needed_seconds.round_ties_even() as i64));
 		self.cache.clear();
 	}
 }
@@ -119,19 +119,21 @@ impl Program<Message> for StopwatchClock {
 				..Default::default()
 			});
 
-			frame.fill_text(Text {
-				content: self.sub_label.clone(),
-				position: Point {
-					x: center.x,
-					y: center.y + 60.0,
-				},
-				color: theme.extended_palette().background.base.text,
-				horizontal_alignment: Horizontal::Center,
-				vertical_alignment: Vertical::Center,
-				size: 25.0.into(),
-				font: Font::DEFAULT,
-				..Default::default()
-			});
+			if let Some(sub_label) = &self.sub_label {
+				frame.fill_text(Text {
+					content: sub_label.clone(),
+					position: Point {
+						x: center.x,
+						y: center.y + 60.0,
+					},
+					color: theme.extended_palette().background.base.text,
+					horizontal_alignment: Horizontal::Center,
+					vertical_alignment: Vertical::Center,
+					size: 25.0.into(),
+					font: Font::DEFAULT,
+					..Default::default()
+				});
+			}
 		});
 
 		vec![geometry]

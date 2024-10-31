@@ -9,7 +9,7 @@ use crate::{
 	}, ProjectTrackerApp,
 };
 use iced::{
-	advanced::graphics::futures::backend::default::time, alignment::{Horizontal, Vertical}, keyboard, padding::top, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Font, Length::{self, Fill}, Padding, Subscription
+	alignment::{Horizontal, Vertical}, keyboard, padding::top, time, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Font, Length::{self, Fill}, Padding, Subscription
 };
 use notify_rust::Notification;
 use std::{io::Cursor, thread, time::{Duration, Instant}};
@@ -168,7 +168,7 @@ impl StopwatchPage {
 						paused: false,
 						project_id,
 						task_id,
-						clock: StopwatchClock::new(0.0, needed_seconds, needed_seconds),
+						clock: StopwatchClock::new(0.0, needed_seconds, Some(needed_seconds)),
 						finished_notification_sent: false,
 					};
 					Some(vec![
@@ -189,7 +189,7 @@ impl StopwatchPage {
 					paused: false,
 					break_duration_minutes: minutes,
 					break_over_notification_sent: false,
-					clock: StopwatchClock::new(0.0, duration_seconds, duration_seconds),
+					clock: StopwatchClock::new(0.0, duration_seconds, None),
 				};
 				Some(vec![PreferenceMessage::SetStopwatchProgress(self.get_progress()).into()])
 			},
@@ -221,7 +221,7 @@ impl StopwatchPage {
 								clock: StopwatchClock::new(
 									elapsed_time_seconds as f32 / needed_seconds,
 									needed_seconds - elapsed_time_seconds as f32,
-									needed_seconds
+									Some(needed_seconds)
 								)
 							}
 						}
@@ -250,7 +250,7 @@ impl StopwatchPage {
 							clock: StopwatchClock::new(
 								elapsed_time_seconds as f32 / duration_seconds,
 								duration_seconds - elapsed_time_seconds as f32,
-								duration_seconds
+								None
 							)
 						}
 					}
@@ -383,7 +383,8 @@ impl StopwatchPage {
 						let seconds_left = needed_seconds - timer_seconds;
 						clock.set_percentage(timer_seconds / needed_seconds);
 						clock.set_seconds_left(seconds_left);
-						clock.set_needed_seconds(needed_seconds);
+						// Empty, since we display a x min. break text below
+						// clock.set_needed_seconds(needed_seconds);
 
 						if seconds_left <= 0.0 && !*break_over_notification_sent {
 							*break_over_notification_sent = true;
@@ -403,10 +404,10 @@ impl StopwatchPage {
 		container(match self {
 			StopwatchPage::Idle => Element::new(column![
 				text("Track time:")
-					.size(90),
+					.size(45),
 				track_time_button(),
 				Space::new(0.0, LARGE_SPACING_AMOUNT),
-				text("or take a break:").size(90),
+				text("or take a break:").size(45),
 				row![
 					take_break_button(5),
 					take_break_button(15),
@@ -444,29 +445,46 @@ impl StopwatchPage {
 			},
 
 			StopwatchPage::TakingBreak { break_duration_minutes, paused, clock, .. } => {
-				column![
-					text(format!("{break_duration_minutes} min. break"))
-						.size(90)
-						.width(Fill)
-						.align_x(Horizontal::Center),
+				responsive(move |size| {
+					let clock = canvas(clock)
+						.width(Length::Fixed(225.0))
+						.height(Length::Fixed(225.0));
 
-					canvas(clock)
-						.width(Length::Fixed(300.0))
-						.height(Length::Fixed(300.0)),
+					let controls = column![
+						text(format!("{break_duration_minutes} min. break")).size(45),
 
-					row![
-						if *paused {
-							resume_timer_button()
-						} else {
-							pause_timer_button()
-						},
-						stop_timer_button()
+						row![
+							if *paused {
+								resume_timer_button()
+							} else {
+								pause_timer_button()
+							},
+							stop_timer_button()
+						]
+						.spacing(LARGE_SPACING_AMOUNT)
 					]
-					.spacing(LARGE_SPACING_AMOUNT)
-				]
-				.align_x(Alignment::Center)
-				.spacing(LARGE_SPACING_AMOUNT)
-				.width(Fill)
+					.align_x(Alignment::Center)
+					.spacing(LARGE_SPACING_AMOUNT);
+
+					let page_view: Element<Message> = if size.width > size.height {
+						row![clock, controls]
+							.spacing(LARGE_SPACING_AMOUNT)
+							.align_y(Vertical::Center)
+							.into()
+					}
+					else {
+						column![clock, controls]
+							.spacing(LARGE_SPACING_AMOUNT)
+							.align_x(Horizontal::Center)
+							.into()
+					};
+
+					container(
+						page_view
+					)
+					.center(Fill)
+					.into()
+				})
 				.into()
 			},
 
@@ -513,21 +531,28 @@ impl StopwatchPage {
 					.spacing(LARGE_SPACING_AMOUNT)
 					.width(Fill);
 
-					let page_view: Element<Message> = if size.width > size.height {
-						row![
-							clock_side,
-						]
-						.push_maybe(task_info(task_ref, project_ref, app))
-						.spacing(LARGE_SPACING_AMOUNT)
-						.into()
+					let page_view: Element<Message> = if let Some(task_info) = task_info(task_ref, project_ref, app) {
+						if size.width > size.height {
+							row![
+								clock_side,
+								task_info,
+							]
+							.spacing(LARGE_SPACING_AMOUNT)
+							.align_y(Vertical::Center)
+							.into()
+						}
+						else {
+							column![
+								clock_side,
+								task_info
+							]
+							.spacing(LARGE_SPACING_AMOUNT)
+							.align_x(Horizontal::Center)
+							.into()
+						}
 					}
 					else {
-						column![
-							clock_side,
-						]
-						.push_maybe(task_info(task_ref, project_ref, app))
-						.spacing(LARGE_SPACING_AMOUNT)
-						.into()
+						clock_side.into()
 					};
 
 					container(
