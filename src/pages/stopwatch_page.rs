@@ -9,7 +9,7 @@ use crate::{
 	}, ProjectTrackerApp,
 };
 use iced::{
-	alignment::{Horizontal, Vertical}, keyboard, padding::top, time, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Font, Length::{self, Fill}, Padding, Subscription
+	alignment::{Horizontal, Vertical}, keyboard, time, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Font, Length::{self, Fill}, Padding, Subscription
 };
 use notify_rust::Notification;
 use std::{io::Cursor, thread, time::{Duration, Instant}};
@@ -514,28 +514,28 @@ impl StopwatchPage {
 						text("<invalid project or task id>").into()
 					};
 
-					let clock_side = column![
-						clock,
-						row![
-							if *paused {
-								resume_timer_button()
-							} else {
-								pause_timer_button()
-							},
-							stop_timer_button(),
-							complete_task_timer_button()
-						]
-						.spacing(LARGE_SPACING_AMOUNT)
+					let controls = row![
+						if *paused {
+							resume_timer_button()
+						} else {
+							pause_timer_button()
+						},
+						stop_timer_button(),
+						complete_task_timer_button()
 					]
-					.align_x(Alignment::Center)
-					.spacing(LARGE_SPACING_AMOUNT)
-					.width(Fill);
+					.spacing(LARGE_SPACING_AMOUNT);
 
 					let page_view: Element<Message> = if let Some(task_info) = task_info(task_ref, project_ref, app) {
 						if size.width > size.height {
 							row![
-								clock_side,
-								task_info,
+								clock,
+								column![
+									task_info,
+									controls,
+								]
+								.align_x(Alignment::Center)
+								.spacing(LARGE_SPACING_AMOUNT)
+								.width(Fill)
 							]
 							.spacing(LARGE_SPACING_AMOUNT)
 							.align_y(Vertical::Center)
@@ -543,8 +543,10 @@ impl StopwatchPage {
 						}
 						else {
 							column![
-								clock_side,
-								task_info
+								clock,
+								Space::new(0.0, LARGE_PADDING_AMOUNT),
+								task_info,
+								controls,
 							]
 							.spacing(LARGE_SPACING_AMOUNT)
 							.align_x(Horizontal::Center)
@@ -552,7 +554,14 @@ impl StopwatchPage {
 						}
 					}
 					else {
-						clock_side.into()
+						column![
+							clock,
+							controls
+						]
+						.align_x(Alignment::Center)
+						.spacing(LARGE_SPACING_AMOUNT)
+						.width(Fill)
+						.into()
 					};
 
 					container(
@@ -655,7 +664,6 @@ fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a 
 				.align_y(Vertical::Center)
 			}))
 			.spacing(LARGE_SPACING_AMOUNT)
-			.padding(top(LARGE_PADDING_AMOUNT))
 			.align_x(Horizontal::Center)
 			.into()
 	})
