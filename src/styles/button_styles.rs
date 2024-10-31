@@ -112,7 +112,7 @@ pub fn hidden_secondary_button_style(theme: &Theme, status: Status) -> Style {
 			border: rounded(BORDER_RADIUS),
 			..Style::default()
 		},
-		Status::Hovered => Style {
+		Status::Hovered | Status::Pressed => Style {
 			background: Some(
 				color_average(
 					theme.extended_palette().background.weak.color,
@@ -122,7 +122,6 @@ pub fn hidden_secondary_button_style(theme: &Theme, status: Status) -> Style {
 			),
 			..hidden_secondary_button_style(theme, Status::Active)
 		},
-		Status::Pressed => hidden_secondary_button_style(theme, Status::Hovered),
 		Status::Disabled => Style::default(),
 	}
 }
@@ -176,7 +175,7 @@ pub fn circle_button_style(theme: &Theme, status: Status) -> Style {
 			border: rounded(f32::MAX),
 			..Default::default()
 		},
-		Status::Hovered => Style {
+		Status::Hovered | Status::Pressed => Style {
 			background: Some(
 				mix_color(
 					pair.color,
@@ -188,7 +187,6 @@ pub fn circle_button_style(theme: &Theme, status: Status) -> Style {
 			text_color: pair.text,
 			..circle_button_style(theme, Status::Active)
 		},
-		Status::Pressed => circle_button_style(theme, Status::Active),
 		Status::Disabled => Style {
 			background: Some(
 				color_average(pair.color, theme.extended_palette().background.strong.color).into(),
@@ -208,7 +206,7 @@ pub fn primary_button_style(theme: &Theme, status: Status) -> Style {
 			border: rounded(BORDER_RADIUS),
 			..Style::default()
 		},
-		Status::Hovered => Style {
+		Status::Hovered | Status::Pressed => Style {
 			background: Some(
 				mix_color(
 					pair.color,
@@ -220,7 +218,6 @@ pub fn primary_button_style(theme: &Theme, status: Status) -> Style {
 			text_color: pair.text,
 			..primary_button_style(theme, Status::Active)
 		},
-		Status::Pressed => primary_button_style(theme, Status::Active),
 		Status::Disabled => Style {
 			background: Some(
 				color_average(pair.color, theme.extended_palette().background.strong.color).into(),
@@ -280,7 +277,7 @@ pub fn secondary_button_style(
 			border: rounded(border_radius),
 			..Style::default()
 		},
-		Status::Hovered => Style {
+		Status::Hovered | Status::Pressed => Style {
 			background: Some(theme.extended_palette().background.strong.color.into()),
 			text_color: theme.extended_palette().secondary.base.text,
 			..secondary_button_style(
@@ -292,14 +289,6 @@ pub fn secondary_button_style(
 				round_right_bottom,
 			)
 		},
-		Status::Pressed => secondary_button_style(
-			theme,
-			Status::Active,
-			round_left_top,
-			round_left_bottom,
-			round_right_top,
-			round_right_bottom,
-		),
 		Status::Disabled => Style::default(),
 	}
 }
@@ -373,7 +362,7 @@ pub fn selection_list_button_style(
 
 	match status {
 		Status::Active => active_style,
-		Status::Hovered => Style {
+		Status::Hovered | Status::Pressed => Style {
 			background: Some(if selected {
 				theme.extended_palette().primary.strong.color.into()
 			} else {
@@ -381,8 +370,7 @@ pub fn selection_list_button_style(
 			}),
 			..active_style
 		},
-		Status::Pressed => active_style,
-		Status::Disabled => active_style, // No disabled state defined
+		Status::Disabled => active_style,
 	}
 }
 
@@ -414,7 +402,7 @@ pub fn enum_dropdown_button_style(
 
 	match status {
 		Status::Active => active_style,
-		Status::Hovered => Style {
+		Status::Hovered | Status::Pressed => Style {
 			background: Some(if selected {
 				theme.extended_palette().primary.strong.color.into()
 			} else {
@@ -422,8 +410,7 @@ pub fn enum_dropdown_button_style(
 			}),
 			..active_style
 		},
-		Status::Pressed => active_style,
-		Status::Disabled => active_style, // No disabled state defined
+		Status::Disabled => active_style,
 	}
 }
 
@@ -521,7 +508,7 @@ pub fn settings_tab_button_style(theme: &Theme, status: Status, selected: bool) 
 
 	match status {
 		Status::Active => active_style,
-		Status::Hovered => Style {
+		Status::Hovered | Status::Pressed  => Style {
 			background: if selected {
 				Some(theme.extended_palette().primary.strong.color.into())
 			} else {
@@ -529,7 +516,6 @@ pub fn settings_tab_button_style(theme: &Theme, status: Status, selected: bool) 
 			},
 			..active_style
 		},
-		Status::Pressed => active_style,
 		Status::Disabled => active_style,
 	}
 }
@@ -550,7 +536,7 @@ pub fn timer_button_style(theme: &Theme, status: Status, timer_ticking: bool) ->
 
 	match status {
 		Status::Active => active_style,
-		Status::Hovered => {
+		Status::Hovered | Status::Pressed => {
 			let color = mix_color(
 				pair.color,
 				theme.extended_palette().background.strong.color,
@@ -567,7 +553,6 @@ pub fn timer_button_style(theme: &Theme, status: Status, timer_ticking: bool) ->
 				..active_style
 			}
 		}
-		Status::Pressed => active_style,
 		Status::Disabled => active_style,
 	}
 }
