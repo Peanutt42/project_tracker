@@ -18,8 +18,8 @@ pub enum ProjectTrackerTheme {
 
 pub static DARK_THEME: Lazy<Theme> = Lazy::new(|| {
 	let palette = Palette {
-		background: Color::from_rgb(0.1, 0.1, 0.1),
-		text: Color::from_rgb(0.9, 0.9, 0.9),
+		background: Color::from_rgb(0.05, 0.05, 0.05),
+		text: Color::from_rgb(0.95, 0.95, 0.95),
 		primary: Color::from_rgb8(0, 41, 229),
 		success: Color::from_rgb8(48, 211, 48),
 		danger: Color::from_rgb(0.9, 0.0, 0.0),
@@ -37,8 +37,8 @@ pub static DARK_THEME: Lazy<Theme> = Lazy::new(|| {
 
 pub static LIGHT_THEME: Lazy<Theme> = Lazy::new(|| {
 	let palette = Palette {
-		background: Color::from_rgb(0.9, 0.9, 0.9),
-		text: Color::from_rgb(0.1, 0.1, 0.1),
+		background: Color::from_rgb(0.95, 0.95, 0.95),
+		text: Color::from_rgb(0.05, 0.05, 0.05),
 		primary: Color::from_rgb8(0, 40, 219),
 		success: Color::from_rgb8(48, 211, 48),
 		danger: Color::from_rgb(0.9, 0.0, 0.0),

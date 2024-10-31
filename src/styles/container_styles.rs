@@ -183,3 +183,21 @@ pub fn task_tag_container_style(_theme: &Theme, color: Color) -> Style {
 		..Default::default()
 	}
 }
+
+pub fn sidebar_background_container_style(theme: &Theme) -> Style {
+	let mix_factor = if theme.extended_palette().is_dark { 0.9 } else { 0.75 };
+
+	Style {
+		background: Some(mix_color(
+			theme.extended_palette().background.weak.color,
+			theme.extended_palette().background.base.color,
+			mix_factor
+		).into()),
+		text_color: Some(mix_color(
+			theme.extended_palette().background.weak.text,
+			theme.extended_palette().background.base.text,
+			mix_factor
+		)),
+		..Default::default()
+	}
+}

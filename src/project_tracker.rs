@@ -1,11 +1,11 @@
 use crate::{
 	components::{
-		create_empty_database_button, import_database_button, toggle_sidebar_button, vertical_seperator, ScalarAnimation, ICON_BUTTON_WIDTH
+		create_empty_database_button, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
 	}, core::{
 		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, SynchronizationSetting, TaskId
 	}, integrations::{download_database_from_server, sync_database_from_server, upload_database_to_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
-	}, styles::{HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	}, styles::{sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 use iced::{
 	alignment::Horizontal, clipboard, event::Status, keyboard, time, widget::{
@@ -974,23 +974,16 @@ impl ProjectTrackerApp {
 							Padding::default()
 								.right(size.width * (1.0 - SidebarPage::SPLIT_LAYOUT_PERCENTAGE)),
 						)
+						.style(sidebar_background_container_style)
 						.into()
 				} else {
 					Space::new(Fill, Fill).into()
 				};
 
-				let seperator: Element<Message> =
-					if show_sidebar || sidebar_animation_value.is_some() {
-						vertical_seperator().into()
-					} else {
-						Space::new(0.0, 0.0).into()
-					};
-
 				stack![
 					sidebar,
 					container(
-						container(row![
-							seperator,
+						container(
 							row![
 								if show_sidebar || sidebar_animation_value.is_some() {
 									Space::with_width(empty_toggle_sidebar_button_layout_width)
@@ -1001,7 +994,7 @@ impl ProjectTrackerApp {
 								arc_self.content_view(),
 								Space::with_width(empty_toggle_sidebar_button_layout_width),
 							]
-						])
+						)
 						.style(|t| container::Style {
 							background: Some(t.extended_palette().background.base.color.into()),
 							..Default::default()
