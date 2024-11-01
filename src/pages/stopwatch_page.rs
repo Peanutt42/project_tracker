@@ -407,21 +407,49 @@ impl StopwatchPage {
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
 		container(match self {
-			StopwatchPage::Idle => Element::new(column![
-				text("Track time:")
-					.size(45),
-				track_time_button(),
-				Space::new(0.0, LARGE_SPACING_AMOUNT),
-				text("or take a break:").size(45),
-				row![
-					take_break_button(5),
-					take_break_button(15),
-					take_break_button(30),
+			StopwatchPage::Idle => Element::new(responsive(move |size| {
+				let track_time = column![
+					text("Track time:")
+						.size(45),
+					track_time_button()
 				]
-				.spacing(LARGE_SPACING_AMOUNT)
-			]
-			.align_x(Alignment::Center)
-			.spacing(LARGE_SPACING_AMOUNT)),
+				.align_x(Alignment::Center)
+				.spacing(LARGE_SPACING_AMOUNT);
+
+				let take_break = column![
+					text("or take a break:").size(45),
+					row![
+						take_break_button(5),
+						take_break_button(15),
+						take_break_button(30),
+					]
+					.spacing(LARGE_SPACING_AMOUNT)
+				]
+				.align_x(Alignment::Center)
+				.spacing(LARGE_SPACING_AMOUNT);
+
+				let page_view: Element<Message> = if size.width > size.height * 2.0 {
+					row![
+						track_time,
+						take_break
+					]
+					.spacing(LARGE_SPACING_AMOUNT * 3)
+					.into()
+				}
+				else {
+					column![
+						track_time,
+						take_break,
+					]
+					.align_x(Alignment::Center)
+					.spacing(LARGE_SPACING_AMOUNT)
+					.into()
+				};
+
+				container(page_view)
+					.center(Fill)
+					.into()
+			})),
 
 			StopwatchPage::TrackTime { elapsed_time, paused, .. } => {
 				column![
