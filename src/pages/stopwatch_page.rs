@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		complete_task_timer_button, days_left_widget, horizontal_scrollable, pause_timer_button, resume_timer_button, stop_timer_button, take_break_button, task_description, track_time_button, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING
 	},
-	core::{Database, DatabaseMessage, PreferenceMessage, Project, ProjectId, StopwatchProgress, Task, TaskId, TaskType},
+	core::{Database, DatabaseMessage, OptionalPreference, PreferenceMessage, Preferences, Project, ProjectId, StopwatchProgress, Task, TaskId, TaskType},
 	project_tracker::Message,
 	styles::{
 		task_tag_container_style, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT
@@ -139,6 +139,7 @@ impl StopwatchPage {
 		&mut self,
 		message: StopwatchPageMessage,
 		database: &Option<Database>,
+		preferences: &Option<Preferences>,
 		opened: bool,
 	) -> Option<Vec<Message>> {
 		let get_needed_seconds = |project_id: ProjectId, task_id: TaskId| -> Option<f32> {
@@ -177,7 +178,7 @@ impl StopwatchPage {
 					])
 				}
 				else {
-					self.update(StopwatchPageMessage::StartTrackingTime, database, opened)
+					self.update(StopwatchPageMessage::StartTrackingTime, database, preferences, opened)
 				}
 			},
 			StopwatchPageMessage::TakeBreak(minutes) => {
@@ -299,7 +300,7 @@ impl StopwatchPage {
 						)
 						.into()])
 					},
-					StopwatchPage::Idle => self.update(StopwatchPageMessage::StartTrackingTime, database, opened),
+					StopwatchPage::Idle => self.update(StopwatchPageMessage::StartTrackingTime, database, preferences, opened),
 				}
 			}
 			else {
@@ -322,7 +323,7 @@ impl StopwatchPage {
 				} else {
 					None
 				};
-				let actions = self.update(StopwatchPageMessage::Stop, database, opened);
+				let actions = self.update(StopwatchPageMessage::Stop, database, preferences, opened);
 
 				if let Some(mut actions) = actions {
 					if let Some(database_action) = database_action {
@@ -369,7 +370,9 @@ impl StopwatchPage {
 								if seconds_left <= 0.0 && !*finished_notification_sent {
 									*finished_notification_sent = true;
 
-									timer_notification(&format!("{} min. timer finished!", needed_minutes), task.name());
+									if preferences.play_timer_notification_sound() {
+										timer_notification(&format!("{} min. timer finished!", needed_minutes), task.name());
+									}
 								}
 							}
 						}
@@ -389,7 +392,9 @@ impl StopwatchPage {
 						if seconds_left <= 0.0 && !*break_over_notification_sent {
 							*break_over_notification_sent = true;
 
-							timer_notification(&format!("{break_duration_minutes} min. break is over!"), "");
+							if preferences.play_timer_notification_sound() {
+								timer_notification(&format!("{break_duration_minutes} min. break is over!"), "");
+							}
 						}
 					},
 					_ => {},

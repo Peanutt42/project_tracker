@@ -27,6 +27,7 @@ use std::time::Instant;
 fn default_show_sidebar() -> bool { true }
 fn default_create_new_tasks_at_top() -> bool { true }
 fn default_sort_unspecified_tasks_at_bottom() -> bool { true }
+fn default_play_timer_notification_sound() -> bool { true }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SynchronizationSetting {
@@ -62,6 +63,9 @@ pub struct Preferences {
 	#[serde(default = "default_sort_unspecified_tasks_at_bottom")]
 	sort_unspecified_tasks_at_bottom: bool,
 
+	#[serde(default = "default_play_timer_notification_sound")]
+	play_timer_notification_sound: bool,
+
 	#[serde(default = "default_show_sidebar")]
 	show_sidebar: bool,
 
@@ -86,6 +90,7 @@ impl Default for Preferences {
 			create_new_tasks_at_top: default_create_new_tasks_at_top(),
 			sort_unspecified_tasks_at_bottom: default_sort_unspecified_tasks_at_bottom(),
 			show_sidebar: default_show_sidebar(),
+			play_timer_notification_sound: default_play_timer_notification_sound(),
 			selected_content_page: SerializedContentPage::default(),
 			stopwatch_progress: None,
 			synchronization: None,
@@ -141,6 +146,7 @@ pub enum PreferenceMessage {
 	SetDateFormatting(DateFormatting),
 	SetCreateNewTaskAtTop(bool),
 	SetSortUnspecifiedTasksAtBottom(bool),
+	SetPlayTimerNotificationSound(bool),
 }
 
 impl From<PreferenceMessage> for Message {
@@ -299,6 +305,11 @@ impl Preferences {
 				self.modify(|pref| pref.sort_unspecified_tasks_at_bottom = sort_unspecified_tasks_at_bottom);
 				PreferenceAction::RefreshCachedTaskList
 			}
+
+			PreferenceMessage::SetPlayTimerNotificationSound(play_sound) => {
+				self.modify(|pref| pref.play_timer_notification_sound = play_sound);
+				PreferenceAction::None
+			}
 		}
 	}
 
@@ -433,10 +444,19 @@ impl Preferences {
 					.size(27.5)
 			),
 			Self::setting_item(
-				"Sort unspecified tasks at the bottom",
+				"Sort unspecified tasks at the bottom:",
 				toggler(self.sort_unspecified_tasks_at_bottom)
 					.on_toggle(|sort_unspecified_tasks_at_bottom| PreferenceMessage::SetSortUnspecifiedTasksAtBottom(
 						sort_unspecified_tasks_at_bottom
+					)
+					.into())
+					.size(27.5)
+			),
+			Self::setting_item(
+				"Play timer notification sound:",
+				toggler(self.play_timer_notification_sound)
+					.on_toggle(|play_timer_notification_sound| PreferenceMessage::SetPlayTimerNotificationSound(
+						play_timer_notification_sound
 					)
 					.into())
 					.size(27.5)
@@ -502,6 +522,7 @@ pub trait OptionalPreference {
 	fn create_new_tasks_at_top(&self) -> bool;
 	fn sort_unspecified_tasks_at_bottom(&self) -> bool;
 	fn synchronization(&self) -> Option<&SynchronizationSetting>;
+	fn play_timer_notification_sound(&self) -> bool;
 }
 
 impl OptionalPreference for Option<Preferences> {
@@ -539,5 +560,13 @@ impl OptionalPreference for Option<Preferences> {
 	}
 	fn synchronization(&self) -> Option<&SynchronizationSetting> {
 		self.as_ref().and_then(|preferences| preferences.synchronization.as_ref())
+	}
+	fn play_timer_notification_sound(&self) -> bool {
+		if let Some(preferences) = self {
+			preferences.play_timer_notification_sound
+		}
+		else {
+			default_play_timer_notification_sound()
+		}
 	}
 }

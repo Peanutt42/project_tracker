@@ -607,6 +607,7 @@ impl ProjectTrackerApp {
 				let messages = self.stopwatch_page.update(
 					message,
 					&self.database,
+					&self.preferences,
 					self.project_page.is_none(),
 				);
 				if let Some(messages) = messages {
@@ -746,6 +747,7 @@ impl ProjectTrackerApp {
 							rect,
 						},
 						&mut self.database,
+						&self.preferences,
 						&mut self.stopwatch_page,
 						is_theme_dark,
 					) {
@@ -775,6 +777,7 @@ impl ProjectTrackerApp {
 					match self.sidebar_page.update(
 						SidebarPageMessage::CancelDragTask,
 						&mut self.database,
+						&self.preferences,
 						&mut self.stopwatch_page,
 						is_theme_dark,
 					) {
@@ -798,6 +801,7 @@ impl ProjectTrackerApp {
 				let sidebar_action = self.sidebar_page.update(
 					message.clone(),
 					&mut self.database,
+					&self.preferences,
 					&mut self.stopwatch_page,
 					is_theme_dark,
 				);

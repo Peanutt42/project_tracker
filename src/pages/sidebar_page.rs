@@ -1,7 +1,7 @@
 use crate::components::{
 	create_new_project_button, custom_project_preview, loading_screen, project_preview, settings_button, stopwatch_button, toggle_sidebar_button
 };
-use crate::core::{OrderedHashMap, Project, ProjectId};
+use crate::core::{OrderedHashMap, Preferences, Project, ProjectId};
 use crate::pages::StopwatchPage;
 use crate::project_tracker::ProjectTrackerApp;
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT};
@@ -202,6 +202,7 @@ impl SidebarPage {
 		&mut self,
 		message: SidebarPageMessage,
 		database: &mut Option<Database>,
+		preferences: &Option<Preferences>,
 		stopwatch_page: &mut StopwatchPage,
 		is_theme_dark: bool,
 	) -> SidebarPageAction {
@@ -279,6 +280,7 @@ impl SidebarPage {
 									task_id,
 								},
 								database,
+								preferences,
 								true,
 							);
 						}
