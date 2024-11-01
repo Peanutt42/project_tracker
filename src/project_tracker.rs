@@ -992,7 +992,6 @@ impl ProjectTrackerApp {
 									toggle_sidebar_button(false)
 								},
 								arc_self.content_view(),
-								Space::with_width(empty_toggle_sidebar_button_layout_width),
 							]
 						)
 						.style(|t| container::Style {
