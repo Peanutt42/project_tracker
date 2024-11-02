@@ -1,13 +1,10 @@
 use crate::{
-	components::horizontal_scrollable,
+	components::{horizontal_scrollable, open_folder_location_button},
 	project_tracker::Message,
-	styles::{
-		rounded_container_style, secondary_button_style_default, tooltip_container_style, GAP,
-		SMALL_HORIZONTAL_PADDING, SMALL_TEXT_SIZE,
-	},
+	styles::{rounded_container_style, SMALL_HORIZONTAL_PADDING},
 };
 use iced::{
-	widget::{button, container, text, tooltip, tooltip::Position, Scrollable},
+	widget::{container, text, Scrollable},
 	Element,
 };
 use std::path::{Path, PathBuf};
@@ -24,16 +21,7 @@ pub fn file_location<'a>(filepath: PathBuf) -> Element<'a, Message> {
 	let parent_filepath = filepath.parent().map(Path::to_path_buf);
 
 	horizontal_scrollable(
-		tooltip(
-			button(text(filepath.to_string_lossy().to_string()))
-				.on_press_maybe(parent_filepath.map(Message::OpenFolderLocation))
-				.padding(SMALL_HORIZONTAL_PADDING)
-				.style(secondary_button_style_default),
-			text("Open folder location").size(SMALL_TEXT_SIZE),
-			Position::Bottom,
-		)
-		.gap(GAP)
-		.style(tooltip_container_style),
+		open_folder_location_button(filepath, parent_filepath)
 	)
 	.into()
 }

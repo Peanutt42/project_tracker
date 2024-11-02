@@ -1,18 +1,17 @@
 use crate::{
 	components::{
-		cancel_create_new_task_tag_button, color_palette, color_palette_item_button,
-		create_new_task_tags_button, delete_task_tag_button, unfocusable,
+		cancel_create_new_task_tag_button, color_palette, color_palette_item_button, create_new_task_tags_button, delete_task_tag_button, task_tag_name_button, unfocusable
 	},
 	core::{Database, DatabaseMessage, Project, ProjectId, TaskTag, TaskTagId},
 	project_tracker::Message,
 	styles::{
-		card_style, hidden_secondary_button_style, text_input_style_only_round_left,
+		card_style, text_input_style_only_round_left,
 		LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT,
 	},
 	ProjectTrackerApp,
 };
 use iced::{
-	widget::{button, column, row, text, text_input, Column},
+	widget::{column, row, text, text_input, Column},
 	Alignment, Color, Element,
 	Length::Fill,
 	Task,
@@ -309,10 +308,7 @@ impl ManageTaskTagsModal {
 					.style(text_input_style_only_round_left)
 					.into()
 			} else {
-				button(text(&tag.name).width(Fill))
-					.on_press(ManageTaskTagsModalMessage::EditTaskTagName(tag_id).into())
-					.style(hidden_secondary_button_style)
-					.into()
+				task_tag_name_button(tag_id, &tag.name).into()
 			};
 
 			let color_picker = DropDown::new(

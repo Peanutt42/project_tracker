@@ -339,7 +339,7 @@ impl TaskModal {
 									new_task_name
 								}
 								.into())
-								.style(text_input_style_borderless)
+								.style(|t, s| text_input_style_borderless(t, s, true))
 								.size(HEADING_TEXT_SIZE)
 								.font(BOLD_FONT)
 								.into();

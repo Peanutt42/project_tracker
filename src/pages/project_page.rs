@@ -479,7 +479,7 @@ impl ProjectPage {
 					}
 					.into()
 				})
-				.style(text_input_style_borderless)
+				.style(|t, s| text_input_style_borderless(t, s, false))
 				.into();//text_input_style_default),
 
 		let show_color_picker_button = edit_color_palette_button(

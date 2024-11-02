@@ -6,6 +6,8 @@ use iced::{
 	Border, Theme,
 };
 
+use super::card_style::card_background_color;
+
 pub fn text_input_style_default(theme: &Theme, status: Status) -> Style {
 	text_input_style(theme, status, true, true, true, true)
 }
@@ -64,7 +66,7 @@ pub fn text_input_style(
 	}
 }
 
-pub fn text_input_style_borderless(theme: &Theme, status: Status) -> Style {
+pub fn text_input_style_borderless(theme: &Theme, status: Status, inside_card: bool) -> Style {
 	let placeholder = theme.extended_palette().background.strong.color;
 	let value = theme.extended_palette().background.base.text;
 	let selection = selection_color(theme.extended_palette());
@@ -73,7 +75,11 @@ pub fn text_input_style_borderless(theme: &Theme, status: Status) -> Style {
 
 	match status {
 		Status::Active | Status::Hovered | Status::Focused => Style {
-			background: theme.extended_palette().background.base.color.into(),
+			background: if inside_card {
+				card_background_color(theme)
+			} else {
+				theme.extended_palette().background.base.color
+			}.into(),
 			border,
 			icon: theme.extended_palette().background.weak.text,
 			placeholder,

@@ -5,7 +5,7 @@ use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
 use crate::project_tracker::{ProjectTrackerApp, Message};
 use crate::styles::{
-	rounded_container_style, text_input_style_default, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+	grey_text_style, rounded_container_style, text_input_style_default, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 };
 use crate::{
 	components::{
@@ -17,7 +17,7 @@ use crate::{
 	},
 	modals::ErrorMsgModalMessage,
 	integrations::import_google_tasks_dialog,
-	styles::{card_style, GREY, PADDING_AMOUNT},
+	styles::{card_style, PADDING_AMOUNT},
 };
 use iced::alignment::Vertical;
 use iced::widget::{text_input, toggler, tooltip};
@@ -303,7 +303,7 @@ Server: your own hosted ProjectTracker-server"
 
 						container(
 							text("Go to https://myaccount.google.com/dashboard and download the Tasks data.\nThen extract the Takeout.zip and import the \"Tasks.json\" file inside under the \"Tasks\" folder.")
-								.style(|_theme| text::Style{ color: Some(GREY) })
+								.style(grey_text_style)
 						)
 						.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
 					]

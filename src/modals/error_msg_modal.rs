@@ -1,11 +1,9 @@
 use crate::{
-	components::copy_to_clipboard_button, project_tracker::Message, styles::{card_style, dangerous_button_style}
+	components::{copy_to_clipboard_button, error_msg_ok_button}, project_tracker::Message, styles::card_style
 };
 use iced::{
-	alignment::Horizontal,
-	widget::{button, row, text},
+	widget::{row, text},
 	Element,
-	Length::Fill,
 };
 use iced_aw::card;
 
@@ -50,10 +48,7 @@ impl ErrorMsgModal {
 				card(
 					text(error_msg),
 					row![
-						button(text("Ok").align_x(Horizontal::Center).width(Fill))
-							.width(Fill)
-							.style(dangerous_button_style)
-							.on_press(ErrorMsgModalMessage::Close.into()),
+						error_msg_ok_button(),
 						copy_to_clipboard_button(error_msg.clone()),
 					],
 				)

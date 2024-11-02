@@ -1,11 +1,11 @@
 use crate::{
 	core::{DateFormatting, SerializableDate},
 	project_tracker::Message,
-	styles::{rounded_container_style, SMALL_HORIZONTAL_PADDING},
+	styles::{default_text_style, danger_text_style, rounded_container_style, SMALL_HORIZONTAL_PADDING},
 };
 use chrono::NaiveDate;
 use iced::{
-	widget::{container, text, text::Style, Text}, Element, Theme
+	widget::{container, text, Text}, Element
 };
 use iced_aw::date_picker::Date;
 
@@ -20,14 +20,10 @@ pub fn days_left_widget(date: SerializableDate, is_task_done: bool) -> Element<'
 	let days_left = date_naive.signed_duration_since(today).num_days();
 
 	let action_needed_text_style = if is_task_done {
-		|_theme: &Theme| -> Style { Style { color: None } }
+		default_text_style
 	}
 	else {
-		|theme: &Theme| -> Style {
-			Style {
-				color: Some(theme.extended_palette().danger.base.color)
-			}
-		}
+		danger_text_style
 	};
 
 	container(match days_left {

@@ -33,6 +33,19 @@ pub fn tooltip_container_style(theme: &Theme) -> Style {
 	}
 }
 
+pub fn modal_background_container_style(_theme: &Theme) -> Style {
+	Style {
+		background: Some(
+			Color {
+				a: 0.75,
+				..Color::BLACK
+			}
+			.into(),
+		),
+		..Default::default()
+	}
+}
+
 pub fn dropdown_container_style(theme: &Theme) -> Style {
 	Style {
 		background: None,
@@ -198,6 +211,13 @@ pub fn sidebar_background_container_style(theme: &Theme) -> Style {
 			theme.extended_palette().background.base.text,
 			mix_factor
 		)),
+		..Default::default()
+	}
+}
+
+pub fn default_background_container_style(theme: &Theme) -> Style {
+	Style {
+		background: Some(theme.extended_palette().background.base.color.into()),
 		..Default::default()
 	}
 }

@@ -1,4 +1,5 @@
-use iced::{font::Weight, Color, Font};
+use iced::{font::Weight, widget::text::Style, Color, Font, Theme};
+use crate::styles::GREY;
 
 pub fn text_color(background: Color) -> Color {
 	let brightness = 0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b;
@@ -13,3 +14,21 @@ pub const BOLD_FONT: Font = Font {
 	weight: Weight::Bold,
 	..Font::DEFAULT
 };
+
+pub fn default_text_style(_theme: &Theme) -> Style {
+	Style {
+		color: None,
+	}
+}
+
+pub fn danger_text_style(theme: &Theme) -> Style {
+	Style {
+		color: Some(theme.extended_palette().danger.base.color),
+	}
+}
+
+pub fn grey_text_style(_theme: &Theme) -> Style {
+	Style {
+		color: Some(GREY)
+	}
+}

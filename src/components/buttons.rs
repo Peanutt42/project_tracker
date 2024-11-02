@@ -2,12 +2,12 @@ use crate::{
 	components::{date_text, duration_text}, core::{
 		Database, DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, SynchronizationSetting, TaskId, TaskTag, TaskTagId
 	}, icons::{icon_to_text, Bootstrap}, modals::{
-		ConfirmModalMessage, CreateTaskModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage
+		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage
 	}, pages::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
 		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
 	}, project_tracker::Message, styles::{
-		circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
@@ -882,4 +882,52 @@ pub fn take_break_button(minutes: usize) -> Button<'static, Message> {
 	)
 	.on_press(StopwatchPageMessage::TakeBreak(minutes).into())
 	.style(move |t, s| timer_button_style(t, s, false))
+}
+
+pub fn open_folder_location_button(filepath: PathBuf, parent_filepath: Option<PathBuf>) -> Element<'static, Message> {
+	tooltip(
+		button(text(filepath.to_string_lossy().to_string()))
+			.on_press_maybe(parent_filepath.map(Message::OpenFolderLocation))
+			.padding(SMALL_HORIZONTAL_PADDING)
+			.style(secondary_button_style_default),
+
+		text("Open folder location").size(SMALL_TEXT_SIZE),
+
+		tooltip::Position::Bottom,
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
+}
+
+pub fn task_open_stopwatch_timer(label: &String) -> Element<Message> {
+	button(
+		row![
+			icon_to_text(Bootstrap::Stopwatch).size(SMALL_TEXT_SIZE),
+			text(label).style(danger_text_style)
+		]
+		.align_y(Vertical::Center)
+		.spacing(TINY_SPACING_AMOUNT),
+	)
+	.padding(SMALL_HORIZONTAL_PADDING)
+	.style(secondary_button_style_default)
+	.on_press(Message::OpenStopwatch)
+	.into()
+}
+
+pub fn error_msg_ok_button() -> Button<'static, Message> {
+	button(
+		text("Ok")
+			.align_x(Horizontal::Center)
+			.width(Fill)
+	)
+	.width(Fill)
+	.style(dangerous_button_style)
+	.on_press(ErrorMsgModalMessage::Close.into())
+}
+
+pub fn task_tag_name_button(task_tag_id: TaskTagId, task_tag_name: &str) -> Button<Message> {
+	button(text(task_tag_name).width(Fill))
+		.on_press(ManageTaskTagsModalMessage::EditTaskTagName(task_tag_id).into())
+		.style(hidden_secondary_button_style)
 }

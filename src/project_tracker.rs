@@ -5,12 +5,12 @@ use crate::{
 		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, SynchronizationSetting, TaskId
 	}, integrations::{download_database_from_server, sync_database_from_server, upload_database_to_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
-	}, styles::{sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 use iced::{
 	alignment::Horizontal, clipboard, event::Status, keyboard, time, widget::{
 		center, column, container, mouse_area, opaque, responsive, row, stack, text, Space, Stack
-	}, window, Color, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme
+	}, window, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme
 };
 use project_tracker_server::{get_last_modification_date_time, ServerError};
 use std::{
@@ -924,18 +924,10 @@ impl ProjectTrackerApp {
 	) -> Option<Element<Message>> {
 		content.map(|content| {
 			opaque(
-				mouse_area(center(opaque(content)).style(|_theme| {
-					container::Style {
-						background: Some(
-							Color {
-								a: 0.75,
-								..Color::BLACK
-							}
-							.into(),
-						),
-						..Default::default()
-					}
-				}))
+				mouse_area(
+					center(opaque(content))
+						.style(modal_background_container_style)
+				)
 				.on_press(on_close),
 			)
 		})
@@ -998,10 +990,7 @@ impl ProjectTrackerApp {
 								arc_self.content_view(),
 							]
 						)
-						.style(|t| container::Style {
-							background: Some(t.extended_palette().background.base.color.into()),
-							..Default::default()
-						})
+						.style(default_background_container_style)
 					)
 					.width(Fill)
 					.padding(Padding::default().left(size.width * sidebar_layout_percentage))

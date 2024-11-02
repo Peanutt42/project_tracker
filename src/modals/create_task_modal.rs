@@ -296,7 +296,7 @@ impl CreateTaskModal {
 								.id(TASK_NAME_INPUT_ID.clone())
 								.on_input(CreateTaskModalMessage::ChangeTaskName)
 								.on_submit(CreateTaskModalMessage::CreateTask)
-								.style(text_input_style_borderless)
+								.style(|t, s| text_input_style_borderless(t, s, true))
 								.size(HEADING_TEXT_SIZE)
 								.font(Font {
 									weight: font::Weight::Bold,

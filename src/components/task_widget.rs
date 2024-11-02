@@ -1,9 +1,10 @@
 use crate::{
-	components::{days_left_widget, duration_widget, in_between_dropzone
-	}, core::{
+	components::{days_left_widget, duration_widget, in_between_dropzone},
+	styles::grey_text_style,
+	core::{
 		DatabaseMessage, Project, ProjectId, SortMode, Task, TaskId, TaskType, TASK_TAG_QUAD_HEIGHT
 	}, icons::{icon_to_text, Bootstrap}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::Message, styles::{
-		checkbox_style, secondary_button_style_default, task_background_container_style, task_button_style, GREY, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT
+		checkbox_style, default_text_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT
 	}
 };
 use iced::widget::{hover, Space};
@@ -15,10 +16,12 @@ use iced::{
 	},
 	Alignment, Element,
 	Length::Fill,
-	Padding, Theme,
+	Padding,
 };
 use iced_drop::droppable;
 use std::{borrow::Cow, time::Duration};
+
+use super::buttons::task_open_stopwatch_timer;
 
 #[allow(clippy::too_many_arguments)]
 pub fn task_widget<'a>(
@@ -33,10 +36,10 @@ pub fn task_widget<'a>(
 	stopwatch_label: Option<&'a String>
 ) -> Element<'a, Message> {
 	let text_style = if matches!(task_type, TaskType::Done) {
-		text::Style { color: Some(GREY) }
+		grey_text_style
 	}
 	else {
-		text::Style::default()
+		default_text_style
 	};
 
 	let show_drag_grip = !dragging && matches!(project.sort_mode, SortMode::Manual);
@@ -62,7 +65,7 @@ pub fn task_widget<'a>(
 		let inner_text_element: Element<'a, Message> =
 			text(task.name())
 				.width(Fill)
-				.style(move |_| text_style)
+				.style(text_style)
 				.into();
 
 		let tags_element = Row::with_children(
@@ -156,22 +159,7 @@ pub fn task_widget<'a>(
 											.as_ref()
 											.map(|due_date| days_left_widget(*due_date, task_type.is_done())),
 									)
-									.push_maybe(stopwatch_label.map(|label| -> Element<Message> {
-										button(
-											row![
-												icon_to_text(Bootstrap::Stopwatch).size(SMALL_TEXT_SIZE),
-												text(label).style(|theme: &Theme| text::Style {
-													color: Some(theme.extended_palette().danger.base.color)
-												})
-											]
-											.align_y(Vertical::Center)
-											.spacing(TINY_SPACING_AMOUNT),
-										)
-										.padding(SMALL_HORIZONTAL_PADDING)
-										.style(secondary_button_style_default)
-										.on_press(Message::OpenStopwatch)
-										.into()
-									}))
+									.push_maybe(stopwatch_label.map(task_open_stopwatch_timer))
 									.spacing(TINY_SPACING_AMOUNT)
 									.align_x(Alignment::End)
 									.into(),
