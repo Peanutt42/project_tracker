@@ -15,11 +15,8 @@ cd "$project_root/project_tracker_server"
 cargo b --release
 
 echo "Installing files..."
-installation_dir="$HOME/.local/project_tracker_server.app"
-mkdir -p "$installation_dir"
-binary_filepath="$installation_dir/bin/project_tracker_server"
-mkdir -p "$installation_dir/bin"
-cp "$project_root/target/release/project_tracker_server" "$binary_filepath"
+binary_filepath="/usr/local/bin/project_tracker_server"
+sudo cp "$project_root/target/release/project_tracker_server" "$binary_filepath"
 
 echo "Enabling systemd service..."
 cd "$project_root/scripts"
