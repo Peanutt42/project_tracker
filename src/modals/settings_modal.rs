@@ -335,6 +335,7 @@ Server: your own hosted ProjectTracker-server"
 						shortcut("Switch to lower Project:", "Ctrl + Tab"),
 						shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
 						shortcut("New Task:", "Ctrl + N"),
+						shortcut("Sync Database:", "Ctrl + S"),
 						shortcut("Toggle Sidebar:", "Ctrl + B"),
 						shortcut("Start/Pause/Resume Stopwatch:", "Space"),
 						shortcut("Stop Stopwatch:", "Esc"),

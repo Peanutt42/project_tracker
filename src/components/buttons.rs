@@ -428,7 +428,7 @@ pub fn sync_database_button(
 		.spacing(SMALL_SPACING_AMOUNT)
 		.align_y(Alignment::Center),
 	)
-	.on_press_maybe(synchronization_filepath.map(Message::SyncDatabase))
+	.on_press_maybe(synchronization_filepath.map(Message::SyncDatabaseFilepath))
 	.style(dangerous_button_style)
 	.into()
 }

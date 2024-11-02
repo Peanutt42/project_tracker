@@ -65,10 +65,11 @@ pub enum Message {
 	DatabaseImported(Result<Database, Arc<LoadDatabaseError>>),
 	ImportDatabaseDialog,
 	ImportDatabaseDialogCanceled,
-	SyncDatabase(PathBuf),
-	SyncDatabaseUpload(PathBuf),
-	SyncDatabaseUploaded,
-	SyncDatabaseFailed(String), // error_msg
+	SyncDatabase,
+	SyncDatabaseFilepath(PathBuf),
+	SyncDatabaseFilepathUpload(PathBuf),
+	SyncDatabaseFilepathUploaded,
+	SyncDatabaseFilepathFailed(String), // error_msg
 	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	SyncDatabaseFromServer,
@@ -168,6 +169,9 @@ impl ProjectTrackerApp {
 				}
 				keyboard::Key::Character("h") if modifiers.command() => {
 					Some(Message::OpenStopwatch)
+				}
+				keyboard::Key::Character("s") if modifiers.command() => {
+					Some(Message::SyncDatabase)
 				}
 				keyboard::Key::Named(keyboard::key::Named::Escape) => {
 					Some(Message::EscapePressed)
@@ -319,6 +323,20 @@ impl ProjectTrackerApp {
 				}
 				Task::none()
 			}
+			Message::SyncDatabase => {
+				if let Some(preferences) = &self.preferences {
+					if let Some(synchronization_settings) = preferences.synchronization() {
+						return match synchronization_settings {
+							SynchronizationSetting::Server(_) => self.update(Message::SyncDatabaseFromServer),
+							SynchronizationSetting::Filepath(filepath) => match filepath {
+								Some(filepath) => self.update(Message::SyncDatabaseFilepath(filepath.clone())),
+								None => Task::none()
+							},
+						};
+					}
+				}
+				Task::none()
+			}
 			Message::ExportDatabaseDialog => {
 				Task::perform(Database::export_file_dialog(), |filepath| match filepath {
 					Some(filepath) => Message::ExportDatabase(filepath),
@@ -369,38 +387,38 @@ impl ProjectTrackerApp {
 			}
 			Message::DatabaseImported(result) => self.update(Message::LoadedDatabase(result))
 				.chain(self.update(Message::SaveDatabase)),
-			Message::SyncDatabase(filepath) => {
+			Message::SyncDatabaseFilepath(filepath) => {
 				self.syncing_database = true;
 				Task::perform(
 					Database::sync(filepath.clone()),
 					move |result| match result {
 						SyncDatabaseResult::InvalidSynchronizationFilepath => {
-							Message::SyncDatabaseFailed(format!(
+							Message::SyncDatabaseFilepathFailed(format!(
 								"Failed to open synchronization file in\n\"{}\"",
 								filepath.display()
 							))
 						}
 						SyncDatabaseResult::Upload => {
-							Message::SyncDatabaseUpload(filepath.clone())
+							Message::SyncDatabaseFilepathUpload(filepath.clone())
 						}
 						SyncDatabaseResult::Download => Message::ImportDatabase(filepath.clone()),
 					},
 				)
 			}
-			Message::SyncDatabaseUpload(filepath) => {
+			Message::SyncDatabaseFilepathUpload(filepath) => {
 				if let Some(database) = &self.database {
 					Task::perform(Database::save_to(filepath, database.to_json()), |_| {
-						Message::SyncDatabaseUploaded
+						Message::SyncDatabaseFilepathUploaded
 					})
 				} else {
 					Task::none()
 				}
 			}
-			Message::SyncDatabaseUploaded => {
+			Message::SyncDatabaseFilepathUploaded => {
 				self.syncing_database = false;
 				Task::none()
 			}
-			Message::SyncDatabaseFailed(error_msg) => {
+			Message::SyncDatabaseFilepathFailed(error_msg) => {
 				self.syncing_database = false;
 				self.show_error_msg(error_msg)
 			}
