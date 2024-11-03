@@ -14,7 +14,7 @@ use iced::{
 };
 use project_tracker_server::{get_last_modification_date_time, ServerError};
 use std::{
-	path::PathBuf, sync::Arc, rc::Rc, time::{Duration, SystemTime}
+	path::PathBuf, rc::Rc, sync::Arc, time::{Duration, Instant, SystemTime}
 };
 
 pub struct ProjectTrackerApp {
@@ -28,6 +28,7 @@ pub struct ProjectTrackerApp {
 	pub exporting_database: bool,
 	pub syncing_database: bool,
 	pub syncing_database_from_server: bool,
+	pub last_sync_time: Option<Instant>,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
 	pub error_msg_modal: ErrorMsgModal,
@@ -69,12 +70,15 @@ pub enum Message {
 	SyncDatabaseFilepath(PathBuf),
 	SyncDatabaseFilepathUpload(PathBuf),
 	SyncDatabaseFilepathUploaded,
+	SyncDatabaseFilepathDownload(PathBuf),
+	SyncDatabaseFilepathDownloaded(Result<Database, Arc<LoadDatabaseError>>),
 	SyncDatabaseFilepathFailed(String), // error_msg
 	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	SyncDatabaseFromServer,
 	DownloadDatabaseFromServer,
 	UploadDatabaseToServer,
+	DatabaseDownloadedFromServer(Database),
 	DatabaseUploadedToServer,
 	ServerError(Arc<ServerError>),
 	DatabaseMessage(DatabaseMessage),
@@ -141,6 +145,7 @@ impl ProjectTrackerApp {
 				exporting_database: false,
 				syncing_database: false,
 				syncing_database_from_server: false,
+				last_sync_time: None,
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
 				error_msg_modal: ErrorMsgModal::Closed,
@@ -159,6 +164,32 @@ impl ProjectTrackerApp {
 
 	pub fn theme(&self) -> Theme {
 		self.get_theme().clone()
+	}
+
+	pub fn title(&self) -> String {
+		format!(
+			"Project Tracker{}",
+			if self.syncing_database || self.syncing_database_from_server {
+				" - Syncing..."
+			}
+			else if self.exporting_database {
+				" - Exporting..."
+			}
+			else if self.importing_database {
+				" - Importing..."
+			}
+			else if let Some(last_sync_time) = &self.last_sync_time {
+				if Instant::now().duration_since(*last_sync_time) <= Duration::from_millis(500) {
+					" - Synced"
+				}
+				else {
+					""
+				}
+			}
+			else {
+				""
+			}
+		)
 	}
 
 	pub fn subscription(&self) -> Subscription<Message> {
@@ -401,7 +432,7 @@ impl ProjectTrackerApp {
 						SyncDatabaseResult::Upload => {
 							Message::SyncDatabaseFilepathUpload(filepath.clone())
 						}
-						SyncDatabaseResult::Download => Message::ImportDatabase(filepath.clone()),
+						SyncDatabaseResult::Download => Message::SyncDatabaseFilepathDownload(filepath.clone()),
 					},
 				)
 			}
@@ -416,8 +447,19 @@ impl ProjectTrackerApp {
 			}
 			Message::SyncDatabaseFilepathUploaded => {
 				self.syncing_database = false;
+				self.last_sync_time = Some(Instant::now());
 				Task::none()
 			}
+			Message::SyncDatabaseFilepathDownload(filepath) => {
+				Task::perform(Database::load_from(filepath), |result| Message::SyncDatabaseFilepathDownloaded(result.map_err(Arc::new)))
+			},
+			Message::SyncDatabaseFilepathDownloaded(result) => match result {
+				Ok(database) => {
+					self.last_sync_time = Some(Instant::now());
+					self.update(Message::DatabaseImported(Ok(database)))
+				},
+				Err(e) => self.update(Message::DatabaseImported(Err(e))),
+			},
 			Message::SyncDatabaseFilepathFailed(error_msg) => {
 				self.syncing_database = false;
 				self.show_error_msg(error_msg)
@@ -562,7 +604,7 @@ impl ProjectTrackerApp {
 					Task::perform(
 						download_database_from_server(server_config),
 						|result| match result {
-							Ok(database) => Message::LoadedDatabase(Ok(database)),
+							Ok(database) => Message::DatabaseDownloadedFromServer(database),
 							Err(e) => Message::ServerError(Arc::new(e)),
 						}
 					)
@@ -570,6 +612,10 @@ impl ProjectTrackerApp {
 				else {
 					Task::none()
 				}
+			},
+			Message::DatabaseDownloadedFromServer(database) => {
+				self.last_sync_time = Some(Instant::now());
+				self.update(Message::LoadedDatabase(Ok(database)))
 			},
 			Message::UploadDatabaseToServer => {
 				if let Some(database) = &self.database {
@@ -591,6 +637,7 @@ impl ProjectTrackerApp {
 			},
 			Message::DatabaseUploadedToServer => {
 				self.syncing_database_from_server = false;
+				self.last_sync_time = Some(Instant::now());
 				Task::none()
 			},
 			Message::DatabaseMessage(database_message) => {

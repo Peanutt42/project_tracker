@@ -12,7 +12,7 @@ use project_tracker::{icons::BOOTSTRAP_FONT_BYTES, ProjectTrackerApp};
 
 fn main() -> Result<(), iced::Error> {
 	iced::application(
-		"Project Tracker",
+		ProjectTrackerApp::title,
 		ProjectTrackerApp::update,
 		ProjectTrackerApp::view,
 	)
