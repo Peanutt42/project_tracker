@@ -1,4 +1,4 @@
-use iced::{alignment::Horizontal, widget::{button, column, container, text, Space}, window::{self, icon}, Element, Error, Font, Length::Fill, Size, Task, Theme};
+use iced::{alignment::Horizontal, keyboard::{key, on_key_press, Key}, widget::{button, column, container, text, Space}, window::{self, icon}, Element, Error, Font, Length::Fill, Size, Subscription, Task, Theme};
 #[cfg(target_os = "linux")]
 use iced::window::settings::PlatformSpecific;
 use iced_fonts::REQUIRED_FONT_BYTES;
@@ -34,6 +34,15 @@ impl AlreadyOpenedApp {
 		else {
 			ProjectTrackerTheme::Light.get_theme().clone()
 		}
+	}
+
+	fn subscription(&self) -> Subscription<Message> {
+		on_key_press(|key, _modifiers| {
+			match key {
+				Key::Named(key::Named::Enter) | Key::Named(key::Named::Escape) => Some(Message::OkPressed),
+				_ => None,
+			}
+		})
 	}
 
 	fn view(&self) -> Element<Message> {
@@ -75,6 +84,7 @@ pub fn run_already_opened_application() -> Result<(), Error> {
 		AlreadyOpenedApp::view
 	)
 	.theme(AlreadyOpenedApp::theme)
+	.subscription(AlreadyOpenedApp::subscription)
 	.font(REQUIRED_FONT_BYTES)
 	.font(include_bytes!("../assets/FiraSans-Regular.ttf"))
 	.default_font(Font::with_name("Fira Sans"))
