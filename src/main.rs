@@ -1,6 +1,8 @@
 // only enables the 'windows' subsystem when compiling in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::process::exit;
+
 #[cfg(target_os = "linux")]
 use iced::window::settings::PlatformSpecific;
 use iced::{
@@ -8,9 +10,17 @@ use iced::{
 	Font, Size,
 };
 use iced_fonts::REQUIRED_FONT_BYTES;
-use project_tracker::{icons::BOOTSTRAP_FONT_BYTES, ProjectTrackerApp};
+use single_instance::SingleInstance;
+use project_tracker::{icons::BOOTSTRAP_FONT_BYTES, ProjectTrackerApp, run_already_opened_application};
 
 fn main() -> Result<(), iced::Error> {
+	let instance = SingleInstance::new("ProjectTrackerInstance").unwrap();
+	if !instance.is_single() {
+		eprintln!("another instance is already running. closing...");
+		run_already_opened_application()?;
+		exit(1);
+	}
+
 	iced::application(
 		ProjectTrackerApp::title,
 		ProjectTrackerApp::update,
