@@ -3,7 +3,7 @@ use crate::{
 		create_empty_database_button, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
 	}, core::{
 		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, SynchronizationSetting, TaskId
-	}, integrations::{download_database_from_server, sync_database_from_server, upload_database_to_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
+	}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -76,8 +76,6 @@ pub enum Message {
 	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	SyncDatabaseFromServer,
-	DownloadDatabaseFromServer,
-	UploadDatabaseToServer,
 	DatabaseDownloadedFromServer(Database),
 	DatabaseUploadedToServer,
 	ServerError(Arc<ServerError>),
@@ -570,66 +568,41 @@ impl ProjectTrackerApp {
 				}
 			},
 			Message::SyncDatabaseFromServer => {
-				if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
-					self.syncing_database_from_server = true;
+				if let Some(database) = &self.database {
+					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
+						self.syncing_database_from_server = true;
 
-					let database_filepath = Database::get_filepath();
+						let database_filepath = Database::get_filepath();
 
-					match database_filepath.metadata() {
-						Ok(metadata) => {
-							return Task::perform(
-								sync_database_from_server(
-									server_config,
-									get_last_modification_date_time(&metadata)
-								),
-								|result| match result {
-									Ok(sync_response) => match sync_response {
-										SyncServerDatabaseResponse::DownloadDatabase => Message::DownloadDatabaseFromServer,
-										SyncServerDatabaseResponse::UploadDatabase => Message::UploadDatabaseToServer,
-									},
-									Err(e) => Message::ServerError(Arc::new(e)),
-								}
-							);
-						},
-						Err(e) => return self.show_error_msg(format!(
-							"failed to get metadata of database file: {}, error: {e}",
-							database_filepath.display()
-						)),
+						match database_filepath.metadata() {
+							Ok(metadata) => {
+								return Task::perform(
+									sync_database_from_server(
+										server_config,
+										get_last_modification_date_time(&metadata),
+										database.clone()
+									),
+									|result| match result {
+										Ok(sync_response) => match sync_response {
+											SyncServerDatabaseResponse::DownloadedDatabase(database) => Message::DatabaseDownloadedFromServer(database),
+											SyncServerDatabaseResponse::UploadedDatabase => Message::DatabaseUploadedToServer,
+										},
+										Err(e) => Message::ServerError(Arc::new(e)),
+									}
+								);
+							},
+							Err(e) => return self.show_error_msg(format!(
+								"failed to get metadata of database file: {}, error: {e}",
+								database_filepath.display()
+							)),
+						}
 					}
 				}
 				Task::none()
-			},
-			Message::DownloadDatabaseFromServer => {
-				if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
-					Task::perform(
-						download_database_from_server(server_config),
-						|result| match result {
-							Ok(database) => Message::DatabaseDownloadedFromServer(database),
-							Err(e) => Message::ServerError(Arc::new(e)),
-						}
-					)
-				}
-				else {
-					Task::none()
-				}
 			},
 			Message::DatabaseDownloadedFromServer(database) => {
 				self.last_sync_time = Some(Instant::now());
 				self.update(Message::LoadedDatabase(Ok(database)))
-			},
-			Message::UploadDatabaseToServer => {
-				if let Some(database) = &self.database {
-					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
-						return Task::perform(
-							upload_database_to_server(server_config, database.to_json()),
-							|result| match result {
-								Ok(_) => Message::DatabaseUploadedToServer,
-								Err(e) => Message::ServerError(Arc::new(e)),
-							}
-						);
-					}
-				}
-				Task::none()
 			},
 			Message::ServerError(e) => {
 				self.syncing_database_from_server = false;

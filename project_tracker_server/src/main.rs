@@ -1,11 +1,10 @@
 use std::fs::{File, read_to_string};
 use std::path::PathBuf;
 use std::process::exit;
-use std::thread;
-use std::io::{Read, Write};
-use std::net::{Shutdown, TcpListener, TcpStream};
+use std::io::{ErrorKind, Write};
 use chrono::{DateTime, Utc};
-use project_tracker_server::{get_last_modification_date_time, hash_password, Request, RequestType, Response, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{get_last_modification_date_time, hash_password, Request, RequestType, Response, ServerError, DEFAULT_PASSWORD, DEFAULT_PORT};
+use std::net::{TcpListener, TcpStream};
 
 const PORT: usize = DEFAULT_PORT;
 
@@ -61,12 +60,12 @@ fn main() {
 
 	println!("Server is listening on port {}", PORT);
 
-	for stream in listener.incoming() {
-		match stream {
-			Ok(stream) => {
+	loop {
+		match listener.accept() {
+			Ok((stream, _addr)) => {
 				let database_filepath_clone = database_filepath.clone();
 				let password_hash_clone = password_hash.clone();
-				thread::spawn(|| handle_client(stream, database_filepath_clone, password_hash_clone));
+				std::thread::spawn(move || listen_client_thread(stream, database_filepath_clone, password_hash_clone));
 			}
 			Err(e) => {
 				eprintln!("Failed to establish a connection: {e}");
@@ -75,93 +74,84 @@ fn main() {
 	}
 }
 
+fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, password_hash: String) {
+	println!("client connected");
 
-pub fn handle_client(mut stream: TcpStream, database_filepath: PathBuf, password_hash: String) {
-	if let Some(request) = read_request(&mut stream) {
-		if request.password_hash != password_hash {
-			send_response(&mut stream, &Response::InvalidPassword);
-			println!("invalid password");
-			return;
-		}
-
-		match request.request_type {
-			RequestType::GetModifiedDate => {
-				if !database_filepath.exists() {
-					// as the server doesn't have any database saved, any database of the client is more
-					// MIN_UTC is the oldest possible Date
-					// -> client will send the database
-					send_response(&mut stream, &Response::ModifiedDate(DateTime::<Utc>::MIN_UTC));
+	loop {
+		match Request::read(&mut stream) {
+			Ok(request) => {
+				if request.password_hash != password_hash {
+					println!("invalid password");
+					if let Err(e) = Response::InvalidPassword.send(&mut stream) {
+						eprintln!("failed to send invalid password response to client: {e}");
+					}
+					return;
 				}
 
-				match database_filepath.metadata() {
-					Ok(metadata) => {
-						send_response(&mut stream, &Response::ModifiedDate(get_last_modification_date_time(&metadata)));
+				match request.request_type {
+					RequestType::GetModifiedDate => {
+						if database_filepath.exists() {
+							match database_filepath.metadata() {
+								Ok(metadata) => {
+									if let Err(e) = Response::ModifiedDate(get_last_modification_date_time(&metadata))
+										.send(&mut stream)
+									{
+										eprintln!("failed to send modified date response to client: {e}");
+									}
+								},
+								Err(e) => panic!("cant access database file: {}, error: {e}", database_filepath.display()),
+							}
+						}
+						else {
+							// as the server doesn't have any database saved, any database of the client is more
+							// MIN_UTC is the oldest possible Date
+							// -> client will send the database
+							let response = Response::ModifiedDate(DateTime::<Utc>::MIN_UTC);
+							if let Err(e) = response.send(&mut stream) {
+								eprintln!("failed to send modification date to client: {e}");
+							}
+						}
+
 					},
-					Err(e) => panic!("cant access database file: {}, error: {e}", database_filepath.display()),
-				}
-			},
-			RequestType::UpdateDatabase { database_json } => {
-				match std::fs::write(&database_filepath, database_json) {
-					Ok(_) => {
-						println!("Updated database file");
+					RequestType::UpdateDatabase { database_json } => {
+						match std::fs::write(&database_filepath, database_json) {
+							Ok(_) => {
+								println!("Updated database file");
+								// TODO: broadcast download database to all other connected clients
+							},
+							Err(e) => {
+								eprintln!("Failed to update database: {e}");
+							},
+						}
 					},
-					Err(e) => {
-						eprintln!("Failed to update database: {e}");
-					},
-				}
-			},
-			RequestType::DownloadDatabase => {
-				match read_to_string(&database_filepath) {
-					Ok(database_content) => {
-						send_response(&mut stream, &Response::Database {
-							database_json: database_content
-						});
-						println!("Sent database");
-					},
-					Err(e) => {
-						eprintln!("Failed to read {}: {e}", database_filepath.display());
+					RequestType::DownloadDatabase => {
+						match read_to_string(&database_filepath) {
+							Ok(database_json) => {
+								let response = Response::Database{ database_json };
+								match response.send(&mut stream) {
+									Ok(_) => println!("Sent database"),
+									Err(e) => eprintln!("failed to send database to client: {e}"),
+								}
+							},
+							Err(e) => {
+								eprintln!("Failed to read {}: {e}", database_filepath.display());
+							}
+						}
 					}
 				}
-			}
+			},
+			Err(e) => {
+				match e {
+					ServerError::ConnectionError(e) if matches!(
+						e.kind(),
+						ErrorKind::UnexpectedEof |
+						ErrorKind::ConnectionAborted |
+						ErrorKind::ConnectionReset
+					) => println!("client disconnected"),
+					_ => eprintln!("failed to read client request: {e}"),
+				}
+				return;
+			},
 		}
-	}
-}
-
-fn read_request(stream: &mut TcpStream) -> Option<Request> {
-	let mut json = String::new();
-
-	if let Err(e) = stream.read_to_string(&mut json) {
-		eprintln!("Failed to get client request: {e}");
-		return None;
-	}
-
-	if let Err(e) = stream.shutdown(Shutdown::Read) {
-		eprintln!("Failed to shutdown reading half of the stream: {e}");
-	}
-
-	match serde_json::from_str(&json) {
-		Ok(request) => Some(request),
-		Err(e) => {
-			eprintln!("Failed to parse client request: {e}");
-			None
-		}
-	}
-}
-
-fn send_response(stream: &mut TcpStream, response: &Response) {
-	let response_json = match serde_json::to_string(response) {
-		Ok(json) => json,
-		Err(e) => {
-			eprintln!("Failed to serialize response to json: {e}");
-			return;
-		}
-	};
-
-	if let Err(e) = stream.write_all(response_json.as_bytes()) {
-		eprintln!("Failed to send response to client: {e}");
-	}
-
-	if let Err(e) = stream.shutdown(Shutdown::Write) {
-		eprintln!("Failed to shutdown writing half of the stream: {e}");
 	}
 }

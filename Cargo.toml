@@ -11,7 +11,7 @@ members = [
 ]
 
 [dependencies]
-project_tracker_server = { path = "project_tracker_server" }
+project_tracker_server = { path = "project_tracker_server", features = ["async_tokio"]}
 iced = { workspace = true }
 iced_aw = { workspace = true }
 iced_drop = { path = "iced_drop" }

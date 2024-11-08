@@ -5,4 +5,4 @@ pub use google_tasks::{
 };
 
 mod server;
-pub use server::{ServerConfig, SyncServerDatabaseResponse, sync_database_from_server, download_database_from_server, upload_database_to_server};
+pub use server::{ServerConfig, SyncServerDatabaseResponse, sync_database_from_server};
