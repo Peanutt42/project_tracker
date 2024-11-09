@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button, horizontal_scrollable, open_create_task_modal_button, project_context_menu_button, search_tasks_button, sort_dropdown_button, task_list, task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING
 	}, core::{
-		Database, DatabaseMessage, OptionalPreference, Preferences, Project, ProjectId, SortMode, Task, TaskId, TaskTagId
+		import_source_code_todos, Database, DatabaseMessage, OptionalPreference, Preferences, Project, ProjectId, SortMode, Task, TaskId, TaskTagId
 	}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, project_tracker::{Message, ProjectTrackerApp}, styles::{
 		text_input_style_borderless, text_input_style_only_round_left, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE
 	}
@@ -23,11 +23,8 @@ use iced_aw::{drop_down, DropDown};
 use once_cell::sync::Lazy;
 use std::{
 	collections::HashSet,
-	fs::File,
-	io::{self, BufRead},
 	time::SystemTime,
 };
-use walkdir::WalkDir;
 
 static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static SEARCH_TASKS_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -621,78 +618,10 @@ impl ProjectPage {
 			.await;
 
 		file_dialog_result.map(|folder_handles| {
-			let mut todos = Vec::new();
-
-			for folder_handle in folder_handles {
-				let folder_path = folder_handle.path();
-				if folder_path
-					.file_name()
-					.and_then(|file_name| {
-						file_name
-							.to_str()
-							.map(|file_name| file_name.starts_with('.'))
-					})
-					.unwrap_or(false)
-				{
-					continue;
-				}
-				for entry in WalkDir::new(folder_path).into_iter().filter_map(|e| e.ok()) {
-					if entry
-						.file_name()
-						.to_str()
-						.map(|file_name| file_name.starts_with('.'))
-						.unwrap_or(false)
-					{
-						continue;
-					}
-					if entry.metadata().map(|meta| meta.is_dir()).unwrap_or(false) {
-						continue;
-					}
-					if let Ok(file) = File::open(entry.path()) {
-						for (i, line) in io::BufReader::new(file)
-							.lines()
-							.map_while(Result::ok)
-							.enumerate()
-						{
-							let mut search_todo = |keyword: &'static str| {
-								if let Some(index) =
-									line.to_lowercase().find(&keyword.to_lowercase())
-								{
-									let mut string_quotes_counter = 0;
-									for c in line[0..index].chars() {
-										if c == '\"' || c == '\'' {
-											string_quotes_counter += 1;
-										}
-									}
-
-									if string_quotes_counter % 2 == 0 {
-										let line = line[index + keyword.len()..].to_string();
-										let line = line.strip_prefix(':').unwrap_or(&line);
-										let line = line.strip_prefix(' ').unwrap_or(line);
-										let source = entry.path().display();
-										let line_number = i + 1;
-										todos.push(Task::new(
-											line.to_string(),
-											format!("{source} on line {line_number}"),
-											None,
-											None,
-											HashSet::new()
-										));
-									}
-								}
-							};
-
-							// case insensitive!
-							search_todo("// todo");
-							search_todo("//todo");
-							search_todo("# todo");
-							search_todo("#todo");
-						}
-					}
-				}
-			}
-
-			todos
+			let folder_paths = folder_handles.iter()
+				.map(|folder_handle| folder_handle.path().to_path_buf())
+				.collect();
+			import_source_code_todos(folder_paths)
 		})
 	}
 }

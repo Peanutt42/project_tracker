@@ -70,7 +70,6 @@ where
 			_content_bounds: Rectangle,
 			translation: Vector,
 		) {
-			// TODO: maybe content_bounds is better for this
 			if (self.filter)(&bounds) {
 				self.offset = self.offset + translation;
 			}
