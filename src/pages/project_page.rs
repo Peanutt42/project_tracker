@@ -181,6 +181,7 @@ pub struct ProjectPage {
 	previous_project_progress: f32,
 	show_context_menu: bool,
 	show_sort_mode_dropdown: bool,
+	pub importing_source_code_todos: bool,
 }
 
 impl ProjectPage {
@@ -203,6 +204,7 @@ impl ProjectPage {
 			previous_project_progress: project.get_completion_percentage(),
 			show_context_menu: false,
 			show_sort_mode_dropdown: false,
+			importing_source_code_todos: false,
 		}
 	}
 
@@ -258,6 +260,7 @@ impl ProjectPage {
 
 			ProjectPageMessage::ImportSourceCodeTodosDialog => {
 				self.show_context_menu = false;
+				self.importing_source_code_todos = true;
 				iced::Task::perform(Self::pick_todo_source_folders_dialog(), |folders| {
 					if let Some(folders) = folders {
 						ProjectPageMessage::ImportSourceCodeTodos(folders).into()
@@ -267,8 +270,12 @@ impl ProjectPage {
 				})
 				.into()
 			}
-			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => ProjectPageAction::None,
+			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => {
+				self.importing_source_code_todos = false;
+				ProjectPageAction::None
+			},
 			ProjectPageMessage::ImportSourceCodeTodos(todos) => {
+				self.importing_source_code_todos = false;
 				if let Some(database) = database {
 					database.modify(|projects| {
 						if let Some(project) = projects.get_mut(&self.project_id) {
@@ -449,6 +456,7 @@ impl ProjectPage {
 						app.sidebar_page.task_dropzone_hovered,
 						self.show_done_tasks,
 						self.show_source_code_todos,
+						self.importing_source_code_todos,
 						&app.stopwatch_page
 					),
 				]

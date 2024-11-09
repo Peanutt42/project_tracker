@@ -184,6 +184,12 @@ impl ProjectTrackerApp {
 					""
 				}
 			}
+			else if self.project_page.as_ref()
+				.map(|project_page| project_page.importing_source_code_todos)
+				.unwrap_or(false)
+			{
+				" - Importing Todos..."
+			}
 			else {
 				""
 			}

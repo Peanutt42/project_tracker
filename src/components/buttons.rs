@@ -626,24 +626,35 @@ pub fn settings_tab_button(
 		.on_press(SettingsModalMessage::SwitchSettingsTab(tab).into())
 }
 
-fn import_source_code_todos_button() -> Element<'static, Message> {
-	tooltip(
-		icon_label_button("Import Todos", Bootstrap::FileEarmarkCode)
-			.width(Fill)
-			.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
-			.style(secondary_button_style_no_rounding),
-		text("Import TODO's").size(SMALL_TEXT_SIZE),
-		tooltip::Position::Bottom,
-	)
-	.gap(GAP)
-	.style(tooltip_container_style)
-	.into()
+fn import_source_code_todos_button() -> Button<'static, Message> {
+	icon_label_button("Import Todos", Bootstrap::FileEarmarkCode)
+		.width(Fill)
+		.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
+		.style(secondary_button_style_no_rounding)
 }
 
-pub fn reimport_source_code_todos_button() -> Button<'static, Message> {
-	icon_label_button("Reimport TODO's", Bootstrap::FileEarmarkCode)
-		.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
-		.style(secondary_button_style_default)
+pub fn reimport_source_code_todos_button(importing: bool) -> Button<'static, Message> {
+	button(
+		row![
+			if importing {
+				Element::new(
+					Spinner::new()
+						.width(Length::Fixed(16.0))
+						.height(Length::Fixed(16.0))
+						.circle_radius(2.0),
+				)
+			} else {
+				icon_to_text(Bootstrap::FileEarmarkCode)
+					.align_y(Vertical::Center)
+					.into()
+			},
+			text("Reimport TODO's")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_y(Alignment::Center),
+	)
+	.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
+	.style(secondary_button_style_default)
 }
 
 pub fn show_source_code_todos_button(

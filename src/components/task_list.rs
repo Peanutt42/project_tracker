@@ -12,6 +12,7 @@ use crate::{
 	project_tracker::Message,
 	styles::PADDING_AMOUNT,
 };
+use iced::widget::Space;
 use iced::{
 	alignment::Horizontal,
 	widget::{column, container, row, scrollable, Column},
@@ -33,6 +34,7 @@ pub fn task_list<'a>(
 	hovered_task_dropzone: Option<TaskDropzone>,
 	show_done_tasks: bool,
 	show_source_code_todos: bool,
+	importing_source_code_todos: bool,
 	stopwatch_page: &'a StopwatchPage
 ) -> Element<'a, Message> {
 	let mut todo_task_elements = Vec::new();
@@ -101,22 +103,18 @@ pub fn task_list<'a>(
 
 	let show_source_code_todos_button: Element<Message> =
 		if cached_task_list.source_code_todo.is_empty() {
-			column![].into()
+			Space::new(0.0, 0.0).into()
 		} else {
 			container(
-				row![show_source_code_todos_button(
-					show_source_code_todos,
-					cached_task_list.source_code_todo.len()
-				)]
-				.push_maybe(if source_code_todo_elements.is_empty() {
-					None
-				} else {
-					Some(
-						container(reimport_source_code_todos_button())
-							.width(Fill)
-							.align_x(Horizontal::Right),
-					)
-				}),
+				row![
+					show_source_code_todos_button(
+						show_source_code_todos,
+						cached_task_list.source_code_todo.len()
+					),
+					container(reimport_source_code_todos_button(importing_source_code_todos))
+						.width(Fill)
+						.align_x(Horizontal::Right)
+				]
 			)
 			.padding(Padding {
 				top: PADDING_AMOUNT,
