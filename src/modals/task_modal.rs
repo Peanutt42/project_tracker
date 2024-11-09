@@ -1,7 +1,7 @@
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::{Fill, Fixed}, Padding};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
-use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, view_task_description_button, ICON_BUTTON_WIDTH}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, vertical_scrollable, view_task_description_button, ICON_BUTTON_WIDTH, SCROLLBAR_WIDTH}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
 
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -344,42 +344,50 @@ impl TaskModal {
 								.font(BOLD_FONT)
 								.into();
 
-							column![
-								Space::new(0.0, SPACING_AMOUNT),
+							container(
+								vertical_scrollable(
+									column![
+										Space::new(0.0, SPACING_AMOUNT),
 
-								if task_tags_list.is_empty() {
-									Element::new(Space::new(0.0, 0.0))
-								}
-								else {
-									horizontal_scrollable(
-										Row::with_children(task_tags_list)
-											.spacing(SPACING_AMOUNT)
-									)
-									.width(Fill)
-									.into()
-								},
+										if task_tags_list.is_empty() {
+											Element::new(Space::new(0.0, 0.0))
+										}
+										else {
+											horizontal_scrollable(
+												Row::with_children(task_tags_list)
+													.spacing(SPACING_AMOUNT)
+											)
+											.width(Fill)
+											.into()
+										},
 
-								name_text,
+										name_text,
 
-								Space::new(0.0, LARGE_SPACING_AMOUNT),
+										Space::new(0.0, LARGE_SPACING_AMOUNT),
 
-								stack![
-									container(description_text)
-										.padding(Padding::ZERO.right(ICON_BUTTON_WIDTH * 2.0))
-										.style(markdown_background_container_style),
-									description_hover_button
-								],
+										stack![
+											container(description_text)
+												.padding(Padding::ZERO.right(ICON_BUTTON_WIDTH * 2.0))
+												.style(markdown_background_container_style),
+											description_hover_button
+										],
 
-								Space::new(0.0, LARGE_SPACING_AMOUNT),
+										Space::new(0.0, LARGE_SPACING_AMOUNT),
 
-								row![
-									needed_time_view,
-									due_date_view,
-									Space::new(Fill, 0.0),
-									delete_task_button(),
-								]
-								.spacing(SPACING_AMOUNT)
-							]
+										row![
+											needed_time_view,
+											due_date_view,
+											Space::new(Fill, 0.0),
+											delete_task_button(),
+										]
+										.spacing(SPACING_AMOUNT)
+									]
+								)
+							)
+							.padding(
+								Padding::default()
+									.bottom(SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT)
+							)
 							.into()
 						}
 						else {

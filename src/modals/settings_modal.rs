@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::components::{hide_password_button, show_password_button, sync_database_from_server_button, synchronization_type_button};
+use crate::components::{hide_password_button, show_password_button, sync_database_from_server_button, synchronization_type_button, vertical_scrollable};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
@@ -325,24 +325,21 @@ Server: your own hosted ProjectTracker-server"
 					.spacing(SMALL_SPACING_AMOUNT)
 				};
 
-				container(
-					column![
-						shortcut("Open Settings:", "Ctrl + ,"),
-						shortcut("Open Stopwatch:", "Ctrl + H"),
-						shortcut("New Project:", "Ctrl + Shift + N"),
-						shortcut("Search Tasks:", "Ctrl + F"),
-						shortcut("Delete Project:", "Ctrl + Del"),
-						shortcut("Switch to lower Project:", "Ctrl + Tab"),
-						shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
-						shortcut("New Task:", "Ctrl + N"),
-						shortcut("Sync Database:", "Ctrl + S"),
-						shortcut("Toggle Sidebar:", "Ctrl + B"),
-						shortcut("Start/Pause/Resume Stopwatch:", "Space"),
-						shortcut("Stop Stopwatch:", "Esc"),
-					]
-					.spacing(SPACING_AMOUNT)
-				)
-				.center_y(Fill)
+				column![
+					shortcut("Open Settings:", "Ctrl + ,"),
+					shortcut("Open Stopwatch:", "Ctrl + H"),
+					shortcut("New Project:", "Ctrl + Shift + N"),
+					shortcut("Search Tasks:", "Ctrl + F"),
+					shortcut("Delete Project:", "Ctrl + Del"),
+					shortcut("Switch to lower Project:", "Ctrl + Tab"),
+					shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
+					shortcut("New Task:", "Ctrl + N"),
+					shortcut("Sync Database:", "Ctrl + S"),
+					shortcut("Toggle Sidebar:", "Ctrl + B"),
+					shortcut("Start/Pause/Resume Stopwatch:", "Space"),
+					shortcut("Stop Stopwatch:", "Esc"),
+				]
+				.spacing(SPACING_AMOUNT)
 				.into()
 			},
 			SettingTab::About => {
@@ -558,14 +555,18 @@ impl SettingsModal {
 				card(
 					text("Settings").size(HEADING_TEXT_SIZE),
 					row![
-						Column::with_children(tabs)
-							.width(150.0)
-							.spacing(SMALL_SPACING_AMOUNT)
-							.padding(right(PADDING_AMOUNT)),
+						vertical_scrollable(
+							Column::with_children(tabs)
+								.width(150.0)
+								.spacing(SMALL_SPACING_AMOUNT)
+								.padding(right(PADDING_AMOUNT))
+						),
 						vertical_seperator(),
-						container(selected_tab.view(app, preferences, *show_password))
-							.width(Fill)
-							.padding(left(PADDING_AMOUNT))
+						vertical_scrollable(
+							container(selected_tab.view(app, preferences, *show_password))
+								.width(Fill)
+								.padding(left(PADDING_AMOUNT))
+						)
 					],
 				)
 				.max_width(900.0)

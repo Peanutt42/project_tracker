@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use crate::{
-	components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, close_create_new_task_modal_button, create_new_task_modal_button, edit_due_date_button, edit_task_needed_time_button, horizontal_scrollable, task_tag_button, unfocusable}, core::{Database, OptionalPreference, Preferences, ProjectId, SerializableDate, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, description_text_editor_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SPACING_AMOUNT}
+	components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, close_create_new_task_modal_button, create_new_task_modal_button, edit_due_date_button, edit_task_needed_time_button, horizontal_scrollable, task_tag_button, unfocusable, vertical_scrollable, SCROLLBAR_WIDTH}, core::{Database, OptionalPreference, Preferences, ProjectId, SerializableDate, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, description_text_editor_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}
 };
 use iced::{
-	font, keyboard, widget::{column, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::{Fill, Fixed}, Subscription
+	font, keyboard, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::{Fill, Fixed}, Padding, Subscription
 };
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
@@ -266,64 +266,72 @@ impl CreateTaskModal {
 						}
 						.size(LARGE_TEXT_SIZE),
 
-						column![
-							if let Some(project) = database.as_ref().and_then(|db| db.get_project(project_id)) {
-								let task_tags_list: Vec<Element<CreateTaskModalMessage>> = project.task_tags.iter()
-									.map(|(tag_id, tag)| {
-										task_tag_button(tag, task_tags.contains(&tag_id))
-											.on_press(CreateTaskModalMessage::ToggleTaskTag(tag_id))
+						container(
+							vertical_scrollable(
+								column![
+									if let Some(project) = database.as_ref().and_then(|db| db.get_project(project_id)) {
+										let task_tags_list: Vec<Element<CreateTaskModalMessage>> = project.task_tags.iter()
+											.map(|(tag_id, tag)| {
+												task_tag_button(tag, task_tags.contains(&tag_id))
+													.on_press(CreateTaskModalMessage::ToggleTaskTag(tag_id))
+													.into()
+											})
+											.collect();
+
+										if task_tags_list.is_empty() {
+											Element::new(Space::new(0.0, 0.0))
+										}
+										else {
+											horizontal_scrollable(
+												Row::with_children(task_tags_list)
+													.spacing(SPACING_AMOUNT)
+											)
+											.width(Fill)
 											.into()
-									})
-									.collect();
+										}
+									}
+									else {
+										Element::new(text("<invalid project id>"))
+									},
 
-								if task_tags_list.is_empty() {
-									Element::new(Space::new(0.0, 0.0))
-								}
-								else {
-									horizontal_scrollable(
-										Row::with_children(task_tags_list)
-											.spacing(SPACING_AMOUNT)
-									)
+									text_input("task name", task_name)
+										.id(TASK_NAME_INPUT_ID.clone())
+										.on_input(CreateTaskModalMessage::ChangeTaskName)
+										.on_submit(CreateTaskModalMessage::CreateTask)
+										.style(|t, s| text_input_style_borderless(t, s, true))
+										.size(HEADING_TEXT_SIZE)
+										.font(Font {
+											weight: font::Weight::Bold,
+											..Default::default()
+										}),
+
+									Space::new(0.0, SPACING_AMOUNT),
+
+									text("Description:"),
+
+									text_editor(task_description)
+										.on_action(CreateTaskModalMessage::TaskDescriptionAction)
+										.style(description_text_editor_style)
+										.key_binding(|key_press| text_editor_keybindings(key_press, CreateTaskModalMessage::UnindentDescription)),
+
+									Space::new(0.0, LARGE_SPACING_AMOUNT),
+
+									row![
+										edit_needed_time_view,
+										due_date_view,
+										Space::new(Fill, 0.0),
+										create_new_task_modal_button(),
+										close_create_new_task_modal_button()
+									]
+									.spacing(SPACING_AMOUNT)
 									.width(Fill)
-									.into()
-								}
-							}
-							else {
-								Element::new(text("<invalid project id>"))
-							},
-
-							text_input("task name", task_name)
-								.id(TASK_NAME_INPUT_ID.clone())
-								.on_input(CreateTaskModalMessage::ChangeTaskName)
-								.on_submit(CreateTaskModalMessage::CreateTask)
-								.style(|t, s| text_input_style_borderless(t, s, true))
-								.size(HEADING_TEXT_SIZE)
-								.font(Font {
-									weight: font::Weight::Bold,
-									..Default::default()
-								}),
-
-							Space::new(0.0, SPACING_AMOUNT),
-
-							text("Description:"),
-
-							text_editor(task_description)
-								.on_action(CreateTaskModalMessage::TaskDescriptionAction)
-								.style(description_text_editor_style)
-								.key_binding(|key_press| text_editor_keybindings(key_press, CreateTaskModalMessage::UnindentDescription)),
-
-							Space::new(0.0, LARGE_SPACING_AMOUNT),
-
-							row![
-								edit_needed_time_view,
-								due_date_view,
-								Space::new(Fill, 0.0),
-								create_new_task_modal_button(),
-								close_create_new_task_modal_button()
-							]
-							.spacing(SPACING_AMOUNT)
-							.width(Fill)
-						],
+								]
+							)
+						)
+						.padding(
+							Padding::default()
+								.bottom(SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT)
+						)
 					)
 					.max_width(600.0)
 					.close_size(LARGE_TEXT_SIZE)

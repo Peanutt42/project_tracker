@@ -1,7 +1,4 @@
-use crate::{
-	project_tracker::Message,
-	styles::{scrollable_style, SMALL_PADDING_AMOUNT},
-};
+use crate::styles::{scrollable_style, SMALL_PADDING_AMOUNT};
 use iced::{
 	widget::{
 		container, scrollable,
@@ -31,7 +28,7 @@ pub fn horizontal_scrollable<'a, Message: 'a>(
 	.style(scrollable_style)
 }
 
-pub fn vertical_scrollable<'a>(
+pub fn vertical_scrollable<'a, Message: 'a>(
 	content: impl Into<Element<'a, Message>>,
 ) -> Scrollable<'a, Message> {
 	scrollable(container(content).padding(Padding {
