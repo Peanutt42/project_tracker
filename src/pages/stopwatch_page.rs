@@ -371,7 +371,7 @@ impl StopwatchPage {
 									*finished_notification_sent = true;
 
 									if preferences.play_timer_notification_sound() {
-										timer_notification(&format!("{} min. timer finished!", needed_minutes), task.name());
+										timer_notification(format!("{} min. timer finished!", needed_minutes), task.name().clone());
 									}
 								}
 							}
@@ -393,7 +393,7 @@ impl StopwatchPage {
 							*break_over_notification_sent = true;
 
 							if preferences.play_timer_notification_sound() {
-								timer_notification(&format!("{break_duration_minutes} min. break is over!"), "");
+								timer_notification(format!("{break_duration_minutes} min. break is over!"), "".to_string());
 							}
 						}
 					},
@@ -612,25 +612,7 @@ impl StopwatchPage {
 	}
 }
 
-fn timer_notification(summary: &str, body: &str) {
-	#[cfg(target_os = "linux")]
-	{
-		use notify_rust::Hint;
-
-		let _ = Notification::new()
-			.summary(summary)
-			.body(body)
-			.appname("Project Tracker")
-			.icon("Project Tracker")
-			.hint(Hint::DesktopEntry("Project Tracker".to_string()))
-			.show();
-	}
-
-	#[cfg(not(target_os = "linux"))]
-	{
-		let _ = Notification::new().summary(&summary).body(body).show();
-	}
-
+fn timer_notification(summary: String, body: String) {
 	// play notification sound
 	thread::spawn(|| {
 		match rodio::OutputStream::try_default() {
@@ -644,6 +626,30 @@ fn timer_notification(summary: &str, body: &str) {
 			Err(e) => eprintln!("Failed to play notification sound: {e}"),
 		}
 	});
+
+	// show notification
+	let notification_result = if cfg!(target_os = "linux") {
+		use notify_rust::Hint;
+
+		Notification::new()
+			.summary(&summary)
+			.body(&body)
+			.appname("Project Tracker")
+			.icon("Project Tracker")
+			.hint(Hint::DesktopEntry("Project Tracker".to_string()))
+			.show()
+	}
+	else {
+		Notification::new()
+			.summary(&summary)
+			.body(&body)
+			.show()
+	};
+
+	match notification_result {
+		Ok(notification_handle) => notification_handle.on_close(|| {}),
+		Err(e) => eprintln!("failed to show timer notification: {e}"),
+	}
 }
 
 fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
