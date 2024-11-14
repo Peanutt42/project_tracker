@@ -1,10 +1,13 @@
-use std::{hash::{DefaultHasher, Hash, Hasher}, net::TcpStream, io::{Read, Write}};
+use std::{net::TcpStream, io::{Read, Write}};
 use chrono::{DateTime, Utc};
 use filetime::FileTime;
 use thiserror::Error;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 #[cfg(feature = "async_tokio")]
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::tcp::{OwnedReadHalf, OwnedWriteHalf}};
+
+mod password_hash;
+pub use password_hash::PasswordHash;
 
 pub const DEFAULT_HOSTNAME: &str = "127.0.0.1";
 pub const DEFAULT_PORT: usize = 8080;
@@ -35,12 +38,12 @@ pub enum RequestType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Request {
-	pub password_hash: String,
+	pub password_hash: PasswordHash,
 	pub request_type: RequestType,
 }
 
 impl Request {
-	pub fn new(password_hash: String, request_type: RequestType) -> Self {
+	pub fn new(password_hash: PasswordHash, request_type: RequestType) -> Self {
 		Self {
 			password_hash,
 			request_type,
@@ -61,12 +64,6 @@ impl Request {
 	pub async fn read_async(stream: &mut OwnedReadHalf) -> ServerResult<Self> {
 		read_message_async(stream).await
 	}
-}
-
-pub fn hash_password(password: String) -> String {
-	let mut hasher = DefaultHasher::default();
-	password.hash(&mut hasher);
-	hasher.finish().to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

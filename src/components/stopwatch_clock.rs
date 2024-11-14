@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 use iced::{
 	alignment::{Horizontal, Vertical},
 	widget::canvas::{path::Arc, stroke, Cache, Geometry, LineCap, Path, Program, Stroke, Text},
-	Color, Point, Radians, Renderer, Theme, Vector,
+	Color, Radians, Renderer, Theme, Vector,
 };
 use crate::{pages::format_stopwatch_duration, project_tracker::Message, styles::FIRA_SANS_FONT};
 

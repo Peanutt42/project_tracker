@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::io::{ErrorKind, Write};
 use chrono::{DateTime, Utc};
-use project_tracker_server::{get_last_modification_date_time, hash_password, Request, RequestType, Response, ServerError, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{get_last_modification_date_time, PasswordHash, Request, RequestType, Response, ServerError, DEFAULT_PASSWORD, DEFAULT_PORT};
 use std::net::{TcpListener, TcpStream};
 
 const PORT: usize = DEFAULT_PORT;
@@ -54,7 +54,7 @@ fn main() {
 			exit(1);
 		});
 
-	let password_hash = hash_password(password);
+	let password_hash = PasswordHash::new(password);
 
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", PORT)).expect("Failed to bind to port");
 
@@ -74,7 +74,7 @@ fn main() {
 	}
 }
 
-fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, password_hash: String) {
+fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, password_hash: PasswordHash) {
 	println!("client connected");
 
 	loop {

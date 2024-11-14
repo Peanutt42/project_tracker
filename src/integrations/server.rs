@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use project_tracker_server::{hash_password, Request, RequestType, Response, ServerError, ServerResult, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{PasswordHash, Request, RequestType, Response, ServerError, ServerResult, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
 use crate::core::Database;
@@ -29,7 +29,7 @@ pub enum SyncServerDatabaseResponse {
 pub async fn sync_database_from_server(config: ServerConfig, database_last_modified_date: DateTime<Utc>, database: Database) -> ServerResult<SyncServerDatabaseResponse> {
 	let stream = TcpStream::connect(format!("{}:{}", config.hostname, config.port)).await?;
 	let (mut read_half, mut write_half) = stream.into_split();
-	let password_hash = hash_password(config.password);
+	let password_hash = PasswordHash::new(config.password);
 
 	Request {
 		password_hash: password_hash.clone(),
