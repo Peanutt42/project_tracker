@@ -10,6 +10,8 @@ pub fn text_color(background: Color) -> Color {
 	}
 }
 
+pub const FIRA_SANS_FONT: Font = Font::with_name("FiraSans");
+
 pub const BOLD_FONT: Font = Font {
 	weight: Weight::Bold,
 	..Font::DEFAULT

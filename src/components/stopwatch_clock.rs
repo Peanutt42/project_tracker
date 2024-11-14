@@ -1,12 +1,10 @@
 use std::f32::consts::PI;
-
 use iced::{
 	alignment::{Horizontal, Vertical},
 	widget::canvas::{path::Arc, stroke, Cache, Geometry, LineCap, Path, Program, Stroke, Text},
-	Color, Font, Point, Radians, Renderer, Theme,
+	Color, Point, Radians, Renderer, Theme, Vector,
 };
-
-use crate::{pages::format_stopwatch_duration, project_tracker::Message};
+use crate::{pages::format_stopwatch_duration, project_tracker::Message, styles::FIRA_SANS_FONT};
 
 #[derive(Debug)]
 pub struct StopwatchClock {
@@ -104,9 +102,12 @@ impl Program<Message> for StopwatchClock {
 				);
 			}
 
+			let label_text_size = 60.0;
+			let label_y_offset = label_text_size / 10.0;
+
 			frame.fill_text(Text {
 				content: self.label.clone(),
-				position: center,
+				position: center + Vector::new(0.0, label_y_offset),
 				color: if self.percentage < 1.0 {
 					theme.extended_palette().background.base.text
 				} else {
@@ -114,23 +115,20 @@ impl Program<Message> for StopwatchClock {
 				},
 				horizontal_alignment: Horizontal::Center,
 				vertical_alignment: Vertical::Center,
-				size: 60.0.into(),
-				font: Font::DEFAULT,
+				size: label_text_size.into(),
+				font: FIRA_SANS_FONT,
 				..Default::default()
 			});
 
 			if let Some(sub_label) = &self.sub_label {
 				frame.fill_text(Text {
 					content: sub_label.clone(),
-					position: Point {
-						x: center.x,
-						y: center.y + 60.0,
-					},
+					position: center + Vector::new(0.0, label_text_size + label_y_offset),
 					color: theme.extended_palette().background.base.text,
 					horizontal_alignment: Horizontal::Center,
 					vertical_alignment: Vertical::Center,
 					size: 25.0.into(),
-					font: Font::DEFAULT,
+					font: FIRA_SANS_FONT,
 					..Default::default()
 				});
 			}
