@@ -6,8 +6,8 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 #[cfg(feature = "async_tokio")]
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::tcp::{OwnedReadHalf, OwnedWriteHalf}};
 
-mod password_hash;
-pub use password_hash::PasswordHash;
+mod encryption;
+pub use encryption::{encrypt, decrypt, SALT_LENGTH, NONCE_LENGTH};
 
 pub const DEFAULT_HOSTNAME: &str = "127.0.0.1";
 pub const DEFAULT_PORT: usize = 8080;
@@ -28,28 +28,17 @@ pub enum ServerError {
 pub type ServerResult<T> = Result<T, ServerError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RequestType {
-	GetModifiedDate,
+pub enum Request {
+	GetModifiedDate, // TODO: maybe this should also be encrypted?
 	DownloadDatabase,
 	UpdateDatabase {
-		database_json: String
+		encrypted_database_json: Vec<u8>,
+		salt: [u8; SALT_LENGTH],
+		nonce: [u8; NONCE_LENGTH],
 	}
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Request {
-	pub password_hash: PasswordHash,
-	pub request_type: RequestType,
 }
 
 impl Request {
-	pub fn new(password_hash: PasswordHash, request_type: RequestType) -> Self {
-		Self {
-			password_hash,
-			request_type,
-		}
-	}
-
 	pub fn send(&self, stream: &mut TcpStream) -> ServerResult<()> {
 		send_message(stream, self)
 	}
@@ -70,8 +59,11 @@ impl Request {
 pub enum Response {
 	ModifiedDate(DateTime<Utc>),
 	Database {
-		database_json: String,
+		encrypted_database_json: Vec<u8>,
+		salt: [u8; SALT_LENGTH],
+		nonce: [u8; NONCE_LENGTH],
 	},
+	DatabaseUpdated,
 	InvalidPassword,
 }
 impl Response {
