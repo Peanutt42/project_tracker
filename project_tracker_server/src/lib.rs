@@ -9,6 +9,9 @@ use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::tcp::{OwnedReadHalf, OwnedWr
 mod encryption;
 pub use encryption::{encrypt, decrypt, SALT_LENGTH, NONCE_LENGTH};
 
+mod server;
+pub use server::run_server;
+
 pub const DEFAULT_HOSTNAME: &str = "127.0.0.1";
 pub const DEFAULT_PORT: usize = 8080;
 pub const DEFAULT_PASSWORD: &str = "1234";
@@ -29,7 +32,7 @@ pub type ServerResult<T> = Result<T, ServerError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Request {
-	GetModifiedDate, // TODO: maybe this should also be encrypted?
+	GetModifiedDate,
 	DownloadDatabase,
 	UpdateDatabase {
 		database_json: String,
