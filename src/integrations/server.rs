@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use project_tracker_server::{encrypt, decrypt, Request, Response, ServerError, ServerResult, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{Request, Response, ServerError, ServerResult, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
 use crate::core::Database;
@@ -30,10 +30,10 @@ pub async fn sync_database_from_server(config: ServerConfig, database_last_modif
 	let stream = TcpStream::connect(format!("{}:{}", config.hostname, config.port)).await?;
 	let (mut read_half, mut write_half) = stream.into_split();
 
-	Request::GetModifiedDate.send_async(&mut write_half)
+	Request::GetModifiedDate.send_async(&mut write_half, &config.password)
 	.await?;
 
-	let server_modified_date = match Response::read_async(&mut read_half).await? {
+	let server_modified_date = match Response::read_async(&mut read_half, &config.password).await? {
 		Response::ModifiedDate(date) => date,
 		// should not send database when only asked for the modified date
 		Response::Database { .. } | Response::DatabaseUpdated => return Err(ServerError::InvalidResponse),
@@ -43,19 +43,13 @@ pub async fn sync_database_from_server(config: ServerConfig, database_last_modif
 	if server_modified_date > database_last_modified_date {
 		// download database
 		Request::DownloadDatabase
-			.send_async(&mut write_half)
+			.send_async(&mut write_half, &config.password)
 			.await?;
 
-		match Response::read_async(&mut read_half).await? {
-			Response::Database{ encrypted_database_json, salt, nonce } => {
-				let database_json_bytes = decrypt(&encrypted_database_json, &config.password, &salt, &nonce)
-        			.map_err(|_| ServerError::InvalidPassword)?;
-
-				let database_json = String::from_utf8(database_json_bytes).map_err(|_| ServerError::InvalidResponse)?;
-				match serde_json::from_str(&database_json) {
-					Ok(database) => Ok(SyncServerDatabaseResponse::DownloadedDatabase(database)),
-					Err(_) => Err(ServerError::InvalidResponse),
-				}
+		match Response::read_async(&mut read_half, &config.password).await? {
+			Response::Database{ database_json } => match serde_json::from_str(&database_json) {
+				Ok(database) => Ok(SyncServerDatabaseResponse::DownloadedDatabase(database)),
+				Err(_) => Err(ServerError::InvalidResponse),
 			},
 			// should not send database when only asked for the modified date
 			Response::ModifiedDate(_) | Response::DatabaseUpdated => Err(ServerError::InvalidResponse),
@@ -65,14 +59,12 @@ pub async fn sync_database_from_server(config: ServerConfig, database_last_modif
 	else {
 		// upload database
 		let database_json = database.to_json();
-		let (encrypted_database_json, salt, nonce) = encrypt(database_json.as_bytes(), &config.password)
-			.map_err(|_| ServerError::InvalidPassword)?;
 
-		Request::UpdateDatabase { encrypted_database_json, salt, nonce }
-			.send_async(&mut write_half)
+		Request::UpdateDatabase { database_json }
+			.send_async(&mut write_half, &config.password)
 			.await?;
 
-		match Response::read_async(&mut read_half).await? {
+		match Response::read_async(&mut read_half, &config.password).await? {
 			Response::DatabaseUpdated => Ok(SyncServerDatabaseResponse::UploadedDatabase),
 			Response::InvalidPassword => Err(ServerError::InvalidPassword),
 			_ => Err(ServerError::InvalidResponse),

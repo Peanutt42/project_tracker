@@ -32,26 +32,24 @@ pub enum Request {
 	GetModifiedDate, // TODO: maybe this should also be encrypted?
 	DownloadDatabase,
 	UpdateDatabase {
-		encrypted_database_json: Vec<u8>,
-		salt: [u8; SALT_LENGTH],
-		nonce: [u8; NONCE_LENGTH],
+		database_json: String,
 	}
 }
 
 impl Request {
-	pub fn send(&self, stream: &mut TcpStream) -> ServerResult<()> {
-		send_message(stream, self)
+	pub fn send(&self, stream: &mut TcpStream, password: &str) -> ServerResult<()> {
+		send_message(stream, self, password)
 	}
-	pub fn read(stream: &mut TcpStream) -> ServerResult<Self> {
-		read_message(stream)
-	}
-	#[cfg(feature = "async_tokio")]
-	pub async fn send_async(&self, stream: &mut OwnedWriteHalf) -> ServerResult<()> {
-		send_message_async(stream, self).await
+	pub fn read(stream: &mut TcpStream, password: &str) -> ServerResult<Self> {
+		read_message(stream, password)
 	}
 	#[cfg(feature = "async_tokio")]
-	pub async fn read_async(stream: &mut OwnedReadHalf) -> ServerResult<Self> {
-		read_message_async(stream).await
+	pub async fn send_async(&self, stream: &mut OwnedWriteHalf, password: &str) -> ServerResult<()> {
+		send_message_async(stream, self, password).await
+	}
+	#[cfg(feature = "async_tokio")]
+	pub async fn read_async(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<Self> {
+		read_message_async(stream, password).await
 	}
 }
 
@@ -59,27 +57,25 @@ impl Request {
 pub enum Response {
 	ModifiedDate(DateTime<Utc>),
 	Database {
-		encrypted_database_json: Vec<u8>,
-		salt: [u8; SALT_LENGTH],
-		nonce: [u8; NONCE_LENGTH],
+		database_json: String,
 	},
 	DatabaseUpdated,
 	InvalidPassword,
 }
 impl Response {
-	pub fn send(&self, stream: &mut TcpStream) -> ServerResult<()> {
-		send_message(stream, self)
+	pub fn send(&self, stream: &mut TcpStream, password: &str) -> ServerResult<()> {
+		send_message(stream, self, password)
 	}
-	pub fn read(stream: &mut TcpStream) -> ServerResult<Self> {
-		read_message(stream)
-	}
-	#[cfg(feature = "async_tokio")]
-	pub async fn send_async(&self, stream: &mut OwnedWriteHalf) -> ServerResult<()> {
-		send_message_async(stream, self).await
+	pub fn read(stream: &mut TcpStream, password: &str) -> ServerResult<Self> {
+		read_message(stream, password)
 	}
 	#[cfg(feature = "async_tokio")]
-	pub async fn read_async(stream: &mut OwnedReadHalf) -> ServerResult<Self> {
-		read_message_async(stream).await
+	pub async fn send_async(&self, stream: &mut OwnedWriteHalf, password: &str) -> ServerResult<()> {
+		send_message_async(stream, self, password).await
+	}
+	#[cfg(feature = "async_tokio")]
+	pub async fn read_async(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<Self> {
+		read_message_async(stream, password).await
 	}
 }
 
@@ -93,56 +89,98 @@ pub fn get_last_modification_date_time(metadata: &std::fs::Metadata) -> DateTime
 		.expect("invalid file modification date timestamp")
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct EncryptedMessage {
+	encrypted_message: Vec<u8>,
+	salt: [u8; SALT_LENGTH],
+	nonce: [u8; NONCE_LENGTH],
+}
 
-fn send_message<T: Serialize>(stream: &mut TcpStream, message: &T) -> ServerResult<()> {
+impl EncryptedMessage {
+	fn new(plaintext_message: &[u8], password: &str) -> ServerResult<Self> {
+		let (encrypted_message, salt, nonce) = encrypt(plaintext_message, password)
+			.map_err(|_| ServerError::InvalidPassword)?;
+
+		Ok(Self {
+			encrypted_message,
+			salt,
+			nonce,
+		})
+	}
+
+	fn decrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
+		decrypt(&self.encrypted_message, password, &self.salt, &self.nonce)
+			.map_err(|_| ServerError::InvalidPassword)
+	}
+}
+
+fn send_message<T: Serialize>(stream: &mut TcpStream, message: &T, password: &str) -> ServerResult<()> {
 	let message_json = serde_json::to_string(message)?;
-	let message_bytes = message_json.as_bytes();
-	let message_len = message_bytes.len();
-	let message_len_bytes = (message_len as u32).to_be_bytes();
+	let encrypted_message = EncryptedMessage::new(message_json.as_bytes(), password)?;
+	let encrypted_message_json = serde_json::to_string(&encrypted_message)?;
+	let encrypted_message_bytes = encrypted_message_json.as_bytes();
+	let encrypted_message_len = encrypted_message_bytes.len();
+	let encrypted_message_len_bytes = (encrypted_message_len as u32).to_be_bytes();
 
-	stream.write_all(&message_len_bytes)?;
-	stream.write_all(message_bytes)?;
+	stream.write_all(&encrypted_message_len_bytes)?;
+	stream.write_all(encrypted_message_bytes)?;
 
 	Ok(())
 }
 
-fn read_message<T: DeserializeOwned>(stream: &mut TcpStream) -> ServerResult<T> {
-	let mut message_len_bytes = [0u8; 4];
-	stream.read_exact(&mut message_len_bytes)?;
-	let message_len = u32::from_be_bytes(message_len_bytes) as usize;
+fn read_message<T: DeserializeOwned>(stream: &mut TcpStream, password: &str) -> ServerResult<T> {
+	let mut encrypted_message_len_bytes = [0u8; 4];
+	stream.read_exact(&mut encrypted_message_len_bytes)?;
+	let encrypted_message_len = u32::from_be_bytes(encrypted_message_len_bytes) as usize;
 
-	let mut message_bytes = vec![0u8; message_len];
-	stream.read_exact(&mut message_bytes)?;
+	let mut encrypted_message_bytes = vec![0u8; encrypted_message_len];
+	stream.read_exact(&mut encrypted_message_bytes)?;
 
-	let message_json = String::from_utf8_lossy(&message_bytes);
+	let encrypted_message_json = String::from_utf8(encrypted_message_bytes)
+		.map_err(|_| ServerError::InvalidResponse)?;
+	let encrypted_message: EncryptedMessage = serde_json::from_str(&encrypted_message_json)
+		.map_err(ServerError::ParseError)?;
+
+	let message_bytes = encrypted_message.decrypt(password)?;
+
+	let message_json = String::from_utf8(message_bytes).map_err(|_| ServerError::InvalidResponse)?;
 	serde_json::from_str(&message_json)
 		.map_err(ServerError::ParseError)
 }
 
 
 #[cfg(feature = "async_tokio")]
-async fn send_message_async<T: Serialize>(stream: &mut OwnedWriteHalf, message: &T) -> ServerResult<()> {
+async fn send_message_async<T: Serialize>(stream: &mut OwnedWriteHalf, message: &T, password: &str) -> ServerResult<()> {
 	let message_json = serde_json::to_string(message)?;
-	let message_bytes = message_json.as_bytes();
-	let message_len = message_bytes.len();
-	let message_len_bytes = (message_len as u32).to_be_bytes();
+	let encrypted_message = EncryptedMessage::new(message_json.as_bytes(), password)?;
+	let encrypted_message_json = serde_json::to_string(&encrypted_message)?;
+	let encrypted_message_bytes = encrypted_message_json.as_bytes();
+	let encrypted_message_len = encrypted_message_bytes.len();
+	let encrypted_message_len_bytes = (encrypted_message_len as u32).to_be_bytes();
 
-	stream.write_all(&message_len_bytes).await?;
-	stream.write_all(message_bytes).await?;
+	stream.write_all(&encrypted_message_len_bytes).await?;
+	stream.write_all(encrypted_message_bytes).await?;
 
 	Ok(())
 }
 
 #[cfg(feature = "async_tokio")]
-async fn read_message_async<T: DeserializeOwned>(stream: &mut OwnedReadHalf) -> ServerResult<T> {
-	let mut message_len_bytes = [0u8; 4];
-	stream.read_exact(&mut message_len_bytes).await?;
-	let message_len = u32::from_be_bytes(message_len_bytes) as usize;
+async fn read_message_async<T: DeserializeOwned>(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<T> {
+	let mut encrypted_message_len_bytes = [0u8; 4];
+	stream.read_exact(&mut encrypted_message_len_bytes).await?;
+	let encrypted_message_len = u32::from_be_bytes(encrypted_message_len_bytes) as usize;
 
-	let mut message_bytes = vec![0u8; message_len];
-	stream.read_exact(&mut message_bytes).await?;
+	let mut encrypted_message_bytes = vec![0u8; encrypted_message_len];
+	stream.read_exact(&mut encrypted_message_bytes).await?;
 
-	let message_json = String::from_utf8_lossy(&message_bytes);
+	let encrypted_message_json = String::from_utf8(encrypted_message_bytes)
+		.map_err(|_| ServerError::InvalidResponse)?;
+	let encrypted_message: EncryptedMessage = serde_json::from_str(&encrypted_message_json)
+		.map_err(ServerError::ParseError)?;
+
+	let message_bytes = encrypted_message.decrypt(password)?;
+
+	let message_json = String::from_utf8(message_bytes).map_err(|_| ServerError::InvalidResponse)?;
 	serde_json::from_str(&message_json)
 		.map_err(ServerError::ParseError)
 }

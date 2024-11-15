@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::io::{ErrorKind, Write};
 use chrono::{DateTime, Utc};
-use project_tracker_server::{encrypt, decrypt, get_last_modification_date_time, Request, Response, ServerError, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{get_last_modification_date_time, Request, Response, ServerError, DEFAULT_PASSWORD, DEFAULT_PORT};
 use std::net::{TcpListener, TcpStream};
 
 const PORT: usize = DEFAULT_PORT;
@@ -76,14 +76,14 @@ fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, passw
 	println!("client connected");
 
 	loop {
-		match Request::read(&mut stream) {
+		match Request::read(&mut stream, &password) {
 			Ok(request) => match request {
 				Request::GetModifiedDate => {
 					if database_filepath.exists() {
 						match database_filepath.metadata() {
 							Ok(metadata) => {
 								if let Err(e) = Response::ModifiedDate(get_last_modification_date_time(&metadata))
-									.send(&mut stream)
+									.send(&mut stream, &password)
 								{
 									eprintln!("failed to send modified date response to client: {e}");
 								}
@@ -96,45 +96,28 @@ fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, passw
 						// MIN_UTC is the oldest possible Date
 						// -> client will send the database
 						let response = Response::ModifiedDate(DateTime::<Utc>::MIN_UTC);
-						if let Err(e) = response.send(&mut stream) {
+						if let Err(e) = response.send(&mut stream, &password) {
 							eprintln!("failed to send modification date to client: {e}");
 						}
 					}
 
 				},
-				Request::UpdateDatabase { encrypted_database_json, salt, nonce } => {
-					match decrypt(&encrypted_database_json, &password, &salt, &nonce) {
-						Ok(database_json) => match std::fs::write(&database_filepath, database_json) {
-							Ok(_) => {
-								println!("Updated database file");
-								// TODO: broadcast download database to all other connected clients
-								let _ = Response::DatabaseUpdated.send(&mut stream);
-							},
-							Err(e) => panic!("cant write to database file: {}, error: {e}", database_filepath.display()),
-						},
-						Err(e) => {
-							eprintln!("failed to decrypt updated database from client: {e}");
-							let _ = Response::InvalidPassword.send(&mut stream);
-						},
-					}
+				Request::UpdateDatabase { database_json } => match std::fs::write(&database_filepath, database_json) {
+					Ok(_) => {
+						println!("Updated database file");
+						// TODO: broadcast download database to all other connected clients
+						let _ = Response::DatabaseUpdated.send(&mut stream, &password);
+					},
+					Err(e) => panic!("cant write to database file: {}, error: {e}", database_filepath.display()),
 				},
 				Request::DownloadDatabase => {
 					match read_to_string(&database_filepath) {
 						Ok(database_json) => {
-							match encrypt(database_json.as_bytes(), &password) {
-								Ok((encrypted_database_json, salt, nonce)) => {
-									let response = Response::Database{ encrypted_database_json, salt, nonce };
-									match response.send(&mut stream) {
-										Ok(_) => println!("Sent database"),
-										Err(e) => eprintln!("failed to send database to client: {e}"),
-									}
-								},
-								Err(e) => {
-									eprintln!("failed to encrypt database before sending it to client: {e}");
-									let _ = Response::InvalidPassword.send(&mut stream);
-								},
-							};
-
+							let response = Response::Database{ database_json };
+							match response.send(&mut stream, &password) {
+								Ok(_) => println!("Sent database"),
+								Err(e) => eprintln!("failed to send database to client: {e}"),
+							}
 						},
 						Err(e) => {
 							eprintln!("Failed to read {}: {e}", database_filepath.display());
@@ -150,6 +133,10 @@ fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, passw
 						ErrorKind::ConnectionAborted |
 						ErrorKind::ConnectionReset
 					) => println!("client disconnected"),
+					ServerError::InvalidPassword => {
+						println!("invalid password");
+						let _ = Response::InvalidPassword.send(&mut stream, &password);
+					},
 					_ => eprintln!("failed to read client request: {e}"),
 				}
 				return;

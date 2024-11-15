@@ -15,27 +15,18 @@ fn derive_key(password: &str, salt: &[u8; SALT_LENGTH]) -> [u8; KEY_LENGTH] {
 	key
 }
 
-fn generate_salt() -> [u8; SALT_LENGTH] {
-	let mut salt = [0u8; SALT_LENGTH];
-	rand::thread_rng().fill(&mut salt);
-	salt
-}
-
-fn generate_nonce() -> [u8; NONCE_LENGTH] {
-	let mut nonce = [0u8; NONCE_LENGTH];
-	rand::thread_rng().fill(&mut nonce);
-	nonce
-}
-
 #[allow(clippy::type_complexity)]
 pub fn encrypt(content: &[u8], password: &str)
 	-> Result<(Vec<u8>, [u8; SALT_LENGTH], [u8; NONCE_LENGTH]), Error>
 {
-	let salt = generate_salt();
+	let mut salt = [0u8; SALT_LENGTH];
+	rand::thread_rng().fill(&mut salt);
+	let mut nonce = [0u8; NONCE_LENGTH];
+	rand::thread_rng().fill(&mut nonce);
+
 	let key = derive_key(password, &salt);
 	let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
 
-	let nonce = generate_nonce();
 	let ciphertext = cipher.encrypt(Nonce::from_slice(&nonce), content)?;
 	Ok((ciphertext, salt, nonce))
 }
