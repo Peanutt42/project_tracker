@@ -2,8 +2,7 @@ use crate::{
 	components::{copy_to_clipboard_button, error_msg_ok_button}, project_tracker::Message, styles::card_style
 };
 use iced::{
-	widget::{row, text},
-	Element,
+	widget::{row, text}, Element
 };
 use iced_aw::card;
 

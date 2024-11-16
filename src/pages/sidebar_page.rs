@@ -1,5 +1,5 @@
 use crate::components::{
-	create_new_project_button, custom_project_preview, loading_screen, project_preview, settings_button, stopwatch_button, toggle_sidebar_button
+	create_new_project_button, custom_project_preview, loading_screen, project_preview, settings_button, stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE
 };
 use crate::core::{OrderedHashMap, Preferences, Project, ProjectId};
 use crate::pages::StopwatchPage;
@@ -590,7 +590,9 @@ impl SidebarPage {
 		let list: Element<Message> = if let Some(database) = &app.database {
 			self.project_preview_list(database.projects(), app)
 		} else {
-			loading_screen()
+			container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
+				.center(Fill)
+				.into()
 		};
 
 		column![

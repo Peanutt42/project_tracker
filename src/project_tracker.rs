@@ -3,7 +3,7 @@ use crate::{
 		create_empty_database_button, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
 	}, core::{
 		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SerializedContentPage, SyncDatabaseResult, SynchronizationSetting, TaskId
-	}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage}, pages::{
+	}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ProjectPage, ProjectPageAction, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -32,6 +32,7 @@ pub struct ProjectTrackerApp {
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
 	pub error_msg_modal: ErrorMsgModal,
+	pub wait_closing_modal: WaitClosingModal,
 	pub settings_modal: SettingsModal,
 	pub manage_tags_modal: ManageTaskTagsModal,
 	pub create_task_modal: CreateTaskModal,
@@ -42,7 +43,7 @@ pub struct ProjectTrackerApp {
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug)]
 pub enum Message {
-	CloseWindowRequested(window::Id),
+	TryClosing,
 	EscapePressed,
 	EnterPressed,
 	CopyToClipboard(String),
@@ -55,6 +56,7 @@ pub enum Message {
 	ConfirmModalMessage(ConfirmModalMessage),
 	ConfirmModalConfirmed(Box<Message>),
 	ErrorMsgModalMessage(ErrorMsgModalMessage),
+	WaitClosingModalMessage(WaitClosingModalMessage),
 	SaveDatabase,
 	DatabaseSaved(SystemTime), // begin_time since saving
 	ExportDatabase(PathBuf),
@@ -147,6 +149,7 @@ impl ProjectTrackerApp {
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
 				error_msg_modal: ErrorMsgModal::Closed,
+				wait_closing_modal: WaitClosingModal::Closed,
 				settings_modal: SettingsModal::Closed,
 				manage_tags_modal: ManageTaskTagsModal::Closed,
 				create_task_modal: CreateTaskModal::Closed,
@@ -224,11 +227,11 @@ impl ProjectTrackerApp {
 				),
 				_ => None,
 			}),
-			iced::event::listen_with(move |event, status, id| match event {
+			iced::event::listen_with(move |event, status, _id| match event {
 				Event::Window(window::Event::CloseRequested)
 					if matches!(status, Status::Ignored) =>
 				{
-					Some(Message::CloseWindowRequested(id))
+					Some(Message::TryClosing)
 				}
 				_ => None,
 			}),
@@ -258,12 +261,39 @@ impl ProjectTrackerApp {
 	}
 
 	pub fn update(&mut self, message: Message) -> Task<Message> {
-		match message {
-			Message::CloseWindowRequested(id) => Task::batch([
-				self.update(Message::SaveDatabase),
-				self.update(PreferenceMessage::Save.into()),
-				window::close(id),
-			]),
+		let mut task = match message {
+			Message::TryClosing => {
+				if self.syncing_database ||
+					self.exporting_database ||
+					self.importing_database ||
+					self.syncing_database_from_server
+				{
+					let waiting_reason = if self.syncing_database {
+						"Synchronizing database with filepath"
+					}
+					else if self.exporting_database {
+						"Exporting database"
+					}
+					else if self.importing_database {
+						"Importing database"
+					}
+					else if self.syncing_database_from_server {
+						"Synchronizing database with server"
+					}
+					else {
+						unreachable!()
+					};
+					self.wait_closing_modal = WaitClosingModal::Opened { waiting_reason	};
+					Task::none()
+				}
+				else {
+					Task::batch([
+						self.update(Message::SaveDatabase),
+						self.update(PreferenceMessage::Save.into()),
+						window::get_latest().and_then(window::close),
+					])
+				}
+			},
 			Message::EscapePressed => {
 				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
 					return self.update(ErrorMsgModalMessage::Close.into());
@@ -341,6 +371,10 @@ impl ProjectTrackerApp {
 			Message::ErrorMsgModalMessage(message) => {
 				self.error_msg_modal.update(message);
 				Task::none()
+			}
+			Message::WaitClosingModalMessage(message) => {
+				self.wait_closing_modal.update(message)
+					.map(Message::WaitClosingModalMessage)
 			}
 			Message::SaveDatabase => {
 				if let Some(database) = &self.database {
@@ -926,7 +960,27 @@ impl ProjectTrackerApp {
 				Task::none()
 			},
 			Message::TaskModalMessage(message) => self.task_modal.update(message, &mut self.database).map(Message::TaskModalMessage),
+		};
+
+		if matches!(self.wait_closing_modal, WaitClosingModal::Opened { .. }) &&
+			matches!(self.error_msg_modal, ErrorMsgModal::Closed) &&
+			!self.syncing_database &&
+			!self.exporting_database &&
+			!self.importing_database &&
+			!self.syncing_database_from_server
+		{
+			self.wait_closing_modal = WaitClosingModal::Closed;
+			task = Task::batch([
+				task,
+				self.update(Message::TryClosing)
+			]);
 		}
+
+		if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
+			self.wait_closing_modal = WaitClosingModal::Closed;
+		}
+
+		task
 	}
 
 	fn perform_project_page_action(&mut self, action: ProjectPageAction) -> Task<Message> {
@@ -1083,6 +1137,11 @@ impl ProjectTrackerApp {
 				self.confirm_modal.view(),
 				ConfirmModalMessage::Close.into(),
 			))
+			.push_maybe(Self::modal(
+				self.wait_closing_modal.view(),
+				WaitClosingModalMessage::Close
+			)
+			.map(|element| element.map(Message::WaitClosingModalMessage)))
 			.push_maybe(Self::modal(
 				self.error_msg_modal.view(),
 				ErrorMsgModalMessage::Close.into(),

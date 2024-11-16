@@ -1,19 +1,16 @@
-use crate::project_tracker::Message;
 use iced::{
-	widget::container,
 	Element,
-	Length::{self, Fill},
+	Length,
 };
 use iced_aw::Spinner;
 
-pub fn loading_screen() -> Element<'static, Message> {
-	container(
-		Spinner::new()
-			.width(Length::Fixed(75.0))
-			.height(Length::Fixed(75.0))
-			.circle_radius(3.0),
-	)
-	.center_x(Fill)
-	.center_y(Fill)
-	.into()
+pub const LARGE_LOADING_SPINNER_SIZE: f32 = 75.0;
+pub const SMALL_LOADING_SPINNER_SIZE: f32 = 25.0;
+
+pub fn loading_screen<Message: 'static>(size: f32) -> Element<'static, Message> {
+	Spinner::new()
+		.width(Length::Fixed(size))
+		.height(Length::Fixed(size))
+		.circle_radius(3.0)
+		.into()
 }

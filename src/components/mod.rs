@@ -17,7 +17,7 @@ pub use buttons::{
 	start_task_timer_button, track_time_button, stop_timer_button, stopwatch_button,
 	sync_database_button, task_tag_button, theme_mode_button, toggle_sidebar_button,
 	sync_database_from_server_button, synchronization_type_button, take_break_button,
-	show_password_button, hide_password_button, create_empty_database_button, open_folder_location_button,
+	show_password_button, hide_password_button, create_empty_database_button, open_folder_location_button, force_close_anyways_button,
 	open_link_button, sort_dropdown_button, error_msg_ok_button, task_tag_name_button, ICON_BUTTON_WIDTH, ICON_FONT_SIZE
 };
 
@@ -37,7 +37,7 @@ mod date_widget;
 pub use date_widget::{date_text, days_left_widget};
 
 mod loading_screen;
-pub use loading_screen::loading_screen;
+pub use loading_screen::{loading_screen, SMALL_LOADING_SPINNER_SIZE, LARGE_LOADING_SPINNER_SIZE};
 
 mod project_preview;
 pub use project_preview::{custom_project_preview, project_preview};

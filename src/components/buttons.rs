@@ -2,7 +2,7 @@ use crate::{
 	components::{date_text, duration_text}, core::{
 		Database, DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, SynchronizationSetting, TaskId, TaskTag, TaskTagId
 	}, icons::{icon_to_text, Bootstrap}, modals::{
-		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage
+		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage, WaitClosingModalMessage
 	}, pages::{
 		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
 		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
@@ -941,4 +941,12 @@ pub fn task_tag_name_button(task_tag_id: TaskTagId, task_tag_name: &str) -> Butt
 	button(text(task_tag_name).width(Fill))
 		.on_press(ManageTaskTagsModalMessage::EditTaskTagName(task_tag_id).into())
 		.style(hidden_secondary_button_style)
+}
+
+pub fn force_close_anyways_button() -> Button<'static, WaitClosingModalMessage> {
+	button(
+		text("Close anyways")
+	)
+	.on_press(WaitClosingModalMessage::ForceCloseAnyways)
+	.style(dangerous_button_style)
 }

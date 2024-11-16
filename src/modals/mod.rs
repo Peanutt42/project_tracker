@@ -16,3 +16,6 @@ pub use task_modal::{TaskModal, TaskModalMessage};
 
 mod create_task_modal;
 pub use create_task_modal::{CreateTaskModal, CreateTaskModalMessage, CreateTaskModalAction};
+
+mod wait_closing_modal;
+pub use wait_closing_modal::{WaitClosingModal, WaitClosingModalMessage};
