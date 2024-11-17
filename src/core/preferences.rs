@@ -141,7 +141,6 @@ pub enum PreferenceMessage {
 	SetThemeMode(ThemeMode),
 	ToggleShowSidebar,
 	SetContentPage(SerializedContentPage),
-	SetStopwatchProgress(Option<StopwatchProgress>),
 	SetSynchronization(Option<SynchronizationSetting>),
 	SetDateFormatting(DateFormatting),
 	SetCreateNewTaskAtTop(bool),
@@ -198,8 +197,14 @@ impl Preferences {
 	pub fn selected_content_page(&self) -> &SerializedContentPage {
 		&self.selected_content_page
 	}
+	pub fn set_selected_content_page(&mut self, content_page: SerializedContentPage) {
+		self.modify(|pref| pref.selected_content_page = content_page);
+	}
 	pub fn stopwatch_progress(&self) -> &Option<StopwatchProgress> {
 		&self.stopwatch_progress
+	}
+	pub fn set_stopwatch_progress(&mut self, progress: Option<StopwatchProgress>) {
+		self.modify(|pref| pref.stopwatch_progress = progress);
 	}
 	pub fn show_sidebar(&self) -> bool {
 		self.show_sidebar
@@ -277,17 +282,12 @@ impl Preferences {
 			}
 
 			PreferenceMessage::SetContentPage(content_page) => {
-				self.modify(|pref| pref.selected_content_page = content_page);
-				PreferenceAction::None
-			}
-
-			PreferenceMessage::SetStopwatchProgress(progress) => {
-				self.modify(|pref| pref.stopwatch_progress = progress);
+				self.set_selected_content_page(content_page);
 				PreferenceAction::None
 			}
 
 			PreferenceMessage::SetSynchronization(setting) => {
-				self.modify(|pref| pref.synchronization = setting);
+				self.set_synchronization(setting);
 				PreferenceAction::None
 			}
 

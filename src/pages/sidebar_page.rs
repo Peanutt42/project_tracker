@@ -202,7 +202,7 @@ impl SidebarPage {
 		&mut self,
 		message: SidebarPageMessage,
 		database: &mut Option<Database>,
-		preferences: &Option<Preferences>,
+		preferences: &mut Option<Preferences>,
 		stopwatch_page: &mut StopwatchPage,
 		is_theme_dark: bool,
 	) -> SidebarPageAction {
@@ -508,7 +508,7 @@ impl SidebarPage {
 		let mut list: Vec<Element<Message>> = projects
 			.iter()
 			.map(|(project_id, project)| {
-				let selected = match &app.project_page {
+				let selected = match &app.content_page.project_page {
 					Some(project_page) => project_id == project_page.project_id,
 					None => false,
 				};
@@ -599,8 +599,8 @@ impl SidebarPage {
 			column![
 				row![
 					stopwatch_button(
-						&app.stopwatch_page,
-						app.project_page.is_none(),
+						&app.content_page.stopwatch_page,
+						app.content_page.is_stopwatch_page_opened(),
 						matches!(self.task_dropzone_hovered, Some(TaskDropzone::Stopwatch))
 					),
 					toggle_sidebar_button(true),

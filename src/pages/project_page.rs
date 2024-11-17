@@ -5,7 +5,8 @@ use crate::{
 		import_source_code_todos, Database, DatabaseMessage, OptionalPreference, Preferences, Project, ProjectId, SortMode, Task, TaskId, TaskTagId
 	}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, project_tracker::{Message, ProjectTrackerApp}, styles::{
 		text_input_style_borderless, text_input_style_only_round_left, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE
-	}
+	},
+	pages::{ContentPageMessage, ContentPageAction},
 };
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use iced::{
@@ -73,7 +74,7 @@ pub enum ProjectPageMessage {
 
 impl From<ProjectPageMessage> for Message {
 	fn from(value: ProjectPageMessage) -> Self {
-		Message::ProjectPageMessage(value)
+		ContentPageMessage::ProjectPageMessage(value).into()
 	}
 }
 
@@ -142,29 +143,7 @@ impl CachedTaskList {
 	}
 }
 
-#[derive(Default)]
-pub enum ProjectPageAction {
-	#[default]
-	None,
-	Task(iced::Task<Message>),
-	OpenManageTaskTagsModal(ProjectId),
-	ConfirmDeleteProject{
-		project_id: ProjectId,
-		project_name: String,
-	},
-	OpenTaskModal{
-		project_id: ProjectId,
-		task_id: TaskId,
-	},
-}
-
-impl From<iced::Task<Message>> for ProjectPageAction {
-	fn from(value: iced::Task<Message>) -> Self {
-		ProjectPageAction::Task(value)
-	}
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProjectPage {
 	pub project_id: ProjectId,
 	pub cached_task_list: CachedTaskList,
@@ -213,12 +192,12 @@ impl ProjectPage {
 		message: ProjectPageMessage,
 		database: &mut Option<Database>,
 		preferences: &Option<Preferences>
-	) -> ProjectPageAction {
+	) -> ContentPageAction {
 		let command = match message {
-			ProjectPageMessage::RefreshCachedTaskList => ProjectPageAction::None,
+			ProjectPageMessage::RefreshCachedTaskList => ContentPageAction::None,
 
-			ProjectPageMessage::OpenSortModeDropdown => { self.show_sort_mode_dropdown = true; ProjectPageAction::None },
-			ProjectPageMessage::CloseSortModeDropdown => { self.show_sort_mode_dropdown = false; ProjectPageAction::None },
+			ProjectPageMessage::OpenSortModeDropdown => { self.show_sort_mode_dropdown = true; ContentPageAction::None },
+			ProjectPageMessage::CloseSortModeDropdown => { self.show_sort_mode_dropdown = false; ContentPageAction::None },
 			ProjectPageMessage::SetSortMode(new_sort_mode) => {
 				if let Some(database) = database {
 					database.modify(|projects| {
@@ -229,12 +208,12 @@ impl ProjectPage {
 					self.generate_cached_task_list(database, preferences);
 					self.show_sort_mode_dropdown = false;
 				}
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 
-			ProjectPageMessage::ShowContextMenu => { self.show_context_menu = true; ProjectPageAction::None },
-			ProjectPageMessage::HideContextMenu => { self.show_context_menu = false; ProjectPageAction::None },
-			ProjectPageMessage::OpenManageTaskTagsModal => { self.show_context_menu = false; ProjectPageAction::OpenManageTaskTagsModal(self.project_id) },
+			ProjectPageMessage::ShowContextMenu => { self.show_context_menu = true; ContentPageAction::None },
+			ProjectPageMessage::HideContextMenu => { self.show_context_menu = false; ContentPageAction::None },
+			ProjectPageMessage::OpenManageTaskTagsModal => { self.show_context_menu = false; ContentPageAction::OpenManageTaskTagsModal(self.project_id) },
 
 			ProjectPageMessage::OpenSearchTasks => {
 				self.search_tasks_filter = Some(String::new());
@@ -248,14 +227,14 @@ impl ProjectPage {
 				if let Some(database) = database {
 					self.generate_cached_task_list(database, preferences);
 				}
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 			ProjectPageMessage::ChangeSearchTasksFilter(new_filter) => {
 				self.search_tasks_filter = Some(new_filter);
 				if let Some(database) = database {
 					self.generate_cached_task_list(database, preferences);
 				}
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 
 			ProjectPageMessage::ImportSourceCodeTodosDialog => {
@@ -272,7 +251,7 @@ impl ProjectPage {
 			}
 			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => {
 				self.importing_source_code_todos = false;
-				ProjectPageAction::None
+				ContentPageAction::None
 			},
 			ProjectPageMessage::ImportSourceCodeTodos(todos) => {
 				self.importing_source_code_todos = false;
@@ -286,17 +265,17 @@ impl ProjectPage {
 						}
 					})
 				}
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 
 			ProjectPageMessage::ShowSourceCodeTodos(show) => {
 				self.show_source_code_todos = show;
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 
 			ProjectPageMessage::ShowDoneTasks(show) => {
 				self.show_done_tasks = show;
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 
 			ProjectPageMessage::ToggleFilterTaskTag(task_tag_id) => {
@@ -308,23 +287,23 @@ impl ProjectPage {
 				if let Some(database) = database {
 					self.generate_cached_task_list(database, preferences);
 				}
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 			ProjectPageMessage::UnsetFilterTaskTag(task_tag_id) => {
 				self.filter_task_tags.remove(&task_tag_id);
 				if let Some(database) = database {
 					self.generate_cached_task_list(database, preferences);
 				}
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 
 			ProjectPageMessage::ShowColorPicker => {
 				self.show_color_picker = true;
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 			ProjectPageMessage::HideColorPicker => {
 				self.show_color_picker = false;
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 			ProjectPageMessage::ChangeProjectColor(new_color) => {
 				self.show_color_picker = false;
@@ -335,7 +314,7 @@ impl ProjectPage {
 						}
 					});
 				}
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 
 			ProjectPageMessage::ConfirmDeleteProject => {
@@ -346,7 +325,7 @@ impl ProjectPage {
 				)
 				.unwrap_or("<invalid project id>".to_string());
 
-				ProjectPageAction::ConfirmDeleteProject {
+				ContentPageAction::ConfirmDeleteProject {
 					project_id: self.project_id,
 					project_name,
 				}
@@ -363,31 +342,31 @@ impl ProjectPage {
 					self.start_dragging_point = Some(point);
 					self.just_minimal_dragging = true;
 				}
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 			ProjectPageMessage::CancelDragTask => {
 				self.dragged_task = None;
 				self.start_dragging_point = None;
 				self.just_minimal_dragging = true;
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 			ProjectPageMessage::PressTask(task_id) => {
 				self.pressed_task = Some(task_id);
-				ProjectPageAction::None
+				ContentPageAction::None
 			},
-			ProjectPageMessage::OpenTask(task_id) => ProjectPageAction::OpenTaskModal { project_id: self.project_id, task_id },
+			ProjectPageMessage::OpenTask(task_id) => ContentPageAction::OpenTaskModal { project_id: self.project_id, task_id },
 			ProjectPageMessage::LeftClickReleased => {
 				let action = if self.just_minimal_dragging {
 					if let Some(pressed_task) = &self.pressed_task {
-						ProjectPageAction::OpenTaskModal {
+						ContentPageAction::OpenTaskModal {
 							project_id: self.project_id,
 							task_id: *pressed_task
 						}
 					} else {
-						ProjectPageAction::None
+						ContentPageAction::None
 					}
 				} else {
-					ProjectPageAction::None
+					ContentPageAction::None
 				};
 				self.pressed_task = None;
 				self.dragged_task = None;
@@ -398,7 +377,7 @@ impl ProjectPage {
 
 			ProjectPageMessage::AnimateProgressbar => {
 				self.progressbar_animation.update();
-				ProjectPageAction::None
+				ContentPageAction::None
 			}
 		};
 
@@ -457,7 +436,7 @@ impl ProjectPage {
 						self.show_done_tasks,
 						self.show_source_code_todos,
 						self.importing_source_code_todos,
-						&app.stopwatch_page
+						&app.content_page.stopwatch_page
 					),
 				]
 				// .spacing(SPACING_AMOUNT) this is not needed since every task in the list has a SPACING_AMOUNT height dropzone

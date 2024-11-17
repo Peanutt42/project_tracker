@@ -4,8 +4,7 @@ use crate::{
 	}, icons::{icon_to_text, Bootstrap}, modals::{
 		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage, WaitClosingModalMessage
 	}, pages::{
-		format_stopwatch_duration, ProjectPageMessage, SidebarPageMessage, StopwatchPage,
-		StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
+		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID
 	}, project_tracker::Message, styles::{
 		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT
 	}, theme_mode::ThemeMode
@@ -263,7 +262,7 @@ pub fn stopwatch_button(
 			.padding(SMALL_HORIZONTAL_PADDING),
 		)
 		.width(Fill)
-		.on_press(Message::OpenStopwatch)
+		.on_press(ContentPageMessage::OpenStopwatch.into())
 		.style(move |t, s| {
 			stopwatch_page_button_style(
 				t,
@@ -922,7 +921,7 @@ pub fn task_open_stopwatch_timer(label: &String) -> Element<Message> {
 	)
 	.padding(SMALL_HORIZONTAL_PADDING)
 	.style(secondary_button_style_default)
-	.on_press(Message::OpenStopwatch)
+	.on_press(ContentPageMessage::OpenStopwatch.into())
 	.into()
 }
 
