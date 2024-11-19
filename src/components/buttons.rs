@@ -968,6 +968,7 @@ pub fn open_project_button(project_id: ProjectId, project_name: &str, project_co
 	button(
 		rich_text![
 			Span::new(format!("{project_name}:"))
+				.link(Message::ContentPageMessage(ContentPageMessage::OpenProjectPage(project_id)))
 				.underline(true)
 				.color(project_color)
 		]
