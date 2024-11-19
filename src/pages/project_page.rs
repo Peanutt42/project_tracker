@@ -132,7 +132,6 @@ impl CachedTaskList {
 		project.sort_mode.sort(project, &mut todo_list, sort_unspecified_tasks_at_bottom);
 		project.sort_mode.sort(project, &mut done_list, sort_unspecified_tasks_at_bottom);
 		project.sort_mode.sort(project, &mut source_code_todo_list, sort_unspecified_tasks_at_bottom);
-
 		Self::new(todo_list, done_list, source_code_todo_list)
 	}
 }
@@ -327,17 +326,6 @@ impl ProjectPage {
 			if self.cached_task_list.cache_time < *database_ref.last_changed_time() {
 				self.generate_cached_task_list(database_ref, preferences);
 			}
-
-			if let Some(project) = database_ref.get_project(&self.project_id) {
-				let new_project_progress = project.get_completion_percentage();
-				if new_project_progress != self.previous_project_progress {
-					self.start_progressbar_animation(
-						self.previous_project_progress,
-						new_project_progress,
-					);
-					self.previous_project_progress = new_project_progress;
-				}
-			}
 		}
 
 		command
@@ -531,6 +519,16 @@ impl ProjectPage {
 				&self.search_tasks_filter,
 				preferences.sort_unspecified_tasks_at_bottom()
 			);
+
+			// update progress bar animation
+			let new_project_progress = project.get_completion_percentage();
+			if new_project_progress != self.previous_project_progress {
+				self.start_progressbar_animation(
+					self.previous_project_progress,
+					new_project_progress,
+				);
+				self.previous_project_progress = new_project_progress;
+			}
 		}
 	}
 

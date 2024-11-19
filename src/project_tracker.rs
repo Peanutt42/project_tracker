@@ -654,6 +654,9 @@ impl ProjectTrackerApp {
 					if let Some(overview_page) = &mut self.content_page.overview_page {
 						overview_page.update(OverviewPageMessage::RefreshCachedTaskList, &self.database, &self.preferences);
 					}
+					if let Some(project_page) = &mut self.content_page.project_page {
+						project_page.generate_cached_task_list(self.database.as_ref().unwrap(), &self.preferences);
+					}
 					match database_message {
 						DatabaseMessage::DeleteProject(project_id) => match &self.content_page.project_page {
 							Some(project_page) if project_page.project_id == project_id => {
