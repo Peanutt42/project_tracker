@@ -1,4 +1,5 @@
 use crate::core::TaskTagId;
+use chrono::NaiveDate;
 use iced::{widget::{container::Id, markdown}, advanced::widget};
 use iced_aw::date_picker::Date;
 use serde::{Deserialize, Serialize};
@@ -167,5 +168,12 @@ impl From<Date> for SerializableDate {
 			month: value.month,
 			day: value.day,
 		}
+	}
+}
+
+impl From<NaiveDate> for SerializableDate {
+	fn from(value: NaiveDate) -> Self {
+		let date: Date = value.into();
+		date.into()
 	}
 }
