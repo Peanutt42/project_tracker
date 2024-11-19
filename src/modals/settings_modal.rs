@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::components::{hide_password_button, show_password_button, sync_database_from_server_button, synchronization_type_button, vertical_scrollable};
+use crate::components::{hide_password_button, show_password_button, sync_database_from_server_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
 use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
@@ -24,7 +24,6 @@ use iced::widget::{text_input, toggler, tooltip};
 use iced::{
 	alignment::Horizontal,
 	keyboard,
-	padding::{left, right},
 	widget::{column, container, row, text, Column, Space},
 	Alignment, Element,
 	Length::Fill,
@@ -564,19 +563,17 @@ impl SettingsModal {
 				card(
 					text("Settings").size(HEADING_TEXT_SIZE),
 					row![
-						vertical_scrollable(
+						vertical_scrollable_no_padding(
 							Column::with_children(tabs)
 								.width(150.0)
 								.spacing(SMALL_SPACING_AMOUNT)
-								.padding(right(PADDING_AMOUNT))
 						),
 						vertical_seperator(),
 						vertical_scrollable(
-							container(selected_tab.view(app, preferences, *show_password))
-								.width(Fill)
-								.padding(left(PADDING_AMOUNT))
+							selected_tab.view(app, preferences, *show_password)
 						)
-					],
+					]
+					.spacing(SPACING_AMOUNT),
 				)
 				.max_width(900.0)
 				.max_height(550.0)

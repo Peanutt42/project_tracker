@@ -55,7 +55,7 @@ mod unfocusable;
 pub use unfocusable::unfocusable;
 
 mod scrollable;
-pub use scrollable::{horizontal_scrollable, vertical_scrollable, HORIZONTAL_SCROLLABLE_PADDING, SCROLLBAR_WIDTH};
+pub use scrollable::{horizontal_scrollable, vertical_scrollable, vertical_scrollable_no_padding, HORIZONTAL_SCROLLABLE_PADDING, SCROLLBAR_WIDTH};
 
 mod dropzone;
 pub use dropzone::in_between_dropzone;

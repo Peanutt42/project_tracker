@@ -41,3 +41,13 @@ pub fn vertical_scrollable<'a, Message: 'a>(
 	))
 	.style(scrollable_style)
 }
+
+pub fn vertical_scrollable_no_padding<'a, Message: 'a>(
+	content: impl Into<Element<'a, Message>>,
+) -> Scrollable<'a, Message> {
+	scrollable(content)
+		.direction(Direction::Vertical(
+			Scrollbar::new().scroller_width(SCROLLBAR_WIDTH),
+		))
+		.style(scrollable_style)
+}
