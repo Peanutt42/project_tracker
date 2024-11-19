@@ -335,7 +335,7 @@ Server: your own hosted ProjectTracker-server"
 
 				column![
 					shortcut("Open Settings:", "Ctrl + ,"),
-					shortcut("Open Stopwatch:", "Ctrl + H"),
+					shortcut("Open Overview:", "Ctrl + H"),
 					shortcut("New Project:", "Ctrl + Shift + N"),
 					shortcut("Search Tasks:", "Ctrl + F"),
 					shortcut("Delete Project:", "Ctrl + Del"),

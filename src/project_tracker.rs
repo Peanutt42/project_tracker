@@ -176,35 +176,61 @@ impl ProjectTrackerApp {
 	}
 
 	pub fn title(&self) -> String {
-		format!(
-			"Project Tracker{}",
-			if self.syncing_database || self.syncing_database_from_server {
-				" - Syncing..."
+		let progress_str = if self.syncing_database || self.syncing_database_from_server {
+			" - Syncing..."
+		}
+		else if self.exporting_database {
+			" - Exporting..."
+		}
+		else if self.importing_database {
+			" - Importing..."
+		}
+		else if let Some(last_sync_time) = &self.last_sync_time {
+			if Instant::now().duration_since(*last_sync_time) <= Duration::from_millis(500) {
+				" - Synced"
 			}
-			else if self.exporting_database {
-				" - Exporting..."
+			else {
+				""
 			}
-			else if self.importing_database {
-				" - Importing..."
-			}
-			else if let Some(last_sync_time) = &self.last_sync_time {
-				if Instant::now().duration_since(*last_sync_time) <= Duration::from_millis(500) {
-					" - Synced"
+		}
+		else if self.content_page.project_page.as_ref()
+			.map(|project_page| project_page.importing_source_code_todos)
+			.unwrap_or(false)
+		{
+			" - Importing Todos..."
+		}
+		else {
+			""
+		};
+
+		let synchronized_status = if !self.syncing_database && !self.syncing_database_from_server {
+			if let Some(last_sync_time) = self.last_sync_time {
+				if let Some(database) = &self.database {
+					if let Ok(last_database_save_duration) = database.last_saved_time.elapsed() {
+						if last_database_save_duration < last_sync_time.elapsed() {
+							" *"
+						}
+						else {
+							""
+						}
+					}
+					else {
+						""
+					}
 				}
 				else {
 					""
 				}
 			}
-			else if self.content_page.project_page.as_ref()
-				.map(|project_page| project_page.importing_source_code_todos)
-				.unwrap_or(false)
-			{
-				" - Importing Todos..."
-			}
 			else {
-				""
+				" *"
 			}
-		)
+		}
+		else {
+			""
+		};
+
+		format!("Project Tracker{progress_str}{synchronized_status}")
 	}
 
 	pub fn subscription(&self) -> Subscription<Message> {
@@ -214,7 +240,7 @@ impl ProjectTrackerApp {
 					Some(Message::ToggleSidebar)
 				}
 				keyboard::Key::Character("h") if modifiers.command() => {
-					Some(ContentPageMessage::OpenStopwatch.into())
+					Some(ContentPageMessage::OpenOverview.into())
 				}
 				keyboard::Key::Character("s") if modifiers.command() => {
 					Some(Message::SyncDatabase)
