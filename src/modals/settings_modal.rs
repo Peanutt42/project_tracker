@@ -81,6 +81,15 @@ impl SettingTab {
 		SettingTab::About,
 	];
 
+	pub fn icon(&self) -> Bootstrap {
+		match self {
+			Self::General => Bootstrap::GearFill,
+			Self::Database => Bootstrap::DatabaseFillGear,
+			Self::Shortcuts => Bootstrap::Command,
+			Self::About => Bootstrap::InfoSquare,
+		}
+	}
+
 	fn view<'a>(
 		&'a self,
 		app: &'a ProjectTrackerApp,
