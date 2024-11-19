@@ -124,6 +124,7 @@ pub enum StopwatchProgress {
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub enum SerializedContentPage {
 	#[default]
+	Overview,
 	Stopwatch,
 	Project(ProjectId),
 }

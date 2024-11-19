@@ -69,7 +69,8 @@ pub fn task_list<'a>(
 			dragging,
 			just_minimal_dragging,
 			highlight,
-			stopwatch_label
+			stopwatch_label,
+			true
 		)
 	};
 

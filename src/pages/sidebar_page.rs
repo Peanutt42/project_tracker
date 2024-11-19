@@ -1,5 +1,5 @@
 use crate::components::{
-	create_new_project_button, custom_project_preview, loading_screen, project_preview, settings_button, stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE
+	create_new_project_button, custom_project_preview, loading_screen, overview_button, project_preview, settings_button, stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE
 };
 use crate::core::{OrderedHashMap, Preferences, Project, ProjectId};
 use crate::pages::StopwatchPage;
@@ -598,25 +598,31 @@ impl SidebarPage {
 		column![
 			column![
 				row![
-					stopwatch_button(
-						&app.content_page.stopwatch_page,
-						app.content_page.is_stopwatch_page_opened(),
-						matches!(self.task_dropzone_hovered, Some(TaskDropzone::Stopwatch))
-					),
+					overview_button(app.content_page.is_overview_page_opened()),
 					toggle_sidebar_button(true),
 				]
 				.align_y(Alignment::Center)
 				.spacing(SMALL_SPACING_AMOUNT),
+
 				horizontal_seperator(),
 			]
 			.spacing(SPACING_AMOUNT)
-			.padding(Padding {
-				left: PADDING_AMOUNT,
-				right: PADDING_AMOUNT,
-				top: PADDING_AMOUNT,
-				bottom: 0.0, // project list already has a dropzone padding/spacing
-			}),
+			.padding(PADDING_AMOUNT),
+
+			column![
+				stopwatch_button(
+					&app.content_page.stopwatch_page,
+					app.content_page.is_stopwatch_page_opened(),
+					matches!(self.task_dropzone_hovered, Some(TaskDropzone::Stopwatch))
+				),
+
+				horizontal_seperator(),
+			]
+			.spacing(SPACING_AMOUNT)
+			.padding(Padding::default().left(PADDING_AMOUNT).right(PADDING_AMOUNT)),
+
 			list,
+
 			row![
 				settings_button(),
 				container(create_new_project_button(

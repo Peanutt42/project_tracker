@@ -4,21 +4,21 @@ use crate::{
 	}, core::{
 		import_source_code_todos, Database, DatabaseMessage, OptionalPreference, Preferences, Project, ProjectId, SortMode, Task, TaskId, TaskTagId
 	}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, project_tracker::{Message, ProjectTrackerApp}, styles::{
-		text_input_style_borderless, text_input_style_only_round_left, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE
+		text_input_style_borderless, text_input_style_only_round_left, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE
 	},
 	pages::{ContentPageMessage, ContentPageAction},
 };
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use iced::{
 	alignment::{Alignment, Horizontal},
-	keyboard, mouse,
+	keyboard,
 	widget::{
 		column, container, row,
 		text, text_input, Row, Space,
 	},
-	Color, Element, Event,
+	Color, Element,
 	Length::Fill,
-	Padding, Point, Subscription,
+	Padding, Subscription,
 };
 use iced_aw::{drop_down, DropDown};
 use once_cell::sync::Lazy;
@@ -62,12 +62,6 @@ pub enum ProjectPageMessage {
 	ChangeProjectColor(Color),
 
 	ConfirmDeleteProject,
-
-	DragTask { task_id: TaskId, point: Point },
-	CancelDragTask,
-	PressTask(TaskId),
-	LeftClickReleased,
-	OpenTask(TaskId),
 
 	AnimateProgressbar,
 }
@@ -152,10 +146,6 @@ pub struct ProjectPage {
 	show_color_picker: bool,
 	pub filter_task_tags: HashSet<TaskTagId>,
 	search_tasks_filter: Option<String>,
-	pressed_task: Option<TaskId>,
-	dragged_task: Option<TaskId>,
-	start_dragging_point: Option<Point>,
-	just_minimal_dragging: bool,
 	progressbar_animation: ScalarAnimation,
 	previous_project_progress: f32,
 	show_context_menu: bool,
@@ -175,10 +165,6 @@ impl ProjectPage {
 			show_color_picker: false,
 			filter_task_tags: HashSet::new(),
 			search_tasks_filter: None,
-			pressed_task: None,
-			dragged_task: None,
-			start_dragging_point: None,
-			just_minimal_dragging: true,
 			progressbar_animation: ScalarAnimation::Idle,
 			previous_project_progress: project.get_completion_percentage(),
 			show_context_menu: false,
@@ -331,50 +317,6 @@ impl ProjectPage {
 				}
 			},
 
-			ProjectPageMessage::DragTask { task_id, point } => {
-				self.dragged_task = Some(task_id);
-				if let Some(start_dragging_point) = self.start_dragging_point {
-					if self.just_minimal_dragging {
-						self.just_minimal_dragging =
-							start_dragging_point.distance(point) < MINIMAL_DRAG_DISTANCE;
-					}
-				} else {
-					self.start_dragging_point = Some(point);
-					self.just_minimal_dragging = true;
-				}
-				ContentPageAction::None
-			}
-			ProjectPageMessage::CancelDragTask => {
-				self.dragged_task = None;
-				self.start_dragging_point = None;
-				self.just_minimal_dragging = true;
-				ContentPageAction::None
-			}
-			ProjectPageMessage::PressTask(task_id) => {
-				self.pressed_task = Some(task_id);
-				ContentPageAction::None
-			},
-			ProjectPageMessage::OpenTask(task_id) => ContentPageAction::OpenTaskModal { project_id: self.project_id, task_id },
-			ProjectPageMessage::LeftClickReleased => {
-				let action = if self.just_minimal_dragging {
-					if let Some(pressed_task) = &self.pressed_task {
-						ContentPageAction::OpenTaskModal {
-							project_id: self.project_id,
-							task_id: *pressed_task
-						}
-					} else {
-						ContentPageAction::None
-					}
-				} else {
-					ContentPageAction::None
-				};
-				self.pressed_task = None;
-				self.dragged_task = None;
-				self.start_dragging_point = None;
-				self.just_minimal_dragging = true;
-				action
-			}
-
 			ProjectPageMessage::AnimateProgressbar => {
 				self.progressbar_animation.update();
 				ContentPageAction::None
@@ -406,12 +348,6 @@ impl ProjectPage {
 			self.progressbar_animation
 				.subscription()
 				.map(|_| ProjectPageMessage::AnimateProgressbar),
-			iced::event::listen_with(move |event, _status, _id| match event {
-				Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
-					Some(ProjectPageMessage::LeftClickReleased)
-				},
-				_ => None,
-			}),
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
 				keyboard::Key::Character("f") if modifiers.command() => {
 					Some(ProjectPageMessage::OpenSearchTasks)
@@ -430,8 +366,8 @@ impl ProjectPage {
 						self.project_id,
 						project,
 						&self.cached_task_list,
-						self.dragged_task,
-						self.just_minimal_dragging,
+						app.dragged_task,
+						app.just_minimal_dragging,
 						app.sidebar_page.task_dropzone_hovered,
 						self.show_done_tasks,
 						self.show_source_code_todos,

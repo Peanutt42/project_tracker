@@ -13,9 +13,12 @@ pub use project_page::{CachedTaskList, ProjectPage, ProjectPageMessage};
 mod stopwatch_page;
 pub use stopwatch_page::{format_stopwatch_duration, StopwatchPage, StopwatchPageMessage};
 
+mod overview_page;
+pub use overview_page::{OverviewPage, OverviewPageMessage};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ContentPage {
+	pub overview_page: Option<OverviewPage>,
 	pub stopwatch_page: StopwatchPage,
 	pub project_page: Option<ProjectPage>,
 }
@@ -24,6 +27,8 @@ pub struct ContentPage {
 pub enum ContentPageMessage {
 	StopwatchPageMessage(StopwatchPageMessage),
 	ProjectPageMessage(ProjectPageMessage),
+	OverviewPageMessage(OverviewPageMessage),
+	OpenOverview,
 	OpenProjectPage(ProjectId),
 	OpenStopwatch,
 }
@@ -60,6 +65,14 @@ impl From<iced::Task<Message>> for ContentPageAction {
 }
 
 impl ContentPage {
+	pub fn new(database: &Option<Database>, preferences: &Option<Preferences>) -> Self {
+		Self {
+			overview_page: Some(OverviewPage::new(database, preferences)),
+			stopwatch_page: StopwatchPage::default(),
+			project_page: None,
+		}
+	}
+
 	pub fn restore_from_serialized(&mut self, database: &Option<Database>, preferences: &mut Option<Preferences>) {
 		if let Some(ref_preferences) = preferences {
 			if let Some(stopwatch_progress) = ref_preferences.stopwatch_progress() {
@@ -67,9 +80,8 @@ impl ContentPage {
 			}
 
 			match ref_preferences.selected_content_page() {
-				SerializedContentPage::Stopwatch => {
-					self.open_stopwatch(preferences);
-				}
+				SerializedContentPage::Overview => self.open_overview(database, preferences),
+				SerializedContentPage::Stopwatch => self.open_stopwatch(preferences),
 				SerializedContentPage::Project(project_id) => {
 					let project_id_to_open = match &self.project_page {
 						Some(project_page) => project_page.project_id,
@@ -81,12 +93,16 @@ impl ContentPage {
 		}
 	}
 
+	pub fn is_overview_page_opened(&self) -> bool {
+		self.overview_page.is_some()
+	}
+
 	pub fn is_project_page_opened(&self) -> bool {
 		self.project_page.is_some()
 	}
 
 	pub fn is_stopwatch_page_opened(&self) -> bool {
-		self.project_page.is_none()
+		self.overview_page.is_none() && self.project_page.is_none()
 	}
 
 	pub fn subscription(&self) -> Subscription<ContentPageMessage> {
@@ -121,6 +137,16 @@ impl ContentPage {
 				actions.push(self.stopwatch_page.update(message, database, preferences, self.is_stopwatch_page_opened()));
 				ContentPageAction::Actions(actions)
 			},
+			ContentPageMessage::OverviewPageMessage(message) => {
+				if let Some(overview_page) = &mut self.overview_page {
+					overview_page.update(message, database, preferences);
+				}
+				ContentPageAction::None
+			}
+			ContentPageMessage::OpenOverview => {
+				self.open_overview(database, preferences);
+				ContentPageAction::None
+			},
 			ContentPageMessage::OpenProjectPage(project_id) => {
 				self.open_project_page(project_id, database, preferences);
 				ContentPageAction::None
@@ -132,7 +158,16 @@ impl ContentPage {
 		}
 	}
 
+	fn open_overview(&mut self, database: &Option<Database>, preferences: &mut Option<Preferences>) {
+		self.project_page = None;
+		self.overview_page = Some(OverviewPage::new(database, preferences));
+		if let Some(preferences) = preferences {
+			preferences.set_selected_content_page(SerializedContentPage::Overview);
+		}
+	}
+
 	fn open_project_page(&mut self, project_id: ProjectId, database: &Option<Database>, preferences: &mut Option<Preferences>) {
+		self.overview_page = None;
 		let open_project_info = database.as_ref().and_then(|database|
 			database
 				.get_project(&project_id)
@@ -149,6 +184,7 @@ impl ContentPage {
 	}
 
 	fn open_stopwatch(&mut self, preferences: &mut Option<Preferences>) {
+		self.overview_page = None;
 		self.project_page = None;
 		if let Some(preferences) = preferences {
 			preferences.set_selected_content_page(SerializedContentPage::Stopwatch);
@@ -158,6 +194,9 @@ impl ContentPage {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
 		if let Some(project_page) = &self.project_page {
 			project_page.view(app)
+		}
+		else if let Some(overview_page) = &self.overview_page {
+			overview_page.view(app)
 		}
 		else {
 			self.stopwatch_page.view(app)

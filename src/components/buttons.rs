@@ -6,11 +6,11 @@ use crate::{
 	}, pages::{
 		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID
 	}, project_tracker::Message, styles::{
-		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT
+		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
-	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, row, text, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
+	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, rich_text, row, text, text::Span, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
 use iced_aw::{drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
 use std::{borrow::Cow, path::PathBuf, time::Duration};
 
@@ -221,6 +221,21 @@ pub fn theme_mode_button(
 		.on_press(PreferenceMessage::SetThemeMode(theme_mode).into())
 }
 
+pub fn overview_button(selected: bool) -> Button<'static, Message> {
+	button(
+		row![
+			icon_to_text(Bootstrap::List).size(LARGE_TEXT_SIZE),
+			text("Overview").size(LARGE_TEXT_SIZE),
+		]
+		.width(Fill)
+		.spacing(SPACING_AMOUNT)
+		.align_y(Alignment::Center)
+	)
+	.width(Fill)
+	.on_press(ContentPageMessage::OpenOverview.into())
+	.style(move |t, s| overview_button_style(t, s, selected))
+}
+
 pub fn stopwatch_button(
 	stopwatch_page: &StopwatchPage,
 	selected: bool,
@@ -258,8 +273,7 @@ pub fn stopwatch_button(
 			}))
 			.width(Fill)
 			.spacing(SPACING_AMOUNT)
-			.align_y(Alignment::Center)
-			.padding(SMALL_HORIZONTAL_PADDING),
+			.align_y(Alignment::Center),
 		)
 		.width(Fill)
 		.on_press(ContentPageMessage::OpenStopwatch.into())
@@ -948,4 +962,16 @@ pub fn force_close_anyways_button() -> Button<'static, WaitClosingModalMessage> 
 	)
 	.on_press(WaitClosingModalMessage::ForceCloseAnyways)
 	.style(dangerous_button_style)
+}
+
+pub fn open_project_button(project_id: ProjectId, project_name: &str, project_color: Color) -> Button<Message> {
+	button(
+		rich_text![
+			Span::new(format!("{project_name}:"))
+				.underline(true)
+				.color(project_color)
+		]
+	)
+	.style(hidden_secondary_button_style)
+	.on_press(ContentPageMessage::OpenProjectPage(project_id).into())
 }

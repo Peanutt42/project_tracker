@@ -1,11 +1,7 @@
 use crate::{
-	components::{days_left_widget, duration_widget, in_between_dropzone},
-	styles::grey_text_style,
-	core::{
+	components::{days_left_widget, duration_widget, in_between_dropzone}, core::{
 		DatabaseMessage, Project, ProjectId, SortMode, Task, TaskId, TaskType, TASK_TAG_QUAD_HEIGHT
-	}, icons::{icon_to_text, Bootstrap}, pages::{ProjectPageMessage, SidebarPageMessage}, project_tracker::Message, styles::{
-		checkbox_style, default_text_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT
-	}
+	}, icons::{icon_to_text, Bootstrap}, modals::TaskModalMessage, pages::SidebarPageMessage, project_tracker::Message, styles::{checkbox_style, default_text_style, grey_text_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT}
 };
 use iced::widget::{hover, Space};
 use iced::{
@@ -33,7 +29,8 @@ pub fn task_widget<'a>(
 	dragging: bool,
 	just_minimal_dragging: bool,
 	highlight_dropzone: bool,
-	stopwatch_label: Option<&'a String>
+	stopwatch_label: Option<&'a String>,
+	show_due_date: bool
 ) -> Element<'a, Message> {
 	let text_style = if matches!(task_type, TaskType::Done) {
 		grey_text_style
@@ -155,9 +152,13 @@ pub fn task_widget<'a>(
 										)))
 									}))
 									.push_maybe(
-										task.due_date
-											.as_ref()
-											.map(|due_date| days_left_widget(*due_date, task_type.is_done())),
+										if show_due_date {
+											task.due_date
+												.as_ref()
+												.map(|due_date| days_left_widget(*due_date, task_type.is_done()))
+										} else {
+											None
+										}
 									)
 									.push_maybe(stopwatch_label.map(task_open_stopwatch_timer))
 									.spacing(TINY_SPACING_AMOUNT)
@@ -204,7 +205,7 @@ pub fn task_widget<'a>(
 					rect
 				}
 				.into())
-				.on_click(ProjectPageMessage::PressTask(task_id).into())
+				.on_click(Message::PressTask{ project_id, task_id })
 				.on_drag(move |point, rect| Message::DragTask {
 					project_id,
 					task_id,
@@ -222,7 +223,7 @@ pub fn task_widget<'a>(
 			_ => button(
 				inner(false)
 			)
-			.on_press(ProjectPageMessage::OpenTask(task_id).into())
+			.on_press(TaskModalMessage::Open{ project_id, task_id }.into())
 			.style(|t, s| task_button_style(t, s, false))
 			.padding(Padding::ZERO)
 			.into(),

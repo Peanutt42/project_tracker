@@ -39,6 +39,21 @@ impl From<TaskModalMessage> for Message {
 	}
 }
 
+pub enum TaskModalAction {
+	None,
+	Task(iced::Task<TaskModalMessage>),
+	DeleteTask {
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
+}
+
+impl From<iced::Task<TaskModalMessage>> for TaskModalAction {
+	fn from(value: iced::Task<TaskModalMessage>) -> Self {
+		TaskModalAction::Task(value)
+	}
+}
+
 pub enum TaskModal {
 	Opened {
 		project_id: ProjectId,
@@ -51,7 +66,7 @@ pub enum TaskModal {
 }
 
 impl TaskModal {
-	pub fn update<'a>(&'a mut self, message: TaskModalMessage, database: &'a mut Option<Database>) -> iced::Task<TaskModalMessage> {
+	pub fn update<'a>(&'a mut self, message: TaskModalMessage, database: &'a mut Option<Database>) -> TaskModalAction {
 		match message {
 			TaskModalMessage::Open { project_id, task_id } => {
 				*self = TaskModal::Opened {
@@ -61,11 +76,11 @@ impl TaskModal {
 					edit_due_date: false,
 					new_needed_time_minutes: None
 				};
-				text_input::focus(TASK_NAME_INPUT_ID.clone())
+				text_input::focus(TASK_NAME_INPUT_ID.clone()).into()
 			},
 			TaskModalMessage::Close => {
 				*self = TaskModal::Closed;
-				iced::Task::none()
+				TaskModalAction::None
 			},
 
 			TaskModalMessage::EditDescription => {
@@ -75,13 +90,13 @@ impl TaskModal {
 							.map(|task| text_editor::Content::with_text(task.description()))
 					);
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			},
 			TaskModalMessage::ViewDescription => {
 				if let TaskModal::Opened { new_description, .. } = self {
 					*new_description = None;
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			},
 			TaskModalMessage::EditDescriptionAction(action) => {
 				if let TaskModal::Opened { project_id, task_id, new_description: Some(new_description),.. } = self {
@@ -94,7 +109,7 @@ impl TaskModal {
 						});
 					}
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			},
 			TaskModalMessage::UnindentDescription => {
 				if let TaskModal::Opened { new_description: Some(new_description), project_id, task_id, .. } = self {
@@ -107,20 +122,20 @@ impl TaskModal {
 						});
 					}
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			}
 
 			TaskModalMessage::EditDueDate => {
 				if let TaskModal::Opened { edit_due_date, .. } = self {
 					*edit_due_date = true;
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			},
 			TaskModalMessage::StopEditingDueDate => {
 				if let TaskModal::Opened { edit_due_date, .. } = self {
 					*edit_due_date = false;
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			},
 			TaskModalMessage::ChangeDueDate(new_due_date) => {
 				if let TaskModal::Opened { project_id, task_id, edit_due_date, .. } = self {
@@ -134,8 +149,7 @@ impl TaskModal {
 						});
 					}
 				}
-
-				iced::Task::none()
+				TaskModalAction::None
 			},
 
 			TaskModalMessage::EditNeededTime => {
@@ -146,19 +160,19 @@ impl TaskModal {
 					});
 					*new_needed_time_minutes = Some(previous_task_needed_minutes);
 				}
-				text_input::focus(EDIT_NEEDED_TIME_INPUT_ID.clone())
+				text_input::focus(EDIT_NEEDED_TIME_INPUT_ID.clone()).into()
 			},
 			TaskModalMessage::StopEditingNeededTime => {
 				if let TaskModal::Opened { new_needed_time_minutes, .. } = self {
 					*new_needed_time_minutes = None;
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			},
 			TaskModalMessage::ChangeNeededTimeInput(new_edited_needed_time_minutes) => {
 				if let TaskModal::Opened { new_needed_time_minutes, .. } = self {
 					*new_needed_time_minutes = Some(new_edited_needed_time_minutes);
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			},
 			TaskModalMessage::ChangeNeededTime => {
 				if let TaskModal::Opened { project_id, task_id, new_needed_time_minutes, .. } = self {
@@ -173,7 +187,7 @@ impl TaskModal {
 					}
 					*new_needed_time_minutes = None;
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			},
 			TaskModalMessage::ClearTaskNeededTime => {
 				if let TaskModal::Opened { project_id, task_id, new_needed_time_minutes, .. } = self {
@@ -186,20 +200,21 @@ impl TaskModal {
 						});
 					}
 				}
-				iced::Task::none()
+				TaskModalAction::None
 			},
-			TaskModalMessage::InvalidNeededTimeInput => iced::Task::none(),
+			TaskModalMessage::InvalidNeededTimeInput => TaskModalAction::None,
 			TaskModalMessage::DeleteTask => {
-				if let TaskModal::Opened { project_id, task_id, .. } = self {
-					if let Some(database) = database {
-						database.update(DatabaseMessage::DeleteTask {
-							project_id: *project_id,
-							task_id: *task_id,
-						});
+				let action = if let TaskModal::Opened { project_id, task_id, .. } = self {
+					TaskModalAction::DeleteTask {
+						project_id: *project_id,
+						task_id: *task_id,
 					}
 				}
+				else {
+					TaskModalAction::None
+				};
 				*self = TaskModal::Closed;
-				iced::Task::none()
+				action
 			},
 		}
 	}
