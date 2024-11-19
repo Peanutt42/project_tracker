@@ -964,15 +964,20 @@ pub fn force_close_anyways_button() -> Button<'static, WaitClosingModalMessage> 
 	.style(dangerous_button_style)
 }
 
-pub fn open_project_button(project_id: ProjectId, project_name: &str, project_color: Color) -> Button<Message> {
-	button(
-		rich_text![
-			Span::new(format!("{project_name}:"))
-				.link(Message::ContentPageMessage(ContentPageMessage::OpenProjectPage(project_id)))
-				.underline(true)
-				.color(project_color)
-		]
+pub fn open_project_button(project_id: ProjectId, project_name: &str, project_color: Color) -> Element<Message> {
+	tooltip(
+		button(
+			rich_text![
+				Span::new(format!("{project_name}:"))
+					.link(Message::ContentPageMessage(ContentPageMessage::OpenProjectPage(project_id)))
+					.underline(true)
+					.color(project_color)
+			]
+		)
+		.style(hidden_secondary_button_style)
+		.on_press(ContentPageMessage::OpenProjectPage(project_id).into()),
+		icon_to_text(Bootstrap::ArrowRight).size(ICON_FONT_SIZE),
+		tooltip::Position::Right
 	)
-	.style(hidden_secondary_button_style)
-	.on_press(ContentPageMessage::OpenProjectPage(project_id).into())
+	.into()
 }
