@@ -5,7 +5,7 @@ use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
 use crate::project_tracker::{ProjectTrackerApp, Message};
 use crate::styles::{
-	grey_text_style, rounded_container_style, text_input_style_default, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+	grey_text_style, link_color, rounded_container_style, text_input_style_default, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 };
 use crate::{
 	components::{
@@ -20,7 +20,8 @@ use crate::{
 	styles::{card_style, PADDING_AMOUNT},
 };
 use iced::alignment::Vertical;
-use iced::widget::{text_input, toggler, tooltip};
+use iced::widget::text::Span;
+use iced::widget::{rich_text, text_input, toggler, tooltip};
 use iced::{
 	alignment::Horizontal,
 	keyboard,
@@ -310,8 +311,14 @@ Server: your own hosted ProjectTracker-server"
 						.align_y(Alignment::Center),
 
 						container(
-							text("Go to https://myaccount.google.com/dashboard and download the Tasks data.\nThen extract the Takeout.zip and import the \"Tasks.json\" file inside under the \"Tasks\" folder.")
-								.style(grey_text_style)
+							rich_text![
+								Span::new("Go to "),
+								Span::new("https://myaccount.google.com/dashboard")
+									.color(link_color(app.is_theme_dark()))
+									.link(Message::OpenUrl("https://myaccount.google.com/dashboard".to_string())),
+								Span::new(" and download the Tasks data.\nThen extract the Takeout.zip and import the \"Tasks.json\" file inside under the \"Tasks\" folder.")
+							]
+							.style(grey_text_style)
 						)
 						.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
 					]
