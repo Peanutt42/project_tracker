@@ -1,17 +1,12 @@
 use crate::{
 	components::{
 		complete_task_timer_button, days_left_widget, horizontal_scrollable, pause_timer_button, resume_timer_button, stop_timer_button, take_break_button, task_description, track_time_button, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING
-	},
-	core::{Database, DatabaseMessage, OptionalPreference, Preferences, Project, ProjectId, StopwatchProgress, Task, TaskId, TaskType},
-	project_tracker::Message,
-	styles::{
-		task_tag_container_style, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT
-	},
-	pages::{ContentPageMessage, ContentPageAction},
-	ProjectTrackerApp,
+	}, core::{Database, DatabaseMessage, OptionalPreference, Preferences, Project, ProjectId, StopwatchProgress, Task, TaskId, TaskType}, pages::{ContentPageAction, ContentPageMessage}, project_tracker::Message, styles::{
+		task_tag_container_style, BOLD_FONT, FIRA_SANS_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT
+	}, ProjectTrackerApp
 };
 use iced::{
-	alignment::{Horizontal, Vertical}, keyboard, time, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Font, Length::{self, Fill}, Padding, Subscription
+	alignment::{Horizontal, Vertical}, keyboard, time, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Length::{self, Fill}, Padding, Subscription
 };
 use notify_rust::Notification;
 use std::{io::Cursor, thread, time::{Duration, Instant}};
@@ -406,7 +401,7 @@ impl StopwatchPage {
 					text(format_stopwatch_duration(
 						elapsed_time.as_secs_f64().round_ties_even() as i64,
 					))
-					.font(Font::DEFAULT)
+					.font(FIRA_SANS_FONT)
 					.size(90)
 					.width(Fill)
 					.align_x(Horizontal::Center),
