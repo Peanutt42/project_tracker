@@ -68,6 +68,7 @@ pub fn task_list<'a>(
 			project,
 			dragging,
 			just_minimal_dragging,
+			true,
 			highlight,
 			stopwatch_label,
 			true

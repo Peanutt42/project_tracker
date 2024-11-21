@@ -28,6 +28,7 @@ pub fn task_widget<'a>(
 	project: &'a Project,
 	dragging: bool,
 	just_minimal_dragging: bool,
+	draggable: bool,
 	highlight_dropzone: bool,
 	stopwatch_label: Option<&'a String>,
 	show_due_date: bool
@@ -39,7 +40,7 @@ pub fn task_widget<'a>(
 		default_text_style
 	};
 
-	let show_drag_grip = !dragging && matches!(project.sort_mode, SortMode::Manual);
+	let show_drag_grip = draggable && !dragging && matches!(project.sort_mode, SortMode::Manual);
 
 	let on_hover_view: Element<'a, Message> = if show_drag_grip {
 		container(icon_to_text(Bootstrap::GripVertical))
@@ -73,7 +74,7 @@ pub fn task_widget<'a>(
 		)
 		.spacing(TINY_SPACING_AMOUNT);
 
-		let grip_icon_dummy: Element<Message> = if dragging && matches!(project.sort_mode, SortMode::Manual) {
+		let grip_icon_dummy: Element<Message> = if draggable && dragging && matches!(project.sort_mode, SortMode::Manual) {
 			container(
 				icon_to_text(Bootstrap::GripVertical)
 			)
@@ -178,7 +179,7 @@ pub fn task_widget<'a>(
 		.padding(Padding::new(SMALL_PADDING_AMOUNT))
 		.style(move |t| task_background_container_style(
 			t,
-			dragging && !just_minimal_dragging,
+			draggable && dragging && !just_minimal_dragging,
 			drag_overlay
 		))
 		.into()
@@ -194,7 +195,7 @@ pub fn task_widget<'a>(
 			highlight_dropzone
 		),
 		match &project.sort_mode {
-			SortMode::Manual => hover(
+			SortMode::Manual if draggable => hover(
 				droppable(
 					inner(false)
 				)

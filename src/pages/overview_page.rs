@@ -127,7 +127,7 @@ impl OverviewPage {
 			.map(|tasks| tasks.len())
 			.sum();
 
-		let tomorrow_tasks_len: usize = self.today_tasks.values()
+		let tomorrow_tasks_len: usize = self.tomorrow_tasks.values()
 					.map(|tasks| tasks.len())
 					.sum();
 
@@ -226,6 +226,7 @@ impl OverviewPage {
 											project,
 											false,
 											true,
+											false,
 											false,
 											stopwatch_label,
 											false
