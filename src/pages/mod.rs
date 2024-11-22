@@ -1,5 +1,5 @@
 use iced::{Element, Subscription};
-use crate::{core::{Database, SerializedContentPage, Preferences, ProjectId, TaskId}, project_tracker::Message, ProjectTrackerApp};
+use crate::{core::{Database, DatabaseMessage, Preferences, ProjectId, SerializedContentPage, TaskId}, project_tracker::Message, ProjectTrackerApp};
 
 mod sidebar_page;
 pub use sidebar_page::{
@@ -45,6 +45,7 @@ pub enum ContentPageAction {
 	None,
 	Actions(Vec<ContentPageAction>),
 	Task(iced::Task<Message>),
+	DatabaseMessage(DatabaseMessage),
 	OpenManageTaskTagsModal(ProjectId),
 	ConfirmDeleteProject{
 		project_id: ProjectId,
@@ -61,6 +62,12 @@ pub enum ContentPageAction {
 impl From<iced::Task<Message>> for ContentPageAction {
 	fn from(value: iced::Task<Message>) -> Self {
 		ContentPageAction::Task(value)
+	}
+}
+
+impl From<DatabaseMessage> for ContentPageAction {
+	fn from(value: DatabaseMessage) -> Self {
+		ContentPageAction::DatabaseMessage(value)
 	}
 }
 
@@ -121,7 +128,7 @@ impl ContentPage {
 		])
 	}
 
-	pub fn update(&mut self, message: ContentPageMessage, database: &mut Option<Database>, preferences: &mut Option<Preferences>) -> ContentPageAction {
+	pub fn update(&mut self, message: ContentPageMessage, database: &Option<Database>, preferences: &mut Option<Preferences>) -> ContentPageAction {
 		match message {
 			ContentPageMessage::ProjectPageMessage(message) => if let Some(project_page) = &mut self.project_page {
 				project_page.update(message, database, preferences)

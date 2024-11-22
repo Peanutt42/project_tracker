@@ -42,15 +42,17 @@ impl From<TaskModalMessage> for Message {
 pub enum TaskModalAction {
 	None,
 	Task(iced::Task<TaskModalMessage>),
-	DeleteTask {
-		project_id: ProjectId,
-		task_id: TaskId,
-	},
+	DatabaseMessage(DatabaseMessage),
 }
 
 impl From<iced::Task<TaskModalMessage>> for TaskModalAction {
 	fn from(value: iced::Task<TaskModalMessage>) -> Self {
 		TaskModalAction::Task(value)
+	}
+}
+impl From<DatabaseMessage> for TaskModalAction {
+	fn from(value: DatabaseMessage) -> Self {
+		TaskModalAction::DatabaseMessage(value)
 	}
 }
 
@@ -66,7 +68,7 @@ pub enum TaskModal {
 }
 
 impl TaskModal {
-	pub fn update<'a>(&'a mut self, message: TaskModalMessage, database: &'a mut Option<Database>) -> TaskModalAction {
+	pub fn update<'a>(&'a mut self, message: TaskModalMessage, database: &'a Option<Database>) -> TaskModalAction {
 		match message {
 			TaskModalMessage::Open { project_id, task_id } => {
 				*self = TaskModal::Opened {
@@ -101,28 +103,30 @@ impl TaskModal {
 			TaskModalMessage::EditDescriptionAction(action) => {
 				if let TaskModal::Opened { project_id, task_id, new_description: Some(new_description),.. } = self {
 					new_description.perform(action);
-					if let Some(database) = database {
-						database.update(DatabaseMessage::ChangeTaskDescription {
-							project_id: *project_id,
-							task_id: *task_id,
-							new_task_description: new_description.text(),
-						});
+					DatabaseMessage::ChangeTaskDescription {
+						project_id: *project_id,
+						task_id: *task_id,
+						new_task_description: new_description.text(),
 					}
+					.into()
 				}
-				TaskModalAction::None
+				else {
+					TaskModalAction::None
+				}
 			},
 			TaskModalMessage::UnindentDescription => {
 				if let TaskModal::Opened { new_description: Some(new_description), project_id, task_id, .. } = self {
 					unindent_text(new_description);
-					if let Some(database) = database {
-						database.update(DatabaseMessage::ChangeTaskDescription {
-							project_id: *project_id,
-							task_id: *task_id,
-							new_task_description: new_description.text(),
-						});
+					DatabaseMessage::ChangeTaskDescription {
+						project_id: *project_id,
+						task_id: *task_id,
+						new_task_description: new_description.text(),
 					}
+					.into()
 				}
-				TaskModalAction::None
+				else {
+					TaskModalAction::None
+				}
 			}
 
 			TaskModalMessage::EditDueDate => {
@@ -140,16 +144,16 @@ impl TaskModal {
 			TaskModalMessage::ChangeDueDate(new_due_date) => {
 				if let TaskModal::Opened { project_id, task_id, edit_due_date, .. } = self {
 					*edit_due_date = false;
-
-					if let Some(database) = database {
-						database.update(DatabaseMessage::ChangeTaskDueDate {
-							project_id: *project_id,
-							task_id: *task_id,
-							new_due_date: Some(new_due_date)
-						});
+					DatabaseMessage::ChangeTaskDueDate {
+						project_id: *project_id,
+						task_id: *task_id,
+						new_due_date: Some(new_due_date)
 					}
+					.into()
 				}
-				TaskModalAction::None
+				else {
+					TaskModalAction::None
+				}
 			},
 
 			TaskModalMessage::EditNeededTime => {
@@ -176,39 +180,40 @@ impl TaskModal {
 			},
 			TaskModalMessage::ChangeNeededTime => {
 				if let TaskModal::Opened { project_id, task_id, new_needed_time_minutes, .. } = self {
-					if let Some(new_needed_time_minutes) = new_needed_time_minutes {
-						if let Some(database) = database {
-							database.update(DatabaseMessage::ChangeTaskNeededTime {
-								project_id: *project_id,
-								task_id: *task_id,
-								new_needed_time_minutes: *new_needed_time_minutes
-							});
+					if let Some(new_needed_time_minutes_clone) = *new_needed_time_minutes {
+						*new_needed_time_minutes = None;
+						return DatabaseMessage::ChangeTaskNeededTime {
+							project_id: *project_id,
+							task_id: *task_id,
+							new_needed_time_minutes: new_needed_time_minutes_clone
 						}
+						.into();
 					}
-					*new_needed_time_minutes = None;
 				}
 				TaskModalAction::None
 			},
 			TaskModalMessage::ClearTaskNeededTime => {
 				if let TaskModal::Opened { project_id, task_id, new_needed_time_minutes, .. } = self {
 					*new_needed_time_minutes = None;
-					if let Some(database) = database {
-						database.update(DatabaseMessage::ChangeTaskNeededTime {
-							project_id: *project_id,
-							task_id: *task_id,
-							new_needed_time_minutes: None
-						});
+					DatabaseMessage::ChangeTaskNeededTime {
+						project_id: *project_id,
+						task_id: *task_id,
+						new_needed_time_minutes: None
 					}
+					.into()
 				}
-				TaskModalAction::None
+				else {
+					TaskModalAction::None
+				}
 			},
 			TaskModalMessage::InvalidNeededTimeInput => TaskModalAction::None,
 			TaskModalMessage::DeleteTask => {
 				let action = if let TaskModal::Opened { project_id, task_id, .. } = self {
-					TaskModalAction::DeleteTask {
+					DatabaseMessage::DeleteTask {
 						project_id: *project_id,
 						task_id: *task_id,
 					}
+					.into()
 				}
 				else {
 					TaskModalAction::None

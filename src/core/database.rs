@@ -26,6 +26,11 @@ pub enum DatabaseMessage {
 
 	ImportProjects(Vec<Project>),
 
+	ImportSourceCodeTodos{
+		project_id: ProjectId,
+		source_code_todo_tasks: Vec<Task>,
+	},
+
 	CreateProject {
 		project_id: ProjectId,
 		name: String,
@@ -38,6 +43,10 @@ pub enum DatabaseMessage {
 	ChangeProjectColor {
 		project_id: ProjectId,
 		new_color: SerializableColor,
+	},
+	ChangeProjectSortMode {
+		project_id: ProjectId,
+		new_sort_mode: SortMode,
 	},
 	MoveProjectUp(ProjectId),
 	MoveProjectDown(ProjectId),
@@ -53,6 +62,10 @@ pub enum DatabaseMessage {
 		task_id: TaskId,
 		src_project_id: ProjectId,
 		dst_project_id: ProjectId,
+	},
+	MoveTodoTaskToEnd {
+		project_id: ProjectId,
+		task_id: TaskId,
 	},
 
 	CreateTask {
@@ -238,6 +251,15 @@ impl Database {
 				}
 			}),
 
+			DatabaseMessage::ImportSourceCodeTodos{ project_id, source_code_todo_tasks } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.source_code_todos.clear();
+					for task in source_code_todo_tasks {
+						project.source_code_todos.insert(TaskId::generate(), task);
+					}
+				}
+			}),
+
 			DatabaseMessage::CreateProject {
 				project_id,
 				name,
@@ -259,6 +281,11 @@ impl Database {
 			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.color = new_color;
+				}
+			}),
+			DatabaseMessage::ChangeProjectSortMode { project_id, new_sort_mode } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.sort_mode = new_sort_mode;
 				}
 			}),
 			DatabaseMessage::MoveProjectUp(project_id) => {
@@ -337,6 +364,12 @@ impl Database {
 							}
 						}
 					}
+				}
+			}),
+
+			DatabaseMessage::MoveTodoTaskToEnd{ project_id, task_id } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.todo_tasks.move_to_end(&task_id);
 				}
 			}),
 

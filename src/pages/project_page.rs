@@ -175,7 +175,7 @@ impl ProjectPage {
 	pub fn update(
 		&mut self,
 		message: ProjectPageMessage,
-		database: &mut Option<Database>,
+		database: &Option<Database>,
 		preferences: &Option<Preferences>
 	) -> ContentPageAction {
 		let command = match message {
@@ -184,16 +184,12 @@ impl ProjectPage {
 			ProjectPageMessage::OpenSortModeDropdown => { self.show_sort_mode_dropdown = true; ContentPageAction::None },
 			ProjectPageMessage::CloseSortModeDropdown => { self.show_sort_mode_dropdown = false; ContentPageAction::None },
 			ProjectPageMessage::SetSortMode(new_sort_mode) => {
-				if let Some(database) = database {
-					database.modify(|projects| {
-						if let Some(project) = projects.get_mut(&self.project_id) {
-							project.sort_mode = new_sort_mode;
-						}
-					});
-					self.generate_cached_task_list(database, preferences);
-					self.show_sort_mode_dropdown = false;
+				self.show_sort_mode_dropdown = false;
+				DatabaseMessage::ChangeProjectSortMode {
+					project_id: self.project_id,
+					new_sort_mode
 				}
-				ContentPageAction::None
+				.into()
 			}
 
 			ProjectPageMessage::ShowContextMenu => { self.show_context_menu = true; ContentPageAction::None },
@@ -240,17 +236,11 @@ impl ProjectPage {
 			},
 			ProjectPageMessage::ImportSourceCodeTodos(todos) => {
 				self.importing_source_code_todos = false;
-				if let Some(database) = database {
-					database.modify(|projects| {
-						if let Some(project) = projects.get_mut(&self.project_id) {
-							project.source_code_todos.clear();
-							for task in todos {
-								project.source_code_todos.insert(TaskId::generate(), task);
-							}
-						}
-					})
+				DatabaseMessage::ImportSourceCodeTodos{
+					project_id: self.project_id,
+					source_code_todo_tasks: todos
 				}
-				ContentPageAction::None
+				.into()
 			}
 
 			ProjectPageMessage::ShowSourceCodeTodos(show) => {
@@ -292,14 +282,11 @@ impl ProjectPage {
 			}
 			ProjectPageMessage::ChangeProjectColor(new_color) => {
 				self.show_color_picker = false;
-				if let Some(database) = database {
-					database.modify(|projects| {
-						if let Some(project) = projects.get_mut(&self.project_id) {
-							project.color = new_color.into();
-						}
-					});
+				DatabaseMessage::ChangeProjectColor {
+					project_id: self.project_id,
+					new_color: new_color.into(),
 				}
-				ContentPageAction::None
+				.into()
 			}
 
 			ProjectPageMessage::ConfirmDeleteProject => {

@@ -1,8 +1,7 @@
 use crate::components::{
 	create_new_project_button, custom_project_preview, loading_screen, overview_button, project_preview, settings_button, stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE
 };
-use crate::core::{OrderedHashMap, Preferences, Project, ProjectId};
-use crate::pages::StopwatchPage;
+use crate::core::{OrderedHashMap, Project, ProjectId};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::{
@@ -101,13 +100,26 @@ impl From<SidebarPageMessage> for Message {
 
 pub enum SidebarPageAction {
 	None,
+	Actions(Vec<SidebarPageAction>),
 	Task(Task<Message>),
+	DatabaseMessage(DatabaseMessage),
+	StopwatchPageMessage(StopwatchPageMessage),
 	SelectProject(ProjectId),
 }
 
 impl From<Task<Message>> for SidebarPageAction {
 	fn from(value: Task<Message>) -> Self {
 		SidebarPageAction::Task(value)
+	}
+}
+impl From<DatabaseMessage> for SidebarPageAction {
+	fn from(value: DatabaseMessage) -> Self {
+		SidebarPageAction::DatabaseMessage(value)
+	}
+}
+impl From<StopwatchPageMessage> for SidebarPageAction {
+	fn from(value: StopwatchPageMessage) -> Self {
+		SidebarPageAction::StopwatchPageMessage(value)
 	}
 }
 
@@ -201,9 +213,7 @@ impl SidebarPage {
 	pub fn update(
 		&mut self,
 		message: SidebarPageMessage,
-		database: &mut Option<Database>,
-		preferences: &mut Option<Preferences>,
-		stopwatch_page: &mut StopwatchPage,
+		database: &Option<Database>,
 		is_theme_dark: bool,
 	) -> SidebarPageAction {
 		match message {
@@ -225,17 +235,20 @@ impl SidebarPage {
 			}
 			SidebarPageMessage::CreateNewProject(project_id) => {
 				let create_new_project_name = self.create_new_project_name.take();
-				if let Some(db) = database {
-					if let Some(create_new_project_name) = create_new_project_name {
-						db.update(DatabaseMessage::CreateProject {
+				if let Some(create_new_project_name) = create_new_project_name {
+					SidebarPageAction::Actions(vec![
+						DatabaseMessage::CreateProject {
 							project_id,
 							name: create_new_project_name,
 							color: get_new_project_color(is_theme_dark).into(),
-						});
-						return SidebarPageAction::SelectProject(project_id);
-					}
+						}
+						.into(),
+						SidebarPageAction::SelectProject(project_id)
+					])
 				}
-				SidebarPageAction::None
+				else {
+					SidebarPageAction::None
+				}
 			}
 
 			SidebarPageMessage::DropTask {
@@ -244,50 +257,38 @@ impl SidebarPage {
 				..
 			} => {
 				if let Some(hovered_task_dropzone) = self.task_dropzone_hovered {
+					self.task_dropzone_hovered = None;
 					match hovered_task_dropzone {
-						TaskDropzone::Project(hovered_project_id) => {
-							let src_project_id = project_id;
-							if let Some(database) = database {
-								database.update(DatabaseMessage::MoveTask {
-									task_id,
-									src_project_id,
-									dst_project_id: hovered_project_id,
-								});
-							}
+						TaskDropzone::Project(hovered_project_id) => DatabaseMessage::MoveTask {
+							task_id,
+							src_project_id: project_id,
+							dst_project_id: hovered_project_id,
 						}
-						TaskDropzone::Task(hovered_task_id) => {
-							if let Some(database) = database {
-								database.update(DatabaseMessage::MoveTaskBeforeOtherTask {
-									project_id,
-									task_id,
-									other_task_id: hovered_task_id,
-								});
-							}
+						.into(),
+
+						TaskDropzone::Task(hovered_task_id) => DatabaseMessage::MoveTaskBeforeOtherTask {
+							project_id,
+							task_id,
+							other_task_id: hovered_task_id,
 						}
-						TaskDropzone::EndOfTodoTaskList => {
-							if let Some(database) = database {
-								database.modify(|projects| {
-									if let Some(project) = projects.get_mut(&project_id) {
-										project.todo_tasks.move_to_end(&task_id);
-									}
-								});
-							}
+						.into(),
+
+						TaskDropzone::EndOfTodoTaskList => DatabaseMessage::MoveTodoTaskToEnd {
+							project_id,
+							task_id
 						}
-						TaskDropzone::Stopwatch => {
-							stopwatch_page.update(
-								StopwatchPageMessage::StopTask {
-									project_id,
-									task_id,
-								},
-								database,
-								preferences,
-								true,
-							);
+						.into(),
+
+						TaskDropzone::Stopwatch => StopwatchPageMessage::StopTask {
+							project_id,
+							task_id,
 						}
+						.into()
 					}
 				}
-				self.task_dropzone_hovered = None;
-				SidebarPageAction::None
+				else {
+					SidebarPageAction::None
+				}
 			}
 			SidebarPageMessage::CancelDragTask => {
 				self.task_dropzone_hovered = None;
@@ -402,29 +403,21 @@ impl SidebarPage {
 
 			SidebarPageMessage::DropProject { .. } => {
 				if let Some(dragged_project_id) = self.dragged_project_id {
+					self.project_dropzone_hovered = None;
 					// self.dragged_project_id = None; gets called after LeftClickReleased
 					if let Some(project_dropzone_hovered) = self.project_dropzone_hovered {
 						self.project_dropzone_hovered = None;
-						if let Some(database) = database {
-							match project_dropzone_hovered {
-								ProjectDropzone::Project(hovered_project_id) => {
-									database.update(
-										DatabaseMessage::MoveProjectBeforeOtherProject {
-											project_id: dragged_project_id,
-											other_project_id: hovered_project_id,
-										},
-									);
-								}
-								ProjectDropzone::EndOfList => {
-									database.update(DatabaseMessage::MoveProjectToEnd(
-										dragged_project_id,
-									));
-								}
+						return match project_dropzone_hovered {
+							ProjectDropzone::Project(hovered_project_id) => DatabaseMessage::MoveProjectBeforeOtherProject {
+								project_id: dragged_project_id,
+								other_project_id: hovered_project_id,
 							}
-						}
+							.into(),
+
+							ProjectDropzone::EndOfList => DatabaseMessage::MoveProjectToEnd(dragged_project_id).into(),
+						};
 					}
 				}
-				self.project_dropzone_hovered = None;
 				SidebarPageAction::None
 			}
 			SidebarPageMessage::DragProject {

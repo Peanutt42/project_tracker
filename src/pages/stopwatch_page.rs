@@ -170,10 +170,11 @@ impl StopwatchPage {
 		)
 	}
 
+	#[must_use]
 	pub fn update(
 		&mut self,
 		message: StopwatchPageMessage,
-		database: &mut Option<Database>,
+		database: &Option<Database>,
 		preferences: &mut Option<Preferences>,
 		opened: bool,
 	) -> ContentPageAction {
@@ -224,8 +225,7 @@ impl StopwatchPage {
 				ContentPageAction::None
 			}
 			StopwatchPageMessage::Stop => {
-				*self = StopwatchPage::Idle;
-				self.set_stopwatch_progress(preferences);
+				self.stop(preferences);
 				ContentPageAction::None
 			}
 			StopwatchPageMessage::Resume => match self {
@@ -264,18 +264,18 @@ impl StopwatchPage {
 				ContentPageAction::None
 			},
 			StopwatchPageMessage::CompleteTask => {
-				if let StopwatchPage::StopTaskTime { project_id, task_id, .. } = self {
-					if let Some(database) = database {
-						database.update(
-							DatabaseMessage::SetTaskDone {
-								project_id: *project_id,
-								task_id: *task_id,
-							}
-						);
+				let action = if let StopwatchPage::StopTaskTime { project_id, task_id, .. } = self {
+					DatabaseMessage::SetTaskDone {
+						project_id: *project_id,
+						task_id: *task_id,
 					}
+					.into()
 				}
-
-				self.update(StopwatchPageMessage::Stop, database, preferences, opened)
+				else {
+					ContentPageAction::None
+				};
+				self.stop(preferences);
+				action
 			},
 			StopwatchPageMessage::Update => {
 				// advance time
@@ -554,6 +554,11 @@ impl StopwatchPage {
 		.center(Fill)
 		.padding(LARGE_PADDING_AMOUNT)
 		.into()
+	}
+
+	fn stop(&mut self, preferences: &mut Option<Preferences>) {
+		*self = StopwatchPage::Idle;
+		self.set_stopwatch_progress(preferences);
 	}
 
 	fn set_stopwatch_progress(&self, preferences: &mut Option<Preferences>) {

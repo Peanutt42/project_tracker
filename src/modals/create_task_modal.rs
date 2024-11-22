@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use crate::{
-	components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, close_create_new_task_modal_button, create_new_task_modal_button, edit_due_date_button, edit_task_needed_time_button, horizontal_scrollable, task_tag_button, unfocusable, vertical_scrollable, SCROLLBAR_WIDTH}, core::{Database, OptionalPreference, Preferences, ProjectId, SerializableDate, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, description_text_editor_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}
+	components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, close_create_new_task_modal_button, create_new_task_modal_button, edit_due_date_button, edit_task_needed_time_button, horizontal_scrollable, task_tag_button, unfocusable, vertical_scrollable, SCROLLBAR_WIDTH}, core::{Database, DatabaseMessage, OptionalPreference, Preferences, ProjectId, SerializableDate, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, description_text_editor_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}
 };
 use iced::{
 	font, keyboard, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::{Fill, Fixed}, Padding, Subscription
@@ -39,15 +39,19 @@ impl From<CreateTaskModalMessage> for Message {
 pub enum CreateTaskModalAction {
 	None,
 	Task(iced::Task<CreateTaskModalMessage>),
-	CreateTask {
-		project_id: ProjectId,
-		task_id: TaskId,
-		task_name: String,
-		task_description: String,
-		task_tags: HashSet<TaskTagId>,
-		due_date: Option<SerializableDate>,
-		needed_time_minutes: Option<usize>,
-	},
+	DatabaseMessage(DatabaseMessage),
+}
+
+impl From<iced::Task<CreateTaskModalMessage>> for CreateTaskModalAction {
+	fn from(value: iced::Task<CreateTaskModalMessage>) -> Self {
+		Self::Task(value)
+	}
+}
+
+impl From<DatabaseMessage> for CreateTaskModalAction {
+	fn from(value: DatabaseMessage) -> Self {
+		Self::DatabaseMessage(value)
+	}
 }
 
 pub enum CreateTaskModal {
@@ -74,7 +78,7 @@ impl CreateTaskModal {
 	}
 
 	#[must_use]
-	pub fn update(&mut self, message: CreateTaskModalMessage) -> CreateTaskModalAction {
+	pub fn update(&mut self, message: CreateTaskModalMessage, preferences: &Option<Preferences>) -> CreateTaskModalAction {
 		match message {
 			CreateTaskModalMessage::Open(project_id) => {
 				*self = Self::Opened {
@@ -86,7 +90,7 @@ impl CreateTaskModal {
 					edit_due_date: false,
 					needed_time_minutes: None,
 				};
-				CreateTaskModalAction::Task(text_input::focus(TASK_NAME_INPUT_ID.clone()))
+				text_input::focus(TASK_NAME_INPUT_ID.clone()).into()
 			},
 			CreateTaskModalMessage::Close => { *self = Self::Closed; CreateTaskModalAction::None },
 			CreateTaskModalMessage::CreateTask => {
@@ -99,7 +103,7 @@ impl CreateTaskModal {
 						due_date,
 						needed_time_minutes,
 						..
-					} => CreateTaskModalAction::CreateTask{
+					} => DatabaseMessage::CreateTask{
 						project_id: *project_id,
 						task_id: TaskId::generate(),
 						task_name: task_name.clone(),
@@ -107,7 +111,8 @@ impl CreateTaskModal {
 						task_tags: task_tags.clone(),
 						due_date: *due_date,
 						needed_time_minutes: needed_time_minutes.and_then(|needed_time| needed_time),
-					},
+						create_at_top: preferences.create_new_tasks_at_top(),
+					}.into(),
 					CreateTaskModal::Closed => CreateTaskModalAction::None
 				};
 				*self = CreateTaskModal::Closed;

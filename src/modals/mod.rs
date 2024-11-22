@@ -9,7 +9,7 @@ mod settings_modal;
 pub use settings_modal::{SettingTab, SettingsModal, SettingsModalMessage};
 
 mod manage_task_tags_modal;
-pub use manage_task_tags_modal::{ManageTaskTagsModal, ManageTaskTagsModalMessage};
+pub use manage_task_tags_modal::{ManageTaskTagsModal, ManageTaskTagsModalMessage, ManageTaskTagsModalAction};
 
 mod task_modal;
 pub use task_modal::{TaskModal, TaskModalMessage, TaskModalAction};

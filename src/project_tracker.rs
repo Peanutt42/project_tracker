@@ -3,7 +3,7 @@ use crate::{
 		create_empty_database_button, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
 	}, core::{
 		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SyncDatabaseResult, SynchronizationSetting, TaskId
-	}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
+	}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -774,7 +774,7 @@ impl ProjectTrackerApp {
 					self.just_minimal_dragging = true;
 				}
 
-				match self.sidebar_page.update(
+				let action = self.sidebar_page.update(
 					SidebarPageMessage::DragTask {
 						project_id,
 						task_id,
@@ -783,17 +783,11 @@ impl ProjectTrackerApp {
 						point,
 						rect,
 					},
-					&mut self.database,
-					&mut self.preferences,
-					&mut self.content_page.stopwatch_page,
+					&self.database,
 					is_theme_dark,
-				) {
-					SidebarPageAction::None => Task::none(),
-					SidebarPageAction::Task(task) => task,
-					SidebarPageAction::SelectProject(project_id) => {
-						self.update(ContentPageMessage::OpenProjectPage(project_id).into())
-					}
-				}
+				);
+
+				self.perform_sidebar_action(action)
 			}
 			Message::CancelDragTask => {
 				let is_theme_dark = self.is_theme_dark();
@@ -802,19 +796,13 @@ impl ProjectTrackerApp {
 				self.start_dragging_point = None;
 				self.just_minimal_dragging = true;
 
-				match self.sidebar_page.update(
+				let action = self.sidebar_page.update(
 					SidebarPageMessage::CancelDragTask,
-					&mut self.database,
-					&mut self.preferences,
-					&mut self.content_page.stopwatch_page,
+					&self.database,
 					is_theme_dark,
-				) {
-					SidebarPageAction::None => Task::none(),
-					SidebarPageAction::Task(task) => task,
-					SidebarPageAction::SelectProject(project_id) => {
-						self.update(ContentPageMessage::OpenProjectPage(project_id).into())
-					}
-				}
+				);
+
+				self.perform_sidebar_action(action)
 			},
 			Message::LeftClickReleased => {
 				let task = if self.just_minimal_dragging {
@@ -836,26 +824,17 @@ impl ProjectTrackerApp {
 				task
 			}
 			Message::ContentPageMessage(message) => {
-				let action = self.content_page.update(message, &mut self.database, &mut self.preferences);
+				let action = self.content_page.update(message, &self.database, &mut self.preferences);
 				self.perform_content_page_action(action)
 			}
 			Message::SidebarPageMessage(message) => {
 				let is_theme_dark = self.is_theme_dark();
-				let sidebar_action = self.sidebar_page.update(
+				let action = self.sidebar_page.update(
 					message.clone(),
-					&mut self.database,
-					&mut self.preferences,
-					&mut self.content_page.stopwatch_page,
+					&self.database,
 					is_theme_dark,
 				);
-
-				match sidebar_action {
-					SidebarPageAction::None => Task::none(),
-					SidebarPageAction::Task(task) => task,
-					SidebarPageAction::SelectProject(project_id) => {
-						self.update(ContentPageMessage::OpenProjectPage(project_id).into())
-					}
-				}
+				self.perform_sidebar_action(action)
 			}
 			Message::ToggleSidebar => {
 				self.sidebar_animation = if self.preferences.show_sidebar() {
@@ -882,14 +861,17 @@ impl ProjectTrackerApp {
 						None
 					};
 
+				let manage_task_tag_modal_action = self.manage_tags_modal.update(message, &self.database);
+
 				Task::batch([
-					self.manage_tags_modal.update(message, &mut self.database),
+					self.perform_manage_task_tags_modal_action(manage_task_tag_modal_action),
+
 					deleted_task_tag_id
 						.and_then(|deleted_task_tag_id| {
 							let action = self.content_page.project_page.as_mut().map(|project_page| {
 								project_page.update(
 									ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id),
-									&mut self.database,
+									&self.database,
 									&self.preferences
 								)
 							});
@@ -899,21 +881,12 @@ impl ProjectTrackerApp {
 				])
 			},
 			Message::CreateTaskModalMessage(message) => {
-				let action = self.create_task_modal.update(message);
+				let action = self.create_task_modal.update(message, &self.preferences);
 				match action {
 					CreateTaskModalAction::None => Task::none(),
 					CreateTaskModalAction::Task(task) => task.map(Message::CreateTaskModalMessage),
-					CreateTaskModalAction::CreateTask{ project_id, task_id, task_name, task_description, task_tags, due_date, needed_time_minutes } => Task::batch([
-						self.update(DatabaseMessage::CreateTask {
-							project_id,
-							task_id,
-							task_name,
-							task_description,
-							task_tags,
-							due_date,
-							needed_time_minutes,
-							create_at_top: self.preferences.create_new_tasks_at_top(),
-						}.into()),
+					CreateTaskModalAction::DatabaseMessage(message) => Task::batch([
+						self.update(message.into()),
 						self.update(ProjectPageMessage::RefreshCachedTaskList.into()),
 						self.update(OverviewPageMessage::RefreshCachedTaskList.into()),
 					]),
@@ -927,18 +900,10 @@ impl ProjectTrackerApp {
 			else {
 				Task::none()
 			},
-			Message::TaskModalMessage(message) => match self.task_modal.update(message, &mut self.database) {
+			Message::TaskModalMessage(message) => match self.task_modal.update(message, &self.database) {
 				TaskModalAction::None => Task::none(),
 				TaskModalAction::Task(task) => task.map(Message::TaskModalMessage),
-				TaskModalAction::DeleteTask { project_id, task_id } => {
-					if let Some(overview_page) = &mut self.content_page.overview_page {
-						overview_page.update(OverviewPageMessage::RefreshCachedTaskList, &self.database, &self.preferences);
-					}
-					self.update(DatabaseMessage::DeleteTask {
-						project_id,
-						task_id
-					}.into())
-				},
+				TaskModalAction::DatabaseMessage(message) => self.update(message.into()),
 			},
 		};
 
@@ -970,6 +935,7 @@ impl ProjectTrackerApp {
 				actions.into_iter().map(|action| self.perform_content_page_action(action))
 			),
 			ContentPageAction::Task(task) => task,
+			ContentPageAction::DatabaseMessage(message) => self.update(message.into()),
 			ContentPageAction::OpenManageTaskTagsModal(project_id) => self.update(
 				ManageTaskTagsModalMessage::Open { project_id }.into()
 			),
@@ -986,6 +952,19 @@ impl ProjectTrackerApp {
 		}
 	}
 
+	fn perform_sidebar_action(&mut self, action: SidebarPageAction) -> Task<Message> {
+		match action {
+			SidebarPageAction::None => Task::none(),
+			SidebarPageAction::Actions(actions) => Task::batch(
+				actions.into_iter().map(|action| self.perform_sidebar_action(action))
+			),
+			SidebarPageAction::Task(task) => task,
+			SidebarPageAction::DatabaseMessage(message) => self.update(message.into()),
+			SidebarPageAction::StopwatchPageMessage(message) => self.update(message.into()),
+			SidebarPageAction::SelectProject(project_id) => self.update(ContentPageMessage::OpenProjectPage(project_id).into()),
+		}
+	}
+
 	fn perform_preference_action(&mut self, action: PreferenceAction) -> Task<Message> {
 		match action {
 			PreferenceAction::None => Task::none(),
@@ -998,6 +977,14 @@ impl ProjectTrackerApp {
 				}
 				Task::none()
 			},
+		}
+	}
+
+	fn perform_manage_task_tags_modal_action(&mut self, action: ManageTaskTagsModalAction) -> Task<Message> {
+		match action {
+			ManageTaskTagsModalAction::None => Task::none(),
+			ManageTaskTagsModalAction::Task(task) => task,
+			ManageTaskTagsModalAction::DatabaseMessage(message) => self.update(message.into()),
 		}
 	}
 
