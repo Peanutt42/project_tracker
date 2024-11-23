@@ -1,8 +1,8 @@
 use std::{collections::{BTreeMap, HashMap}, time::SystemTime};
 use chrono::{Days, NaiveDate};
-use iced::{widget::{column, container, row, text, Column}, Element, Length::Fill, Padding};
+use iced::{widget::{column, container, text, Column}, Element, Length::Fill, Padding};
 use iced_aw::date_picker::Date;
-use crate::{components::{days_left_widget, open_project_button, task_widget, vertical_scrollable}, core::{Database, OptionalPreference, Preferences, ProjectId, SerializableDate, SortMode, Task, TaskId}, pages::{ContentPageMessage, StopwatchPage}, project_tracker::Message, styles::{rounded_container_style, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{days_left_widget, open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{Database, OptionalPreference, Preferences, ProjectId, SerializableDate, SortMode, Task, TaskId}, pages::{ContentPageMessage, StopwatchPage}, project_tracker::Message, styles::{PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
 
 
 #[derive(Debug, Clone)]
@@ -10,12 +10,18 @@ pub struct OverviewPage {
 	overdue_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>, // sorted by due date, then by project
 	today_tasks: HashMap<ProjectId, Vec<TaskId>>, // sorted by est. needed time
 	tomorrow_tasks: HashMap<ProjectId, Vec<TaskId>>, // sorted by est. needed time
-	cache_time: SystemTime, // TODO: implement regeneration
+	cache_time: SystemTime,
+	show_overdue_tasks: bool,
+	show_today_tasks: bool,
+	show_tomorrow_tasks: bool,
 }
 
 #[derive(Debug, Clone)]
 pub enum OverviewPageMessage {
 	RefreshCachedTaskList,
+	ToggleShowOverdueTasks,
+	ToggleShowTodayTasks,
+	ToggleShowTomorrowTasks,
 }
 
 impl From<OverviewPageMessage> for Message {
@@ -98,6 +104,9 @@ impl OverviewPage {
 			today_tasks,
 			tomorrow_tasks,
 			cache_time: SystemTime::now(),
+			show_overdue_tasks: true,
+			show_today_tasks: true,
+			show_tomorrow_tasks: true,
 		}
 	}
 
@@ -110,10 +119,12 @@ impl OverviewPage {
 					}
 				}
 			},
+			OverviewPageMessage::ToggleShowOverdueTasks => self.show_overdue_tasks = !self.show_overdue_tasks,
+			OverviewPageMessage::ToggleShowTodayTasks => self.show_today_tasks = !self.show_today_tasks,
+			OverviewPageMessage::ToggleShowTomorrowTasks => self.show_tomorrow_tasks = !self.show_tomorrow_tasks,
 		}
 	}
 
-	// TODO: collapsable overdue, today, tomorrow sections
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
 		let overdue_tasks_len: usize = self.overdue_tasks.values()
 			.map(|tasks|
@@ -133,37 +144,53 @@ impl OverviewPage {
 
 		container(
 			vertical_scrollable(
-				Column::new()
-					.push_maybe(if self.overdue_tasks.is_empty() {
-						None
-					} else {
-						Some(column![
-							row![
-								text("Overdue"),
-								container(text(overdue_tasks_len.to_string()))
-									.padding(SMALL_HORIZONTAL_PADDING)
-									.style(rounded_container_style)
-							]
-							.spacing(SPACING_AMOUNT),
-							Column::with_children(self.overdue_tasks.iter()
-								.map(|(date, tasks)| {
-									column![
-										days_left_widget(*date, false),
-										Self::view_tasks(tasks, app),
-									]
+				column![
+					Column::new()
+						.push(overview_time_section_button(
+							"Overdue",
+							overdue_tasks_len,
+							!self.show_overdue_tasks,
+							OverviewPageMessage::ToggleShowOverdueTasks.into()
+						))
+						.push_maybe(if self.overdue_tasks.is_empty() || !self.show_overdue_tasks {
+							None
+						} else {
+							Some(
+								Column::with_children(self.overdue_tasks.iter()
+									.map(|(date, tasks)| {
+										column![
+											days_left_widget(*date, false),
+											Self::view_tasks(tasks, app),
+										]
+										.spacing(SPACING_AMOUNT)
+										.padding(Padding::default().left(PADDING_AMOUNT))
+										.into()
+									}))
 									.spacing(SPACING_AMOUNT)
-									.padding(Padding::default().left(PADDING_AMOUNT))
-									.into()
-								}))
-								.spacing(SPACING_AMOUNT)
-						]
-						.spacing(SPACING_AMOUNT))
-					})
-					.push_maybe(Self::view_tasks_for_day("Today", today_tasks_len, &self.today_tasks, app))
-					.push_maybe(Self::view_tasks_for_day("Tomorrow", tomorrow_tasks_len, &self.tomorrow_tasks, app))
-					.width(Fill)
-					.spacing(SPACING_AMOUNT)
-					.padding(PADDING_AMOUNT)
+							)
+						}),
+
+					Self::view_tasks_for_day(
+						"Today",
+						today_tasks_len,
+						!self.show_today_tasks,
+						OverviewPageMessage::ToggleShowTodayTasks.into(),
+						&self.today_tasks,
+						app
+					),
+
+					Self::view_tasks_for_day(
+						"Tomorrow",
+						tomorrow_tasks_len,
+						!self.show_tomorrow_tasks,
+						OverviewPageMessage::ToggleShowTomorrowTasks.into(),
+						&self.tomorrow_tasks,
+						app
+					),
+				]
+				.width(Fill)
+				.spacing(SPACING_AMOUNT)
+				.padding(PADDING_AMOUNT)
 			)
 		)
 		.width(Fill)
@@ -171,27 +198,18 @@ impl OverviewPage {
 		.into()
 	}
 
-	fn view_tasks_for_day<'a>(time_label: &'static str, task_count: usize, tasks: &'a HashMap<ProjectId, Vec<TaskId>>, app: &'a ProjectTrackerApp)
-		-> Option<Element<'a, Message>>
+	fn view_tasks_for_day<'a>(time_label: &'static str, task_count: usize, collapsed: bool, on_toggle_collabsed: Message, tasks: &'a HashMap<ProjectId, Vec<TaskId>>, app: &'a ProjectTrackerApp)
+		-> Element<'a, Message>
 	{
-		if tasks.is_empty() {
-			None
-		} else {
-			Some(
-				column![
-					row![
-						text(time_label),
-						container(text(task_count.to_string()))
-							.padding(SMALL_HORIZONTAL_PADDING)
-							.style(rounded_container_style)
-					]
-					.spacing(SPACING_AMOUNT),
-					Self::view_tasks(tasks, app),
-				]
-				.spacing(SPACING_AMOUNT)
-				.into()
-			)
-		}
+		Column::new()
+			.push(overview_time_section_button(time_label, task_count, collapsed, on_toggle_collabsed))
+			.push_maybe(if tasks.is_empty() || collapsed {
+				None
+			} else {
+				Some(Self::view_tasks(tasks, app))
+			})
+			.spacing(SPACING_AMOUNT)
+			.into()
 	}
 
 	fn view_tasks<'a>(tasks: &'a HashMap<ProjectId, Vec<TaskId>>, app: &'a ProjectTrackerApp) -> Element<'a, Message> {

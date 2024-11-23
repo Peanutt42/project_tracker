@@ -1,6 +1,6 @@
 use crate::styles::{
 	background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS,
-	LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS,
+	LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS, GREY,
 };
 use iced::{
 	border::{rounded, Radius},
@@ -168,7 +168,10 @@ pub fn hidden_secondary_button_style(theme: &Theme, status: Status) -> Style {
 			),
 			..hidden_secondary_button_style(theme, Status::Active)
 		},
-		Status::Disabled => Style::default(),
+		Status::Disabled => Style {
+			text_color: GREY,
+			..hidden_secondary_button_style(theme, Status::Active)
+		},
 	}
 }
 

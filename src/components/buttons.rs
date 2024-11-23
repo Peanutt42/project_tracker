@@ -6,7 +6,7 @@ use crate::{
 	}, pages::{
 		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID
 	}, project_tracker::Message, styles::{
-		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT
+		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, rounded_container_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
@@ -980,4 +980,33 @@ pub fn open_project_button(project_id: ProjectId, project_name: &str, project_co
 		tooltip::Position::Right
 	)
 	.into()
+}
+
+pub fn overview_time_section_button(label: &'static str, task_count: usize, mut collapsed: bool, on_toggle_collabsed: Message) -> Button<'static, Message> {
+	if task_count == 0 {
+		collapsed = true;
+	}
+
+	button(
+		row![
+			icon_to_text(if collapsed {
+				Bootstrap::CaretRightFill
+			} else {
+				Bootstrap::CaretDownFill
+			})
+			.size(ICON_FONT_SIZE),
+			text(label),
+			container(text(task_count.to_string()))
+				.padding(SMALL_HORIZONTAL_PADDING)
+				.style(rounded_container_style)
+		]
+		.spacing(SPACING_AMOUNT)
+		.align_y(Vertical::Center)
+	)
+	.on_press_maybe(if task_count == 0 {
+		None
+	} else {
+		Some(on_toggle_collabsed)
+	})
+	.style(hidden_secondary_button_style)
 }
