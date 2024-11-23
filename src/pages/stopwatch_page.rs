@@ -698,10 +698,12 @@ fn timer_notification(summary: String, body: String) {
 			.show()
 	};
 
-	match notification_result {
-		Ok(notification_handle) => notification_handle.on_close(|| {}),
-		Err(e) => eprintln!("failed to show timer notification: {e}"),
-	}
+	thread::spawn(|| {
+		match notification_result {
+			Ok(notification_handle) => notification_handle.on_close(|| {}),
+			Err(e) => eprintln!("failed to show timer notification: {e}"),
+		}
+	});
 }
 
 fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
