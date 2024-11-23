@@ -7,7 +7,7 @@ use crate::core::{ProjectId, Task, TaskId};
 use crate::{
 	core::{Project, TaskType},
 	pages::{
-		CachedTaskList, StopwatchPage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
+		CachedTaskList, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
 	},
 	project_tracker::Message,
 	styles::PADDING_AMOUNT,
@@ -34,8 +34,7 @@ pub fn task_list<'a>(
 	hovered_task_dropzone: Option<TaskDropzone>,
 	show_done_tasks: bool,
 	show_source_code_todos: bool,
-	importing_source_code_todos: bool,
-	stopwatch_page: &'a StopwatchPage
+	importing_source_code_todos: bool
 ) -> Element<'a, Message> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
@@ -50,16 +49,6 @@ pub fn task_list<'a>(
 			Some(TaskDropzone::Task(hovered_task_id)) => hovered_task_id == task_id,
 			_ => false,
 		};
-		let stopwatch_label = match stopwatch_page {
-			StopwatchPage::StopTaskTime { project_id: timed_project_id, task_id: timed_task_id, clock, .. } => {
-				if *timed_project_id == project_id && *timed_task_id == task_id {
-					Some(clock.label())
-				} else {
-					None
-				}
-			},
-			_ => None,
-		};
 		task_widget(
 			task,
 			task_id,
@@ -70,7 +59,6 @@ pub fn task_list<'a>(
 			just_minimal_dragging,
 			true,
 			highlight,
-			stopwatch_label,
 			true
 		)
 	};

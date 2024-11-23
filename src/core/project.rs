@@ -1,4 +1,4 @@
-use crate::{core::{OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType}, icons::Bootstrap};
+use crate::{core::{OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType, TimeSpend}, icons::Bootstrap};
 use iced::{widget::container::Id, Color};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -92,9 +92,10 @@ impl Project {
 		tags: HashSet<TaskTagId>,
 		due_date: Option<SerializableDate>,
 		needed_time_minutes: Option<usize>,
+		time_spend: Option<TimeSpend>,
 		create_at_top: bool,
 	) {
-		let task = Task::new(name, description, needed_time_minutes, due_date, tags);
+		let task = Task::new(name, description, needed_time_minutes, time_spend, due_date, tags);
 
 		if create_at_top {
 			self.todo_tasks.insert_at_top(task_id, task);
@@ -153,6 +154,33 @@ impl Project {
 	) {
 		if let Some(task) = self.get_task_mut(&task_id) {
 			task.needed_time_minutes = new_needed_time_minutes;
+		}
+	}
+
+	pub fn set_task_time_spend(
+		&mut self,
+		task_id: TaskId,
+		new_time_spend: Option<TimeSpend>,
+	) {
+		if let Some(task) = self.get_task_mut(&task_id) {
+			task.time_spend = new_time_spend;
+		}
+	}
+
+	pub fn start_task_time_spend(&mut self, task_id: TaskId) {
+		if let Some(task) = self.get_task_mut(&task_id) {
+			if task.time_spend.is_none() {
+				task.time_spend = Some(TimeSpend::new(0.0));
+			}
+			task.time_spend.as_mut().unwrap().start();
+		}
+	}
+
+	pub fn stop_task_time_spend(&mut self, task_id: TaskId) {
+		if let Some(task) = self.get_task_mut(&task_id) {
+			if let Some(time_spend) = &mut task.time_spend {
+				time_spend.stop();
+			}
 		}
 	}
 

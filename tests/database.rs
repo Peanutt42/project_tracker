@@ -20,6 +20,7 @@ async fn test_database_serialization() {
 				HashSet::new(),
 				None,
 				None,
+				None,
 				false,
 			);
 		}

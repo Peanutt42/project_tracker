@@ -346,8 +346,7 @@ impl ProjectPage {
 						app.sidebar_page.task_dropzone_hovered,
 						self.show_done_tasks,
 						self.show_source_code_todos,
-						self.importing_source_code_todos,
-						&app.content_page.stopwatch_page
+						self.importing_source_code_todos
 					),
 				]
 				// .spacing(SPACING_AMOUNT) this is not needed since every task in the list has a SPACING_AMOUNT height dropzone

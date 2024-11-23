@@ -7,11 +7,15 @@ use iced::{
 	Element,
 };
 use pretty_duration::{pretty_duration, PrettyDurationLabels, PrettyDurationOptions};
-use std::{borrow::Cow, time::Duration};
+use std::time::Duration;
 
-pub fn duration_text(duration: Cow<'_, Duration>) -> Text {
-	text(pretty_duration(
-		duration.as_ref(),
+pub fn round_duration_to_seconds(duration: Duration) -> Duration {
+	Duration::from_secs(duration.as_secs())
+}
+
+pub fn duration_str(duration: Duration) -> String {
+	pretty_duration(
+		&duration,
 		Some(PrettyDurationOptions {
 			output_format: None,
 			singular_labels: Some(PrettyDurationLabels {
@@ -33,10 +37,14 @@ pub fn duration_text(duration: Cow<'_, Duration>) -> Text {
 				millisecond: "ms",
 			}),
 		}),
-	))
+	)
 }
 
-pub fn duration_widget(duration: Cow<'_, Duration>) -> Element<'_, Message> {
+pub fn duration_text(duration: Duration) -> Text<'static> {
+	text(duration_str(duration))
+}
+
+pub fn duration_widget(duration: Duration) -> Element<'static, Message> {
 	container(duration_text(duration))
 		.padding(SMALL_HORIZONTAL_PADDING)
 		.style(rounded_container_style)

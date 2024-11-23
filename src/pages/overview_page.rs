@@ -2,7 +2,7 @@ use std::{collections::{BTreeMap, HashMap}, time::SystemTime};
 use chrono::{Days, NaiveDate};
 use iced::{widget::{column, container, text, Column}, Element, Length::Fill, Padding};
 use iced_aw::date_picker::Date;
-use crate::{components::{days_left_widget, open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{Database, OptionalPreference, Preferences, ProjectId, SerializableDate, SortMode, Task, TaskId}, pages::{ContentPageMessage, StopwatchPage}, project_tracker::Message, styles::{PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
+use crate::{components::{days_left_widget, open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{Database, OptionalPreference, Preferences, ProjectId, SerializableDate, SortMode, Task, TaskId}, pages::ContentPageMessage, project_tracker::Message, styles::{PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
 
 
 #[derive(Debug, Clone)]
@@ -221,21 +221,6 @@ impl OverviewPage {
 							tasks.iter()
 								.map(|task_id| {
 									if let Some((task, task_type)) = project.get_task_and_type(task_id) {
-										let stopwatch_label = match &app.content_page.stopwatch_page {
-											StopwatchPage::StopTaskTime {
-												project_id: timed_project_id,
-												task_id: timed_task_id,
-												clock,
-												..
-											} => {
-												if *timed_project_id == *project_id && *timed_task_id == *task_id {
-													Some(clock.label())
-												} else {
-													None
-												}
-											},
-											_ => None,
-										};
 										task_widget(
 											task,
 											*task_id,
@@ -246,7 +231,6 @@ impl OverviewPage {
 											true,
 											false,
 											false,
-											stopwatch_label,
 											false
 										)
 									}

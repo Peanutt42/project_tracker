@@ -1,7 +1,7 @@
 use crate::{
-	components::{days_left_widget, duration_widget, in_between_dropzone}, core::{
+	components::{days_left_widget, duration_widget, duration_str, round_duration_to_seconds, in_between_dropzone}, core::{
 		DatabaseMessage, Project, ProjectId, SortMode, Task, TaskId, TaskType, TASK_TAG_QUAD_HEIGHT
-	}, icons::{icon_to_text, Bootstrap}, modals::TaskModalMessage, pages::SidebarPageMessage, project_tracker::Message, styles::{checkbox_style, default_text_style, grey_text_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT}
+	}, icons::{icon_to_text, Bootstrap}, modals::TaskModalMessage, pages::SidebarPageMessage, project_tracker::Message, styles::{checkbox_style, default_text_style, grey_text_style, rounded_container_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT}
 };
 use iced::widget::{hover, Space};
 use iced::{
@@ -15,9 +15,7 @@ use iced::{
 	Padding,
 };
 use iced_drop::droppable;
-use std::{borrow::Cow, time::Duration};
-
-use super::buttons::task_open_stopwatch_timer;
+use std::time::Duration;
 
 #[allow(clippy::too_many_arguments)]
 pub fn task_widget<'a>(
@@ -30,7 +28,6 @@ pub fn task_widget<'a>(
 	just_minimal_dragging: bool,
 	draggable: bool,
 	highlight_dropzone: bool,
-	stopwatch_label: Option<&'a String>,
 	show_due_date: bool
 ) -> Element<'a, Message> {
 	let text_style = if matches!(task_type, TaskType::Done) {
@@ -144,14 +141,42 @@ pub fn task_widget<'a>(
 						.spacing(TINY_SPACING_AMOUNT),
 
 					Column::new().push_maybe(
-						if task.needed_time_minutes.is_some() || task.due_date.is_some() {
+						if task.needed_time_minutes.is_some() || task.time_spend.is_some() || task.due_date.is_some() {
 							Some(
 								Column::new()
-									.push_maybe(task.needed_time_minutes.map(|duration_minutes| {
-										duration_widget(Cow::Owned(Duration::from_secs(
-											duration_minutes as u64 * 60,
-										)))
-									}))
+									.push_maybe(
+										match (task.needed_time_minutes, &task.time_spend) {
+											(Some(needed_time_minutes), Some(time_spend)) => Some(
+												container(
+													text(
+														format!(
+															"{}/{}",
+															duration_str(round_duration_to_seconds(time_spend.get_duration())),
+															duration_str(Duration::from_secs(needed_time_minutes as u64 * 60)),
+														)
+													)
+												)
+												.padding(SMALL_HORIZONTAL_PADDING)
+												.style(rounded_container_style)
+												.into()
+											),
+											(Some(needed_time_minutes), None) => Some(
+												duration_widget(Duration::from_secs(needed_time_minutes as u64 * 60))
+											),
+											(None, Some(time_spend)) => Some(
+												container(
+													text(format!(
+														"{}/...",
+														duration_str(round_duration_to_seconds(time_spend.get_duration()))
+													))
+												)
+												.padding(SMALL_HORIZONTAL_PADDING)
+												.style(rounded_container_style)
+												.into()
+											),
+											(None, None) => None,
+										}
+									)
 									.push_maybe(
 										if show_due_date {
 											task.due_date
@@ -161,7 +186,6 @@ pub fn task_widget<'a>(
 											None
 										}
 									)
-									.push_maybe(stopwatch_label.map(task_open_stopwatch_timer))
 									.spacing(TINY_SPACING_AMOUNT)
 									.align_x(Alignment::End)
 									.into(),

@@ -111,6 +111,7 @@ impl CreateTaskModal {
 						task_tags: task_tags.clone(),
 						due_date: *due_date,
 						needed_time_minutes: needed_time_minutes.and_then(|needed_time| needed_time),
+						time_spend: None,
 						create_at_top: preferences.create_new_tasks_at_top(),
 					}.into(),
 					CreateTaskModal::Closed => CreateTaskModalAction::None

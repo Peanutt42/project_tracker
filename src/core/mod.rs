@@ -14,7 +14,10 @@ mod project;
 pub use project::{Project, ProjectId, SerializableColor, SortMode};
 
 mod task;
-pub use task::{SerializableDate, Task, TaskId, TaskType};
+pub use task::{Task, TaskId, TaskType, TimeSpend};
+
+mod date;
+pub use date::SerializableDate;
 
 mod task_tag;
 pub use task_tag::{TaskTag, TaskTagId, TASK_TAG_QUAD_HEIGHT};

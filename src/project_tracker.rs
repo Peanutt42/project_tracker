@@ -539,8 +539,8 @@ impl ProjectTrackerApp {
 				match load_database_result {
 					Ok(database) => {
 						self.database = Some(database);
-						self.content_page.restore_from_serialized(&self.database, &mut self.preferences);
-						Task::none()
+						let action = self.content_page.restore_from_serialized(&self.database, &mut self.preferences);
+						self.perform_content_page_action(action)
 					},
 					Err(error) => match error.as_ref() {
 						LoadDatabaseError::FailedToOpenFile { .. } => {

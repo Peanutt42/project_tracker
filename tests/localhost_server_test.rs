@@ -33,6 +33,7 @@ async fn localhost_server_test() {
 				HashSet::new(),
 				None,
 				None,
+				None,
 				false,
 			);
 		}

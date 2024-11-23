@@ -1,6 +1,6 @@
 use crate::core::{
 	OrderedHashMap, Project, ProjectId, SortMode, SerializableColor, SerializableDate, Task, TaskId, TaskTag,
-	TaskTagId, TaskType,
+	TaskTagId, TaskType, TimeSpend
 };
 use crate::project_tracker::Message;
 use serde::{Deserialize, Serialize};
@@ -76,6 +76,7 @@ pub enum DatabaseMessage {
 		task_tags: HashSet<TaskTagId>,
 		due_date: Option<SerializableDate>,
 		needed_time_minutes: Option<usize>,
+		time_spend: Option<TimeSpend>,
 		create_at_top: bool,
 	},
 	ChangeTaskName {
@@ -100,6 +101,19 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		new_needed_time_minutes: Option<usize>,
+	},
+	ChangeTaskTimeSpend {
+		project_id: ProjectId,
+		task_id: TaskId,
+		new_time_spend: Option<TimeSpend>,
+	},
+	StartTaskTimeSpend {
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
+	StopTaskTimeSpend {
+		project_id: ProjectId,
+		task_id: TaskId,
 	},
 	ChangeTaskDueDate {
 		project_id: ProjectId,
@@ -381,10 +395,11 @@ impl Database {
 				task_tags,
 				due_date,
 				needed_time_minutes,
+				time_spend,
 				create_at_top,
 			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
-					project.add_task(task_id, task_name, task_description, task_tags, due_date, needed_time_minutes, create_at_top);
+					project.add_task(task_id, task_name, task_description, task_tags, due_date, needed_time_minutes, time_spend, create_at_top);
 				}
 			}),
 			DatabaseMessage::ChangeTaskName {
@@ -428,6 +443,21 @@ impl Database {
 			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.set_task_needed_time(task_id, new_needed_time_minutes);
+				}
+			}),
+			DatabaseMessage::ChangeTaskTimeSpend { project_id, task_id, new_time_spend } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.set_task_time_spend(task_id, new_time_spend);
+				}
+			}),
+			DatabaseMessage::StartTaskTimeSpend { project_id, task_id } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.start_task_time_spend(task_id);
+				}
+			}),
+			DatabaseMessage::StopTaskTimeSpend { project_id, task_id } => self.modify(|projects| {
+				if let Some(project) = projects.get_mut(&project_id) {
+					project.stop_task_time_spend(task_id);
 				}
 			}),
 			DatabaseMessage::ChangeTaskDueDate {

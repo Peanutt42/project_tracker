@@ -105,7 +105,6 @@ pub enum StopwatchProgress {
 	Task {
 		project_id: ProjectId,
 		task_id: TaskId,
-		elapsed_time_seconds: u64,
 		paused: bool,
 		finished_notification_sent: bool,
 	},

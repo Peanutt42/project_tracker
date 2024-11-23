@@ -6,13 +6,13 @@ use crate::{
 	}, pages::{
 		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID
 	}, project_tracker::Message, styles::{
-		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, rounded_container_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT, TINY_SPACING_AMOUNT
+		circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, rounded_container_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	}, theme_mode::ThemeMode
 };
 use iced::{
 	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, rich_text, row, text, text::Span, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
 use iced_aw::{drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
-use std::{borrow::Cow, path::PathBuf, time::Duration};
+use std::{path::PathBuf, time::Duration};
 
 pub const ICON_FONT_SIZE: f32 = 16.0;
 pub const ICON_BUTTON_WIDTH: f32 = ICON_FONT_SIZE * 1.8;
@@ -239,11 +239,18 @@ pub fn overview_button(selected: bool) -> Button<'static, Message> {
 pub fn stopwatch_button(
 	stopwatch_page: &StopwatchPage,
 	selected: bool,
-	dropzone_highlight: bool
+	dropzone_highlight: bool,
+	database: &Option<Database>
 ) -> Element<'static, Message> {
 	let stopwatch_label = match stopwatch_page {
-		StopwatchPage::StopTaskTime { clock, .. } | StopwatchPage::TakingBreak { clock, .. } => Some(
-			clock.label().to_string()
+		StopwatchPage::TakingBreak { clock, .. } => Some(clock.label().to_string()),
+		StopwatchPage::StopTaskTime { clock, project_id, task_id, .. } => Some(
+			match clock {
+				Some(clock) => clock.label().to_string(),
+				None => format_stopwatch_duration(
+					StopwatchPage::get_spend_seconds(*project_id, *task_id, database).unwrap_or(0.0).round_ties_even() as i64,
+				)
+			}
 		),
 		StopwatchPage::TrackTime { elapsed_time, .. } => Some(
 			format_stopwatch_duration(elapsed_time.as_secs_f64().round_ties_even() as i64)
@@ -521,11 +528,8 @@ pub fn clear_task_needed_time_button<Message>(on_press: Message) -> Button<'stat
 
 pub fn edit_task_needed_time_button<Message>(needed_time_minutes: Option<usize>, on_press: Message) -> Button<'static, Message> {
 	button(
-		if let Some(needed_time_minutes) = needed_time_minutes
-		{
-			duration_text(Cow::Owned(Duration::from_secs(
-				needed_time_minutes as u64 * 60
-			)))
+		if let Some(needed_time_minutes) = needed_time_minutes {
+			duration_text(Duration::from_secs(needed_time_minutes as u64 * 60))
 		} else {
 			text("Add needed time")
 		}
@@ -921,21 +925,6 @@ pub fn open_folder_location_button(filepath: PathBuf, parent_filepath: Option<Pa
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
-	.into()
-}
-
-pub fn task_open_stopwatch_timer(label: &String) -> Element<Message> {
-	button(
-		row![
-			icon_to_text(Bootstrap::Stopwatch).size(SMALL_TEXT_SIZE),
-			text(label).style(danger_text_style)
-		]
-		.align_y(Vertical::Center)
-		.spacing(TINY_SPACING_AMOUNT),
-	)
-	.padding(SMALL_HORIZONTAL_PADDING)
-	.style(secondary_button_style_default)
-	.on_press(ContentPageMessage::OpenStopwatch.into())
 	.into()
 }
 

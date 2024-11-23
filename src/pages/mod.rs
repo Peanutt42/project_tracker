@@ -39,6 +39,7 @@ impl From<ContentPageMessage> for Message {
 	}
 }
 
+#[must_use]
 #[derive(Default)]
 pub enum ContentPageAction {
 	#[default]
@@ -80,11 +81,16 @@ impl ContentPage {
 		}
 	}
 
-	pub fn restore_from_serialized(&mut self, database: &Option<Database>, preferences: &mut Option<Preferences>) {
+	pub fn restore_from_serialized(&mut self, database: &Option<Database>, preferences: &mut Option<Preferences>) -> ContentPageAction {
 		if let Some(ref_preferences) = preferences {
-			if let Some(stopwatch_progress) = ref_preferences.stopwatch_progress() {
-				self.stopwatch_page = StopwatchPage::startup_again(*stopwatch_progress, database);
+			let action = if let Some(stopwatch_progress) = ref_preferences.stopwatch_progress() {
+				let (stopwatch_page, action) = StopwatchPage::startup_again(*stopwatch_progress, database);
+				self.stopwatch_page = stopwatch_page;
+				action
 			}
+			else {
+				ContentPageAction::None
+			};
 
 			match ref_preferences.selected_content_page() {
 				SerializedContentPage::Overview => self.open_overview(database, preferences),
@@ -97,6 +103,11 @@ impl ContentPage {
 					self.open_project_page(project_id_to_open, database, preferences);
 				}
 			}
+
+			action
+		}
+		else {
+			ContentPageAction::None
 		}
 	}
 

@@ -17,6 +17,7 @@ async fn main() {
 				format!("{j}. Task"),
 				"A detailed description of the task".to_string(),
 				None,
+				None,
 				if i % 20 == 0 {
 					Some(
 						if j % 200 == 0 {
@@ -43,7 +44,7 @@ async fn main() {
 
 	Database::save_to(
 		PathBuf::from("stresstest_database.json"),
-		serde_json::to_string_pretty(&db).unwrap(),
+		db.to_json(),
 	)
 	.await
 	.unwrap();
