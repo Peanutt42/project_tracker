@@ -3,7 +3,7 @@ use std::{
 	path::PathBuf,
 };
 
-use chrono::{DateTime, Datelike};
+use chrono::{DateTime, Datelike, Local, TimeZone};
 use iced::Color;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -85,19 +85,20 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 
 				let task_name = google_tasks_task.title;
 				let task_description = google_tasks_task.notes.unwrap_or_default();
-				let mut task = Task::new(task_name, task_description, None, None, None, HashSet::new());
-				task.due_date = google_tasks_task.due.and_then(|due_date_str| {
+				let task_due_date = google_tasks_task.due.and_then(|due_date_str| {
 					DateTime::parse_from_rfc3339(&due_date_str)
 						.map(|parsed_due_date| {
-							let naive_due_date = parsed_due_date.naive_utc().date();
+							let local_due_date = Local.from_utc_datetime(&parsed_due_date.naive_utc());
 							SerializableDate {
-								year: naive_due_date.year(),
-								month: naive_due_date.month(),
-								day: naive_due_date.day(),
+								year: local_due_date.year(),
+								month: local_due_date.month(),
+								day: local_due_date.day(),
 							}
 						})
 						.ok()
 				});
+
+				let task = Task::new(task_name, task_description, None, None, task_due_date, HashSet::new());
 
 				let task_id = TaskId::generate();
 
