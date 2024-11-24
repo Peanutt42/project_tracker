@@ -336,7 +336,7 @@ impl StopwatchPage {
 
 				// check if timer is finished
 				match self {
-					StopwatchPage::StopTaskTime { project_id, task_id, clock: Some(clock), finished_notification_sent, .. } => {
+					StopwatchPage::StopTaskTime { project_id, task_id, clock, finished_notification_sent, .. } => {
 						let task_and_type = database
 							.as_ref()
 							.and_then(|db| db.get_task_and_type(project_id, task_id));
@@ -349,9 +349,16 @@ impl StopwatchPage {
 								let timer_seconds = Self::get_spend_seconds(*project_id, *task_id, database).unwrap_or(0.0);
 								let needed_seconds = needed_minutes as f32 * 60.0;
 								let seconds_left = needed_seconds - timer_seconds;
-								clock.set_percentage(timer_seconds / needed_seconds);
-								clock.set_seconds_left(seconds_left);
-								clock.set_needed_seconds(needed_seconds);
+								let percentage = timer_seconds / needed_seconds;
+
+								if let Some(clock) = clock {
+									clock.set_percentage(percentage);
+									clock.set_seconds_left(seconds_left);
+									clock.set_needed_seconds(needed_seconds);
+								}
+								else {
+									*clock = Some(StopwatchClock::new(percentage, seconds_left, Some(needed_seconds)));
+								}
 
 								if seconds_left <= 0.0 && !*finished_notification_sent {
 									*finished_notification_sent = true;
@@ -360,6 +367,9 @@ impl StopwatchPage {
 										timer_notification(format!("{} min. timer finished!", needed_minutes), task.name().clone());
 									}
 								}
+							}
+							else {
+								*clock = None;
 							}
 						}
 						else {
