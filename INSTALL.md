@@ -24,6 +24,12 @@ cd scripts
 ./install_server_linux.sh
 ./set_server_password_linux.sh
 ```
+Project Tracker Server with website:
+```bash
+cd scripts
+./install_server_with_web_linux.sh
+./set_server_password_linux.sh
+```
 
 ## Installation - Windows - GUI/Client only
 ```bat
