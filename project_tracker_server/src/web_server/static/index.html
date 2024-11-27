@@ -11,13 +11,15 @@
 	<div class="login_page" id="login_page" style="display: none;" >
 		<h1>Project Tracker Web</h1>
 		<div class="password">
-			<input type="password" id="password_input" placeholder="Password" autofocus="true" autocomplete="current-password" required />
-			<button id="login_button">Login</button>
-		</div>
-		<div class="invalid_password" id="invalid_password">Invalid Password!</div>
-		<div class="show_password" id="show_password">
-			<input type="checkbox" id="show_password_checkbox" >
-			Show Password
+			<div class="password_row" style="display: flex; flex-direction: row; gap: 10px" >
+				<input type="password" id="password_input" placeholder="Password" autofocus="true" autocomplete="current-password" required />
+				<button id="login_button">Login</button>
+			</div>
+			<div class="invalid_password" id="invalid_password">Invalid Password!</div>
+			<div class="show_password" id="show_password">
+				<input type="checkbox" id="show_password_checkbox" >
+				Show Password
+			</div>
 		</div>
 	</div>
 	<button id="logout_button">Logout</button>
