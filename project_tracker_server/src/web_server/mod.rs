@@ -2,8 +2,9 @@ use std::path::PathBuf;
 use warp::{reply::{Reply, Response}, Filter};
 
 const INDEX_HTML: &str = include_str!("static/index.html");
+const STYLE_CSS: &str = include_str!("static/style.css");
 const SCRIPT_JS: &str = include_str!("static/script.js");
-const FAVICON_ICO: &[u8] = include_bytes!("../../../assets/icon.ico");
+const FAVICON_ICO: &[u8] = include_bytes!("static/favicon.ico");
 
 pub async fn run_web_server(database_filepath: PathBuf, password: String) {
 	let get_database_route = warp::path("load_database")
@@ -16,14 +17,20 @@ pub async fn run_web_server(database_filepath: PathBuf, password: String) {
 	let index_route = warp::path::end()
 		.map(|| warp::reply::html(INDEX_HTML));
 
+	let style_route = warp::path("static")
+		.and(warp::path("style.css"))
+		.map(|| warp::reply::with_header(STYLE_CSS, "Content-Type", "text/css"));
+
 	let script_route = warp::path("static")
 		.and(warp::path("script.js"))
 		.map(|| warp::reply::with_header(SCRIPT_JS, "Content-Type", "application/javascript"));
 
-	let favicon_route = warp::path("favicon.ico")
+	let favicon_route = warp::path("static")
+		.and(warp::path("favicon.ico"))
     	.map(|| warp::reply::with_header(FAVICON_ICO, "Content-Type", "image/x-icon"));
 
 	let routes = index_route
+    	.or(style_route)
 		.or(script_route)
 		.or(favicon_route)
 		.or(get_database_route);

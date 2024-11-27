@@ -1,4 +1,5 @@
 const database_json_output = document.getElementById("database-json-output");
+const logout_button = document.getElementById("logout_button");
 const login_page = document.getElementById("login_page");
 const password_input = document.getElementById("password_input");
 const login_button = document.getElementById("login_button");
@@ -6,17 +7,31 @@ const show_password = document.getElementById("show_password");
 const show_password_checkbox = document.getElementById("show_password_checkbox");
 const invalid_password = document.getElementById("invalid_password");
 
-login_button.addEventListener("click", submitPassword);
+logout_button.addEventListener("click", logout);
+
+login_button.addEventListener("click", submit_password);
 
 password_input.addEventListener("keypress", (event) => {
-    if (event.key === "Enter") {
-        submitPassword();
-    }
+	if (event.key === "Enter") {
+		submit_password();
+	}
 });
 
 show_password.addEventListener("click", toggleShowPassword);
 show_password_checkbox.addEventListener("click", toggleShowPassword);
 show_password_checkbox.checked = false;
+
+// auto login if last login was successful
+document.addEventListener("DOMContentLoaded", () => {
+	const storedPassword = localStorage.getItem("password");
+	if (storedPassword) {
+		hide_login_page();
+		login(storedPassword);
+	}
+	else {
+		show_login_page();
+	}
+});
 
 function toggleShowPassword() {
 	if (show_password_checkbox.checked) {
@@ -26,41 +41,80 @@ function toggleShowPassword() {
 	}
 }
 
-async function submitPassword() {
+function show_login_page() {
+	login_page.style.display = "block";
+	logout_button.style.display = "none";
+	password_input.value = "";
+	show_password_checkbox.checked = false;
+	style_valid_password();
+}
+
+function hide_login_page() {
+	login_page.style.display = "none";
+	logout_button.style.display = "block";
+}
+
+function style_invalid_password() {
+	password_input.classList.add("invalid");
+	invalid_password.style.display = "block";
+}
+
+function style_valid_password() {
+	password_input.classList.remove("invalid");
+	invalid_password.style.display = "none";
+}
+
+function store_password(password) {
+	localStorage.setItem("password", password);
+}
+
+function remove_stored_password() {
+	localStorage.removeItem("password");
+}
+
+async function submit_password() {
 	const password = password_input.value;
+	await login(password);
+}
 
-    if (!password) {
-        alert("Please enter a password!");
-        return;
-    }
+async function login(password) {
+	if (!password) {
+		logout();
+		alert("Please enter a password!");
+		return;
+	}
 
-    try {
-        const response = await fetch("/load_database", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ password }),
-        });
+	try {
+		const response = await fetch("/load_database", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ password }),
+		});
 
-        if (response.ok) {
-          const json = await response.json();
-          const prettyJson = JSON.stringify(json, null, 2);
-          database_json_output.textContent = prettyJson;
-		  login_page.style.display = "none";
-		  password_input.classList.remove("invalid");
-		  invalid_password.style.display = "none";
-        } else if (response.status === 401) {
-      		// TODO: show a error msg above password input and make input red etc.
-			login_page.style.display = "block";
-			password_input.classList.add("invalid");
-			invalid_password.style.display = "block";
-        } else {
-			login_page.style.display = "block";
-			password_input.classList.add("invalid");
-			invalid_password.style.display = "block";
-          alert("An error occurred: " + response.statusText);
-        }
-    } catch (error) {
-        console.error("Failed to load database", error);
-        alert("Failed to load database!");
-    }
+		if (response.ok) {
+			const json = await response.json();
+			const prettyJson = JSON.stringify(json, null, 2);
+			database_json_output.textContent = prettyJson;
+			hide_login_page();
+			style_valid_password();
+			store_password(password);
+		} else if (response.status === 401) {
+			logout();
+			style_invalid_password();
+		} else {
+			logout();
+			style_invalid_password();
+			alert("An error occurred: " + response.statusText);
+		}
+	} catch (error) {
+		logout();
+		console.error("Failed to load database", error);
+		alert("Failed to load database!");
+	}
+}
+
+function logout() {
+	database_json_output.textContent = "";
+	show_login_page();
+	remove_stored_password();
 }

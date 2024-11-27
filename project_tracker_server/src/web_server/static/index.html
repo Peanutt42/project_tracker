@@ -1,130 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Project Tracker Web</title>
+	<title>Project Tracker Web</title>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <style>
-    	body {
-            background-color: #121212;
-            color: #e0e0e0;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-        }
-		.login_page {
-			position: absolute;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			width: 100%;
-			max-width: 400px;
-			display: flex;
-			flex-direction: column;
-			gap: 10px;
-		}
-        h1 {
-			text-align: center;
-            color: #ffffff;
-        }
-		.password {
-			display: flex;
-			flex-direction: row;
-			gap: 10px;
-		}
-       input[type="password"] {
-			width: 100%;
-			height: 40px;
-			font-size: 20px;
-			outline: none;
-            border: 1px solid #333;
-            border-radius: 5px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-        }
-		input[type="password"]:focus {
-			outline: none;
-		}
-        input[type="password"]::placeholder {
-            color: #888;
-        }
-		input[type="text"] {
-			width: 100%;
-			height: 40px;
-			font-size: 20px;
-			outline: none;
-            border: 1px solid #333;
-            border-radius: 5px;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-        }
-		input[type="text"]:focus {
-			outline: none;
-		}
-        input[type="text"]::placeholder {
-            color: #888;
-        }
-		#password_input {
-			border: 1px solid #333;
-			padding: 5px;
-			border-radius: 4px;
-		}
-		#password_input.invalid {
-			border: 1px solid red;
-		}
-		input[type="checkbox"] {
-			width: 20px;
-			height: 20px;
-		}
-		.show_password {
-			display: flex;
-			flex-direction: row;
-			gap: 5px;
-			padding-left: 5px;
-		}
-		.invalid_password {
-			display: none;
-			color: red;
-			padding-left: 5px;
-		}
-        button {
-            background-color: rgb(0, 41, 229);
-            color: #ffffff;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: rgb(0, 30, 170);
-        }
-        pre {
-            background-color: #1e1e1e;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #333;
-            overflow-x: auto;
-            color: #00e676;
-        }
-        a {
-            color: #bb86fc;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        #database-json-output {
-            font-family: monospace;
-            white-space: pre;
-            margin-top: 20px;
-        }
-    </style>
+	<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+	<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-	<div class="login_page" id="login_page">
+	<div class="login_page" id="login_page" style="display: none;" >
 		<h1>Project Tracker Web</h1>
 		<div class="password">
 			<input type="password" id="password_input" placeholder="Password" autofocus="true" autocomplete="current-password" required />
@@ -135,8 +19,9 @@
 			<input type="checkbox" id="show_password_checkbox" >
 			Show Password
 		</div>
-    </div>
-    <div id="database-json-output"></div>
-    <script src="/static/script.js"></script>
+	</div>
+	<button id="logout_button">Logout</button>
+	<div id="database-json-output"></div>
+	<script src="/static/script.js"></script>
 </body>
 </html>
