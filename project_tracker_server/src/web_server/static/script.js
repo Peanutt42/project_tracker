@@ -23,10 +23,14 @@ show_password_checkbox.checked = false;
 
 // auto login if last login was successful
 document.addEventListener("DOMContentLoaded", () => {
-	const storedPassword = localStorage.getItem("password");
-	if (storedPassword) {
+	const stored_password = localStorage.getItem("password");
+	if (stored_password) {
 		hide_login_page();
-		login(storedPassword);
+		const last_loaded_database = localStorage.getItem("last_loaded_database");
+		if (last_loaded_database) {
+			database_json_output.textContent = last_loaded_database;
+		}
+		login(stored_password);
 	}
 	else {
 		show_login_page();
@@ -64,14 +68,6 @@ function style_valid_password() {
 	invalid_password.style.display = "none";
 }
 
-function store_password(password) {
-	localStorage.setItem("password", password);
-}
-
-function remove_stored_password() {
-	localStorage.removeItem("password");
-}
-
 async function submit_password() {
 	const password = password_input.value;
 	await login(password);
@@ -97,7 +93,8 @@ async function login(password) {
 			database_json_output.textContent = prettyJson;
 			hide_login_page();
 			style_valid_password();
-			store_password(password);
+			localStorage.setItem("password", password);
+			localStorage.setItem("last_loaded_database", prettyJson);
 		} else if (response.status === 401) {
 			logout();
 			style_invalid_password();
@@ -116,5 +113,5 @@ async function login(password) {
 function logout() {
 	database_json_output.textContent = "";
 	show_login_page();
-	remove_stored_password();
+	localStorage.removeItem("password");
 }
