@@ -134,7 +134,7 @@ a {
 a:hover {
 	text-decoration: underline;
 }
-#database-json-output {
+#database {
 	font-family: monospace;
 	white-space: pre;
 	margin-top: 20px;
