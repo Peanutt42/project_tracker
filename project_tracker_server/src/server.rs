@@ -3,10 +3,11 @@ use std::path::PathBuf;
 use std::io::ErrorKind;
 use std::fs::read_to_string;
 use chrono::{DateTime, Utc};
+use tokio::sync::broadcast::Sender;
 use crate::{get_last_modification_date_time, Request, Response, ServerError};
 
 
-pub fn run_server(port: usize, database_filepath: PathBuf, password: String) {
+pub fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<()>) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).expect("Failed to bind to port");
 
 	println!("Server is listening on port {}", port);
@@ -16,7 +17,8 @@ pub fn run_server(port: usize, database_filepath: PathBuf, password: String) {
 			Ok((stream, _addr)) => {
 				let database_filepath_clone = database_filepath.clone();
 				let password_clone = password.clone();
-				std::thread::spawn(move || listen_client_thread(stream, database_filepath_clone, password_clone));
+				let modified_sender_clone = modified_sender.clone();
+				std::thread::spawn(move || listen_client_thread(stream, database_filepath_clone, password_clone, modified_sender_clone));
 			}
 			Err(e) => {
 				eprintln!("Failed to establish a connection: {e}");
@@ -25,7 +27,7 @@ pub fn run_server(port: usize, database_filepath: PathBuf, password: String) {
 	}
 }
 
-fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, password: String) {
+fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, password: String, modified_sender: Sender<()>) {
 	println!("client connected");
 
 	loop {
@@ -58,8 +60,9 @@ fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, passw
 				Request::UpdateDatabase { database_json } => match std::fs::write(&database_filepath, database_json) {
 					Ok(_) => {
 						println!("Updated database file");
-						// TODO: broadcast download database to all other connected clients
+						// TODO: broadcast download database to all other connected clients (ws gui clients)
 						let _ = Response::DatabaseUpdated.send(&mut stream, &password);
+						let _ = modified_sender.send(());
 					},
 					Err(e) => panic!("cant write to database file: {}, error: {e}", database_filepath.display()),
 				},

@@ -3628,6 +3628,7 @@ dependencies = [
  "aes-gcm",
  "chrono",
  "filetime",
+ "futures-util",
  "pbkdf2",
  "rand",
  "serde",

@@ -4,7 +4,6 @@ use std::io::Write;
 use std::process::exit;
 use project_tracker_server::{run_server, DEFAULT_PASSWORD, DEFAULT_PORT};
 
-#[cfg(feature = "web_server")]
 mod web_server;
 
 fn main() {
@@ -54,22 +53,20 @@ fn main() {
 			exit(1);
 		});
 
-	#[cfg(feature = "web_server")]
-	{
-		let database_filepath_clone = database_filepath.clone();
-		let password_clone = password.clone();
+	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
 
-		std::thread::Builder::new()
-			.name("Web Server".to_string())
-			.spawn(move || {
-				let rt = tokio::runtime::Runtime::new().unwrap();
+	let database_filepath_clone = database_filepath.clone();
+	let password_clone = password.clone();
+	std::thread::Builder::new()
+		.name("Web Server".to_string())
+		.spawn(move || {
+			let rt = tokio::runtime::Runtime::new().unwrap();
 
-				rt.block_on(async {
-					web_server::run_web_server(database_filepath_clone, password_clone).await;
-				});
-			})
-			.expect("failed to start web server thread");
-	}
+			rt.block_on(async {
+				web_server::run_web_server(database_filepath_clone, password_clone, modified_receiver).await;
+			});
+		})
+		.expect("failed to start web server thread");
 
-	run_server(DEFAULT_PORT, database_filepath, password);
+	run_server(DEFAULT_PORT, database_filepath, password, modified_sender);
 }

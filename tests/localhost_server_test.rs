@@ -46,10 +46,12 @@ async fn localhost_server_test() {
 
 	// start test server
 	let tmp_server_database_filepath_clone = tmp_server_database_filepath.clone();
+	let (modified_sender, _modified_receiver) = tokio::sync::broadcast::channel(1);
 	std::thread::spawn(|| run_server(
 		DEFAULT_PORT,
 		tmp_server_database_filepath_clone,
-		DEFAULT_PASSWORD.to_string()
+		DEFAULT_PASSWORD.to_string(),
+		modified_sender
 	));
 
 	let test_server_config = ServerConfig {

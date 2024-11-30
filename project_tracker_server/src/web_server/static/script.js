@@ -7,6 +7,10 @@ const show_password = document.getElementById("show_password");
 const show_password_checkbox = document.getElementById("show_password_checkbox");
 const invalid_password = document.getElementById("invalid_password");
 
+let ws = null;
+let reconnect_attempts = 0;
+connect_ws();
+
 logout_button.addEventListener("click", logout);
 
 login_button.addEventListener("click", submit_password);
@@ -114,4 +118,35 @@ function logout() {
 	database_json_output.textContent = "";
 	show_login_page();
 	localStorage.removeItem("password");
+}
+
+function connect_ws() {
+	ws = new WebSocket('ws://' + location.host + '/modified');
+	ws.onopen = on_ws_open;
+	ws.onclose = on_ws_close;
+	ws.onmessage = on_ws_message;
+}
+
+function on_ws_open(event) {
+	reconnect_attempts = 0;
+}
+
+function on_ws_close(event) {
+	if (reconnect_attempts < 10) {
+		reconnect_attempts++;
+		console.log('reconnecting to modified ws endpoint... (' + reconnect_attempts + '. attempt)');
+		// reconnect every 2 seconds
+		setTimeout(connect_ws, 2000);
+	}
+	else {
+		console.log('too many reconnect attempts, refresh when ws up again');
+	}
+}
+
+// fetch updated database
+function on_ws_message(msg) {
+	const stored_password = localStorage.getItem("password");
+	if (stored_password) {
+		login(stored_password);
+	}
 }

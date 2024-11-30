@@ -11,12 +11,9 @@ filetime = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
 rand = { workspace = true }
-tokio = { workspace = true, optional = true }
+tokio = { workspace = true }
 sha2 = "0.10.8"
 aes-gcm = "0.10.3"
 pbkdf2 = "0.12.2"
-warp = { version = "0.3.7", optional = true }
-
-[features]
-web_server = ["dep:warp", "dep:tokio"]
-async_tokio = ["dep:tokio"]
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+warp = { version = "0.3.7", features = ["websocket"]}

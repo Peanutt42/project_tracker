@@ -3,7 +3,6 @@ use chrono::{DateTime, Utc};
 use filetime::FileTime;
 use thiserror::Error;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-#[cfg(feature = "async_tokio")]
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::tcp::{OwnedReadHalf, OwnedWriteHalf}};
 
 mod encryption;
@@ -46,11 +45,9 @@ impl Request {
 	pub fn read(stream: &mut TcpStream, password: &str) -> ServerResult<Self> {
 		read_message(stream, password)
 	}
-	#[cfg(feature = "async_tokio")]
 	pub async fn send_async(&self, stream: &mut OwnedWriteHalf, password: &str) -> ServerResult<()> {
 		send_message_async(stream, self, password).await
 	}
-	#[cfg(feature = "async_tokio")]
 	pub async fn read_async(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<Self> {
 		read_message_async(stream, password).await
 	}
@@ -72,11 +69,9 @@ impl Response {
 	pub fn read(stream: &mut TcpStream, password: &str) -> ServerResult<Self> {
 		read_message(stream, password)
 	}
-	#[cfg(feature = "async_tokio")]
 	pub async fn send_async(&self, stream: &mut OwnedWriteHalf, password: &str) -> ServerResult<()> {
 		send_message_async(stream, self, password).await
 	}
-	#[cfg(feature = "async_tokio")]
 	pub async fn read_async(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<Self> {
 		read_message_async(stream, password).await
 	}
@@ -152,7 +147,6 @@ fn read_message<T: DeserializeOwned>(stream: &mut TcpStream, password: &str) -> 
 }
 
 
-#[cfg(feature = "async_tokio")]
 async fn send_message_async<T: Serialize>(stream: &mut OwnedWriteHalf, message: &T, password: &str) -> ServerResult<()> {
 	let message_json = serde_json::to_string(message)?;
 	let encrypted_message = EncryptedMessage::new(message_json.as_bytes(), password)?;
@@ -167,7 +161,6 @@ async fn send_message_async<T: Serialize>(stream: &mut OwnedWriteHalf, message: 
 	Ok(())
 }
 
-#[cfg(feature = "async_tokio")]
 async fn read_message_async<T: DeserializeOwned>(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<T> {
 	let mut encrypted_message_len_bytes = [0u8; 4];
 	stream.read_exact(&mut encrypted_message_len_bytes).await?;
