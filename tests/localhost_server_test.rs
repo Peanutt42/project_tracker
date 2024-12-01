@@ -1,5 +1,5 @@
 use project_tracker::{core::{Database, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId}, integrations::{sync_database_from_server, ServerConfig, SyncServerDatabaseResponse}};
-use project_tracker_server::{get_last_modification_date_time, run_server, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{run_server, DEFAULT_PASSWORD, DEFAULT_PORT};
 use tokio::fs::read_to_string;
 use std::{collections::HashSet, path::PathBuf};
 
@@ -63,7 +63,6 @@ async fn localhost_server_test() {
 	// sync with server: should download server db to client db
 	match sync_database_from_server(
 		test_server_config.clone(),
-		get_last_modification_date_time(&tmp_client_database_filepath.metadata().unwrap()),
 		test_client_database.clone()
 	)
 	.await
@@ -102,7 +101,6 @@ async fn localhost_server_test() {
 
 	match sync_database_from_server(
 		test_server_config,
-		get_last_modification_date_time(&tmp_client_database_filepath.metadata().unwrap()),
 		test_client_database.clone()
 	)
 	.await

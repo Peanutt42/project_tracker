@@ -26,7 +26,7 @@ pub enum SyncServerDatabaseResponse {
 	DownloadedDatabase(Database),
 }
 
-pub async fn sync_database_from_server(config: ServerConfig, database_last_modified_date: DateTime<Utc>, database: Database) -> ServerResult<SyncServerDatabaseResponse> {
+pub async fn sync_database_from_server(config: ServerConfig, database: Database) -> ServerResult<SyncServerDatabaseResponse> {
 	let stream = TcpStream::connect(format!("{}:{}", config.hostname, config.port)).await?;
 	let (mut read_half, mut write_half) = stream.into_split();
 
@@ -39,6 +39,8 @@ pub async fn sync_database_from_server(config: ServerConfig, database_last_modif
 		Response::Database { .. } | Response::DatabaseUpdated => return Err(ServerError::InvalidResponse),
 		Response::InvalidPassword => return Err(ServerError::InvalidPassword),
 	};
+
+	let database_last_modified_date: DateTime<Utc> = (*database.last_changed_time()).into();
 
 	if server_modified_date > database_last_modified_date {
 		// download database

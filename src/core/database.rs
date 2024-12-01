@@ -3,6 +3,8 @@ use crate::core::{
 	TaskTagId, TaskType, TimeSpend
 };
 use crate::project_tracker::Message;
+use chrono::{DateTime, Utc};
+use project_tracker_server::get_last_modification_date_time;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use std::collections::{HashMap, HashSet};
@@ -17,7 +19,7 @@ pub struct Database {
 	last_changed_time: SystemTime,
 
 	#[serde(skip, default = "SystemTime::now")]
-	pub last_saved_time: SystemTime,
+	last_saved_time: SystemTime,
 }
 
 #[derive(Clone, Debug)]
@@ -220,9 +222,17 @@ impl Database {
 		&self.last_changed_time
 	}
 
+	pub fn saved(&mut self, saved_time: SystemTime) {
+		self.last_saved_time = saved_time;
+	}
+
 	pub fn modify(&mut self, f: impl FnOnce(&mut OrderedHashMap<ProjectId, Project>)) {
 		f(&mut self.projects);
 		self.modified();
+	}
+
+	fn modified(&mut self) {
+		self.last_changed_time = SystemTime::now();
 	}
 
 	pub fn has_same_content_as(&self, other: &Database) -> bool {
@@ -241,10 +251,6 @@ impl Database {
 		}
 
 		true
-	}
-
-	fn modified(&mut self) {
-		self.last_changed_time = SystemTime::now();
 	}
 
 	pub fn has_unsaved_changes(&self) -> bool {
@@ -594,22 +600,18 @@ impl Database {
 		Ok(begin_time)
 	}
 
-	pub async fn sync(synchronization_filepath: PathBuf) -> SyncDatabaseResult {
-		use filetime::FileTime;
+	pub async fn sync(synchronization_filepath: PathBuf, local_database_last_change_time: SystemTime) -> SyncDatabaseResult {
+		let local_last_modification_datetime: DateTime<Utc> = local_database_last_change_time.into();
 
 		let synchronization_filepath_metadata = match synchronization_filepath.metadata() {
 			Ok(metadata) => metadata,
 			Err(_) => return SyncDatabaseResult::InvalidSynchronizationFilepath,
 		};
 
-		let local_filepath = Self::get_filepath();
-		let local_filepath_metadata = match local_filepath.metadata() {
-			Ok(metadata) => metadata,
-			Err(_) => return SyncDatabaseResult::Download,
-		};
+		let synchronization_last_modification_datetime = get_last_modification_date_time(&synchronization_filepath_metadata);
 
-		if FileTime::from_last_modification_time(&local_filepath_metadata)
-			> FileTime::from_last_modification_time(&synchronization_filepath_metadata)
+		if local_last_modification_datetime
+			> synchronization_last_modification_datetime
 		{
 			SyncDatabaseResult::Upload
 		} else {

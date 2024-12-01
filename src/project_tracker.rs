@@ -12,7 +12,7 @@ use iced::{
 		center, column, container, mouse_area, opaque, responsive, row, stack, text, Space, Stack
 	}, window, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme
 };
-use project_tracker_server::{get_last_modification_date_time, ServerError};
+use project_tracker_server::ServerError;
 use std::{
 	path::PathBuf, rc::Rc, sync::Arc, time::{Duration, Instant, SystemTime}
 };
@@ -206,7 +206,7 @@ impl ProjectTrackerApp {
 		let synchronized_status = if !self.syncing_database && !self.syncing_database_from_server {
 			if let Some(last_sync_time) = self.last_sync_time {
 				if let Some(database) = &self.database {
-					if let Ok(last_database_save_duration) = database.last_saved_time.elapsed() {
+					if let Ok(last_database_save_duration) = database.last_changed_time().elapsed() {
 						if last_database_save_duration < last_sync_time.elapsed() {
 							" *"
 						}
@@ -416,7 +416,7 @@ impl ProjectTrackerApp {
 			}
 			Message::DatabaseSaved(saved_time) => {
 				if let Some(database) = &mut self.database {
-					database.last_saved_time = saved_time;
+					database.saved(saved_time);
 				}
 				Task::none()
 			}
@@ -485,22 +485,27 @@ impl ProjectTrackerApp {
 			Message::DatabaseImported(result) => self.update(Message::LoadedDatabase(result))
 				.chain(self.update(Message::SaveDatabase)),
 			Message::SyncDatabaseFilepath(filepath) => {
-				self.syncing_database = true;
-				Task::perform(
-					Database::sync(filepath.clone()),
-					move |result| match result {
-						SyncDatabaseResult::InvalidSynchronizationFilepath => {
-							Message::SyncDatabaseFilepathFailed(format!(
-								"Failed to open synchronization file in\n\"{}\"",
-								filepath.display()
-							))
-						}
-						SyncDatabaseResult::Upload => {
-							Message::SyncDatabaseFilepathUpload(filepath.clone())
-						}
-						SyncDatabaseResult::Download => Message::SyncDatabaseFilepathDownload(filepath.clone()),
-					},
-				)
+				if let Some(database) = &self.database {
+					self.syncing_database = true;
+					Task::perform(
+						Database::sync(filepath.clone(), *database.last_changed_time()),
+						move |result| match result {
+							SyncDatabaseResult::InvalidSynchronizationFilepath => {
+								Message::SyncDatabaseFilepathFailed(format!(
+									"Failed to open synchronization file in\n\"{}\"",
+									filepath.display()
+								))
+							}
+							SyncDatabaseResult::Upload => {
+								Message::SyncDatabaseFilepathUpload(filepath.clone())
+							}
+							SyncDatabaseResult::Download => Message::SyncDatabaseFilepathDownload(filepath.clone()),
+						},
+					)
+				}
+				else {
+					Task::none()
+				}
 			}
 			Message::SyncDatabaseFilepathUpload(filepath) => {
 				if let Some(database) = &self.database {
@@ -607,30 +612,19 @@ impl ProjectTrackerApp {
 					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
 						self.syncing_database_from_server = true;
 
-						let database_filepath = Database::get_filepath();
-
-						match database_filepath.metadata() {
-							Ok(metadata) => {
-								return Task::perform(
-									sync_database_from_server(
-										server_config,
-										get_last_modification_date_time(&metadata),
-										database.clone()
-									),
-									|result| match result {
-										Ok(sync_response) => match sync_response {
-											SyncServerDatabaseResponse::DownloadedDatabase(database) => Message::DatabaseDownloadedFromServer(database),
-											SyncServerDatabaseResponse::UploadedDatabase => Message::DatabaseUploadedToServer,
-										},
-										Err(e) => Message::ServerError(Arc::new(e)),
-									}
-								);
-							},
-							Err(e) => return self.show_error_msg(format!(
-								"failed to get metadata of database file: {}, error: {e}",
-								database_filepath.display()
-							)),
-						}
+						return Task::perform(
+							sync_database_from_server(
+								server_config,
+								database.clone()
+							),
+							|result| match result {
+								Ok(sync_response) => match sync_response {
+									SyncServerDatabaseResponse::DownloadedDatabase(database) => Message::DatabaseDownloadedFromServer(database),
+									SyncServerDatabaseResponse::UploadedDatabase => Message::DatabaseUploadedToServer,
+								},
+								Err(e) => Message::ServerError(Arc::new(e)),
+							}
+						);
 					}
 				}
 				Task::none()
