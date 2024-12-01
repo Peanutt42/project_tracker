@@ -1,6 +1,6 @@
 #!/bin/bash
 
-project_root="$(realpath "../")"
+project_root="$(realpath $(dirname $0)/../)"
 
 if [ "$project_root" = "" ]; then
 	echo "failed to get absolute filepath of project root"
