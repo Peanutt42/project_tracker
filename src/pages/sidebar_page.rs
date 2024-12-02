@@ -389,7 +389,6 @@ impl SidebarPage {
 
 			SidebarPageMessage::DropProject { .. } => {
 				if let Some(dragged_project_id) = self.dragged_project_id {
-					self.project_dropzone_hovered = None;
 					// self.dragged_project_id = None; gets called after LeftClickReleased
 					if let Some(project_dropzone_hovered) = self.project_dropzone_hovered {
 						self.project_dropzone_hovered = None;
