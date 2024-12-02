@@ -5,13 +5,9 @@ edition = "2021"
 repository = "https://github.com/Peanutt42/project_tracker"
 
 [workspace]
-members = [
-	"project_tracker_server",
-	"iced_drop"
-]
+members = ["iced_drop"]
 
 [dependencies]
-project_tracker_server = { path = "project_tracker_server" }
 iced = { workspace = true }
 iced_aw = { workspace = true }
 iced_drop = { path = "iced_drop" }
@@ -38,6 +34,11 @@ libc = "0.2"
 image = "0.24"
 thiserror = { workspace = true }
 single-instance = "0.3.3"
+sha2 = "0.10.8"
+aes-gcm = "0.10.3"
+pbkdf2 = "0.12.2"
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+warp = { version = "0.3.7", features = ["websocket"]}
 
 [dev-dependencies]
 tokio = { version = "1.4", features = ["fs", "rt-multi-thread", "macros", "net", "io-util"] }
@@ -49,10 +50,14 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bincode = "1.3.3"
 rand = "0.8.5"
-tokio = { version = "1.4", features = ["fs", "net", "io-util", "rt-multi-thread"] }
+tokio = { version = "1.4", features = ["fs", "net", "io-util", "rt-multi-thread", "sync"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 filetime = "0.2"
 thiserror = "1.0"
+
+[[bin]]
+name = "project_tracker_server"
+path = "src/server/main.rs"
 
 [build-dependencies]
 winresource = "0.1.17"

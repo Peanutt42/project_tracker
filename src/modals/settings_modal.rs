@@ -19,6 +19,7 @@ use crate::{
 	integrations::import_google_tasks_dialog,
 	styles::{card_style, PADDING_AMOUNT},
 };
+use crate::server::DEFAULT_PASSWORD;
 use iced::alignment::Vertical;
 use iced::widget::text::Span;
 use iced::widget::{rich_text, text_input, toggler, tooltip};
@@ -31,7 +32,6 @@ use iced::{
 	Padding, Subscription, Task,
 };
 use iced_aw::card;
-use project_tracker_server::DEFAULT_PASSWORD;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {

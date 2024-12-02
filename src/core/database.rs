@@ -3,8 +3,8 @@ use crate::core::{
 	TaskTagId, TaskType, TimeSpend
 };
 use crate::project_tracker::Message;
+use crate::server::get_last_modification_date_time;
 use chrono::{DateTime, Utc};
-use project_tracker_server::get_last_modification_date_time;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use std::collections::{HashMap, HashSet};

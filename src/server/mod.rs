@@ -5,11 +5,11 @@ use thiserror::Error;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::tcp::{OwnedReadHalf, OwnedWriteHalf}};
 
+mod run_server;
+pub use run_server::run_server;
+
 mod encryption;
 pub use encryption::{encrypt, decrypt, SALT_LENGTH, NONCE_LENGTH};
-
-mod server;
-pub use server::run_server;
 
 pub const DEFAULT_HOSTNAME: &str = "127.0.0.1";
 pub const DEFAULT_PORT: usize = 8080;

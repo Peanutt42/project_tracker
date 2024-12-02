@@ -1,5 +1,5 @@
 use project_tracker::{core::{Database, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId}, integrations::{sync_database_from_server, ServerConfig, SyncServerDatabaseResponse}};
-use project_tracker_server::{run_server, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker::server::{run_server, DEFAULT_PASSWORD, DEFAULT_PORT};
 use tokio::fs::read;
 use std::{collections::HashSet, path::PathBuf};
 

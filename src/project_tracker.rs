@@ -5,14 +5,14 @@ use crate::{
 		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SyncDatabaseResult, SynchronizationSetting, TaskId
 	}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
-	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
+	server::ServerError,
 };
 use iced::{
 	alignment::Horizontal, clipboard, event::Status, keyboard, mouse, time, widget::{
 		center, column, container, mouse_area, opaque, responsive, row, stack, text, Space, Stack
 	}, window, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme
 };
-use project_tracker_server::ServerError;
 use std::{
 	path::PathBuf, rc::Rc, sync::Arc, time::{Duration, Instant, SystemTime}
 };

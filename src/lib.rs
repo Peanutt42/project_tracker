@@ -5,6 +5,7 @@ mod modals;
 mod project_tracker;
 pub use project_tracker::ProjectTrackerApp;
 mod already_opened_app;
+pub mod server;
 pub use already_opened_app::run_already_opened_application;
 pub mod styles;
 pub mod icons;
