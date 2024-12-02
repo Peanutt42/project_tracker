@@ -34,7 +34,7 @@ pub enum Request {
 	GetModifiedDate,
 	DownloadDatabase,
 	UpdateDatabase {
-		database_json: String,
+		database_binary: Vec<u8>,
 	}
 }
 
@@ -57,7 +57,7 @@ impl Request {
 pub enum Response {
 	ModifiedDate(DateTime<Utc>),
 	Database {
-		database_json: String,
+		database_binary: Vec<u8>,
 	},
 	DatabaseUpdated,
 	InvalidPassword,

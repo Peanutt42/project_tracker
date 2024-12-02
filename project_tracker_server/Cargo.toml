@@ -7,6 +7,7 @@ repository = "https://github.com/Peanutt42/project_tracker"
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
+bincode = { workspace = true }
 filetime = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }

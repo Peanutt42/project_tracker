@@ -174,7 +174,7 @@ pub enum LoadDatabaseError {
 	#[error("failed to parse database: {filepath}, error: {error}")]
 	FailedToParse {
 		filepath: PathBuf,
-		error: serde_json::Error,
+		error: bincode::Error,
 	},
 }
 
@@ -188,7 +188,7 @@ pub enum SyncDatabaseResult {
 }
 
 impl Database {
-	const FILE_NAME: &'static str = "database.json";
+	const FILE_NAME: &'static str = "database.project_tracker";
 
 	pub fn new(projects: OrderedHashMap<ProjectId, Project>) -> Self {
 		Self {
@@ -564,13 +564,13 @@ impl Database {
 	}
 
 	pub async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
-		let file_content = tokio::fs::read_to_string(&filepath).await
+		let file_content = tokio::fs::read(&filepath).await
 			.map_err(|error| LoadDatabaseError::FailedToOpenFile{
 				filepath: filepath.clone(),
 				error
 			})?;
 
-		serde_json::from_str(&file_content)
+		bincode::deserialize(&file_content)
 			.map_err(|error| LoadDatabaseError::FailedToParse{
 				filepath: filepath.clone(),
 				error
@@ -581,12 +581,12 @@ impl Database {
 		Self::load_from(Self::get_and_ensure_filepath().await).await
 	}
 
-	pub fn to_json(&self) -> String {
-		serde_json::to_string_pretty(self).unwrap()
+	pub fn to_binary(&self) -> Vec<u8> {
+		bincode::serialize(self).unwrap()
 	}
 
-	pub async fn save_to(filepath: PathBuf, json: String) -> Result<(), String> {
-		if let Err(e) = tokio::fs::write(filepath.as_path(), json.as_bytes()).await {
+	pub async fn save_to(filepath: PathBuf, binary: Vec<u8>) -> Result<(), String> {
+		if let Err(e) = tokio::fs::write(filepath.as_path(), binary).await {
 			Err(format!("Failed to save to {}: {e}", filepath.display()))
 		} else {
 			Ok(())
@@ -594,9 +594,9 @@ impl Database {
 	}
 
 	// returns begin time of saving
-	pub async fn save(json: String) -> Result<SystemTime, String> {
+	pub async fn save(binary: Vec<u8>) -> Result<SystemTime, String> {
 		let begin_time = SystemTime::now();
-		Self::save_to(Self::get_and_ensure_filepath().await, json).await?;
+		Self::save_to(Self::get_and_ensure_filepath().await, binary).await?;
 		Ok(begin_time)
 	}
 
@@ -623,7 +623,7 @@ impl Database {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Export ProjectTracker Database")
 			.set_file_name(Self::FILE_NAME)
-			.add_filter("Database (.json)", &["json"])
+			.add_filter("Database (.project_tracker)", &["project_tracker"])
 			.save_file()
 			.await;
 
@@ -633,7 +633,7 @@ impl Database {
 	pub async fn import_file_dialog() -> Option<PathBuf> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Import ProjectTracker Database")
-			.add_filter("Database (.json)", &["json"])
+			.add_filter("Database (.project_tracker)", &["project_tracker"])
 			.pick_file()
 			.await;
 

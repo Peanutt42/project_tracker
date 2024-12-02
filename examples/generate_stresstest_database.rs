@@ -43,8 +43,8 @@ async fn main() {
 	}
 
 	Database::save_to(
-		PathBuf::from("stresstest_database.json"),
-		db.to_json(),
+		PathBuf::from("stresstest_database.project_tracker"),
+		db.to_binary(),
 	)
 	.await
 	.unwrap();

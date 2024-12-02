@@ -6,7 +6,7 @@ use std::{collections::HashSet, path::PathBuf};
 #[tokio::test]
 async fn test_database_serialization() {
 	let output_filepath: PathBuf =
-		PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("tmp_test_database.json");
+		PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("tmp_test_database.project_tracker");
 	let mut database = Database::default();
 
 	for i in 0..10 {
@@ -30,7 +30,7 @@ async fn test_database_serialization() {
 
 	let original = database.clone();
 
-	Database::save_to(output_filepath.clone(), database.to_json())
+	Database::save_to(output_filepath.clone(), database.to_binary())
 		.await
 		.unwrap();
 

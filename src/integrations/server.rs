@@ -49,7 +49,7 @@ pub async fn sync_database_from_server(config: ServerConfig, database: Database)
 			.await?;
 
 		match Response::read_async(&mut read_half, &config.password).await? {
-			Response::Database{ database_json } => match serde_json::from_str(&database_json) {
+			Response::Database{ database_binary } => match bincode::deserialize(&database_binary) {
 				Ok(database) => Ok(SyncServerDatabaseResponse::DownloadedDatabase(database)),
 				Err(_) => Err(ServerError::InvalidResponse),
 			},
@@ -60,9 +60,9 @@ pub async fn sync_database_from_server(config: ServerConfig, database: Database)
 	}
 	else {
 		// upload database
-		let database_json = database.to_json();
+		let database_binary = database.to_binary();
 
-		Request::UpdateDatabase { database_json }
+		Request::UpdateDatabase { database_binary }
 			.send_async(&mut write_half, &config.password)
 			.await?;
 

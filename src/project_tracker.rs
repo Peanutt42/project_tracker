@@ -406,7 +406,7 @@ impl ProjectTrackerApp {
 			}
 			Message::SaveDatabase => {
 				if let Some(database) = &self.database {
-					Task::perform(Database::save(database.to_json()), |result| match result {
+					Task::perform(Database::save(database.to_binary()), |result| match result {
 						Ok(begin_time) => Message::DatabaseSaved(begin_time),
 						Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
 					})
@@ -447,7 +447,7 @@ impl ProjectTrackerApp {
 			Message::ExportDatabase(filepath) => {
 				if let Some(database) = &self.database {
 					self.exporting_database = true;
-					Task::perform(Database::save_to(filepath, database.to_json()), |result| {
+					Task::perform(Database::save_to(filepath, database.to_binary()), |result| {
 						match result {
 							Ok(_) => Message::DatabaseExported,
 							Err(e) => Message::ExportDatabaseFailed(e),
@@ -509,7 +509,7 @@ impl ProjectTrackerApp {
 			}
 			Message::SyncDatabaseFilepathUpload(filepath) => {
 				if let Some(database) = &self.database {
-					Task::perform(Database::save_to(filepath, database.to_json()), |_| {
+					Task::perform(Database::save_to(filepath, database.to_binary()), |_| {
 						Message::SyncDatabaseFilepathUploaded
 					})
 				} else {
@@ -561,7 +561,7 @@ impl ProjectTrackerApp {
 							let saved_corrupted_filepath = Database::get_filepath()
 								.parent()
 								.unwrap()
-								.join("corrupted - database.json");
+								.join("corrupted - database.project_tracker");
 							let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
 							if self.database.is_none() {
 								self.database = Some(Database::default());

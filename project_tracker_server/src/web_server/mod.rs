@@ -57,8 +57,8 @@ pub async fn run_web_server(database_filepath: PathBuf, password: String, modifi
 
 fn load_database(body: serde_json::Value, database_filepath: &PathBuf, password: String) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
-		match std::fs::read_to_string(database_filepath) {
-			Ok(content) => match serde_json::from_str::<serde_json::Value>(&content) {
+		match std::fs::read(database_filepath) {
+			Ok(bin_content) => match bincode::deserialize::<serde_json::Value>(&bin_content) {
 				Ok(json) => reply::json(&json).into_response(),
 				Err(_) => {
 					eprintln!("web-server: database file has invalid json format!");

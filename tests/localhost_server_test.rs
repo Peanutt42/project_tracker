@@ -1,20 +1,20 @@
 use project_tracker::{core::{Database, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId}, integrations::{sync_database_from_server, ServerConfig, SyncServerDatabaseResponse}};
 use project_tracker_server::{run_server, DEFAULT_PASSWORD, DEFAULT_PORT};
-use tokio::fs::read_to_string;
+use tokio::fs::read;
 use std::{collections::HashSet, path::PathBuf};
 
 #[tokio::test]
 async fn localhost_server_test() {
 	let tmp_client_database_filepath = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-		.join("tmp_test_client_database.json");
+		.join("tmp_test_client_database.project_tracker");
 
 	let mut test_client_database = Database::default();
-	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_json())
+	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_binary())
 		.await
 		.unwrap();
 
 	let tmp_server_database_filepath = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-		.join("tmp_test_server_database.json");
+		.join("tmp_test_server_database.project_tracker");
 
 	let mut test_server_database = Database::new(OrderedHashMap::default());
 	for i in 0..10 {
@@ -40,7 +40,7 @@ async fn localhost_server_test() {
 
 		test_server_database.modify(|projects| projects.insert(ProjectId::generate(), project));
 	}
-	Database::save_to(tmp_server_database_filepath.clone(), test_server_database.to_json())
+	Database::save_to(tmp_server_database_filepath.clone(), test_server_database.to_binary())
 		.await
 		.unwrap();
 
@@ -69,7 +69,7 @@ async fn localhost_server_test() {
 	.unwrap() {
 		SyncServerDatabaseResponse::DownloadedDatabase(updated_database) => {
 			test_client_database = updated_database.clone();
-			Database::save_to(tmp_client_database_filepath.clone(), updated_database.to_json())
+			Database::save_to(tmp_client_database_filepath.clone(), updated_database.to_binary())
 				.await
 				.unwrap();
 		},
@@ -78,8 +78,8 @@ async fn localhost_server_test() {
 	}
 
 	assert_eq!(
-		read_to_string(tmp_client_database_filepath.clone()).await.unwrap(),
-		read_to_string(tmp_server_database_filepath.clone()).await.unwrap()
+		read(tmp_client_database_filepath.clone()).await.unwrap(),
+		read(tmp_server_database_filepath.clone()).await.unwrap()
 	);
 
 	// client adds project -> should upload client db to server db
@@ -95,7 +95,7 @@ async fn localhost_server_test() {
 		);
 	});
 
-	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_json())
+	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_binary())
 		.await
 		.unwrap();
 
@@ -111,7 +111,7 @@ async fn localhost_server_test() {
 	}
 
 	assert_eq!(
-		read_to_string(tmp_client_database_filepath.clone()).await.unwrap(),
-		read_to_string(tmp_server_database_filepath.clone()).await.unwrap()
+		read(tmp_client_database_filepath.clone()).await.unwrap(),
+		read(tmp_server_database_filepath.clone()).await.unwrap()
 	);
 }

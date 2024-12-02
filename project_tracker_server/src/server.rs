@@ -1,7 +1,7 @@
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::io::ErrorKind;
-use std::fs::read_to_string;
+use std::fs::read;
 use chrono::{DateTime, Utc};
 use tokio::sync::broadcast::Sender;
 use crate::{get_last_modification_date_time, Request, Response, ServerError};
@@ -57,7 +57,7 @@ fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, passw
 					}
 
 				},
-				Request::UpdateDatabase { database_json } => match std::fs::write(&database_filepath, database_json) {
+				Request::UpdateDatabase { database_binary } => match std::fs::write(&database_filepath, database_binary) {
 					Ok(_) => {
 						println!("Updated database file");
 						// TODO: broadcast download database to all other connected clients (ws gui clients)
@@ -67,9 +67,9 @@ fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, passw
 					Err(e) => panic!("cant write to database file: {}, error: {e}", database_filepath.display()),
 				},
 				Request::DownloadDatabase => {
-					match read_to_string(&database_filepath) {
-						Ok(database_json) => {
-							let response = Response::Database{ database_json };
+					match read(&database_filepath) {
+						Ok(database_binary) => {
+							let response = Response::Database{ database_binary };
 							match response.send(&mut stream, &password) {
 								Ok(_) => println!("Sent database"),
 								Err(e) => eprintln!("failed to send database to client: {e}"),

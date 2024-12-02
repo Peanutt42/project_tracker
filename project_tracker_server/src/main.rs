@@ -4,7 +4,7 @@ use std::io::Write;
 use std::process::exit;
 use project_tracker_server::{run_server, DEFAULT_PASSWORD, DEFAULT_PORT};
 
-mod web_server;
+//mod web_server;
 
 fn main() {
 	let mut args = std::env::args();
@@ -21,7 +21,7 @@ fn main() {
 		exit(1);
 	}
 
-	let database_filepath = server_data_directory.join("database.json");
+	let database_filepath = server_data_directory.join("database.project_tracker");
 	let password_filepath = server_data_directory.join("password.txt");
 
 	if !database_filepath.exists() {
@@ -53,9 +53,9 @@ fn main() {
 			exit(1);
 		});
 
-	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
+	let (modified_sender, _modified_receiver) = tokio::sync::broadcast::channel(10);
 
-	let database_filepath_clone = database_filepath.clone();
+	/*let database_filepath_clone = database_filepath.clone();
 	let password_clone = password.clone();
 	std::thread::Builder::new()
 		.name("Web Server".to_string())
@@ -66,7 +66,7 @@ fn main() {
 				web_server::run_web_server(database_filepath_clone, password_clone, modified_receiver).await;
 			});
 		})
-		.expect("failed to start web server thread");
+		.expect("failed to start web server thread");*/
 
 	run_server(DEFAULT_PORT, database_filepath, password, modified_sender);
 }
