@@ -11,8 +11,8 @@ echo "Stopping service if already running"
 sudo systemctl stop ProjectTrackerServer.service >/dev/null 2>&1
 
 echo "Compiling..."
-cd "$project_root/project_tracker_server"
-cargo b --release --bin server
+cd "$project_root"
+cargo b --release --bin project_tracker_server
 
 echo "Installing files..."
 binary_filepath="/usr/local/bin/project_tracker_server"
