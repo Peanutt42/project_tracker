@@ -1,6 +1,5 @@
 use std::str::FromStr;
 use crate::components::{hide_password_button, show_password_button, sync_database_from_server_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
-use crate::core::{Database, DatabaseMessage, DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
 use crate::project_tracker::{ProjectTrackerApp, Message};
@@ -18,8 +17,10 @@ use crate::{
 	modals::ErrorMsgModalMessage,
 	integrations::import_google_tasks_dialog,
 	styles::{card_style, PADDING_AMOUNT},
+	DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting,
 };
-use crate::server::DEFAULT_PASSWORD;
+use project_tracker_core::{Database, DatabaseMessage};
+use project_tracker_server::DEFAULT_PASSWORD;
 use iced::alignment::Vertical;
 use iced::widget::text::Span;
 use iced::widget::{rich_text, text_input, toggler, tooltip};

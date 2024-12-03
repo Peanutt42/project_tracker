@@ -1,5 +1,6 @@
 use iced::{Element, Subscription};
-use crate::{core::{Database, DatabaseMessage, Preferences, ProjectId, SerializedContentPage, TaskId}, project_tracker::Message, ProjectTrackerApp};
+use crate::{project_tracker::Message, ProjectTrackerApp, Preferences, SerializedContentPage};
+use project_tracker_core::{Database, DatabaseMessage, ProjectId, TaskId};
 
 mod sidebar_page;
 pub use sidebar_page::{

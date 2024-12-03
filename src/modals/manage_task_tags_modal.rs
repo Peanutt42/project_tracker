@@ -1,15 +1,12 @@
 use crate::{
 	components::{
 		cancel_create_new_task_tag_button, color_palette, color_palette_item_button, create_new_task_tags_button, delete_task_tag_button, task_tag_name_button, unfocusable
-	},
-	core::{Database, DatabaseMessage, Project, ProjectId, TaskTag, TaskTagId},
-	project_tracker::Message,
-	styles::{
+	}, core::IcedColorConversion, project_tracker::Message, styles::{
 		card_style, text_input_style_only_round_left,
 		LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT,
-	},
-	ProjectTrackerApp,
+	}, ProjectTrackerApp
 };
+use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, SerializableColor, TaskTag, TaskTagId};
 use iced::{
 	widget::{column, row, text, text_input, Column},
 	Alignment, Color, Element,
@@ -159,7 +156,7 @@ impl ManageTaskTagsModal {
 					DatabaseMessage::ChangeTaskTagColor {
 						project_id: *project_id,
 						task_tag_id: *edit_task_tag_id,
-						new_color: new_color.into(),
+						new_color: SerializableColor::from_iced_color(new_color),
 					}
 					.into()
 				}
@@ -225,7 +222,7 @@ impl ManageTaskTagsModal {
 						task_tag_id: TaskTagId::generate(),
 						task_tag: TaskTag::new(
 							std::mem::take(new_task_tag_name),
-							Color::WHITE.into(),
+							SerializableColor::from_iced_color(Color::WHITE),
 						),
 					}
 					.into()
@@ -344,7 +341,7 @@ impl ManageTaskTagsModal {
 
 			let color_picker = DropDown::new(
 				color_palette_item_button(
-					tag.color.into(),
+					tag.color.to_iced_color(),
 					false,
 					true,
 					true,
@@ -354,7 +351,7 @@ impl ManageTaskTagsModal {
 						ManageTaskTagsModalMessage::EditTaskTagColor(tag_id).into()
 					}
 				),
-				color_palette(tag.color.into(), move |new_color| {
+				color_palette(tag.color.to_iced_color(), move |new_color| {
 					ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color).into()
 				}),
 				show_color_palette

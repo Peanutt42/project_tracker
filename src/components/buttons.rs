@@ -1,14 +1,13 @@
 use crate::{
-	components::{date_text, duration_text}, core::{
-		Database, DatabaseMessage, DateFormatting, PreferenceMessage, ProjectId, SerializableDate, SortMode, SynchronizationSetting, TaskId, TaskTag, TaskTagId
-	}, icons::{icon_to_text, Bootstrap}, modals::{
+	components::{date_text, duration_text}, core::{IcedColorConversion, SortModeUI}, icons::{icon_to_text, Bootstrap}, modals::{
 		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage, WaitClosingModalMessage
 	}, pages::{
 		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID
 	}, project_tracker::Message, styles::{
 		circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, rounded_container_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
-	}, theme_mode::ThemeMode
+	}, theme_mode::ThemeMode, DateFormatting, PreferenceMessage, SynchronizationSetting
 };
+use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId};
 use iced::{
 	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, rich_text, row, text, text::Span, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
 use iced_aw::{drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
@@ -482,7 +481,7 @@ pub fn task_tag_button<Message>(
 	toggled: bool,
 ) -> Button<Message> {
 	let button = button(text(&task_tag.name)).style(move |t, s| {
-		task_tag_button_style(t, s, task_tag.color.into(), toggled)
+		task_tag_button_style(t, s, task_tag.color.to_iced_color(), toggled)
 	});
 
 	button

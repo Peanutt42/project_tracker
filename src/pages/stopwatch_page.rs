@@ -1,10 +1,11 @@
 use crate::{
 	components::{
 		complete_task_timer_button, days_left_widget, horizontal_scrollable, pause_timer_button, resume_timer_button, stop_timer_button, take_break_button, task_description, track_time_button, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING
-	}, core::{Database, DatabaseMessage, OptionalPreference, Preferences, Project, ProjectId, StopwatchProgress, Task, TaskId, TaskType}, pages::{ContentPageAction, ContentPageMessage}, project_tracker::Message, styles::{
+	}, core::IcedColorConversion, pages::{ContentPageAction, ContentPageMessage}, project_tracker::Message, styles::{
 		task_tag_container_style, BOLD_FONT, FIRA_SANS_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT
-	}, ProjectTrackerApp
+	}, OptionalPreference, Preferences, ProjectTrackerApp, StopwatchProgress
 };
+use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, Task, TaskId, TaskType};
 use iced::{
 	alignment::{Horizontal, Vertical}, keyboard, time, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Length::{self, Fill}, Padding, Subscription
 };
@@ -567,7 +568,7 @@ impl StopwatchPage {
 					]
 					.spacing(LARGE_SPACING_AMOUNT);
 
-					let page_view: Element<Message> = if let Some(task_info) = task_info(task_ref, project_ref, app) {
+					let page_view: Element<Message> = if let Some(task_info) = task_info(task_ref, *task_id, project_ref, app) {
 						if size.width > size.height {
 							row![
 								clock,
@@ -716,7 +717,7 @@ fn timer_notification(summary: String, body: String) {
 	});
 }
 
-fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
+fn task_info<'a>(task: Option<&'a Task>, task_id: TaskId, project: Option<&'a Project>, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
 	task.map(|task| {
 		Column::new()
 			.push(
@@ -725,7 +726,7 @@ fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a 
 					.font(BOLD_FONT)
 			)
 			.push_maybe(task.due_date.map(|date| days_left_widget(date, false)))
-			.push(task_description(task, app))
+			.push(task_description(app.task_description_markdown_items.get(&task_id), app))
 			.push_maybe(project.map(|project| {
 				row![
 					container(
@@ -733,7 +734,7 @@ fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a 
 							text(format!("{}:", project.name))
 						)
 						.style(|t| {
-							task_tag_container_style(t, project.color.into())
+							task_tag_container_style(t, project.color.to_iced_color())
 						})
 						.padding(
 							Padding::new(SMALL_PADDING_AMOUNT)
@@ -748,7 +749,7 @@ fn task_info<'a>(task: Option<&'a Task>, project: Option<&'a Project>, app: &'a 
 							if let Some(tag) = project.task_tags.get(tag_id) {
 								container(text(&tag.name))
 									.style(|t| {
-										task_tag_container_style(t, tag.color.into())
+										task_tag_container_style(t, tag.color.to_iced_color())
 									})
 									.padding(
 										Padding::new(SMALL_PADDING_AMOUNT)

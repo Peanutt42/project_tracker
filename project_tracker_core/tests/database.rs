@@ -1,4 +1,4 @@
-use project_tracker::core::{
+use project_tracker_core::{
 	Database, LoadDatabaseError, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId
 };
 use std::{collections::HashSet, path::PathBuf};

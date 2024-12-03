@@ -1,12 +1,11 @@
 use std::{net::TcpStream, io::{Read, Write}};
 use chrono::{DateTime, Utc};
-use filetime::FileTime;
 use thiserror::Error;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::tcp::{OwnedReadHalf, OwnedWriteHalf}};
 
-mod run_server;
-pub use run_server::run_server;
+mod server;
+pub use server::run_server;
 
 mod encryption;
 pub use encryption::{encrypt, decrypt, SALT_LENGTH, NONCE_LENGTH};
@@ -75,16 +74,6 @@ impl Response {
 	pub async fn read_async(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<Self> {
 		read_message_async(stream, password).await
 	}
-}
-
-pub fn get_last_modification_date_time(metadata: &std::fs::Metadata) -> DateTime<Utc> {
-	let modified = FileTime::from_last_modification_time(metadata);
-
-	let unix_timestamp = modified.unix_seconds();
-	let nanos = modified.nanoseconds();
-
-	DateTime::from_timestamp(unix_timestamp, nanos)
-		.expect("invalid file modification date timestamp")
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

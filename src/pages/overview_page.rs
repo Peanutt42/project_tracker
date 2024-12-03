@@ -1,9 +1,10 @@
 use std::{collections::{BTreeMap, HashMap}, time::SystemTime};
 use chrono::{Days, NaiveDate};
-use iced::{widget::{column, container, text, Column}, Element, Length::Fill, Padding};
+use iced::{widget::{column, container, container::Id, text, Column}, Element, Length::Fill, Padding};
 use iced_aw::date_picker::Date;
-use crate::{components::{days_left_widget, open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{Database, OptionalPreference, Preferences, ProjectId, SerializableDate, SortMode, Task, TaskId}, pages::ContentPageMessage, project_tracker::Message, styles::{PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
-
+use crate::{components::{days_left_widget, open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{IcedColorConversion, SerializableDateConversion}, pages::ContentPageMessage, project_tracker::Message, styles::{PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, Preferences, ProjectTrackerApp};
+use crate::core::SortModeUI;
+use project_tracker_core::{Database, ProjectId, SerializableDate, SortMode, Task, TaskId};
 
 #[derive(Debug, Clone)]
 pub struct OverviewPage {
@@ -46,7 +47,7 @@ impl OverviewPage {
 			for (project_id, project) in database.projects().iter() {
 				let mut cache_overdue_tasks = |task_id: TaskId, task: &Task| {
 					if let Some(due_date) = &task.due_date {
-						if *due_date < today_date.into() {
+						if *due_date < SerializableDate::from_iced_date(today_date) {
 							overdue_tasks.entry(*due_date)
 								.or_default()
 								.entry(project_id)
@@ -57,7 +58,7 @@ impl OverviewPage {
 				};
 				let mut cache_today_tasks = |task_id: TaskId, task: &Task| {
 					if let Some(due_date) = &task.due_date {
-						if *due_date == today_date.into() {
+						if *due_date == SerializableDate::from_iced_date(today_date) {
 							today_tasks.entry(project_id)
 								.or_default()
 								.push(task_id);
@@ -67,7 +68,7 @@ impl OverviewPage {
 				let mut cache_tomorrow_tasks = |task_id: TaskId, task: &Task| {
 					if let Some(tomorrow_date) = tomorrow_date {
 						if let Some(due_date) = &task.due_date {
-							if *due_date == tomorrow_date.into() {
+							if *due_date == SerializableDate::from_iced_date(tomorrow_date) {
 								tomorrow_tasks.entry(project_id)
 									.or_default()
 									.push(task_id);
@@ -224,7 +225,9 @@ impl OverviewPage {
 										task_widget(
 											task,
 											*task_id,
+											app.task_ui_id_map.get_dropzone_id(*task_id).unwrap_or(Id::unique()),
 											task_type,
+											app.task_description_markdown_items.get(task_id),
 											*project_id,
 											project,
 											false,
@@ -241,7 +244,7 @@ impl OverviewPage {
 						);
 
 						column![
-							open_project_button(*project_id, &project.name, project.color.into()),
+							open_project_button(*project_id, &project.name, project.color.to_iced_color()),
 							list.padding(Padding::default().left(PADDING_AMOUNT)),
 						]
 						.into()

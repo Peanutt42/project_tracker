@@ -1,8 +1,7 @@
 use crate::{
-	core::{DateFormatting, SerializableDate},
-	project_tracker::Message,
-	styles::{default_text_style, danger_text_style, rounded_container_style, SMALL_HORIZONTAL_PADDING},
+	core::SerializableDateConversion, project_tracker::Message, styles::{danger_text_style, default_text_style, rounded_container_style, SMALL_HORIZONTAL_PADDING}, DateFormatting
 };
+use project_tracker_core::SerializableDate;
 use chrono::NaiveDate;
 use iced::{
 	widget::{container, text, Text}, Element
@@ -15,7 +14,7 @@ pub fn date_text(date: &SerializableDate, formatting: DateFormatting) -> Text<'s
 
 pub fn days_left_widget(date: SerializableDate, is_task_done: bool) -> Element<'static, Message> {
 	let today: NaiveDate = Date::today().into();
-	let date: Date = date.into();
+	let date: Date = date.to_iced_date();
 	let date_naive: NaiveDate = date.into();
 	let days_left = date_naive.signed_duration_since(today).num_days();
 

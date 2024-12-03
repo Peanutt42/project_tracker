@@ -1,9 +1,8 @@
 use crate::{
-	components::{days_left_widget, duration_widget, duration_str, round_duration_to_seconds, in_between_dropzone}, core::{
-		DatabaseMessage, Project, ProjectId, SortMode, Task, TaskId, TaskType, TASK_TAG_QUAD_HEIGHT
-	}, icons::{icon_to_text, Bootstrap}, modals::TaskModalMessage, pages::SidebarPageMessage, project_tracker::Message, styles::{checkbox_style, default_text_style, grey_text_style, rounded_container_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT}
+	components::{days_left_widget, duration_str, duration_widget, in_between_dropzone, round_duration_to_seconds}, core::{View, TASK_TAG_QUAD_HEIGHT}, icons::{icon_to_text, Bootstrap}, modals::TaskModalMessage, pages::SidebarPageMessage, project_tracker::Message, styles::{checkbox_style, default_text_style, grey_text_style, rounded_container_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT}
 };
-use iced::widget::{hover, Space};
+use project_tracker_core::{DatabaseMessage, Project, ProjectId, SortMode, Task, TaskId, TaskType};
+use iced::widget::{hover, markdown, Space};
 use iced::{
 	alignment::Vertical,
 	widget::{
@@ -21,7 +20,9 @@ use std::time::Duration;
 pub fn task_widget<'a>(
 	task: &'a Task,
 	task_id: TaskId,
+	task_dropzone_id: Id,
 	task_type: TaskType,
+	task_description_markdown_items: Option<&'a Vec<markdown::Item>>,
 	project_id: ProjectId,
 	project: &'a Project,
 	dragging: bool,
@@ -128,15 +129,15 @@ pub fn task_widget<'a>(
 							Some(tags_element)
 						})
 						.push(inner_text_element)
-						.push_maybe(if task.description_markdown_items().is_empty() {
-							None::<Element<'a, Message>>
-						}
-						else {
-							Some(
-								icon_to_text(Bootstrap::JustifyLeft)
-									.size(SMALL_TEXT_SIZE)
-									.into()
-							)
+						.push_maybe(match task_description_markdown_items {
+							Some(task_description_markdown_items) if !task_description_markdown_items.is_empty() => {
+								Some(
+									icon_to_text(Bootstrap::JustifyLeft)
+										.size(SMALL_TEXT_SIZE)
+										.into()
+								)
+							},
+							_ => None::<Element<'a, Message>>
 						})
 						.spacing(TINY_SPACING_AMOUNT),
 
@@ -212,7 +213,7 @@ pub fn task_widget<'a>(
 	column![
 		in_between_dropzone(
 			if matches!(task_type, TaskType::Todo) {
-				task.dropzone_id.clone()
+				task_dropzone_id.clone()
 			} else {
 				Id::unique()
 			},

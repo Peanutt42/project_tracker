@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 use crate::{
-	components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, close_create_new_task_modal_button, create_new_task_modal_button, edit_due_date_button, edit_task_needed_time_button, horizontal_scrollable, task_tag_button, unfocusable, vertical_scrollable, SCROLLBAR_WIDTH}, core::{Database, DatabaseMessage, OptionalPreference, Preferences, ProjectId, SerializableDate, TaskId, TaskTagId}, project_tracker::Message, styles::{card_style, description_text_editor_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}
+	components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, close_create_new_task_modal_button, create_new_task_modal_button, edit_due_date_button, edit_task_needed_time_button, horizontal_scrollable, task_tag_button, unfocusable, vertical_scrollable, SCROLLBAR_WIDTH}, core::SerializableDateConversion, project_tracker::Message, styles::{card_style, description_text_editor_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, Preferences
 };
+use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, TaskId, TaskTagId};
 use iced::{
 	font, keyboard, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::{Fill, Fixed}, Padding, Subscription
 };
@@ -242,10 +243,11 @@ impl CreateTaskModal {
 				let due_date_view: Element<'a, CreateTaskModalMessage> = if *edit_due_date {
 					date_picker(
 						true,
-						due_date.unwrap_or(date_picker::Date::today().into()),
+						due_date.map(|due_date| due_date.to_iced_date())
+							.unwrap_or(date_picker::Date::today()),
 						add_due_date_button,
 						CreateTaskModalMessage::StopEditingDueDate,
-						|date| CreateTaskModalMessage::ChangeDueDate(date.into())
+						|date| CreateTaskModalMessage::ChangeDueDate(SerializableDate::from_iced_date(date))
 					)
 					.into()
 				}

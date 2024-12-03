@@ -1,4 +1,4 @@
-use project_tracker::core::OrderedHashMap;
+use project_tracker_core::OrderedHashMap;
 
 #[test]
 fn test_order_after_moving() {

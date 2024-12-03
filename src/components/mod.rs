@@ -28,7 +28,7 @@ mod task_widget;
 pub use task_widget::task_widget;
 
 mod task_description;
-pub use task_description::task_description;
+pub use task_description::{task_description, generate_task_description_markdown};
 
 mod duration_widget;
 pub use duration_widget::{round_duration_to_seconds, duration_str, duration_text, duration_widget};

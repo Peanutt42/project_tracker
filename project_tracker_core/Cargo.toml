@@ -1,0 +1,18 @@
+[package]
+name = "project_tracker_core"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/Peanutt42/project_tracker"
+
+[dependencies]
+serde = { workspace = true }
+bincode = { workspace = true }
+indexmap = { workspace = true }
+tokio = { workspace = true }
+rand = { workspace = true }
+directories = { workspace = true }
+thiserror = { workspace = true }
+rfd = { workspace = true }
+chrono = { workspace = true }
+filetime = { workspace = true }
+walkdir = "2.5"

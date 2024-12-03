@@ -1,7 +1,7 @@
 use crate::components::{
 	create_new_project_button, custom_project_preview, loading_screen, overview_button, project_preview, settings_button, stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE
 };
-use crate::core::{OrderedHashMap, Project, ProjectId};
+use crate::core::{IcedColorConversion, ProjectUiIdMap, TaskUiIdMap};
 use crate::project_tracker::ProjectTrackerApp;
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::{
@@ -9,13 +9,13 @@ use crate::{
 		horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable,
 		COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE,
 	},
-	core::{Database, DatabaseMessage, TaskId},
 	pages::StopwatchPageMessage,
 	project_tracker::Message,
 	styles::{
 		text_input_style_default, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT,
 	},
 };
+use project_tracker_core::{Database, DatabaseMessage, OrderedHashMap, Project, ProjectId, SerializableColor, TaskId};
 use iced::{
 	advanced::widget::Id,
 	alignment::Horizontal,
@@ -214,6 +214,8 @@ impl SidebarPage {
 		&mut self,
 		message: SidebarPageMessage,
 		database: &Option<Database>,
+		project_ui_ids: &mut ProjectUiIdMap,
+		task_ui_ids: &mut TaskUiIdMap,
 		is_theme_dark: bool,
 	) -> SidebarPageAction {
 		match message {
@@ -240,7 +242,7 @@ impl SidebarPage {
 						DatabaseMessage::CreateProject {
 							project_id,
 							name: create_new_project_name,
-							color: get_new_project_color(is_theme_dark).into(),
+							color: SerializableColor::from_iced_color(get_new_project_color(is_theme_dark)),
 						}
 						.into(),
 						SidebarPageAction::SelectProject(project_id)
@@ -298,10 +300,10 @@ impl SidebarPage {
 				self.task_dropzone_hovered = None;
 				if let Some(projects) = database.as_ref().map(|db| db.projects()) {
 					for (id, _bounds) in zones.iter() {
-						for (dst_project_id, dst_project) in projects.iter() {
-							if *id == dst_project.task_dropzone_id.clone().into() {
+						for dst_project_id in projects.keys() {
+							if *id == project_ui_ids.get_task_dropzone_id_mut(*dst_project_id).into() {
 								self.task_dropzone_hovered =
-									Some(TaskDropzone::Project(dst_project_id));
+									Some(TaskDropzone::Project(*dst_project_id));
 								break;
 							}
 						}
@@ -330,9 +332,9 @@ impl SidebarPage {
 					if let Some(project) =
 						database.as_ref().and_then(|db| db.get_project(&project_id))
 					{
-						for (task_id, task) in project.todo_tasks.iter() {
-							if is_hovered(task.dropzone_id.clone().into()) {
-								self.task_dropzone_hovered = Some(TaskDropzone::Task(task_id));
+						for task_id in project.todo_tasks.keys() {
+							if is_hovered(task_ui_ids.get_dropzone_id_mut(*task_id).into()) {
+								self.task_dropzone_hovered = Some(TaskDropzone::Task(*task_id));
 								break;
 							}
 						}
@@ -354,7 +356,7 @@ impl SidebarPage {
 				rect,
 				point,
 			} => {
-				let project_options = Self::project_dropzones_for_tasks_options(database, project_id);
+				let project_options = Self::project_dropzones_for_tasks_options(database, project_id, project_ui_ids);
 				let mut commands = vec![zones_on_point(
 					move |zones| {
 						SidebarPageMessage::HandleProjectZonesForTasks {
@@ -369,7 +371,7 @@ impl SidebarPage {
 					None,
 				)];
 				if task_is_todo && !filtering_tags {
-					let task_options = Self::task_dropzone_options(database, project_id, task_id);
+					let task_options = Self::task_dropzone_options(database, project_id, task_id, task_ui_ids);
 					commands.push(find_zones(
 						move |zones| {
 							SidebarPageMessage::HandleTaskZones {
@@ -420,7 +422,7 @@ impl SidebarPage {
 					self.start_dragging_point = Some(point);
 					self.just_minimal_dragging = true;
 				}
-				let options = Self::project_dropzone_options(database, project_id);
+				let options = Self::project_dropzone_options(database, project_id, project_ui_ids);
 				find_zones(
 					move |zones| {
 						SidebarPageMessage::HandleProjectZones { project_id, zones }.into()
@@ -438,13 +440,12 @@ impl SidebarPage {
 						let bottom_project_dropzone_widget_id =
 							BOTTOM_PROJECT_DROPZONE_ID.clone().into();
 
-						for (dst_project_id, dst_project) in projects.iter() {
-							let dst_project_widget_id =
-								dst_project.project_dropzone_id.clone().into();
+						for dst_project_id in projects.keys() {
+							let dst_project_widget_id = project_ui_ids.get_project_dropzone_id_mut(*dst_project_id).into();
 							for (id, _bounds) in zones.iter() {
 								if *id == dst_project_widget_id {
 									self.project_dropzone_hovered =
-										Some(ProjectDropzone::Project(dst_project_id));
+										Some(ProjectDropzone::Project(*dst_project_id));
 									break;
 								}
 								if *id == bottom_project_dropzone_widget_id {
@@ -506,9 +507,12 @@ impl SidebarPage {
 					Some(dragged_project_id) => dragged_project_id == project_id,
 					None => false,
 				};
+				let (project_dropzone_id, task_dropzone_id) = app.project_ui_id_map.get_project_task_dropzone_ids(project_id);
 				project_preview(
 					project,
 					project_id,
+					project_dropzone_id,
+					task_dropzone_id,
 					selected,
 					project_dropzone_highlight,
 					task_dropzone_highlight,
@@ -622,6 +626,7 @@ impl SidebarPage {
 	fn project_dropzone_options(
 		database: &Option<Database>,
 		exception: ProjectId,
+		project_ui_ids: &mut ProjectUiIdMap
 	) -> Option<Vec<Id>> {
 		// the dropzone of the project below the exception project does not make sense as a option,
 		// since the exception project is already before the project below it
@@ -630,10 +635,10 @@ impl SidebarPage {
 		database.as_ref().map(|database| {
 			let mut options: Vec<Id> = database
 				.projects()
-				.iter()
+				.keys()
 				.enumerate()
-				.filter_map(|(i, (project_id, project))| {
-					if project_id == exception {
+				.filter_map(|(i, project_id)| {
+					if *project_id == exception {
 						skip_project_order = Some(i + 1);
 						None
 					} else {
@@ -643,10 +648,10 @@ impl SidebarPage {
 									skip_project_order = None;
 									None
 								} else {
-									Some(project.project_dropzone_id.clone().into())
+									Some(project_ui_ids.get_project_dropzone_id_mut(*project_id).into())
 								}
 							}
-							None => Some(project.project_dropzone_id.clone().into()),
+							None => Some(project_ui_ids.get_project_dropzone_id_mut(*project_id).into()),
 						}
 					}
 				})
@@ -665,16 +670,16 @@ impl SidebarPage {
 		})
 	}
 
-	fn project_dropzones_for_tasks_options(database: &Option<Database>, exception: ProjectId) -> Option<Vec<Id>> {
+	fn project_dropzones_for_tasks_options(database: &Option<Database>, exception: ProjectId, project_ui_ids: &mut ProjectUiIdMap) -> Option<Vec<Id>> {
 		database.as_ref().map(|database| {
 			let mut options: Vec<Id> = database
 				.projects()
-				.iter()
-				.filter_map(|(project_id, project)| {
-					if project_id == exception {
+				.keys()
+				.filter_map(|project_id| {
+					if *project_id == exception {
 						None
 					} else {
-						Some(project.task_dropzone_id.clone().into())
+						Some(project_ui_ids.get_task_dropzone_id_mut(*project_id).into())
 					}
 				})
 				.collect();
@@ -689,6 +694,7 @@ impl SidebarPage {
 		database: &Option<Database>,
 		project_exception: ProjectId,
 		task_exception: TaskId,
+		task_ui_ids: &mut TaskUiIdMap
 	) -> Option<Vec<Id>> {
 		if let Some(database) = database {
 			let mut options = Vec::new();
@@ -700,13 +706,13 @@ impl SidebarPage {
 						.get_key_at_order(project.todo_tasks.len() - 1);
 					let mut skip_task_order = None;
 
-					for (i, (task_id, task)) in project.todo_tasks.iter().enumerate() {
-						if task_id == task_exception {
+					for (i, task_id) in project.todo_tasks.keys().enumerate() {
+						if *task_id == task_exception {
 							skip_task_order = Some(i + 1);
 						} else {
 							match skip_task_order {
 								Some(skip_order) if i == skip_order => skip_task_order = None,
-								_ => options.push(task.dropzone_id.clone().into()),
+								_ => options.push(task_ui_ids.get_dropzone_id_mut(*task_id).into()),
 							}
 						}
 					}

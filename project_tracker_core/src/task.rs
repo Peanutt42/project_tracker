@@ -1,5 +1,4 @@
-use crate::core::{TaskTagId, SerializableDate};
-use iced::{widget::{container::Id, markdown}, advanced::widget};
+use crate::{TaskTagId, SerializableDate};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::{Duration, Instant}};
 
@@ -25,7 +24,7 @@ impl TaskType {
 	}
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TimeSpend {
 	offset_seconds: f32, // seconds spend before stopping the time
 	#[serde(skip)]
@@ -68,24 +67,22 @@ impl TimeSpend {
 	}
 }
 
-#[derive(Clone, Debug)]
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Task {
 	name: String,
 	description: String,
+	#[serde(default)]
 	pub needed_time_minutes: Option<usize>,
+	#[serde(default)]
 	pub time_spend: Option<TimeSpend>,
+	#[serde(default)]
 	pub due_date: Option<SerializableDate>,
 	pub tags: HashSet<TaskTagId>,
-
-	pub dropzone_id: Id,
-	pub droppable_id: widget::Id,
-	description_markdown_items: Vec<markdown::Item>,
 }
 
 impl Task {
 	pub fn new(name: String, description: String, needed_time_minutes: Option<usize>, time_spend: Option<TimeSpend>, due_date: Option<SerializableDate>, tags: HashSet<TaskTagId>) -> Self {
-		let description_markdown_items = markdown::parse(&description).collect();
-
 		Self {
 			name,
 			description,
@@ -93,15 +90,11 @@ impl Task {
 			time_spend,
 			due_date,
 			tags,
-			dropzone_id: Id::unique(),
-			droppable_id: widget::Id::unique(),
-			description_markdown_items,
 		}
 	}
 
 	pub fn name(&self) -> &String { &self.name }
 	pub fn description(&self) -> &String { &self.description }
-	pub fn description_markdown_items(&self) -> &Vec<markdown::Item> { &self.description_markdown_items }
 
 	pub fn set_name(&mut self, new_name: String) {
 		self.name = new_name;
@@ -109,7 +102,6 @@ impl Task {
 
 	pub fn set_description(&mut self, new_description: String) {
 		self.description = new_description;
-		self.description_markdown_items = markdown::parse(&self.description).collect();
 	}
 
 	pub fn has_same_content_as(&self, other: &Task) -> bool {
@@ -138,51 +130,3 @@ impl PartialEq for Task {
 	}
 }
 impl Eq for Task {}
-
-
-#[derive(Serialize, Deserialize)]
-struct SerializedTask {
-	pub name: String,
-	pub description: String,
-	#[serde(default)]
-	pub needed_time_minutes: Option<usize>,
-	#[serde(default)]
-	pub time_spend_seconds: Option<f32>,
-	#[serde(default)]
-	pub due_date: Option<SerializableDate>,
-	pub tags: HashSet<TaskTagId>,
-}
-
-impl Serialize for Task {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-	where
-		S: serde::Serializer
-	{
-		let serialized_task = SerializedTask {
-			name: self.name.clone(),
-			description: self.description.clone(),
-			needed_time_minutes: self.needed_time_minutes,
-			time_spend_seconds: self.time_spend.as_ref().map(|time_spend| time_spend.get_seconds()),
-			due_date: self.due_date,
-			tags: self.tags.clone(),
-		};
-		serialized_task.serialize(serializer)
-	}
-}
-
-impl<'de> Deserialize<'de> for Task {
-	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-	where
-		D: serde::Deserializer<'de>
-	{
-		let serialized_task = SerializedTask::deserialize(deserializer)?;
-		Ok(Task::new(
-			serialized_task.name,
-			serialized_task.description,
-			serialized_task.needed_time_minutes,
-			serialized_task.time_spend_seconds.map(TimeSpend::new),
-			serialized_task.due_date,
-			serialized_task.tags
-		))
-	}
-}

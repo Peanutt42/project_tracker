@@ -1,5 +1,5 @@
 use crate::components::{cancel_create_project_button, in_between_dropzone};
-use crate::core::{Project, ProjectId};
+use crate::core::IcedColorConversion;
 use crate::styles::{
 	project_preview_background_container_style, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT,
 	SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT,
@@ -9,6 +9,7 @@ use crate::{
 	project_tracker::Message,
 	styles::{dropzone_container_style, project_preview_style},
 };
+use project_tracker_core::{Project, ProjectId};
 use iced::{
 	alignment::Horizontal,
 	border::rounded,
@@ -35,9 +36,12 @@ pub fn project_color_block(color: Color) -> Element<'static, Message> {
 	.into()
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn project_preview(
 	project: &Project,
 	project_id: ProjectId,
+	project_dropzone_id: Id,
+	task_dropzone_id: Id,
 	selected: bool,
 	project_dropzone_highlight: bool,
 	task_dropzone_highlight: bool,
@@ -48,9 +52,9 @@ pub fn project_preview(
 
 	custom_project_preview(
 		Some(project_id),
-		Some(project.project_dropzone_id.clone()),
-		Some(project.task_dropzone_id.clone()),
-		project.color.into(),
+		Some(project_dropzone_id),
+		Some(task_dropzone_id),
+		project.color.to_iced_color(),
 		project.done_tasks.len(),
 		project.total_tasks(),
 		inner_text_element,

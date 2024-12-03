@@ -1,8 +1,8 @@
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::{Fill, Fixed}, Padding};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
-use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, vertical_scrollable, view_task_description_button, ICON_BUTTON_WIDTH, SCROLLBAR_WIDTH}, core::{Database, DatabaseMessage, OptionalPreference, ProjectId, SerializableDate, TaskId}, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, ProjectTrackerApp};
-
+use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, vertical_scrollable, view_task_description_button, ICON_BUTTON_WIDTH, SCROLLBAR_WIDTH}, core::SerializableDateConversion, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, ProjectTrackerApp};
+use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, TaskId};
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 
@@ -298,10 +298,11 @@ impl TaskModal {
 							let due_date_view: Element<'a, Message> = if *edit_due_date {
 								date_picker(
 									true,
-									task.due_date.unwrap_or(date_picker::Date::today().into()),
+									task.due_date.map(|due_date| due_date.to_iced_date())
+										.unwrap_or(date_picker::Date::today()),
 									add_due_date_button,
 									TaskModalMessage::StopEditingDueDate.into(),
-									move |date| TaskModalMessage::ChangeDueDate(date.into()).into()
+									move |date| TaskModalMessage::ChangeDueDate(SerializableDate::from_iced_date(date)).into()
 								)
 								.into()
 							}
@@ -348,7 +349,7 @@ impl TaskModal {
 									.into()
 							}
 							else {
-								task_description(task, app)
+								task_description(app.task_description_markdown_items.get(task_id), app)
 							};
 
 							let name_text: Element<'a, Message> = text_input("Input task name", task.name())

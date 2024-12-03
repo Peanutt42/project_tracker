@@ -6,7 +6,6 @@ use crate::{
 		theme_mode_button, HORIZONTAL_SCROLLABLE_PADDING,
 	},
 	modals::ErrorMsgModalMessage,
-	core::{ProjectId, SerializableDate, TaskId},
 	project_tracker::Message,
 	styles::SPACING_AMOUNT,
 	theme_mode::ThemeMode,
@@ -18,6 +17,7 @@ use iced::{
 	Length::Fill,
 	Task,
 };
+use crate::{ProjectId, SerializableDate, TaskId};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use std::path::PathBuf;

@@ -1,7 +1,6 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, path::{Path, PathBuf}};
 use walkdir::{WalkDir, DirEntry};
-
-use crate::core::Task;
+use crate::Task;
 
 pub fn import_source_code_todos(folders: Vec<PathBuf>) -> Vec<Task> {
 	let mut todos = Vec::new();

@@ -8,7 +8,9 @@ use iced::Color;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::core::{OrderedHashMap, Project, SerializableDate, SortMode, Task, TaskId};
+use project_tracker_core::{OrderedHashMap, Project, SerializableColor, SerializableDate, SortMode, Task, TaskId};
+
+use crate::core::IcedColorConversion;
 
 #[derive(Debug, Error)]
 pub enum ImportGoogleTasksError {
@@ -75,7 +77,7 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 		.items
 		.into_iter()
 		.map(|google_tasks_list| {
-			let mut project = Project::new(google_tasks_list.title, Color::WHITE.into(), OrderedHashMap::new(), SortMode::default());
+			let mut project = Project::new(google_tasks_list.title, SerializableColor::from_iced_color(Color::WHITE), OrderedHashMap::new(), SortMode::default());
 
 			for google_tasks_task in google_tasks_list.items {
 				let is_todo = google_tasks_task

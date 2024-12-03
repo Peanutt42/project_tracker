@@ -1,20 +1,20 @@
 use crate::{
 	components::{
-		create_empty_database_button, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
-	}, core::{
-		Database, DatabaseMessage, LoadDatabaseError, LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, ProjectId, SyncDatabaseResult, SynchronizationSetting, TaskId
-	}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
+		create_empty_database_button, generate_task_description_markdown, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
+	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
-	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
-	server::ServerError,
+	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
+use crate::{LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
+use project_tracker_core::{Database, DatabaseMessage, LoadDatabaseError, ProjectId, SyncDatabaseResult, TaskId};
+use project_tracker_server::ServerError;
 use iced::{
 	alignment::Horizontal, clipboard, event::Status, keyboard, mouse, time, widget::{
-		center, column, container, mouse_area, opaque, responsive, row, stack, text, Space, Stack
+		center, column, container, markdown, mouse_area, opaque, responsive, row, stack, text, Space, Stack
 	}, window, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme
 };
 use std::{
-	path::PathBuf, rc::Rc, sync::Arc, time::{Duration, Instant, SystemTime}
+	collections::HashMap, path::PathBuf, rc::Rc, sync::Arc, time::{Duration, Instant, SystemTime}
 };
 
 pub struct ProjectTrackerApp {
@@ -22,6 +22,9 @@ pub struct ProjectTrackerApp {
 	pub sidebar_animation: ScalarAnimation,
 	pub content_page: ContentPage,
 	pub database: Option<Database>,
+	pub project_ui_id_map: ProjectUiIdMap,
+	pub task_ui_id_map: TaskUiIdMap,
+	pub task_description_markdown_items: HashMap<TaskId, Vec<markdown::Item>>,
 	pub loading_database: bool,
 	pub importing_database: bool,
 	pub exporting_database: bool,
@@ -144,6 +147,9 @@ impl ProjectTrackerApp {
 				sidebar_animation: ScalarAnimation::Idle,
 				content_page: ContentPage::new(&None, &None),
 				database: None,
+				project_ui_id_map: ProjectUiIdMap::default(),
+				task_ui_id_map: TaskUiIdMap::default(),
+				task_description_markdown_items: HashMap::new(),
 				loading_database: true,
 				importing_database: false,
 				exporting_database: false,
@@ -543,6 +549,27 @@ impl ProjectTrackerApp {
 
 				match load_database_result {
 					Ok(database) => {
+						// generate task description markdown parsed items
+						for (_project_id, project) in database.projects().iter() {
+							for (task_id, task) in project.todo_tasks.iter() {
+								self.task_description_markdown_items.insert(
+									task_id,
+									generate_task_description_markdown(task.description())
+								);
+							}
+							for (task_id, task) in project.source_code_todos.iter() {
+								self.task_description_markdown_items.insert(
+									*task_id,
+									generate_task_description_markdown(task.description())
+								);
+							}
+							for (task_id, task) in project.done_tasks.iter() {
+								self.task_description_markdown_items.insert(
+									*task_id,
+									generate_task_description_markdown(task.description())
+								);
+							}
+						}
 						self.database = Some(database);
 						let action = self.content_page.restore_from_serialized(&self.database, &mut self.preferences);
 						self.perform_content_page_action(action)
@@ -644,7 +671,13 @@ impl ProjectTrackerApp {
 			},
 			Message::DatabaseMessage(database_message) => {
 				if let Some(database) = &mut self.database {
-					database.update(database_message.clone());
+					if let DatabaseMessage::ChangeTaskDescription { task_id, new_task_description, .. } = &database_message {
+						self.task_description_markdown_items.insert(
+							*task_id,
+							generate_task_description_markdown(new_task_description)
+						);
+					}
+					database.update(database_message);
 					if let Some(overview_page) = &mut self.content_page.overview_page {
 						overview_page.update(OverviewPageMessage::RefreshCachedTaskList, &self.database, &self.preferences);
 					}
@@ -778,6 +811,8 @@ impl ProjectTrackerApp {
 						rect,
 					},
 					&self.database,
+					&mut self.project_ui_id_map,
+					&mut self.task_ui_id_map,
 					is_theme_dark,
 				);
 
@@ -793,6 +828,8 @@ impl ProjectTrackerApp {
 				let action = self.sidebar_page.update(
 					SidebarPageMessage::CancelDragTask,
 					&self.database,
+					&mut self.project_ui_id_map,
+					&mut self.task_ui_id_map,
 					is_theme_dark,
 				);
 
@@ -826,6 +863,8 @@ impl ProjectTrackerApp {
 				let action = self.sidebar_page.update(
 					message.clone(),
 					&self.database,
+					&mut self.project_ui_id_map,
+					&mut self.task_ui_id_map,
 					is_theme_dark,
 				);
 				self.perform_sidebar_action(action)

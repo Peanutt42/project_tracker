@@ -1,18 +1,19 @@
-use crate::components::{
+use std::collections::HashMap;
+
+use crate::{components::{
 	delete_all_done_tasks_button, in_between_dropzone,
 	reimport_source_code_todos_button, show_done_tasks_button, show_source_code_todos_button,
 	task_widget, vertical_scrollable,
-};
-use crate::core::{ProjectId, Task, TaskId};
+}, core::TaskUiIdMap};
+use project_tracker_core::{Project, ProjectId, Task, TaskId, TaskType};
 use crate::{
-	core::{Project, TaskType},
 	pages::{
 		CachedTaskList, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
 	},
 	project_tracker::Message,
 	styles::PADDING_AMOUNT,
 };
-use iced::widget::Space;
+use iced::widget::{container::Id, markdown, Space};
 use iced::{
 	alignment::Horizontal,
 	widget::{column, container, row, scrollable, Column},
@@ -29,6 +30,8 @@ pub fn task_list<'a>(
 	project_id: ProjectId,
 	project: &'a Project,
 	cached_task_list: &'a CachedTaskList,
+	task_ui_id_map: &'a TaskUiIdMap,
+	task_description_markdown_items: &'a HashMap<TaskId, Vec<markdown::Item>>,
 	dragged_task: Option<TaskId>,
 	just_minimal_dragging: bool,
 	hovered_task_dropzone: Option<TaskDropzone>,
@@ -49,10 +52,14 @@ pub fn task_list<'a>(
 			Some(TaskDropzone::Task(hovered_task_id)) => hovered_task_id == task_id,
 			_ => false,
 		};
+		let task_dropzone_id = task_ui_id_map.get_dropzone_id(task_id).unwrap_or(Id::unique());
+		let task_description_markdown_items = task_description_markdown_items.get(&task_id);
 		task_widget(
 			task,
 			task_id,
+			task_dropzone_id,
 			task_type,
+			task_description_markdown_items,
 			project_id,
 			project,
 			dragging,

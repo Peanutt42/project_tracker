@@ -1,0 +1,20 @@
+[package]
+name = "project_tracker_server"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/Peanutt42/project_tracker"
+
+[dependencies]
+project_tracker_core = { path = "../project_tracker_core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+bincode = { workspace = true }
+rand = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+sha2 = "0.10.8"
+aes-gcm = "0.10.3"
+pbkdf2 = "0.12.2"
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+warp = { version = "0.3.7", features = ["websocket"] }

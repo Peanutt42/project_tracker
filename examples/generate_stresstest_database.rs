@@ -1,6 +1,7 @@
 use std::{collections::HashSet, path::PathBuf};
 use chrono::{Duration, Local};
-use project_tracker::core::{Database, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, Task, TaskId};
+use project_tracker::core::SerializableDateConversion;
+use project_tracker_core::{Database, OrderedHashMap, Project, ProjectId, SerializableColor, SerializableDate, SortMode, Task, TaskId};
 
 #[tokio::main]
 async fn main() {
@@ -21,12 +22,11 @@ async fn main() {
 				if i % 20 == 0 {
 					Some(
 						if j % 200 == 0 {
-							today_date
+							SerializableDate::from_naive_date(today_date)
 						}
 						else {
-							tomorrow_date
+							SerializableDate::from_naive_date(tomorrow_date)
 						}
-						.into()
 					)
 				} else {
 					None
