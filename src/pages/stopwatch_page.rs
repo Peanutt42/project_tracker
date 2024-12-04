@@ -62,7 +62,7 @@ impl From<StopwatchPageMessage> for Message {
 }
 
 impl StopwatchPage {
-	pub fn startup_again(stopwatch_progress: StopwatchProgress, database: &Option<Database>) -> (Self, ContentPageAction) {
+	pub fn startup_again(stopwatch_progress: StopwatchProgress, database: Option<&Database>) -> (Self, ContentPageAction) {
 		match stopwatch_progress {
 			StopwatchProgress::TrackTime { elapsed_time_seconds, paused } => (
 				StopwatchPage::TrackTime{
@@ -155,8 +155,8 @@ impl StopwatchPage {
 		Subscription::batch([redraw_subscription, toggle_subscription])
 	}
 
-	pub fn get_needed_seconds(project_id: ProjectId, task_id: TaskId, database: &Option<Database>) -> Option<f32> {
-		database.as_ref().and_then(|database|
+	pub fn get_needed_seconds(project_id: ProjectId, task_id: TaskId, database: Option<&Database>) -> Option<f32> {
+		database.and_then(|database|
 			database.get_task(&project_id, &task_id)
 				.and_then(|task|
 					task.needed_time_minutes.as_ref()
@@ -165,8 +165,8 @@ impl StopwatchPage {
 		)
 	}
 
-	pub fn get_spend_seconds(project_id: ProjectId, task_id: TaskId, database: &Option<Database>) -> Option<f32> {
-		database.as_ref().and_then(|database|
+	pub fn get_spend_seconds(project_id: ProjectId, task_id: TaskId, database: Option<&Database>) -> Option<f32> {
+		database.and_then(|database|
 			database.get_task(&project_id, &task_id)
 				.and_then(|task|
 					task.time_spend.as_ref().map(|time_spend| time_spend.get_seconds())
@@ -177,7 +177,7 @@ impl StopwatchPage {
 	pub fn update(
 		&mut self,
 		message: StopwatchPageMessage,
-		database: &Option<Database>,
+		database: Option<&Database>,
 		preferences: &mut Option<Preferences>,
 		opened: bool,
 	) -> ContentPageAction {
@@ -545,7 +545,7 @@ impl StopwatchPage {
 								.into()
 						} else {
 							text(format_stopwatch_duration(
-								Self::get_spend_seconds(*project_id, *task_id, &app.database).unwrap_or(0.0).round_ties_even() as i64,
+								Self::get_spend_seconds(*project_id, *task_id, app.database.as_ref()).unwrap_or(0.0).round_ties_even() as i64,
 							))
 							.font(FIRA_SANS_FONT)
 							.size(90)

@@ -6,7 +6,7 @@ use crate::{
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 use crate::{LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
-use project_tracker_core::{Database, DatabaseMessage, LoadDatabaseError, ProjectId, SyncDatabaseResult, TaskId};
+use project_tracker_core::{Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, SyncDatabaseResult, TaskId};
 use project_tracker_server::ServerError;
 use iced::{
 	alignment::Horizontal, clipboard, event::Status, keyboard, mouse, time, widget::{
@@ -67,7 +67,7 @@ pub enum Message {
 	DatabaseSaved(SystemTime), // begin_time since saving
 	ExportDatabase(PathBuf),
 	ExportDatabaseDialog,
-	ExportDatabaseFailed(String),
+	ExportDatabaseFailed(Arc<SaveDatabaseError>),
 	ExportDatabaseDialogCanceled,
 	DatabaseExported,
 	ImportDatabase(PathBuf),
@@ -124,6 +124,10 @@ impl ProjectTrackerApp {
 		self.update(ErrorMsgModalMessage::open(error_msg))
 	}
 
+	fn show_error<E: std::error::Error>(&mut self, error: E) -> Task<Message> {
+		self.update(ErrorMsgModalMessage::open_error(error))
+	}
+
 	pub fn is_theme_dark(&self) -> bool {
 		if let Some(preferences) = &self.preferences {
 			match preferences.theme_mode() {
@@ -145,7 +149,7 @@ impl ProjectTrackerApp {
 			Self {
 				sidebar_page: SidebarPage::new(),
 				sidebar_animation: ScalarAnimation::Idle,
-				content_page: ContentPage::new(&None, &None),
+				content_page: ContentPage::new(None, &None),
 				database: None,
 				project_ui_id_map: ProjectUiIdMap::default(),
 				task_ui_id_map: TaskUiIdMap::default(),
@@ -412,11 +416,17 @@ impl ProjectTrackerApp {
 			}
 			Message::SaveDatabase => {
 				if let Some(database) = &self.database {
-					Task::perform(Database::save(database.to_binary()), |result| match result {
-						Ok(begin_time) => Message::DatabaseSaved(begin_time),
-						Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
-					})
-				} else {
+					if let Some(database_binary) = database.to_binary() {
+						Task::perform(Database::save(database_binary), |result| match result {
+							Ok(begin_time) => Message::DatabaseSaved(begin_time),
+							Err(error) => ErrorMsgModalMessage::open_error(error),
+						})
+					}
+					else {
+						self.show_error_msg("failed to serialize database to save to file!".to_string())
+					}
+				}
+				else {
 					Task::none()
 				}
 			}
@@ -452,20 +462,26 @@ impl ProjectTrackerApp {
 			}
 			Message::ExportDatabase(filepath) => {
 				if let Some(database) = &self.database {
-					self.exporting_database = true;
-					Task::perform(Database::save_to(filepath, database.to_binary()), |result| {
-						match result {
-							Ok(_) => Message::DatabaseExported,
-							Err(e) => Message::ExportDatabaseFailed(e),
-						}
-					})
-				} else {
+					match database.to_binary() {
+						Some(database_binary) => {
+							self.exporting_database = true;
+							Task::perform(Database::save_to(filepath, database_binary), |result| {
+								match result {
+									Ok(_) => Message::DatabaseExported,
+									Err(e) => Message::ExportDatabaseFailed(Arc::new(e)),
+								}
+							})
+						},
+						None => self.show_error_msg("failed to serialize database to binary to export to file!".to_string()),
+					}
+				}
+				else {
 					Task::none()
 				}
 			}
-			Message::ExportDatabaseFailed(error_msg) => {
+			Message::ExportDatabaseFailed(error) => {
 				self.exporting_database = false;
-				self.show_error_msg(error_msg)
+				self.show_error(error)
 			}
 			Message::DatabaseExported => {
 				self.exporting_database = false;
@@ -515,9 +531,12 @@ impl ProjectTrackerApp {
 			}
 			Message::SyncDatabaseFilepathUpload(filepath) => {
 				if let Some(database) = &self.database {
-					Task::perform(Database::save_to(filepath, database.to_binary()), |_| {
-						Message::SyncDatabaseFilepathUploaded
-					})
+					match database.to_binary() {
+						Some(database_binary) => Task::perform(Database::save_to(filepath, database_binary), |_| {
+							Message::SyncDatabaseFilepathUploaded
+						}),
+						None => self.show_error_msg("failed to serialize database to binary in order to upload it to the server".to_string()),
+					}
 				} else {
 					Task::none()
 				}
@@ -571,13 +590,14 @@ impl ProjectTrackerApp {
 							}
 						}
 						self.database = Some(database);
-						let action = self.content_page.restore_from_serialized(&self.database, &mut self.preferences);
+						let action = self.content_page.restore_from_serialized(self.database.as_ref(), &mut self.preferences);
 						self.perform_content_page_action(action)
 					},
 					Err(error) => match error.as_ref() {
+						LoadDatabaseError::FailedToFindDatbaseFilepath => self.show_error_msg(format!("{error}")),
 						LoadDatabaseError::FailedToOpenFile { .. } => {
 							if self.database.is_some() {
-								self.show_error_msg(format!("{error}"))
+								self.show_error(error)
 							}
 							else {
 								Task::none()
@@ -585,17 +605,21 @@ impl ProjectTrackerApp {
 						},
 						LoadDatabaseError::FailedToParse{ filepath, .. } => {
 							// saves the corrupted database, just so we don't lose the progress and can correct it afterwards
-							let saved_corrupted_filepath = Database::get_filepath()
-								.parent()
-								.unwrap()
-								.join("corrupted - database.project_tracker");
-							let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
+							if let Some(mut saved_corrupted_filepath) = Database::get_filepath() {
+								saved_corrupted_filepath.set_file_name("corrupted - database.project_tracker");
+								if let Err(e) = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone()) {
+									eprintln!("failed to copy corrupted database file to {}: {e}", saved_corrupted_filepath.display());
+								}
+							}
+							else {
+								eprintln!("failed to save a copy of the corrupted database!");
+							}
 							if self.database.is_none() {
 								self.database = Some(Database::default());
 							}
 							Task::batch([
 								self.update(Message::SaveDatabase),
-								self.show_error_msg(format!("{error}"))
+								self.show_error(error)
 							])
 						},
 					},
@@ -608,27 +632,32 @@ impl ProjectTrackerApp {
 						self.update(PreferenceMessage::Save.into())
 					},
 					Err(error) => match error.as_ref() {
+						LoadPreferencesError::FailedToFindPreferencesFilepath => self.show_error(error),
 						LoadPreferencesError::FailedToOpenFile{ .. } => {
 							if self.preferences.is_none() {
 								self.preferences = Some(Preferences::default());
 								self.update(PreferenceMessage::Save.into())
 							} else {
-								self.show_error_msg(format!("{error}"))
+								self.show_error(error)
 							}
 						}
 						LoadPreferencesError::FailedToParse{ filepath, .. } => {
 							// saves the corrupted preferences, just so we don't lose the progress and can correct it afterwards
-							let saved_corrupted_filepath = Preferences::get_filepath()
-								.parent()
-								.unwrap()
-								.join("corrupted - preferences.json");
-							let _ = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone());
+							if let Some(mut saved_corrupted_filepath) = Preferences::get_filepath() {
+								saved_corrupted_filepath.set_file_name("corrupted - preferences.json");
+								if let Err(e) = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone()) {
+									eprintln!("failed to copy corrupted preferences file to {}: {e}", saved_corrupted_filepath.display());
+								}
+							}
+							else {
+								eprintln!("failed to save copy of corrupted preferences!");
+							}
 							if self.preferences.is_none() {
 								self.preferences = Some(Preferences::default());
 							}
 							Task::batch([
 								self.update(PreferenceMessage::Save.into()),
-								self.show_error_msg(format!("Parsing Error:\nFailed to load preferences in\n\"{}\"\n\nOld corrupted preferences saved into\n\"{}\"", filepath.display(), saved_corrupted_filepath.display()))
+								self.show_error_msg(format!("Parsing Error:\nFailed to load preferences in\n\"{}\"", filepath.display()))
 							])
 						},
 					},
@@ -662,7 +691,7 @@ impl ProjectTrackerApp {
 			},
 			Message::ServerError(e) => {
 				self.syncing_database_from_server = false;
-				self.update(ErrorMsgModalMessage::open(format!("{e}")))
+				self.show_error(e)
 			},
 			Message::DatabaseUploadedToServer => {
 				self.syncing_database_from_server = false;
@@ -679,10 +708,9 @@ impl ProjectTrackerApp {
 					}
 					database.update(database_message);
 					if let Some(overview_page) = &mut self.content_page.overview_page {
-						overview_page.update(OverviewPageMessage::RefreshCachedTaskList, &self.database, &self.preferences);
+						overview_page.update(OverviewPageMessage::RefreshCachedTaskList, Some(database), &self.preferences);
 					}
 
-					let database = self.database.as_ref().unwrap();
 					match &mut self.content_page.project_page {
 						Some(project_page) if database.get_project(&project_page.project_id).is_none() => {
 							self.update(ContentPageMessage::OpenOverview.into())
@@ -855,7 +883,7 @@ impl ProjectTrackerApp {
 				task
 			}
 			Message::ContentPageMessage(message) => {
-				let action = self.content_page.update(message, &self.database, &mut self.preferences);
+				let action = self.content_page.update(message, self.database.as_ref(), &mut self.preferences);
 				self.perform_content_page_action(action)
 			}
 			Message::SidebarPageMessage(message) => {
@@ -904,7 +932,7 @@ impl ProjectTrackerApp {
 							let action = self.content_page.project_page.as_mut().map(|project_page| {
 								project_page.update(
 									ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id),
-									&self.database,
+									self.database.as_ref(),
 									&self.preferences
 								)
 							});
@@ -1002,6 +1030,7 @@ impl ProjectTrackerApp {
 		match action {
 			PreferenceAction::None => Task::none(),
 			PreferenceAction::Task(task) => task,
+			PreferenceAction::FailedToSerailizePreferences(e) => self.show_error(e),
 			PreferenceAction::RefreshCachedTaskList => {
 				if let Some(project_page) = &mut self.content_page.project_page {
 					if let Some(database) = &self.database {

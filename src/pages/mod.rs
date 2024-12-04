@@ -74,7 +74,7 @@ impl From<DatabaseMessage> for ContentPageAction {
 }
 
 impl ContentPage {
-	pub fn new(database: &Option<Database>, preferences: &Option<Preferences>) -> Self {
+	pub fn new(database: Option<&Database>, preferences: &Option<Preferences>) -> Self {
 		Self {
 			overview_page: Some(OverviewPage::new(database, preferences)),
 			stopwatch_page: StopwatchPage::default(),
@@ -82,7 +82,7 @@ impl ContentPage {
 		}
 	}
 
-	pub fn restore_from_serialized(&mut self, database: &Option<Database>, preferences: &mut Option<Preferences>) -> ContentPageAction {
+	pub fn restore_from_serialized(&mut self, database: Option<&Database>, preferences: &mut Option<Preferences>) -> ContentPageAction {
 		if let Some(ref_preferences) = preferences {
 			let action = if let Some(stopwatch_progress) = ref_preferences.stopwatch_progress() {
 				let (stopwatch_page, action) = StopwatchPage::startup_again(*stopwatch_progress, database);
@@ -140,7 +140,7 @@ impl ContentPage {
 		])
 	}
 
-	pub fn update(&mut self, message: ContentPageMessage, database: &Option<Database>, preferences: &mut Option<Preferences>) -> ContentPageAction {
+	pub fn update(&mut self, message: ContentPageMessage, database: Option<&Database>, preferences: &mut Option<Preferences>) -> ContentPageAction {
 		match message {
 			ContentPageMessage::ProjectPageMessage(message) => if let Some(project_page) = &mut self.project_page {
 				project_page.update(message, database, preferences)
@@ -177,7 +177,7 @@ impl ContentPage {
 		}
 	}
 
-	fn open_overview(&mut self, database: &Option<Database>, preferences: &mut Option<Preferences>) {
+	fn open_overview(&mut self, database: Option<&Database>, preferences: &mut Option<Preferences>) {
 		self.project_page = None;
 		self.overview_page = Some(OverviewPage::new(database, preferences));
 		if let Some(preferences) = preferences {
@@ -185,7 +185,7 @@ impl ContentPage {
 		}
 	}
 
-	fn open_project_page(&mut self, project_id: ProjectId, database: &Option<Database>, preferences: &mut Option<Preferences>) {
+	fn open_project_page(&mut self, project_id: ProjectId, database: Option<&Database>, preferences: &mut Option<Preferences>) {
 		self.overview_page = None;
 		let open_project_info = database.as_ref().and_then(|database|
 			database

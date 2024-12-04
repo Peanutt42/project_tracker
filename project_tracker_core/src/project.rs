@@ -161,10 +161,10 @@ impl Project {
 
 	pub fn start_task_time_spend(&mut self, task_id: TaskId) {
 		if let Some(task) = self.get_task_mut(&task_id) {
-			if task.time_spend.is_none() {
-				task.time_spend = Some(TimeSpend::new(0.0));
+			match &mut task.time_spend {
+				Some(time_spend) => time_spend.start(),
+				None => task.time_spend = Some(TimeSpend::new(0.0)),
 			}
-			task.time_spend.as_mut().unwrap().start();
 		}
 	}
 

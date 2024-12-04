@@ -38,10 +38,13 @@ fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, passw
 					if database_filepath.exists() {
 						match database_filepath.metadata() {
 							Ok(metadata) => {
-								if let Err(e) = Response::ModifiedDate(get_last_modification_date_time(&metadata))
-									.send(&mut stream, &password)
-								{
-									eprintln!("failed to send modified date response to client: {e}");
+								match get_last_modification_date_time(&metadata) {
+									Some(last_modification_date_time) => if let Err(e) = Response::ModifiedDate(last_modification_date_time)
+										.send(&mut stream, &password)
+									{
+										eprintln!("failed to send modified date response to client: {e}");
+									},
+									None => panic!("failed to get last modification date time from database file!"),
 								}
 							},
 							Err(e) => panic!("cant access database file: {}, error: {e}", database_filepath.display()),

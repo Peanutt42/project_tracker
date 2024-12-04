@@ -44,7 +44,7 @@ async fn main() {
 
 	Database::save_to(
 		PathBuf::from("stresstest_database.project_tracker"),
-		db.to_binary(),
+		db.to_binary().unwrap(),
 	)
 	.await
 	.unwrap();

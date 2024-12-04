@@ -32,12 +32,12 @@ impl From<OverviewPageMessage> for Message {
 }
 
 impl OverviewPage {
-	pub fn new(database: &Option<Database>, preferences: &Option<Preferences>) -> Self {
+	pub fn new(database: Option<&Database>, preferences: &Option<Preferences>) -> Self {
 		let mut overdue_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>> = BTreeMap::new();
 		let mut today_tasks: HashMap<ProjectId, Vec<TaskId>> = HashMap::new();
 		let mut tomorrow_tasks: HashMap<ProjectId, Vec<TaskId>> = HashMap::new();
 
-		if let Some(database) = &database {
+		if let Some(database) = database {
 			let today: NaiveDate = Date::today().into();
 			let today_date: Date = today.into();
 
@@ -91,12 +91,14 @@ impl OverviewPage {
 
 			let sort_unspecified_tasks_at_bottom = preferences.sort_unspecified_tasks_at_bottom();
 			for (project_id, tasks) in today_tasks.iter_mut() {
-				let project = database.get_project(project_id).unwrap();
-				SortMode::NeededTime.sort(project, tasks, sort_unspecified_tasks_at_bottom);
+				if let Some(project) = database.get_project(project_id) {
+					SortMode::NeededTime.sort(project, tasks, sort_unspecified_tasks_at_bottom);
+				}
 			}
 			for (project_id, tasks) in tomorrow_tasks.iter_mut() {
-				let project = database.get_project(project_id).unwrap();
-				SortMode::NeededTime.sort(project, tasks, sort_unspecified_tasks_at_bottom);
+				if let Some(project) = database.get_project(project_id) {
+					SortMode::NeededTime.sort(project, tasks, sort_unspecified_tasks_at_bottom);
+				}
 			}
 		}
 
@@ -111,7 +113,7 @@ impl OverviewPage {
 		}
 	}
 
-	pub fn update(&mut self, message: OverviewPageMessage, database: &Option<Database>, preferences: &Option<Preferences>) {
+	pub fn update(&mut self, message: OverviewPageMessage, database: Option<&Database>, preferences: &Option<Preferences>) {
 		match message {
 			OverviewPageMessage::RefreshCachedTaskList => {
 				if let Some(database_ref) = database {

@@ -21,6 +21,10 @@ impl ErrorMsgModalMessage {
 	pub fn open(error_msg: String) -> Message {
 		Self::Open(error_msg).into()
 	}
+
+	pub fn open_error<E: std::error::Error>(error: E) -> Message {
+		Self::Open(format!("{error}")).into()
+	}
 }
 
 impl From<ErrorMsgModalMessage> for Message {

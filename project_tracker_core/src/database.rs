@@ -158,6 +158,8 @@ pub enum DatabaseMessage {
 
 #[derive(Debug, Error)]
 pub enum LoadDatabaseError {
+	#[error("failed to find database filepath")]
+	FailedToFindDatbaseFilepath,
 	#[error("failed to open file: {filepath}, error: {error}")]
 	FailedToOpenFile {
 		filepath: PathBuf,
@@ -169,8 +171,19 @@ pub enum LoadDatabaseError {
 		error: bincode::Error,
 	},
 }
-
 pub type LoadDatabaseResult = Result<Database, LoadDatabaseError>;
+
+#[derive(Debug, Error)]
+pub enum SaveDatabaseError {
+	#[error("failed to find database filepath")]
+	FailedToFindDatabaseFilepath,
+	#[error("failed to write to file: {filepath}, error: {error}")]
+	FailedToWriteToFile {
+		filepath: PathBuf,
+		error: std::io::Error,
+	},
+}
+pub type SaveDatabaseResult<T> = Result<T, SaveDatabaseError>;
 
 #[derive(Clone, Debug)]
 pub enum SyncDatabaseResult {
@@ -535,24 +548,25 @@ impl Database {
 		}
 	}
 
-	pub fn get_filepath() -> PathBuf {
-		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
-			.expect("Failed to get saved state filepath");
+	pub fn get_filepath() -> Option<PathBuf> {
+		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")?;
 
-		project_dirs
-			.data_local_dir()
-			.join(Self::FILE_NAME)
-			.to_path_buf()
+		Some(
+			project_dirs
+				.data_local_dir()
+				.join(Self::FILE_NAME)
+				.to_path_buf()
+		)
 	}
 
-	async fn get_and_ensure_filepath() -> PathBuf {
-		let filepath = Self::get_filepath();
-
-		tokio::fs::create_dir_all(filepath.parent().unwrap())
+	async fn get_and_ensure_filepath() -> Option<PathBuf> {
+		let filepath = Self::get_filepath()?;
+		let parent_filepath = filepath.parent()?;
+		tokio::fs::create_dir_all(parent_filepath)
 			.await
-			.expect("Failed to create Local Data Directories");
+			.ok()?;
 
-		filepath
+		Some(filepath)
 	}
 
 	pub async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
@@ -570,25 +584,31 @@ impl Database {
 	}
 
 	pub async fn load() -> LoadDatabaseResult {
-		Self::load_from(Self::get_and_ensure_filepath().await).await
+		Self::load_from(
+			Self::get_and_ensure_filepath().await
+				.ok_or(LoadDatabaseError::FailedToFindDatbaseFilepath)?
+		)
+		.await
 	}
 
-	pub fn to_binary(&self) -> Vec<u8> {
-		bincode::serialize(self).unwrap()
+	pub fn to_binary(&self) -> Option<Vec<u8>> {
+		bincode::serialize(self).ok()
 	}
 
-	pub async fn save_to(filepath: PathBuf, binary: Vec<u8>) -> Result<(), String> {
-		if let Err(e) = tokio::fs::write(filepath.as_path(), binary).await {
-			Err(format!("Failed to save to {}: {e}", filepath.display()))
-		} else {
-			Ok(())
-		}
+	pub async fn save_to(filepath: PathBuf, binary: Vec<u8>) -> SaveDatabaseResult<()> {
+		tokio::fs::write(filepath.as_path(), binary).await
+			.map_err(|error| SaveDatabaseError::FailedToWriteToFile { filepath, error })
 	}
 
 	// returns begin time of saving
-	pub async fn save(binary: Vec<u8>) -> Result<SystemTime, String> {
+	pub async fn save(binary: Vec<u8>) -> SaveDatabaseResult<SystemTime> {
 		let begin_time = SystemTime::now();
-		Self::save_to(Self::get_and_ensure_filepath().await, binary).await?;
+		Self::save_to(
+			Self::get_and_ensure_filepath().await
+				.ok_or(SaveDatabaseError::FailedToFindDatabaseFilepath)?,
+			binary
+		)
+		.await?;
 		Ok(begin_time)
 	}
 
@@ -600,14 +620,15 @@ impl Database {
 			Err(_) => return SyncDatabaseResult::InvalidSynchronizationFilepath,
 		};
 
-		let synchronization_last_modification_datetime = get_last_modification_date_time(&synchronization_filepath_metadata);
-
-		if local_last_modification_datetime
-			> synchronization_last_modification_datetime
-		{
-			SyncDatabaseResult::Upload
-		} else {
-			SyncDatabaseResult::Download
+		match get_last_modification_date_time(&synchronization_filepath_metadata) {
+			Some(synchronization_last_modification_datetime) => if local_last_modification_datetime
+				> synchronization_last_modification_datetime
+			{
+				SyncDatabaseResult::Upload
+			} else {
+				SyncDatabaseResult::Download
+			},
+			None => SyncDatabaseResult::Download
 		}
 	}
 
@@ -639,7 +660,7 @@ impl Default for Database {
 	}
 }
 
-pub fn get_last_modification_date_time(metadata: &std::fs::Metadata) -> DateTime<Utc> {
+pub fn get_last_modification_date_time(metadata: &std::fs::Metadata) -> Option<DateTime<Utc>> {
 	use filetime::FileTime;
 
 	let modified = FileTime::from_last_modification_time(metadata);
@@ -648,5 +669,4 @@ pub fn get_last_modification_date_time(metadata: &std::fs::Metadata) -> DateTime
 	let nanos = modified.nanoseconds();
 
 	DateTime::from_timestamp(unix_timestamp, nanos)
-		.expect("invalid file modification date timestamp")
 }

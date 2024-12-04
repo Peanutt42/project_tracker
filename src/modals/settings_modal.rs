@@ -103,9 +103,12 @@ impl SettingTab {
 				column![
 					row![
 						container("Database file location: ").padding(HORIZONTAL_SCROLLABLE_PADDING),
-						container(file_location(Database::get_filepath()))
-							.width(Fill)
-							.align_x(Horizontal::Right),
+						container(match Database::get_filepath() {
+							Some(filepath) => file_location(filepath),
+							None => text("couldnt find database filepath").into(),
+						})
+						.width(Fill)
+						.align_x(Horizontal::Right),
 					]
 					.align_y(Alignment::Center),
 
@@ -485,7 +488,7 @@ impl SettingsModal {
 					match result {
 						Some(result) => match result {
 							Ok(projects) => DatabaseMessage::ImportProjects(projects).into(),
-							Err(import_error) => ErrorMsgModalMessage::open(format!("{import_error}")),
+							Err(import_error) => ErrorMsgModalMessage::open_error(import_error),
 						},
 						None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
 					}

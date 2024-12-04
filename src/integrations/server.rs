@@ -60,16 +60,22 @@ pub async fn sync_database_from_server(config: ServerConfig, database: Database)
 	}
 	else {
 		// upload database
-		let database_binary = database.to_binary();
+		match database.to_binary() {
+			Some(database_binary) => {
+				Request::UpdateDatabase { database_binary }
+					.send_async(&mut write_half, &config.password)
+					.await?;
 
-		Request::UpdateDatabase { database_binary }
-			.send_async(&mut write_half, &config.password)
-			.await?;
-
-		match Response::read_async(&mut read_half, &config.password).await? {
-			Response::DatabaseUpdated => Ok(SyncServerDatabaseResponse::UploadedDatabase),
-			Response::InvalidPassword => Err(ServerError::InvalidPassword),
-			_ => Err(ServerError::InvalidResponse),
+				match Response::read_async(&mut read_half, &config.password).await? {
+					Response::DatabaseUpdated => Ok(SyncServerDatabaseResponse::UploadedDatabase),
+					Response::InvalidPassword => Err(ServerError::InvalidPassword),
+					_ => Err(ServerError::InvalidResponse),
+				}
+			},
+			None => {
+				eprintln!("failed to serialize database to upload it to the server, sending InvalidResponse error");
+				Err(ServerError::InvalidResponse)
+			},
 		}
 	}
 }

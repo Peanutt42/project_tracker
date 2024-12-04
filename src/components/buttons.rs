@@ -239,7 +239,7 @@ pub fn stopwatch_button(
 	stopwatch_page: &StopwatchPage,
 	selected: bool,
 	dropzone_highlight: bool,
-	database: &Option<Database>
+	database: Option<&Database>
 ) -> Element<'static, Message> {
 	let stopwatch_label = match stopwatch_page {
 		StopwatchPage::TakingBreak { clock, .. } => Some(clock.label().to_string()),

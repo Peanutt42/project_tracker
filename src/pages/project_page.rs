@@ -173,7 +173,7 @@ impl ProjectPage {
 	pub fn update(
 		&mut self,
 		message: ProjectPageMessage,
-		database: &Option<Database>,
+		database: Option<&Database>,
 		preferences: &Option<Preferences>
 	) -> ContentPageAction {
 		let command = match message {

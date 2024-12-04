@@ -596,7 +596,7 @@ impl SidebarPage {
 					&app.content_page.stopwatch_page,
 					app.content_page.is_stopwatch_page_opened(),
 					matches!(self.task_dropzone_hovered, Some(TaskDropzone::Stopwatch)),
-					&app.database,
+					app.database.as_ref(),
 				),
 
 				horizontal_seperator(),

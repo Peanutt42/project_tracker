@@ -10,7 +10,7 @@ async fn localhost_server_test() {
 		.join("tmp_test_client_database.project_tracker");
 
 	let mut test_client_database = Database::default();
-	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_binary())
+	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_binary().unwrap())
 		.await
 		.unwrap();
 
@@ -41,7 +41,7 @@ async fn localhost_server_test() {
 
 		test_server_database.modify(|projects| projects.insert(ProjectId::generate(), project));
 	}
-	Database::save_to(tmp_server_database_filepath.clone(), test_server_database.to_binary())
+	Database::save_to(tmp_server_database_filepath.clone(), test_server_database.to_binary().unwrap())
 		.await
 		.unwrap();
 
@@ -70,7 +70,7 @@ async fn localhost_server_test() {
 	.unwrap() {
 		SyncServerDatabaseResponse::DownloadedDatabase(updated_database) => {
 			test_client_database = updated_database.clone();
-			Database::save_to(tmp_client_database_filepath.clone(), updated_database.to_binary())
+			Database::save_to(tmp_client_database_filepath.clone(), updated_database.to_binary().unwrap())
 				.await
 				.unwrap();
 		},
@@ -96,7 +96,7 @@ async fn localhost_server_test() {
 		);
 	});
 
-	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_binary())
+	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_binary().unwrap())
 		.await
 		.unwrap();
 

@@ -10,6 +10,7 @@ use crate::{
 	styles::SPACING_AMOUNT,
 	theme_mode::ThemeMode,
 };
+use iced::widget::text;
 use iced::{
 	alignment::Horizontal,
 	widget::{column, container, row, toggler, Row},
@@ -158,6 +159,7 @@ pub enum PreferenceAction {
 	None,
 	Task(Task<Message>),
 	RefreshCachedTaskList,
+	FailedToSerailizePreferences(serde_json::Error),
 }
 
 impl From<Task<Message>> for PreferenceAction {
@@ -168,7 +170,9 @@ impl From<Task<Message>> for PreferenceAction {
 
 #[derive(Debug, Error)]
 pub enum LoadPreferencesError {
-	#[error("failed to open prefrences file: {filepath}, error: {error}")]
+	#[error("failed to find preferences filepath")]
+	FailedToFindPreferencesFilepath,
+	#[error("failed to open preferences file: {filepath}, error: {error}")]
 	FailedToOpenFile {
 		filepath: PathBuf,
 		error: std::io::Error,
@@ -181,6 +185,18 @@ pub enum LoadPreferencesError {
 }
 
 pub type LoadPreferencesResult = Result<Preferences, LoadPreferencesError>;
+
+#[derive(Debug, Error)]
+pub enum SavePreferencesError {
+	#[error("failed to find preferences filepath")]
+	FailedToFindPreferencesFilepath,
+	#[error("failed to save preferences file: {filepath}, error: {error}")]
+	FailedToSaveFile {
+		filepath: PathBuf,
+		error: std::io::Error,
+	}
+}
+pub type SavePreferencesResult<T> = Result<T, SavePreferencesError>;
 
 impl Preferences {
 	const FILE_NAME: &'static str = "preferences.json";
@@ -234,13 +250,13 @@ impl Preferences {
 
 	pub fn update(&mut self, message: PreferenceMessage) -> PreferenceAction {
 		match message {
-			PreferenceMessage::Save => {
-				Task::perform(Self::save(self.to_json()), |result| match result {
+			PreferenceMessage::Save => match self.to_json() {
+				Ok(json) => PreferenceAction::Task(Task::perform(Self::save(json), |result| match result {
 					Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
-					Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
-				})
-				.into()
-			}
+					Err(error) => ErrorMsgModalMessage::open_error(error),
+				})),
+				Err(e) => PreferenceAction::FailedToSerailizePreferences(e),
+			},
 			PreferenceMessage::Saved(begin_time) => {
 				self.last_saved_time = begin_time;
 				PreferenceAction::None
@@ -250,14 +266,16 @@ impl Preferences {
 				self.modified();
 				PreferenceAction::None
 			}
-			PreferenceMessage::Export => Task::perform(
-				Self::export_file_dialog(self.to_json()),
-				|result| match result {
-					Ok(_) => PreferenceMessage::Exported.into(),
-					Err(error_msg) => ErrorMsgModalMessage::open(error_msg),
-				},
-			)
-			.into(),
+			PreferenceMessage::Export => match self.to_json() {
+				Ok(json) => PreferenceAction::Task(Task::perform(
+					Self::export_file_dialog(json),
+					|result| match result {
+						Ok(_) => PreferenceMessage::Exported.into(),
+						Err(error) => ErrorMsgModalMessage::open_error(error),
+					},
+				)),
+				Err(e) => PreferenceAction::FailedToSerailizePreferences(e),
+			},
 			PreferenceMessage::Exported => PreferenceAction::None,
 			PreferenceMessage::Import => {
 				Task::perform(Preferences::import_file_dialog(), |result| {
@@ -313,24 +331,24 @@ impl Preferences {
 		}
 	}
 
-	pub fn get_filepath() -> PathBuf {
-		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")
-			.expect("Failed to get saved state filepath");
+	pub fn get_filepath() -> Option<PathBuf> {
+		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")?;
 
-		project_dirs
-			.config_local_dir()
-			.join(Self::FILE_NAME)
-			.to_path_buf()
+		Some(
+			project_dirs
+				.config_local_dir()
+				.join(Self::FILE_NAME)
+				.to_path_buf()
+		)
 	}
 
-	async fn get_and_ensure_filepath() -> PathBuf {
-		let filepath = Self::get_filepath();
-
-		tokio::fs::create_dir_all(filepath.parent().unwrap())
+	async fn get_and_ensure_filepath() -> Option<PathBuf> {
+		let filepath = Self::get_filepath()?;
+		tokio::fs::create_dir_all(filepath.parent()?)
 			.await
-			.expect("Failed to create Local Config Directories");
+			.ok()?;
 
-		filepath
+		Some(filepath)
 	}
 
 	async fn load_from(filepath: PathBuf) -> LoadPreferencesResult {
@@ -348,29 +366,35 @@ impl Preferences {
 	}
 
 	pub async fn load() -> LoadPreferencesResult {
-		Self::load_from(Self::get_and_ensure_filepath().await).await
+		Self::load_from(
+			Self::get_and_ensure_filepath().await
+				.ok_or(LoadPreferencesError::FailedToFindPreferencesFilepath)?
+		)
+		.await
 	}
 
-	async fn save_to(filepath: PathBuf, json: String) -> Result<(), String> {
-		if let Err(e) = tokio::fs::write(&filepath, json.as_bytes()).await {
-			Err(format!("Failed to save to {}: {e}", filepath.display()))
-		} else {
-			Ok(())
-		}
+	async fn save_to(filepath: PathBuf, json: String) -> SavePreferencesResult<()> {
+		tokio::fs::write(&filepath, json.as_bytes()).await
+			.map_err(|error| SavePreferencesError::FailedToSaveFile { filepath, error })
 	}
 
-	pub fn to_json(&self) -> String {
-		serde_json::to_string_pretty(self).unwrap()
+	pub fn to_json(&self) -> serde_json::Result<String> {
+		serde_json::to_string_pretty(self)
 	}
 
 	// returns begin time of saving
-	pub async fn save(json: String) -> Result<Instant, String> {
+	pub async fn save(json: String) -> SavePreferencesResult<Instant> {
 		let begin_time = Instant::now();
-		Self::save_to(Self::get_and_ensure_filepath().await, json).await?;
+		Self::save_to(
+			Self::get_and_ensure_filepath().await
+				.ok_or(SavePreferencesError::FailedToFindPreferencesFilepath)?,
+			json
+		)
+		.await?;
 		Ok(begin_time)
 	}
 
-	pub async fn export_file_dialog(json: String) -> Result<(), String> {
+	pub async fn export_file_dialog(json: String) -> SavePreferencesResult<()> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Export ProjectTracker Preferences")
 			.set_file_name(Self::FILE_NAME)
@@ -464,7 +488,10 @@ impl Preferences {
 			horizontal_seperator_padded(),
 			Self::setting_item(
 				container("Preferences file location:").padding(HORIZONTAL_SCROLLABLE_PADDING),
-				file_location(Self::get_filepath())
+				match Self::get_filepath() {
+					Some(filepath) => file_location(filepath),
+					None => text("couldnt get filepath").into(),
+				}
 			),
 			container(
 				row![
