@@ -146,14 +146,14 @@ function populate_dom_with_task(task_list, task, task_type) {
 	const task_div = document.createElement("div");
 	task_div.className = "task";
 	let task_info = task_type + ' - ';
-	if (task.time_spend_seconds) {
-		task_info += Math.floor(task.time_spend_seconds / 60) + 'min';
+	if (task.time_spend) {
+		task_info += Math.floor(task.time_spend.offset_seconds / 60) + 'min';
 		if (task.needed_time_minutes === null) {
 			task_info += '/... - ';
 		}
 	}
 	if (task.needed_time_minutes) {
-		if (task.time_spend_seconds) {
+		if (task.time_spend) {
 			task_info += '/';
 		}
 		task_info += task.needed_time_minutes + 'min - ';
