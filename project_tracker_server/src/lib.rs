@@ -34,6 +34,7 @@ pub enum Request {
 	DownloadDatabase,
 	UpdateDatabase {
 		database_binary: Vec<u8>,
+		last_modified_time: DateTime<Utc>,
 	}
 }
 

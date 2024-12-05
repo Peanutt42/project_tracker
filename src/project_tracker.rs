@@ -55,6 +55,7 @@ pub enum Message {
 	CopyToClipboard(String),
 	OpenUrl(String),
 	SaveChangedFiles,
+	SyncIfChanged,
 	OpenFolderLocation(PathBuf),
 	SystemTheme {
 		is_dark: bool,
@@ -126,6 +127,25 @@ impl ProjectTrackerApp {
 
 	fn show_error<E: std::error::Error>(&mut self, error: E) -> Task<Message> {
 		self.update(ErrorMsgModalMessage::open_error(error))
+	}
+
+	fn has_unsynced_changes(&self) -> bool {
+		if let Some(last_sync_time) = self.last_sync_time {
+			if let Some(database) = &self.database {
+				if let Ok(last_database_save_duration) = database.last_changed_time().elapsed() {
+					last_database_save_duration < last_sync_time.elapsed()
+				}
+				else {
+					false
+				}
+			}
+			else {
+				false
+			}
+		}
+		else {
+			true
+		}
 	}
 
 	pub fn is_theme_dark(&self) -> bool {
@@ -213,28 +233,8 @@ impl ProjectTrackerApp {
 			""
 		};
 
-		let synchronized_status = if !self.syncing_database && !self.syncing_database_from_server {
-			if let Some(last_sync_time) = self.last_sync_time {
-				if let Some(database) = &self.database {
-					if let Ok(last_database_save_duration) = database.last_changed_time().elapsed() {
-						if last_database_save_duration < last_sync_time.elapsed() {
-							" *"
-						}
-						else {
-							""
-						}
-					}
-					else {
-						""
-					}
-				}
-				else {
-					""
-				}
-			}
-			else {
-				" *"
-			}
+		let synchronized_status = if !self.syncing_database && !self.syncing_database_from_server && self.has_unsynced_changes() {
+			" *"
 		}
 		else {
 			""
@@ -251,9 +251,6 @@ impl ProjectTrackerApp {
 				}
 				keyboard::Key::Character("h") if modifiers.command() => {
 					Some(ContentPageMessage::OpenOverview.into())
-				}
-				keyboard::Key::Character("s") if modifiers.command() => {
-					Some(Message::SyncDatabase)
 				}
 				keyboard::Key::Named(keyboard::key::Named::Escape) => {
 					Some(Message::EscapePressed)
@@ -294,6 +291,7 @@ impl ProjectTrackerApp {
 				.map(Message::SettingsModalMessage),
 			self.create_task_modal.subscription(),
 			time::every(Duration::from_secs(1)).map(|_| Message::SaveChangedFiles),
+			time::every(Duration::from_secs(1)).map(|_| Message::SyncIfChanged),
 			system_theme_subscription(),
 		])
 	}
@@ -389,6 +387,14 @@ impl ProjectTrackerApp {
 					}
 				}
 				Task::batch(commands)
+			}
+			Message::SyncIfChanged => {
+				if !self.syncing_database && !self.syncing_database_from_server && self.has_unsynced_changes() {
+					self.update(Message::SyncDatabase)
+				}
+				else {
+					Task::none()
+				}
 			}
 			Message::OpenFolderLocation(filepath) => {
 				let _ = open::that(filepath);
@@ -711,7 +717,15 @@ impl ProjectTrackerApp {
 						overview_page.update(OverviewPageMessage::RefreshCachedTaskList, Some(database), &self.preferences);
 					}
 
-					match &mut self.content_page.project_page {
+					let should_save = SystemTime::now().duration_since(*database.last_saved_time())
+						.map(|last_save_duration| last_save_duration >= Duration::from_secs(1))
+						.unwrap_or(false);
+					let should_sync = match self.last_sync_time {
+						Some(last_sync_time) => Instant::now().duration_since(last_sync_time) >= Duration::from_secs(1),
+						None => true,
+					};
+
+					let project_page_task = match &mut self.content_page.project_page {
 						Some(project_page) if database.get_project(&project_page.project_id).is_none() => {
 							self.update(ContentPageMessage::OpenOverview.into())
 						}
@@ -720,7 +734,16 @@ impl ProjectTrackerApp {
 							Task::none()
 						},
 						_ => Task::none(),
+					};
+
+					let mut tasks = vec![project_page_task];
+					if should_save {
+						tasks.push(self.update(Message::SaveDatabase));
 					}
+					if should_sync {
+						tasks.push(self.update(Message::SyncDatabase));
+					}
+					Task::batch(tasks)
 				} else {
 					Task::none()
 				}

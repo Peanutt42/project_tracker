@@ -231,6 +231,10 @@ impl Database {
 		self.last_saved_time = saved_time;
 	}
 
+	pub fn last_saved_time(&self) -> &SystemTime {
+		&self.last_saved_time
+	}
+
 	pub fn modify(&mut self, f: impl FnOnce(&mut OrderedHashMap<ProjectId, Project>)) {
 		f(&mut self.projects);
 		self.modified();

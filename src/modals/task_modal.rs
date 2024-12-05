@@ -102,15 +102,19 @@ impl TaskModal {
 			},
 			TaskModalMessage::EditDescriptionAction(action) => {
 				if let TaskModal::Opened { project_id, task_id, new_description: Some(new_description),.. } = self {
+					let is_action_edit = action.is_edit();
 					new_description.perform(action);
-					DatabaseMessage::ChangeTaskDescription {
-						project_id: *project_id,
-						task_id: *task_id,
-						new_task_description: new_description.text(),
+					if is_action_edit {
+						DatabaseMessage::ChangeTaskDescription {
+							project_id: *project_id,
+							task_id: *task_id,
+							new_task_description: new_description.text(),
+						}
+						.into()
+					} else {
+						TaskModalAction::None
 					}
-					.into()
-				}
-				else {
+				} else {
 					TaskModalAction::None
 				}
 			},

@@ -62,7 +62,7 @@ pub async fn sync_database_from_server(config: ServerConfig, database: Database)
 		// upload database
 		match database.to_binary() {
 			Some(database_binary) => {
-				Request::UpdateDatabase { database_binary }
+				Request::UpdateDatabase { database_binary, last_modified_time: database_last_modified_date }
 					.send_async(&mut write_half, &config.password)
 					.await?;
 
