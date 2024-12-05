@@ -122,7 +122,7 @@ pub fn edit_task_description_button(editing: bool) -> Element<'static, Message> 
 	tooltip(
 		icon_button(Bootstrap::PencilSquare)
 			.on_press(TaskModalMessage::EditDescription.into())
-			.style(move |t, s| selection_list_button_style(t, s, editing, false, true)),
+			.style(move |t, s| selection_list_button_style(t, s, editing, false, true, false, true)),
 
 		text("Edit description").size(SMALL_TEXT_SIZE),
 
@@ -137,7 +137,7 @@ pub fn view_task_description_button(viewing: bool) -> Element<'static, Message> 
 	tooltip(
 		icon_button(Bootstrap::BodyText)
 			.on_press(TaskModalMessage::ViewDescription.into())
-			.style(move |t, s| selection_list_button_style(t, s, viewing, true, false)),
+			.style(move |t, s| selection_list_button_style(t, s, viewing, true, false, true, false)),
 
 		text("View description").size(SMALL_TEXT_SIZE),
 
@@ -212,6 +212,8 @@ pub fn theme_mode_button(
 				t,
 				s,
 				theme_mode == current_theme_mode,
+				round_left,
+				round_right,
 				round_left,
 				round_right,
 			)
@@ -318,7 +320,7 @@ pub fn date_formatting_button<'a>(
 		.width(120.0)
 		.on_press(SettingsModalMessage::SetDateFormatting(*format).into())
 		.style(move |t, s| {
-			selection_list_button_style(t, s, *selected_format == *format, is_left, !is_left)
+			selection_list_button_style(t, s, *selected_format == *format, is_left, !is_left, is_left, !is_left)
 		})
 }
 
@@ -574,7 +576,7 @@ pub fn edit_color_palette_button(
 	on_press: Message,
 ) -> Element<'static, Message> {
 	tooltip(
-		color_palette_item_button(color, editing, true, true, on_press),
+		color_palette_item_button(color, editing, true, true, true, true, on_press),
 		text("Edit color").size(SMALL_TEXT_SIZE),
 		tooltip::Position::Bottom,
 	)
@@ -586,8 +588,10 @@ pub fn edit_color_palette_button(
 pub fn color_palette_item_button(
 	color: Color,
 	selected: bool,
-	round_left: bool,
-	round_right: bool,
+	round_left_top: bool,
+	round_right_top: bool,
+	round_left_bottom: bool,
+	round_right_bottom: bool,
 	on_press: Message,
 ) -> Button<'static, Message> {
 	button(Quad {
@@ -600,7 +604,7 @@ pub fn color_palette_item_button(
 		..Default::default()
 	})
 	.on_press(on_press)
-	.style(move |t, s| selection_list_button_style(t, s, selected, round_left, round_right))
+	.style(move |t, s| selection_list_button_style(t, s, selected, round_left_top, round_right_top, round_left_bottom, round_right_bottom))
 	.padding(SMALL_PADDING_AMOUNT)
 }
 
@@ -864,6 +868,8 @@ pub fn synchronization_type_button(synchronization_setting: SynchronizationSetti
 				t,
 				s,
 				selected,
+				round_left,
+				round_right,
 				round_left,
 				round_right,
 			)

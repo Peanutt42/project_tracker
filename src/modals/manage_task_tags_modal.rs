@@ -345,6 +345,8 @@ impl ManageTaskTagsModal {
 					false,
 					true,
 					true,
+					true,
+					true,
 					if show_color_palette {
 						ManageTaskTagsModalMessage::StopEditTaskTagColor.into()
 					} else {

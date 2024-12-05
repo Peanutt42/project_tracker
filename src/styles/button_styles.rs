@@ -387,8 +387,10 @@ pub fn selection_list_button_style(
 	theme: &Theme,
 	status: Status,
 	selected: bool,
-	round_left: bool,
-	round_right: bool,
+	round_left_top: bool,
+	round_right_top: bool,
+	round_left_bottom: bool,
+	round_right_bottom: bool,
 ) -> Style {
 	let active_style = Style {
 		background: Some(if selected {
@@ -398,8 +400,10 @@ pub fn selection_list_button_style(
 		}),
 		border: rounded(
 			Radius::default()
-				.left(if round_left { BORDER_RADIUS } else { 0.0 })
-				.right(if round_right { BORDER_RADIUS } else { 0.0 }),
+				.top_left(if round_left_top { BORDER_RADIUS } else { 0.0 })
+				.top_right(if round_right_top { BORDER_RADIUS } else { 0.0 })
+				.bottom_left(if round_left_bottom { BORDER_RADIUS } else { 0.0 })
+				.bottom_right(if round_right_bottom { BORDER_RADIUS } else { 0.0 }),
 		),
 		text_color: if selected {
 			theme.extended_palette().primary.base.text
