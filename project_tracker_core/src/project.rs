@@ -163,7 +163,11 @@ impl Project {
 		if let Some(task) = self.get_task_mut(&task_id) {
 			match &mut task.time_spend {
 				Some(time_spend) => time_spend.start(),
-				None => task.time_spend = Some(TimeSpend::new(0.0)),
+				None => {
+					let mut time_spend = TimeSpend::new(0.0);
+					time_spend.start();
+					task.time_spend = Some(time_spend);
+				},
 			}
 		}
 	}
