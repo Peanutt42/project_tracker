@@ -38,6 +38,7 @@ pub async fn sync_database_from_server(config: ServerConfig, database: Database)
 		// should not send database when only asked for the modified date
 		Response::Database { .. } | Response::DatabaseUpdated => return Err(ServerError::InvalidResponse),
 		Response::InvalidPassword => return Err(ServerError::InvalidPassword),
+		Response::InvalidDatabaseBinary => return Err(ServerError::InvalidDatabaseBinaryFormat),
 	};
 
 	let database_last_modified_date: DateTime<Utc> = (*database.last_changed_time()).into();
@@ -56,6 +57,7 @@ pub async fn sync_database_from_server(config: ServerConfig, database: Database)
 			// should not send database when only asked for the modified date
 			Response::ModifiedDate(_) | Response::DatabaseUpdated => Err(ServerError::InvalidResponse),
 			Response::InvalidPassword => Err(ServerError::InvalidPassword),
+			Response::InvalidDatabaseBinary => Err(ServerError::InvalidDatabaseBinaryFormat),
 		}
 	}
 	else {

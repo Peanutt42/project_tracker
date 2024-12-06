@@ -24,6 +24,8 @@ pub enum ServerError {
 	InvalidResponse,
 	#[error("invalid password")]
 	InvalidPassword,
+	#[error("invalid database binary format")]
+	InvalidDatabaseBinaryFormat,
 }
 
 pub type ServerResult<T> = Result<T, ServerError>;
@@ -61,6 +63,7 @@ pub enum Response {
 	},
 	DatabaseUpdated,
 	InvalidPassword,
+	InvalidDatabaseBinary,
 }
 impl Response {
 	pub fn send(&self, stream: &mut TcpStream, password: &str) -> ServerResult<()> {
