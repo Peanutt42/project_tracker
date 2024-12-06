@@ -104,13 +104,6 @@ impl Task {
 		self.description = new_description;
 	}
 
-	pub fn has_same_content_as(&self, other: &Task) -> bool {
-		self.name == other.name
-			&& self.needed_time_minutes == other.needed_time_minutes
-			&& self.due_date == other.due_date
-			&& self.tags == other.tags
-	}
-
 	pub fn matches_filter(&self, filter: &HashSet<TaskTagId>) -> bool {
 		for tag_id in filter.iter() {
 			if !self.tags.contains(tag_id) {

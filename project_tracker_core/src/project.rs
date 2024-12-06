@@ -207,46 +207,6 @@ impl Project {
 			_ => tasks_done as f32 / self.total_tasks() as f32,
 		}
 	}
-
-	// ignores iced unique id's, probably only for tests
-	pub fn has_same_content_as(&self, other: &Project) -> bool {
-		if self.name != other.name || self.color != other.color || self.sort_mode != other.sort_mode || self.task_tags != other.task_tags
-		{
-			return false;
-		}
-
-		for (task_id, task) in self.todo_tasks.iter() {
-			if let Some(other_task) = other.todo_tasks.get(&task_id) {
-				if !task.has_same_content_as(other_task) {
-					return false;
-				}
-			} else {
-				return false;
-			}
-		}
-
-		for (task_id, task) in self.done_tasks.iter() {
-			if let Some(other_task) = other.done_tasks.get(task_id) {
-				if !task.has_same_content_as(other_task) {
-					return false;
-				}
-			} else {
-				return false;
-			}
-		}
-
-		for (task_id, task) in self.source_code_todos.iter() {
-			if let Some(other_task) = other.source_code_todos.get(task_id) {
-				if !task.has_same_content_as(other_task) {
-					return false;
-				}
-			} else {
-				return false;
-			}
-		}
-
-		true
-	}
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]

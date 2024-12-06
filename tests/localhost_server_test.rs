@@ -2,7 +2,7 @@ use project_tracker_core::{Database, OrderedHashMap, Project, ProjectId, Seriali
 use project_tracker_server::{run_server, DEFAULT_PASSWORD, DEFAULT_PORT};
 use project_tracker::integrations::{sync_database_from_server, ServerConfig, SyncServerDatabaseResponse};
 use tokio::fs::read;
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, path::PathBuf, time::SystemTime};
 
 #[tokio::test]
 async fn localhost_server_test() {
@@ -13,6 +13,7 @@ async fn localhost_server_test() {
 	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_binary().unwrap())
 		.await
 		.unwrap();
+	test_client_database.saved(SystemTime::now());
 
 	let tmp_server_database_filepath = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
 		.join("tmp_test_server_database.project_tracker");
@@ -44,6 +45,7 @@ async fn localhost_server_test() {
 	Database::save_to(tmp_server_database_filepath.clone(), test_server_database.to_binary().unwrap())
 		.await
 		.unwrap();
+	test_server_database.saved(SystemTime::now());
 
 	// start test server
 	let tmp_server_database_filepath_clone = tmp_server_database_filepath.clone();
@@ -68,11 +70,12 @@ async fn localhost_server_test() {
 	)
 	.await
 	.unwrap() {
-		SyncServerDatabaseResponse::DownloadedDatabase(updated_database) => {
+		SyncServerDatabaseResponse::DownloadedDatabase(mut updated_database) => {
 			test_client_database = updated_database.clone();
 			Database::save_to(tmp_client_database_filepath.clone(), updated_database.to_binary().unwrap())
 				.await
 				.unwrap();
+			updated_database.saved(SystemTime::now());
 		},
 		SyncServerDatabaseResponse::UploadedDatabase =>
 			panic!("since the server database is more up to date, client db shouldn't override server db!"),
@@ -99,6 +102,7 @@ async fn localhost_server_test() {
 	Database::save_to(tmp_client_database_filepath.clone(), test_client_database.to_binary().unwrap())
 		.await
 		.unwrap();
+	test_client_database.saved(SystemTime::now());
 
 	match sync_database_from_server(
 		test_server_config,

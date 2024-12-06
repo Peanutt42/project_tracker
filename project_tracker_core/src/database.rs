@@ -244,24 +244,6 @@ impl Database {
 		self.last_changed_time = SystemTime::now();
 	}
 
-	pub fn has_same_content_as(&self, other: &Database) -> bool {
-		if self.projects.len() != other.projects.len() {
-			return false;
-		}
-
-		for (project_id, project) in self.projects.iter() {
-			if let Some(other_project) = other.projects.get(&project_id) {
-				if !project.has_same_content_as(other_project) {
-					return false;
-				}
-			} else {
-				return false;
-			}
-		}
-
-		true
-	}
-
 	pub fn has_unsaved_changes(&self) -> bool {
 		self.last_changed_time > self.last_saved_time
 	}
