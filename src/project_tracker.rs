@@ -837,11 +837,22 @@ impl ProjectTrackerApp {
 				}
 			}
 			Message::PreferenceMessage(preference_message) => {
+				let server_config_changed = matches!(
+					preference_message,
+					PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Server(_)))
+				);
 				let action = if let Some(preferences) = &mut self.preferences {
 					preferences.update(preference_message)
 				} else {
 					PreferenceAction::None
 				};
+				if server_config_changed {
+					if let Some(message_sender) = &mut self.server_ws_message_sender {
+						if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
+							let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+						}
+					}
+				}
 				self.perform_preference_action(action)
 			}
 			Message::SwitchToLowerProject => {

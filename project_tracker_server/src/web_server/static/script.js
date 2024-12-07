@@ -191,8 +191,5 @@ function on_ws_close(event) {
 
 // fetch updated database
 function on_ws_message(msg) {
-	const stored_password = localStorage.getItem("password");
-	if (stored_password) {
-		login(stored_password);
-	}
+	populate_dom_from_database(JSON.parse(msg.data));
 }

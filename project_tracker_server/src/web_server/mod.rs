@@ -9,7 +9,7 @@ const STYLE_CSS: &str = include_str!("static/style.css");
 const SCRIPT_JS: &str = include_str!("static/script.js");
 const FAVICON_ICO: &[u8] = include_bytes!("static/favicon.ico");
 
-pub async fn run_web_server(password: String, modified_receiver: Receiver<()>, shared_data: Arc<RwLock<SharedServerData>>) {
+pub async fn run_web_server(password: String, modified_receiver: Receiver<SharedServerData>, shared_data: Arc<RwLock<SharedServerData>>) {
 	let get_database_route = path("load_database")
 		.and(post())
 		.and(body::json())
@@ -23,7 +23,7 @@ pub async fn run_web_server(password: String, modified_receiver: Receiver<()>, s
 	let modified_ws_route = path("modified")
 		.and(ws())
 		.and(modified_receiver)
-		.map(|ws: Ws, modified_receiver: Arc<RwLock<Receiver<()>>>| {
+		.map(|ws: Ws, modified_receiver: Arc<RwLock<Receiver<SharedServerData>>>| {
 			ws.on_upgrade(move |socket| modified_ws_connected(socket, modified_receiver.read().unwrap().resubscribe()))
 		});
 
@@ -70,12 +70,14 @@ fn load_database(body: serde_json::Value, password: String, shared_data: Arc<RwL
 	}
 }
 
-async fn modified_ws_connected(mut ws: WebSocket, mut modified_receiver: Receiver<()>) {
+async fn modified_ws_connected(mut ws: WebSocket, mut modified_receiver: Receiver<SharedServerData>) {
 	loop {
 		match modified_receiver.recv().await {
-			Ok(()) => {
-				if let Err(e) = ws.send(Message::text(String::new())).await {
-					eprintln!("failed to send modified event to ws client: {e}");
+			Ok(shared_data) => {
+				if let Ok(database_json) = serde_json::to_string(&shared_data.database.to_serialized()) {
+					if let Err(e) = ws.send(Message::text(database_json)).await {
+						eprintln!("failed to send modified event to ws client: {e}");
+					}
 				}
 			},
 			Err(e) => panic!("failed to receive further database modified events: {e}"),

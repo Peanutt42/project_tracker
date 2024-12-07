@@ -6,7 +6,8 @@ use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
 
 mod web_server;
 
-fn main() {
+#[tokio::main]
+async fn main() {
 	let mut args = std::env::args();
 
 	let server_data_directory_str = args.nth(1).unwrap_or_else(|| {
@@ -70,5 +71,12 @@ fn main() {
 		})
 		.expect("failed to start web server thread");
 
-	project_tracker_server::run_server(DEFAULT_PORT, database_filepath, password, modified_sender, shared_data);
+	project_tracker_server::run_server(
+		DEFAULT_PORT,
+		database_filepath,
+		password,
+		modified_sender,
+		shared_data
+	)
+	.await;
 }
