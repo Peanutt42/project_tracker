@@ -11,6 +11,7 @@ serde_json = { workspace = true }
 bincode = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }
+async-tungstenite = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
 sha2 = "0.10.8"

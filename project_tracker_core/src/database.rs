@@ -21,7 +21,7 @@ pub struct Database {
 	last_saved_time: SystemTime,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum DatabaseMessage {
 	Clear,
 

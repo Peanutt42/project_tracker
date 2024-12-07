@@ -1,9 +1,8 @@
-use std::{io::{Read, Write}, net::TcpStream, path::PathBuf, sync::{Arc, RwLock}};
+use std::{path::PathBuf, sync::{Arc, RwLock}};
 use chrono::{DateTime, Utc};
 use project_tracker_core::{get_last_modification_date_time, Database};
 use thiserror::Error;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::tcp::{OwnedReadHalf, OwnedWriteHalf}};
+use serde::{Deserialize, Serialize};
 
 mod server;
 pub use server::run_server;
@@ -20,7 +19,7 @@ pub enum ServerError {
 	#[error("connection failed with server: {0}")]
 	ConnectionError(#[from] std::io::Error),
 	#[error("failed to parse server response: {0}")]
-	ParseError(#[from] serde_json::Error),
+	ParseError(#[from] bincode::Error),
 	#[error("invalid response from server")]
 	InvalidResponse,
 	#[error("invalid password")]
@@ -42,17 +41,21 @@ pub enum Request {
 }
 
 impl Request {
-	pub fn send(&self, stream: &mut TcpStream, password: &str) -> ServerResult<()> {
-		send_message(stream, self, password)
+	pub fn decrypt(binary: Vec<u8>, password: &str) -> ServerResult<Self> {
+		let encrypted_message: EncryptedMessage = bincode::deserialize(&binary)?;
+		let request_binary = encrypted_message.decrypt(password)?;
+		Ok(bincode::deserialize(&request_binary)?)
 	}
-	pub fn read(stream: &mut TcpStream, password: &str) -> ServerResult<Self> {
-		read_message(stream, password)
-	}
-	pub async fn send_async(&self, stream: &mut OwnedWriteHalf, password: &str) -> ServerResult<()> {
-		send_message_async(stream, self, password).await
-	}
-	pub async fn read_async(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<Self> {
-		read_message_async(stream, password).await
+
+	pub fn encrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
+		let request_binary = bincode::serialize(self)?;
+
+		Ok(
+			bincode::serialize(&EncryptedMessage::new(
+				&request_binary,
+				password
+			)?)?
+		)
 	}
 }
 
@@ -68,17 +71,21 @@ pub enum Response {
 	InvalidDatabaseBinary,
 }
 impl Response {
-	pub fn send(&self, stream: &mut TcpStream, password: &str) -> ServerResult<()> {
-		send_message(stream, self, password)
+	pub fn decrypt(binary: Vec<u8>, password: &str) -> ServerResult<Self> {
+		let encrypted_message: EncryptedMessage = bincode::deserialize(&binary)?;
+		let response_binary = encrypted_message.decrypt(password)?;
+		Ok(bincode::deserialize(&response_binary)?)
 	}
-	pub fn read(stream: &mut TcpStream, password: &str) -> ServerResult<Self> {
-		read_message(stream, password)
-	}
-	pub async fn send_async(&self, stream: &mut OwnedWriteHalf, password: &str) -> ServerResult<()> {
-		send_message_async(stream, self, password).await
-	}
-	pub async fn read_async(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<Self> {
-		read_message_async(stream, password).await
+
+	pub fn encrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
+		let response_binary = bincode::serialize(self)?;
+
+		Ok(
+			bincode::serialize(&EncryptedMessage::new(
+				&response_binary,
+				password
+			)?)?
+		)
 	}
 }
 
@@ -107,74 +114,6 @@ impl EncryptedMessage {
 	}
 }
 
-fn send_message<T: Serialize>(stream: &mut TcpStream, message: &T, password: &str) -> ServerResult<()> {
-	let message_json = serde_json::to_string(message)?;
-	let encrypted_message = EncryptedMessage::new(message_json.as_bytes(), password)?;
-	let encrypted_message_json = serde_json::to_string(&encrypted_message)?;
-	let encrypted_message_bytes = encrypted_message_json.as_bytes();
-	let encrypted_message_len = encrypted_message_bytes.len();
-	let encrypted_message_len_bytes = (encrypted_message_len as u32).to_be_bytes();
-
-	stream.write_all(&encrypted_message_len_bytes)?;
-	stream.write_all(encrypted_message_bytes)?;
-
-	Ok(())
-}
-
-fn read_message<T: DeserializeOwned>(stream: &mut TcpStream, password: &str) -> ServerResult<T> {
-	let mut encrypted_message_len_bytes = [0u8; 4];
-	stream.read_exact(&mut encrypted_message_len_bytes)?;
-	let encrypted_message_len = u32::from_be_bytes(encrypted_message_len_bytes) as usize;
-
-	let mut encrypted_message_bytes = vec![0u8; encrypted_message_len];
-	stream.read_exact(&mut encrypted_message_bytes)?;
-
-	let encrypted_message_json = String::from_utf8(encrypted_message_bytes)
-		.map_err(|_| ServerError::InvalidResponse)?;
-	let encrypted_message: EncryptedMessage = serde_json::from_str(&encrypted_message_json)
-		.map_err(ServerError::ParseError)?;
-
-	let message_bytes = encrypted_message.decrypt(password)?;
-
-	let message_json = String::from_utf8(message_bytes).map_err(|_| ServerError::InvalidResponse)?;
-	serde_json::from_str(&message_json)
-		.map_err(ServerError::ParseError)
-}
-
-
-async fn send_message_async<T: Serialize>(stream: &mut OwnedWriteHalf, message: &T, password: &str) -> ServerResult<()> {
-	let message_json = serde_json::to_string(message)?;
-	let encrypted_message = EncryptedMessage::new(message_json.as_bytes(), password)?;
-	let encrypted_message_json = serde_json::to_string(&encrypted_message)?;
-	let encrypted_message_bytes = encrypted_message_json.as_bytes();
-	let encrypted_message_len = encrypted_message_bytes.len();
-	let encrypted_message_len_bytes = (encrypted_message_len as u32).to_be_bytes();
-
-	stream.write_all(&encrypted_message_len_bytes).await?;
-	stream.write_all(encrypted_message_bytes).await?;
-
-	Ok(())
-}
-
-async fn read_message_async<T: DeserializeOwned>(stream: &mut OwnedReadHalf, password: &str) -> ServerResult<T> {
-	let mut encrypted_message_len_bytes = [0u8; 4];
-	stream.read_exact(&mut encrypted_message_len_bytes).await?;
-	let encrypted_message_len = u32::from_be_bytes(encrypted_message_len_bytes) as usize;
-
-	let mut encrypted_message_bytes = vec![0u8; encrypted_message_len];
-	stream.read_exact(&mut encrypted_message_bytes).await?;
-
-	let encrypted_message_json = String::from_utf8(encrypted_message_bytes)
-		.map_err(|_| ServerError::InvalidResponse)?;
-	let encrypted_message: EncryptedMessage = serde_json::from_str(&encrypted_message_json)
-		.map_err(ServerError::ParseError)?;
-
-	let message_bytes = encrypted_message.decrypt(password)?;
-
-	let message_json = String::from_utf8(message_bytes).map_err(|_| ServerError::InvalidResponse)?;
-	serde_json::from_str(&message_json)
-		.map_err(ServerError::ParseError)
-}
 
 #[derive(Debug, Clone)]
 pub struct SharedServerData {

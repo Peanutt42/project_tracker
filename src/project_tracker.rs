@@ -1,14 +1,14 @@
 use crate::{
 	components::{
 		create_empty_database_button, generate_task_description_markdown, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
-	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingTab, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
+	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingTab, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 use crate::{LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
 use chrono::Utc;
 use project_tracker_core::{Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, SyncDatabaseResult, TaskId};
-use project_tracker_server::ServerError;
+use project_tracker_server::{Request, Response, ServerError};
 use iced::{
 	alignment::Horizontal, clipboard, event::Status, keyboard, mouse, time, widget::{
 		center, column, container, markdown, mouse_area, opaque, responsive, row, stack, text, Space, Stack
@@ -32,6 +32,7 @@ pub struct ProjectTrackerApp {
 	pub syncing_database: bool,
 	pub syncing_database_from_server: bool,
 	pub last_sync_time: Option<Instant>,
+	pub server_ws_message_sender: Option<ServerWsMessageSender>,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
 	pub error_msg_modal: ErrorMsgModal,
@@ -86,9 +87,8 @@ pub enum Message {
 	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	SyncDatabaseFromServer,
-	DatabaseDownloadedFromServer(Database),
-	DatabaseUploadedToServer,
 	ServerError(Arc<ServerError>),
+	ServerWsEvent(ServerWsEvent),
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
 	SwitchToUpperProject, // switches to upper project when using shortcuts
@@ -181,6 +181,7 @@ impl ProjectTrackerApp {
 				syncing_database: false,
 				syncing_database_from_server: false,
 				last_sync_time: None,
+				server_ws_message_sender: None,
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
 				error_msg_modal: ErrorMsgModal::Closed,
@@ -293,6 +294,7 @@ impl ProjectTrackerApp {
 			self.create_task_modal.subscription(),
 			time::every(Duration::from_secs(1)).map(|_| Message::SaveChangedFiles),
 			time::every(Duration::from_secs(1)).map(|_| Message::SyncIfChanged),
+			Subscription::run(connect_ws).map(Message::ServerWsEvent),
 			system_theme_subscription(),
 		])
 	}
@@ -642,6 +644,11 @@ impl ProjectTrackerApp {
 				match load_preferences_result {
 					Ok(preferences) => {
 						self.preferences = Some(preferences);
+						if let Some(message_sender) = &mut self.server_ws_message_sender {
+							if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
+								let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+							}
+						}
 						self.update(PreferenceMessage::Save.into())
 					},
 					Err(error) => match error.as_ref() {
@@ -676,31 +683,15 @@ impl ProjectTrackerApp {
 					},
 				}
 			},
-			Message::SyncDatabaseFromServer => {
-				if let Some(database) = &self.database {
-					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization().cloned() {
-						self.syncing_database_from_server = true;
-
-						return Task::perform(
-							sync_database_from_server(
-								server_config,
-								database.clone()
-							),
-							|result| match result {
-								Ok(sync_response) => match sync_response {
-									SyncServerDatabaseResponse::DownloadedDatabase(database) => Message::DatabaseDownloadedFromServer(database),
-									SyncServerDatabaseResponse::UploadedDatabase => Message::DatabaseUploadedToServer,
-								},
-								Err(e) => Message::ServerError(Arc::new(e)),
-							}
-						);
-					}
-				}
+			Message::SyncDatabaseFromServer => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
+				self.syncing_database_from_server = true;
+				let _ = server_ws_message_sender.send(ServerWsMessage::Request(
+					Request::GetModifiedDate
+				));
 				Task::none()
-			},
-			Message::DatabaseDownloadedFromServer(database) => {
-				self.last_sync_time = Some(Instant::now());
-				self.update(Message::LoadedDatabase(Ok(database)))
+			}
+			else {
+				Task::none()
 			},
 			Message::ServerError(e) => {
 				self.syncing_database_from_server = false;
@@ -711,10 +702,95 @@ impl ProjectTrackerApp {
 					"Try again",
 				))
 			},
-			Message::DatabaseUploadedToServer => {
-				self.syncing_database_from_server = false;
-				self.last_sync_time = Some(Instant::now());
-				Task::none()
+			Message::ServerWsEvent(event) => match event {
+				ServerWsEvent::MessageSender(mut message_sender) => {
+					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
+						let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+					}
+					self.server_ws_message_sender = Some(message_sender);
+					Task::none()
+				},
+				ServerWsEvent::Connected => {
+					println!("ws connected!");
+					Task::none()
+				},
+				ServerWsEvent::Disconnected => {
+					println!("ws disconnected");
+					Task::none()
+				},
+				ServerWsEvent::ServerError(e) => {
+					self.syncing_database_from_server = false;
+					self.update(Message::ServerError(e))
+				},
+				ServerWsEvent::Response(response) => match response {
+					Response::Database { database_binary, last_modified_time } => {
+						let server_is_more_up_to_date = self.database.as_ref()
+							.map(|db| last_modified_time > *db.last_changed_time())
+        					.unwrap_or(true);
+						if server_is_more_up_to_date {
+							match Database::from_binary(&database_binary, last_modified_time) {
+								Ok(database) => {
+									self.last_sync_time = Some(Instant::now());
+									self.syncing_database_from_server = false;
+									self.update(Message::LoadedDatabase(Ok(database)))
+								},
+								Err(e) => {
+									self.syncing_database_from_server = false;
+									self.update(Message::ServerError(Arc::new(e.into())))
+								},
+							}
+						}
+						else {
+							Task::none()
+						}
+					},
+					Response::DatabaseUpdated => {
+						self.syncing_database_from_server = false;
+						self.last_sync_time = Some(Instant::now());
+						Task::none()
+					},
+					Response::InvalidDatabaseBinary => {
+						self.syncing_database_from_server = false;
+						self.update(Message::ServerError(Arc::new(ServerError::InvalidDatabaseBinaryFormat)))
+					},
+					Response::InvalidPassword => {
+						self.syncing_database_from_server = false;
+						self.update(Message::ServerError(Arc::new(ServerError::InvalidPassword)))
+					},
+					Response::ModifiedDate(server_modified_date) => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
+						let server_is_more_up_to_date = self.database.as_ref()
+							.map(|db| server_modified_date > *db.last_changed_time())
+        					.unwrap_or(true);
+
+						if server_is_more_up_to_date {
+							let _ = server_ws_message_sender.send(ServerWsMessage::Request(
+									Request::DownloadDatabase
+								));
+							Task::none()
+						}
+						else if let Some(database) = &self.database {
+							match database.clone().to_binary() {
+								Some(database_binary) => {
+									let _ = server_ws_message_sender.send(ServerWsMessage::Request(
+										Request::UpdateDatabase {
+											database_binary,
+											last_modified_time: *database.last_changed_time()
+										}
+									));
+									Task::none()
+								},
+								None => self.update(Message::ServerError(Arc::new(ServerError::InvalidDatabaseBinaryFormat))),
+							}
+						}
+						else {
+							Task::none()
+						}
+					}
+					else {
+						self.syncing_database_from_server = false;
+						Task::none()
+					},
+				}
 			},
 			Message::DatabaseMessage(database_message) => {
 				if let Some(database) = &mut self.database {

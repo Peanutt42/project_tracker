@@ -15,6 +15,7 @@ iced_aw = { workspace = true }
 iced_drop = { path = "iced_drop" }
 iced_fonts = "0.1.1"
 tokio = { workspace = true }
+async-tungstenite = { workspace = true }
 notify-rust = "4"
 rodio = "0.19"
 serde = { workspace = true }
@@ -53,6 +54,7 @@ filetime = "0.2"
 thiserror = "1.0"
 directories = "5.0.1"
 rfd = "0.14.1"
+async-tungstenite = { version = "0.25", features = ["tokio-rustls-webpki-roots"] }
 
 [build-dependencies]
 winresource = "0.1.17"
