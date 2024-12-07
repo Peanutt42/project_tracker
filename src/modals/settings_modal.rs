@@ -520,25 +520,19 @@ impl SettingsModal {
 				PreferenceAction::None
 			},
 
-			SettingsModalMessage::EnableSynchronization => {
-				if let Some(preferences) = preferences {
-					preferences.set_synchronization(Some(SynchronizationSetting::Filepath(None)));
-				}
-				PreferenceAction::None
-			},
-			SettingsModalMessage::DisableSynchronization => {
-				if let Some(preferences) = preferences {
-					preferences.set_synchronization(None);
-				}
-				PreferenceAction::None
-			},
+			SettingsModalMessage::EnableSynchronization => PreferenceMessage::SetSynchronization(
+				Some(SynchronizationSetting::Filepath(None))
+			)
+			.into(),
+			SettingsModalMessage::DisableSynchronization => PreferenceMessage::SetSynchronization(None).into(),
 			SettingsModalMessage::SetServerHostname(new_hostname) => {
 				if let Some(preferences) = preferences {
 					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
-						preferences.set_synchronization(Some(SynchronizationSetting::Server(ServerConfig {
+						return PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Server(ServerConfig {
 							hostname: new_hostname,
 							..config.clone()
-						})));
+						})))
+						.into();
 					}
 				}
 				PreferenceAction::None
@@ -546,10 +540,11 @@ impl SettingsModal {
 			SettingsModalMessage::SetServerPort(new_port) => {
 				if let Some(preferences) = preferences {
 					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
-						preferences.set_synchronization(Some(SynchronizationSetting::Server(ServerConfig {
+						return PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Server(ServerConfig {
 							port: new_port,
 							..config.clone()
-						})));
+						})))
+						.into();
 					}
 				}
 				PreferenceAction::None
@@ -557,10 +552,11 @@ impl SettingsModal {
 			SettingsModalMessage::SetServerPassword(new_password) => {
 				if let Some(preferences) = preferences {
 					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
-						preferences.set_synchronization(Some(SynchronizationSetting::Server(ServerConfig {
+						return PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Server(ServerConfig {
 							password: new_password,
 							..config.clone()
-						})));
+						})))
+						.into();
 					}
 				}
 				PreferenceAction::None

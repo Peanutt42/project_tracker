@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		create_empty_database_button, generate_task_description_markdown, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
-	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingTab, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
+	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerConfig, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingTab, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -15,7 +15,7 @@ use iced::{
 	}, window, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme
 };
 use std::{
-	collections::HashMap, path::PathBuf, rc::Rc, sync::Arc, time::{Duration, Instant, SystemTime}
+	collections::HashMap, hash::{DefaultHasher, Hash, Hasher}, path::PathBuf, rc::Rc, sync::Arc, time::{Duration, Instant, SystemTime}
 };
 
 pub struct ProjectTrackerApp {
@@ -246,6 +246,21 @@ impl ProjectTrackerApp {
 	}
 
 	pub fn subscription(&self) -> Subscription<Message> {
+		let server_config = match self.preferences.synchronization() {
+			Some(SynchronizationSetting::Server(server_config)) => server_config.clone(),
+			_ => ServerConfig {
+				hostname: String::new(),
+				port: 0,
+				password: String::new()
+			}
+		};
+		// to identify websocket subscriptions with different server configs
+		let server_config_hash = {
+			let mut hasher = DefaultHasher::default();
+			server_config.hash(&mut hasher);
+			hasher.finish()
+		};
+
 		Subscription::batch([
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
 				keyboard::Key::Character("b") if modifiers.command() => {
@@ -294,7 +309,7 @@ impl ProjectTrackerApp {
 			self.create_task_modal.subscription(),
 			time::every(Duration::from_secs(1)).map(|_| Message::SaveChangedFiles),
 			time::every(Duration::from_secs(1)).map(|_| Message::SyncIfChanged),
-			Subscription::run(connect_ws).map(Message::ServerWsEvent),
+			Subscription::run_with_id(server_config_hash, connect_ws()).map(Message::ServerWsEvent),
 			system_theme_subscription(),
 		])
 	}
@@ -1152,6 +1167,7 @@ impl ProjectTrackerApp {
 		match action {
 			PreferenceAction::None => Task::none(),
 			PreferenceAction::Task(task) => task,
+			PreferenceAction::PreferenceMessage(message) => self.update(message.into()),
 			PreferenceAction::FailedToSerailizePreferences(e) => self.show_error(e),
 			PreferenceAction::RefreshCachedTaskList => {
 				if let Some(project_page) = &mut self.content_page.project_page {

@@ -158,8 +158,15 @@ impl From<PreferenceMessage> for Message {
 pub enum PreferenceAction {
 	None,
 	Task(Task<Message>),
+	PreferenceMessage(PreferenceMessage),
 	RefreshCachedTaskList,
 	FailedToSerailizePreferences(serde_json::Error),
+}
+
+impl From<PreferenceMessage> for PreferenceAction {
+	fn from(value: PreferenceMessage) -> Self {
+		PreferenceAction::PreferenceMessage(value)
+	}
 }
 
 impl From<Task<Message>> for PreferenceAction {
@@ -204,9 +211,6 @@ impl Preferences {
 	pub fn synchronization(&self) -> &Option<SynchronizationSetting> {
 		&self.synchronization
 	}
-	pub fn set_synchronization(&mut self, setting: Option<SynchronizationSetting>) {
-		self.modify(|pref| pref.synchronization = setting);
-	}
 	pub fn theme_mode(&self) -> &ThemeMode {
 		&self.theme_mode
 	}
@@ -235,7 +239,7 @@ impl Preferences {
 		self.sort_unspecified_tasks_at_bottom
 	}
 
-	pub fn modify(&mut self, f: impl FnOnce(&mut Preferences)) {
+	fn modify(&mut self, f: impl FnOnce(&mut Preferences)) {
 		f(self);
 		self.modified();
 	}
@@ -305,7 +309,7 @@ impl Preferences {
 			}
 
 			PreferenceMessage::SetSynchronization(setting) => {
-				self.set_synchronization(setting);
+				self.modify(|pref| pref.synchronization = setting);
 				PreferenceAction::None
 			}
 

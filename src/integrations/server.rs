@@ -5,7 +5,7 @@ use project_tracker_server::{Request, Response, ServerError, DEFAULT_HOSTNAME, D
 use serde::{Deserialize, Serialize};
 use async_tungstenite::tungstenite;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ServerConfig {
 	pub hostname: String,
 	pub port: usize,
@@ -46,31 +46,40 @@ pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 						return;
 					}
 					if let Some(ServerWsMessage::Connect(server_config)) = receiver.next().await {
-						message_sender_sent = false;
 						state.message_receiver = Some(receiver);
 						state.connection = WsServerConnection::Connecting(server_config);
 					}
 				},
 				WsServerConnection::Connecting(server_config) => {
-					match async_tungstenite::tokio::connect_async(
-						format!("ws://{}:{}", server_config.hostname, server_config.port)
-					)
-					.await
-					{
-						Ok((webserver, _)) => {
-							if output.send(ServerWsEvent::Connected).await.is_err() {
-								return;
+					match &mut state.message_receiver {
+						Some(message_receiver) => {
+							if let Ok(Some(ServerWsMessage::Connect(new_server_config))) = message_receiver.try_next() {
+								*server_config = new_server_config;
 							}
-
-							state.connection = WsServerConnection::Connected(webserver, server_config.clone());
+							match async_tungstenite::tokio::connect_async(
+								format!("ws://{}:{}", server_config.hostname, server_config.port)
+							)
+							.await
+							{
+								Ok((webserver, _)) => {
+									if output.send(ServerWsEvent::Connected).await.is_err() {
+										return;
+									}
+									state.connection = WsServerConnection::Connected(webserver, server_config.clone());
+								},
+								Err(e) => {
+									eprintln!("failed to connect to ws: {e}");
+									tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+									if output.send(ServerWsEvent::Disconnected).await.is_err() {
+										return;
+									}
+								}
+							}
 						},
-						Err(e) => {
-							eprintln!("failed to connect to ws: {e}");
-							tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-							if output.send(ServerWsEvent::Disconnected).await.is_err() {
-								return;
-							}
-						}
+						None => {
+							message_sender_sent = false;
+							state.connection = WsServerConnection::Disconnected;
+						},
 					}
 				}
 				WsServerConnection::Connected(websocket, server_config) => {
