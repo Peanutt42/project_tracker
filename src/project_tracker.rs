@@ -394,6 +394,7 @@ impl ProjectTrackerApp {
 					!self.syncing_database_from_server &&
 					self.has_unsynced_changes() &&
 					matches!(self.error_msg_modal, ErrorMsgModal::Closed) && // dont auto sync when an error happened
+					matches!(self.confirm_modal, ConfirmModal::Closed) && // dont auto sync while user needs to confirm something
 					matches!(self.settings_modal, SettingsModal::Closed) // or user is configuring the sync options
 				{
 					self.update(Message::SyncDatabase)
