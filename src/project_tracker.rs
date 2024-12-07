@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		create_empty_database_button, generate_task_description_markdown, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
-	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
+	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{sync_database_from_server, SyncServerDatabaseResponse}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingTab, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -390,7 +390,12 @@ impl ProjectTrackerApp {
 				Task::batch(commands)
 			}
 			Message::SyncIfChanged => {
-				if !self.syncing_database && !self.syncing_database_from_server && self.has_unsynced_changes() {
+				if !self.syncing_database &&
+					!self.syncing_database_from_server &&
+					self.has_unsynced_changes() &&
+					matches!(self.error_msg_modal, ErrorMsgModal::Closed) && // dont auto sync when an error happened
+					matches!(self.settings_modal, SettingsModal::Closed) // or user is configuring the sync options
+				{
 					self.update(Message::SyncDatabase)
 				}
 				else {
@@ -698,7 +703,12 @@ impl ProjectTrackerApp {
 			},
 			Message::ServerError(e) => {
 				self.syncing_database_from_server = false;
-				self.show_error(e)
+				self.update(ConfirmModalMessage::open_labeled(
+					format!("{e}\nReconfigure synchronization settings?"),
+					SettingsModalMessage::OpenTab(SettingTab::Database),
+					"Reconfigure",
+					"Try again",
+				))
 			},
 			Message::DatabaseUploadedToServer => {
 				self.syncing_database_from_server = false;

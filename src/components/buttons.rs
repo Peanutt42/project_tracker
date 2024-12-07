@@ -608,8 +608,8 @@ pub fn color_palette_item_button(
 	.padding(SMALL_PADDING_AMOUNT)
 }
 
-pub fn confirm_ok_button(on_confirmed: &Message) -> Button<'static, Message> {
-	button(text("Ok").align_x(Horizontal::Center))
+pub fn confirm_ok_button(on_confirmed: &Message, custom_label: Option<&'static str>) -> Button<'static, Message> {
+	button(text(custom_label.unwrap_or("Ok")).align_x(Horizontal::Center))
 		.width(Fill)
 		.style(dangerous_button_style)
 		.on_press(Message::ConfirmModalConfirmed(Box::new(
@@ -617,8 +617,8 @@ pub fn confirm_ok_button(on_confirmed: &Message) -> Button<'static, Message> {
 		)))
 }
 
-pub fn confirm_cancel_button() -> Button<'static, Message> {
-	button(text("Cancel").align_x(Horizontal::Center))
+pub fn confirm_cancel_button(custom_label: Option<&'static str>) -> Button<'static, Message> {
+	button(text(custom_label.unwrap_or("Cancel")).align_x(Horizontal::Center))
 		.width(Fill)
 		.style(secondary_button_style_default)
 		.on_press(ConfirmModalMessage::Close.into())

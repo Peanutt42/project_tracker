@@ -14,6 +14,8 @@ pub enum ConfirmModalMessage {
 	Open {
 		title: String,
 		on_confirmed: Box<Message>,
+		custom_ok_label: Option<&'static str>,
+		custom_cancel_label: Option<&'static str>,
 	},
 	Close,
 }
@@ -23,6 +25,18 @@ impl ConfirmModalMessage {
 		Self::Open {
 			title,
 			on_confirmed: Box::new(on_confirmed.into()),
+			custom_ok_label: None,
+			custom_cancel_label: None,
+		}
+		.into()
+	}
+
+	pub fn open_labeled(title: String, on_confirmed: impl Into<Message>, ok_label: &'static str, cancel_label: &'static str) -> Message {
+		Self::Open {
+			title,
+			on_confirmed: Box::new(on_confirmed.into()),
+			custom_ok_label: Some(ok_label),
+			custom_cancel_label: Some(cancel_label),
 		}
 		.into()
 	}
@@ -38,6 +52,8 @@ pub enum ConfirmModal {
 	Opened {
 		title: String,
 		on_confirmed: Message,
+		custom_ok_label: Option<&'static str>,
+		custom_cancel_label: Option<&'static str>,
 	},
 	Closed,
 }
@@ -48,10 +64,14 @@ impl ConfirmModal {
 			ConfirmModalMessage::Open {
 				title,
 				on_confirmed,
+				custom_ok_label,
+				custom_cancel_label,
 			} => {
 				*self = ConfirmModal::Opened {
 					title,
 					on_confirmed: *on_confirmed,
+					custom_ok_label,
+					custom_cancel_label,
 				};
 			}
 			ConfirmModalMessage::Close => {
@@ -66,11 +86,16 @@ impl ConfirmModal {
 			ConfirmModal::Opened {
 				title,
 				on_confirmed,
+				custom_ok_label,
+				custom_cancel_label,
 			} => Some(
 				card(
 					text(title),
-					row![confirm_ok_button(on_confirmed), confirm_cancel_button(),]
-						.spacing(SPACING_AMOUNT),
+					row![
+						confirm_ok_button(on_confirmed, *custom_ok_label),
+						confirm_cancel_button(*custom_cancel_label)
+					]
+					.spacing(SPACING_AMOUNT),
 				)
 				.max_width(300.0)
 				.style(card_style)

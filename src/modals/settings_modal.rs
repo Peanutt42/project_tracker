@@ -39,6 +39,7 @@ pub enum SettingsModalMessage {
 	Open,
 	Close,
 	SwitchSettingsTab(SettingTab),
+	OpenTab(SettingTab),
 
 	ShowPassword,
 	HidePassword,
@@ -455,6 +456,13 @@ impl SettingsModal {
 			}
 			SettingsModalMessage::Close => {
 				*self = SettingsModal::Closed;
+				PreferenceAction::None
+			}
+			SettingsModalMessage::OpenTab(tab) => {
+				*self = SettingsModal::Opened {
+					selected_tab: tab,
+					show_password: false
+				};
 				PreferenceAction::None
 			}
 
