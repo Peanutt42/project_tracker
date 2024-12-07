@@ -2,7 +2,7 @@ use std::fs::{File, read_to_string};
 use std::path::PathBuf;
 use std::io::Write;
 use std::process::exit;
-use project_tracker_server::{DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
 
 mod web_server;
 
@@ -53,20 +53,22 @@ fn main() {
 			exit(1);
 		});
 
+	let shared_data = SharedServerData::new(database_filepath.clone());
+
 	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
 
-	let database_filepath_clone = database_filepath.clone();
 	let password_clone = password.clone();
+	let shared_data_clone = shared_data.clone();
 	std::thread::Builder::new()
 		.name("Web Server".to_string())
 		.spawn(move || {
 			let rt = tokio::runtime::Runtime::new().unwrap();
 
 			rt.block_on(async {
-				web_server::run_web_server(database_filepath_clone, password_clone, modified_receiver).await;
+				web_server::run_web_server(password_clone, modified_receiver, shared_data_clone).await;
 			});
 		})
 		.expect("failed to start web server thread");
 
-	project_tracker_server::run_server(DEFAULT_PORT, database_filepath, password, modified_sender);
+	project_tracker_server::run_server(DEFAULT_PORT, database_filepath, password, modified_sender, shared_data);
 }

@@ -1,5 +1,5 @@
 use std::{collections::{BTreeMap, HashMap}, time::SystemTime};
-use chrono::{Days, NaiveDate};
+use chrono::{DateTime, Days, NaiveDate, Utc};
 use iced::{widget::{column, container, container::Id, text, Column}, Element, Length::Fill, Padding};
 use iced_aw::date_picker::Date;
 use crate::{components::{days_left_widget, open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{IcedColorConversion, SerializableDateConversion}, pages::ContentPageMessage, project_tracker::Message, styles::{PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, Preferences, ProjectTrackerApp};
@@ -117,7 +117,8 @@ impl OverviewPage {
 		match message {
 			OverviewPageMessage::RefreshCachedTaskList => {
 				if let Some(database_ref) = database {
-					if self.cache_time < *database_ref.last_changed_time() {
+					let cache_date_time: DateTime<Utc> = self.cache_time.into();
+					if cache_date_time < *database_ref.last_changed_time() {
 						*self = Self::new(database, preferences);
 					}
 				}

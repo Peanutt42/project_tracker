@@ -10,13 +10,14 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SerializedDatabase {
+	projects: OrderedHashMap<ProjectId, Project>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Database {
 	projects: OrderedHashMap<ProjectId, Project>,
-
-	#[serde(skip, default = "SystemTime::now")]
-	last_changed_time: SystemTime,
-
-	#[serde(skip, default = "SystemTime::now")]
+	last_changed_time: DateTime<Utc>,
 	last_saved_time: SystemTime,
 }
 
@@ -160,10 +161,10 @@ pub enum DatabaseMessage {
 pub enum LoadDatabaseError {
 	#[error("failed to find database filepath")]
 	FailedToFindDatbaseFilepath,
-	#[error("failed to open file: {filepath}, error: {error}")]
+	#[error("failed to open file: {filepath}, io-error: {error:?}")]
 	FailedToOpenFile {
 		filepath: PathBuf,
-		error: std::io::Error,
+		error: Option<std::io::Error>,
 	},
 	#[error("failed to parse database: {filepath}, error: {error}")]
 	FailedToParse {
@@ -195,10 +196,10 @@ pub enum SyncDatabaseResult {
 impl Database {
 	const FILE_NAME: &'static str = "database.project_tracker";
 
-	pub fn new(projects: OrderedHashMap<ProjectId, Project>) -> Self {
+	pub fn new(projects: OrderedHashMap<ProjectId, Project>, last_changed_time: DateTime<Utc>) -> Self {
 		Self {
 			projects,
-			last_changed_time: SystemTime::now(),
+			last_changed_time,
 			last_saved_time: SystemTime::now(),
 		}
 	}
@@ -223,7 +224,7 @@ impl Database {
 			.and_then(|project| project.get_task_and_type(task_id))
 	}
 
-	pub fn last_changed_time(&self) -> &SystemTime {
+	pub fn last_changed_time(&self) -> &DateTime<Utc> {
 		&self.last_changed_time
 	}
 
@@ -241,11 +242,12 @@ impl Database {
 	}
 
 	fn modified(&mut self) {
-		self.last_changed_time = SystemTime::now();
+		self.last_changed_time = SystemTime::now().into();
 	}
 
 	pub fn has_unsaved_changes(&self) -> bool {
-		self.last_changed_time > self.last_saved_time
+		let last_saved_date_time: DateTime<Utc> = self.last_saved_time.into();
+		self.last_changed_time > last_saved_date_time
 	}
 
 	pub fn update(&mut self, message: DatabaseMessage) {
@@ -556,13 +558,23 @@ impl Database {
 	}
 
 	pub async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
-		let file_content = tokio::fs::read(&filepath).await
-			.map_err(|error| LoadDatabaseError::FailedToOpenFile{
+		let file_metadata = filepath.metadata()
+			.map_err(|e| LoadDatabaseError::FailedToOpenFile {
 				filepath: filepath.clone(),
-				error
+				error: Some(e)
+			})?;
+		let file_last_modification_time = get_last_modification_date_time(&file_metadata)
+    		.ok_or(LoadDatabaseError::FailedToOpenFile {
+      			filepath: filepath.clone(),
+         		error: None
+      		})?;
+		let file_content = tokio::fs::read(&filepath).await
+			.map_err(|e| LoadDatabaseError::FailedToOpenFile{
+				filepath: filepath.clone(),
+				error: Some(e)
 			})?;
 
-		bincode::deserialize(&file_content)
+		Self::from_binary(&file_content, file_last_modification_time)
 			.map_err(|error| LoadDatabaseError::FailedToParse{
 				filepath: filepath.clone(),
 				error
@@ -577,8 +589,23 @@ impl Database {
 		.await
 	}
 
-	pub fn to_binary(&self) -> Option<Vec<u8>> {
-		bincode::serialize(self).ok()
+	pub fn to_serialized(self) -> SerializedDatabase {
+		SerializedDatabase {
+			projects: self.projects,
+		}
+	}
+
+	pub fn from_serialized(serialized: SerializedDatabase, last_changed_time: DateTime<Utc>) -> Self {
+		Self::new(serialized.projects, last_changed_time)
+	}
+
+	pub fn from_binary(binary: &[u8], last_changed_time: DateTime<Utc>) -> bincode::Result<Self> {
+		bincode::deserialize(binary)
+    		.map(|serialized| Self::from_serialized(serialized, last_changed_time))
+	}
+
+	pub fn to_binary(self) -> Option<Vec<u8>> {
+		bincode::serialize(&self.to_serialized()).ok()
 	}
 
 	pub async fn save_to(filepath: PathBuf, binary: Vec<u8>) -> SaveDatabaseResult<()> {
@@ -598,17 +625,15 @@ impl Database {
 		Ok(begin_time)
 	}
 
-	pub async fn sync(synchronization_filepath: PathBuf, local_database_last_change_time: SystemTime) -> SyncDatabaseResult {
-		let local_last_modification_datetime: DateTime<Utc> = local_database_last_change_time.into();
-
+	pub async fn sync(synchronization_filepath: PathBuf, local_database_last_change_time: DateTime<Utc>) -> SyncDatabaseResult {
 		let synchronization_filepath_metadata = match synchronization_filepath.metadata() {
 			Ok(metadata) => metadata,
 			Err(_) => return SyncDatabaseResult::InvalidSynchronizationFilepath,
 		};
 
 		match get_last_modification_date_time(&synchronization_filepath_metadata) {
-			Some(synchronization_last_modification_datetime) => if local_last_modification_datetime
-				> synchronization_last_modification_datetime
+			Some(synchronization_last_modification_datetime) =>
+				if local_database_last_change_time > synchronization_last_modification_datetime
 			{
 				SyncDatabaseResult::Upload
 			} else {
@@ -642,7 +667,7 @@ impl Database {
 
 impl Default for Database {
 	fn default() -> Self {
-		Self::new(OrderedHashMap::new())
+		Self::new(OrderedHashMap::new(), SystemTime::now().into())
 	}
 }
 

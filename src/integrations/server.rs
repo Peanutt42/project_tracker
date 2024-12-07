@@ -1,6 +1,5 @@
 use project_tracker_core::Database;
 use project_tracker_server::{Request, Response, ServerError, ServerResult, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
 
@@ -41,7 +40,7 @@ pub async fn sync_database_from_server(config: ServerConfig, database: Database)
 		Response::InvalidDatabaseBinary => return Err(ServerError::InvalidDatabaseBinaryFormat),
 	};
 
-	let database_last_modified_date: DateTime<Utc> = (*database.last_changed_time()).into();
+	let database_last_modified_date = *database.last_changed_time();
 
 	if server_modified_date > database_last_modified_date {
 		// download database
@@ -50,7 +49,7 @@ pub async fn sync_database_from_server(config: ServerConfig, database: Database)
 			.await?;
 
 		match Response::read_async(&mut read_half, &config.password).await? {
-			Response::Database{ database_binary } => match bincode::deserialize(&database_binary) {
+			Response::Database{ database_binary, last_modified_time } => match Database::from_binary(&database_binary, last_modified_time) {
 				Ok(database) => Ok(SyncServerDatabaseResponse::DownloadedDatabase(database)),
 				Err(_) => Err(ServerError::InvalidResponse),
 			},

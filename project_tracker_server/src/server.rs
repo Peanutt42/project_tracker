@@ -2,36 +2,12 @@ use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::io::ErrorKind;
 use std::sync::{Arc, RwLock};
-use chrono::{DateTime, Utc};
 use tokio::sync::broadcast::Sender;
-use project_tracker_core::{get_last_modification_date_time, Database};
-use crate::{Request, Response, ServerError};
+use project_tracker_core::Database;
+use crate::{Request, Response, ServerError, SharedServerData};
 
-struct SharedData {
-	database: Database,
-	last_modified_time: DateTime<Utc>,
-}
-
-pub fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<()>) {
+pub fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<()>, shared_data: Arc<RwLock<SharedServerData>>) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).expect("Failed to bind to port");
-
-	let last_modified_time = get_last_modification_date_time(
-		&database_filepath.metadata().expect("Failed to get the last modified metadata of database file")
-	)
-	.expect("Failed to get the last modified metadata of database file");
-
-	let database_file_content = std::fs::read(&database_filepath)
-		.expect("Failed to read database file at startup!");
-
-	let database = bincode::deserialize(&database_file_content)
-		.expect("Failed to parse database file content at startup!");
-
-	let shared_data = SharedData {
-		database,
-		last_modified_time,
-	};
-
-	let shared_data = Arc::new(RwLock::new(shared_data));
 
 	println!("Server is listening on port {}", port);
 
@@ -51,7 +27,7 @@ pub fn run_server(port: usize, database_filepath: PathBuf, password: String, mod
 	}
 }
 
-fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, password: String, modified_sender: Sender<()>, shared_data: Arc<RwLock<SharedData>>) {
+fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, password: String, modified_sender: Sender<()>, shared_data: Arc<RwLock<SharedServerData>>) {
 	println!("client connected");
 
 	loop {
@@ -65,7 +41,7 @@ fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, passw
 					}
 				},
 				Request::UpdateDatabase { database_binary, last_modified_time } => {
-					match bincode::deserialize(&database_binary) {
+					match Database::from_binary(&database_binary, last_modified_time) {
 						Ok(database) => {
 							{
 								let mut shared_data = shared_data.write().unwrap();
@@ -89,9 +65,13 @@ fn listen_client_thread(mut stream: TcpStream, database_filepath: PathBuf, passw
 					};
 				},
 				Request::DownloadDatabase => {
-					match shared_data.read().unwrap().database.to_binary() {
+					let shared_data_clone = shared_data.read().unwrap().clone();
+					match shared_data_clone.database.to_binary() {
 						Some(database_binary) => {
-							let response = Response::Database{ database_binary };
+							let response = Response::Database{
+								database_binary,
+								last_modified_time: shared_data_clone.last_modified_time
+							};
 							match response.send(&mut stream, &password) {
 								Ok(_) => println!("Sent database"),
 								Err(e) => eprintln!("failed to send database to client: {e}"),

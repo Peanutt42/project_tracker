@@ -5,6 +5,7 @@ use crate::{
 		text_input_style_borderless, text_input_style_only_round_left, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE
 	}, OptionalPreference, Preferences
 };
+use chrono::{DateTime, Utc};
 use project_tracker_core::{import_source_code_todos, Database, DatabaseMessage, Project, ProjectId, SerializableColor, SortMode, Task, TaskId, TaskTagId};
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use iced::{
@@ -308,7 +309,8 @@ impl ProjectPage {
 		};
 
 		if let Some(database_ref) = database {
-			if self.cached_task_list.cache_time < *database_ref.last_changed_time() {
+			let cache_date_time: DateTime<Utc> = self.cached_task_list.cache_time.into();
+			if cache_date_time < *database_ref.last_changed_time() {
 				self.generate_cached_task_list(database_ref, preferences);
 			}
 		}

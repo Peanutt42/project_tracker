@@ -6,6 +6,7 @@ use crate::{
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 use crate::{LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
+use chrono::Utc;
 use project_tracker_core::{Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, SyncDatabaseResult, TaskId};
 use project_tracker_server::ServerError;
 use iced::{
@@ -132,7 +133,7 @@ impl ProjectTrackerApp {
 	fn has_unsynced_changes(&self) -> bool {
 		if let Some(last_sync_time) = self.last_sync_time {
 			if let Some(database) = &self.database {
-				if let Ok(last_database_save_duration) = database.last_changed_time().elapsed() {
+				if let Ok(last_database_save_duration) = (Utc::now() - database.last_changed_time()).abs().to_std() {
 					last_database_save_duration < last_sync_time.elapsed()
 				}
 				else {
@@ -421,7 +422,7 @@ impl ProjectTrackerApp {
 					.map(Message::WaitClosingModalMessage)
 			}
 			Message::SaveDatabase => {
-				if let Some(database) = &self.database {
+				if let Some(database) = self.database.clone() {
 					if let Some(database_binary) = database.to_binary() {
 						Task::perform(Database::save(database_binary), |result| match result {
 							Ok(begin_time) => Message::DatabaseSaved(begin_time),
@@ -467,7 +468,7 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::ExportDatabase(filepath) => {
-				if let Some(database) = &self.database {
+				if let Some(database) = self.database.clone() {
 					match database.to_binary() {
 						Some(database_binary) => {
 							self.exporting_database = true;
@@ -536,7 +537,7 @@ impl ProjectTrackerApp {
 				}
 			}
 			Message::SyncDatabaseFilepathUpload(filepath) => {
-				if let Some(database) = &self.database {
+				if let Some(database) = self.database.clone() {
 					match database.to_binary() {
 						Some(database_binary) => Task::perform(Database::save_to(filepath, database_binary), |_| {
 							Message::SyncDatabaseFilepathUploaded
@@ -717,7 +718,7 @@ impl ProjectTrackerApp {
 						overview_page.update(OverviewPageMessage::RefreshCachedTaskList, Some(database), &self.preferences);
 					}
 
-					let should_save = SystemTime::now().duration_since(*database.last_saved_time())
+					let should_save = database.last_saved_time().elapsed()
 						.map(|last_save_duration| last_save_duration >= Duration::from_secs(1))
 						.unwrap_or(false);
 					let should_sync = match self.last_sync_time {

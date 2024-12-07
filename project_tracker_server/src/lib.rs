@@ -1,5 +1,6 @@
-use std::{net::TcpStream, io::{Read, Write}};
+use std::{io::{Read, Write}, net::TcpStream, path::PathBuf, sync::{Arc, RwLock}};
 use chrono::{DateTime, Utc};
+use project_tracker_core::{get_last_modification_date_time, Database};
 use thiserror::Error;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::tcp::{OwnedReadHalf, OwnedWriteHalf}};
@@ -60,6 +61,7 @@ pub enum Response {
 	ModifiedDate(DateTime<Utc>),
 	Database {
 		database_binary: Vec<u8>,
+		last_modified_time: DateTime<Utc>,
 	},
 	DatabaseUpdated,
 	InvalidPassword,
@@ -172,4 +174,32 @@ async fn read_message_async<T: DeserializeOwned>(stream: &mut OwnedReadHalf, pas
 	let message_json = String::from_utf8(message_bytes).map_err(|_| ServerError::InvalidResponse)?;
 	serde_json::from_str(&message_json)
 		.map_err(ServerError::ParseError)
+}
+
+#[derive(Debug, Clone)]
+pub struct SharedServerData {
+	pub database: Database,
+	pub last_modified_time: DateTime<Utc>,
+}
+
+impl SharedServerData {
+	pub fn new(filepath: PathBuf) -> Arc<RwLock<Self>> {
+		let last_modified_time = get_last_modification_date_time(
+			&filepath.metadata().expect("Failed to get the last modified metadata of database file")
+		)
+		.expect("Failed to get the last modified metadata of database file");
+
+		let database_file_content = std::fs::read(&filepath)
+			.expect("Failed to read database file at startup!");
+
+		let database = Database::from_binary(&database_file_content, last_modified_time)
+			.expect("Failed to parse database file content at startup!");
+
+		let shared_data = SharedServerData {
+			database,
+			last_modified_time,
+		};
+
+		Arc::new(RwLock::new(shared_data))
+	}
 }

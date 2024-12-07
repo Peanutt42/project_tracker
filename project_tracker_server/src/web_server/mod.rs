@@ -1,20 +1,20 @@
+use project_tracker_server::SharedServerData;
 use warp::{body, http::StatusCode, path, path::end, post, reply::{self, html, with_header, with_status, Reply, Response}, serve, ws, ws::{WebSocket, Ws, Message}, Filter};
 use futures_util::SinkExt;
-use std::{path::PathBuf, sync::{Arc, RwLock}};
+use std::sync::{Arc, RwLock};
 use tokio::sync::broadcast::Receiver;
-use project_tracker_core::Database;
 
 const INDEX_HTML: &str = include_str!("static/index.html");
 const STYLE_CSS: &str = include_str!("static/style.css");
 const SCRIPT_JS: &str = include_str!("static/script.js");
 const FAVICON_ICO: &[u8] = include_bytes!("static/favicon.ico");
 
-pub async fn run_web_server(database_filepath: PathBuf, password: String, modified_receiver: Receiver<()>) {
+pub async fn run_web_server(password: String, modified_receiver: Receiver<()>, shared_data: Arc<RwLock<SharedServerData>>) {
 	let get_database_route = path("load_database")
 		.and(post())
 		.and(body::json())
 		.map(move |body: serde_json::Value| {
-			load_database(body, &database_filepath, password.clone())
+			load_database(body, password.clone(), shared_data.clone())
 		});
 
 	let modified_receiver = Arc::new(RwLock::new(modified_receiver));
@@ -56,33 +56,9 @@ pub async fn run_web_server(database_filepath: PathBuf, password: String, modifi
 		.await
 }
 
-fn load_database(body: serde_json::Value, database_filepath: &PathBuf, password: String) -> Response {
+fn load_database(body: serde_json::Value, password: String, shared_data: Arc<RwLock<SharedServerData>>) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
-		match std::fs::read(database_filepath) {
-			Ok(bin_content) => match bincode::deserialize::<Database>(&bin_content) {
-				Ok(db) => reply::json(&db).into_response(),
-				Err(_) => {
-					eprintln!("web-server: database file has invalid json format!");
-					with_status(
-						html("Database file has invalid json format!".to_string()),
-						StatusCode::INTERNAL_SERVER_ERROR,
-					)
-					.into_response()
-				},
-			},
-			Err(e) => {
-				eprintln!(
-					"web-server: failed to read database file in {}: {}",
-					database_filepath.display(),
-					e
-				);
-				with_status(
-					html("Failed to read database file!".to_string()),
-					StatusCode::INTERNAL_SERVER_ERROR,
-				)
-				.into_response()
-			}
-		}
+		reply::json(&shared_data.read().unwrap().database.clone().to_serialized()).into_response()
 	}
 	else {
 		println!("web-server: invalid password providied, refusing access!");
