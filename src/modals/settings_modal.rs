@@ -11,7 +11,7 @@ use crate::{
 		dangerous_button, export_database_button,
 		file_location, filepath_widget, horizontal_seperator_padded, import_database_button,
 		import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button,
-		sync_database_button, vertical_seperator, copy_to_clipboard_button, open_link_button,
+		sync_database_button, vertical_seperator,
 		HORIZONTAL_SCROLLABLE_PADDING, ICON_FONT_SIZE,
 	},
 	modals::ErrorMsgModalMessage,
@@ -381,15 +381,11 @@ Server: your own hosted ProjectTracker-server"
 
 					item(
 						"Author:",
-						row![
-							text("P3anutt42 (github)"),
-
-							copy_to_clipboard_button(author_link.to_string()),
-
-							open_link_button(author_link.to_string()),
+						rich_text![
+							Span::new(author_link)
+								.color(link_color(app.is_theme_dark()))
+								.link(Message::OpenUrl(author_link.to_string()))
 						]
-						.spacing(SMALL_SPACING_AMOUNT)
-						.align_y(Vertical::Center)
 						.into()
 					),
 
@@ -397,15 +393,11 @@ Server: your own hosted ProjectTracker-server"
 
 					item(
 						"Repository:",
-						row![
-							text(repository),
-
-							copy_to_clipboard_button(repository.to_string()),
-
-							open_link_button(repository.to_string()),
+						rich_text![
+							Span::new(repository)
+								.color(link_color(app.is_theme_dark()))
+								.link(Message::OpenUrl(repository.to_string()))
 						]
-						.spacing(SMALL_SPACING_AMOUNT)
-						.align_y(Vertical::Center)
 						.into()
 					),
 				]

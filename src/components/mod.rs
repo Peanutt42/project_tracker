@@ -18,7 +18,7 @@ pub use buttons::{
 	sync_database_button, task_tag_button, theme_mode_button, toggle_sidebar_button,
 	sync_database_from_server_button, synchronization_type_button, take_break_button,
 	show_password_button, hide_password_button, create_empty_database_button, open_folder_location_button, force_close_anyways_button,
-	open_link_button, sort_dropdown_button, error_msg_ok_button, task_tag_name_button, ICON_BUTTON_WIDTH, ICON_FONT_SIZE
+	sort_dropdown_button, error_msg_ok_button, task_tag_name_button, ICON_BUTTON_WIDTH, ICON_FONT_SIZE
 };
 
 mod task_list;
