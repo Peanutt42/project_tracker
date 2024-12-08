@@ -219,8 +219,8 @@ pub fn task_widget<'a>(
 			},
 			highlight_dropzone
 		),
-		match &project.sort_mode {
-			SortMode::Manual if draggable => hover(
+		if draggable {
+			hover(
 				droppable(
 					inner(false)
 				)
@@ -245,14 +245,15 @@ pub fn task_widget<'a>(
 				.style(move |t, s| task_button_style(t, s, dragging && !just_minimal_dragging)),
 
 				on_hover_view
-			),
-			_ => button(
+			)
+		} else {
+			button(
 				inner(false)
 			)
 			.on_press(TaskModalMessage::Open{ project_id, task_id }.into())
 			.style(|t, s| task_button_style(t, s, false))
 			.padding(Padding::ZERO)
-			.into(),
+			.into()
 		}
 	]
 	.into()

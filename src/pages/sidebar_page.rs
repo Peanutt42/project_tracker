@@ -15,7 +15,7 @@ use crate::{
 		text_input_style_default, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT,
 	},
 };
-use project_tracker_core::{Database, DatabaseMessage, OrderedHashMap, Project, ProjectId, SerializableColor, TaskId};
+use project_tracker_core::{Database, DatabaseMessage, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId};
 use iced::{
 	advanced::widget::Id,
 	alignment::Horizontal,
@@ -692,15 +692,15 @@ impl SidebarPage {
 
 	fn task_dropzone_options(
 		database: &Option<Database>,
-		project_exception: ProjectId,
+		project_id: ProjectId,
 		task_exception: TaskId,
 		task_ui_ids: &mut TaskUiIdMap
 	) -> Option<Vec<Id>> {
 		if let Some(database) = database {
 			let mut options = Vec::new();
 
-			for (project_id, project) in database.projects().iter() {
-				if project_id == project_exception {
+			if let Some(project) = database.get_project(&project_id) {
+				if matches!(project.sort_mode, SortMode::Manual) {
 					let last_task_id = project
 						.todo_tasks
 						.get_key_at_order(project.todo_tasks.len() - 1);
