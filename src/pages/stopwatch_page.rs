@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		complete_task_timer_button, days_left_widget, horizontal_scrollable, pause_timer_button, resume_timer_button, stop_timer_button, take_break_button, task_description, track_time_button, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING
+		complete_task_timer_button, days_left_widget, horizontal_scrollable, open_project_button, pause_timer_button, resume_timer_button, stop_timer_button, take_break_button, task_description, track_time_button, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING,
 	}, core::IcedColorConversion, pages::{ContentPageAction, ContentPageMessage}, project_tracker::Message, styles::{
 		task_tag_container_style, BOLD_FONT, FIRA_SANS_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT
 	}, OptionalPreference, Preferences, ProjectTrackerApp, StopwatchProgress
@@ -568,7 +568,13 @@ impl StopwatchPage {
 					]
 					.spacing(LARGE_SPACING_AMOUNT);
 
-					let page_view: Element<Message> = if let Some(task_info) = task_info(task_ref, *task_id, project_ref, app) {
+					let page_view: Element<Message> = if let Some(task_info) = task_info(
+						task_ref,
+						*task_id,
+						project_ref.map(|project_ref| (*project_id, project_ref)),
+						app
+					)
+					{
 						if size.width > size.height {
 							row![
 								clock,
@@ -717,7 +723,7 @@ fn timer_notification(summary: String, body: String) {
 	});
 }
 
-fn task_info<'a>(task: Option<&'a Task>, task_id: TaskId, project: Option<&'a Project>, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
+fn task_info<'a>(task: Option<&'a Task>, task_id: TaskId, project: Option<(ProjectId, &'a Project)>, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
 	task.map(|task| {
 		Column::new()
 			.push(
@@ -727,20 +733,10 @@ fn task_info<'a>(task: Option<&'a Task>, task_id: TaskId, project: Option<&'a Pr
 			)
 			.push_maybe(task.due_date.map(|date| days_left_widget(date, false)))
 			.push(task_description(app.task_description_markdown_items.get(&task_id), app))
-			.push_maybe(project.map(|project| {
+			.push_maybe(project.map(|(project_id, project)| {
 				row![
 					container(
-						container(
-							text(format!("{}:", project.name))
-						)
-						.style(|t| {
-							task_tag_container_style(t, project.color.to_iced_color())
-						})
-						.padding(
-							Padding::new(SMALL_PADDING_AMOUNT)
-								.left(PADDING_AMOUNT)
-								.right(PADDING_AMOUNT)
-						)
+						open_project_button(project_id, &project.name, project.color.to_iced_color())
 					)
 					.padding(HORIZONTAL_SCROLLABLE_PADDING),
 
