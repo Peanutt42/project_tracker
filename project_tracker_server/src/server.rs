@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 use async_tungstenite::{tungstenite::{self, Message}, tokio::accept_async};
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
-use crate::{Request, Response, SharedServerData};
+use crate::{EncryptedResponse, Request, Response, ServerError, SharedServerData};
 
 pub async fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<SharedServerData>, shared_data: Arc<RwLock<SharedServerData>>) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await.expect("Failed to bind to port");
@@ -51,7 +51,14 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 	tokio::spawn(async move {
 		while let Some(message) = write_ws_receiver.recv().await {
 			if let Err(e) = write.send(message).await {
-				eprintln!("failed to send response: {e}");
+				match e {
+					tungstenite::Error::AlreadyClosed |
+					tungstenite::Error::ConnectionClosed |
+					tungstenite::Error::Protocol(tungstenite::error::ProtocolError::ResetWithoutClosingHandshake) => {
+						return;
+					},
+					_ => eprintln!("failed to send response: {e}"),
+				}
 			}
 		}
 	});
@@ -61,11 +68,16 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 	tokio::spawn(async move {
 		while let Ok(shared_data) = modified_receiver.recv().await {
 			if write_ws_sender_clone.send(Message::binary(
-				Response::Database{
-					database_binary: shared_data.database.to_binary().unwrap(),
-					last_modified_time: shared_data.last_modified_time
-				}
-				.encrypt(&password_clone).unwrap()
+				Response::Encrypted(
+					EncryptedResponse::Database{
+						database_binary: shared_data.database.to_binary().unwrap(),
+						last_modified_time: shared_data.last_modified_time
+					}
+					.encrypt(&password_clone)
+					.unwrap()
+				)
+				.serialize()
+				.unwrap()
 			))
 			.await
 			.is_err()
@@ -82,9 +94,13 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 					match request {
 						Request::GetModifiedDate => {
 							println!("sending last modified date");
-							let response = Response::ModifiedDate(shared_data.read().unwrap().last_modified_time)
-								.encrypt(&password)
-								.unwrap();
+							let response = Response::Encrypted(
+								EncryptedResponse::ModifiedDate(shared_data.read().unwrap().last_modified_time)
+									.encrypt(&password)
+									.unwrap()
+							)
+							.serialize()
+							.unwrap();
 							if let Err(e) = write_ws_sender.send(Message::binary(response)).await {
 								eprintln!("failed to respond to 'GetModifiedDate' request: {e}");
 							}
@@ -104,9 +120,13 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 									}
 
 									let _ = write_ws_sender.send(Message::binary(
-										Response::DatabaseUpdated
-											.encrypt(&password)
-											.unwrap()
+										Response::Encrypted(
+											EncryptedResponse::DatabaseUpdated
+												.encrypt(&password)
+												.unwrap()
+										)
+										.serialize()
+										.unwrap()
 									))
 									.await;
 									let _ = modified_sender.send(shared_data_clone);
@@ -116,7 +136,7 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 									eprintln!("failed to parse database binary of client: {e}");
 									let _ = write_ws_sender.send(Message::binary(
 										Response::InvalidDatabaseBinary
-											.encrypt(&password)
+											.serialize()
 											.unwrap()
 									))
 									.await;
@@ -127,12 +147,16 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 							let shared_data_clone = shared_data.read().unwrap().clone();
 							match shared_data_clone.database.to_binary() {
 								Some(database_binary) => {
-									let response = Response::Database{
-										database_binary,
-										last_modified_time: shared_data_clone.last_modified_time
-									};
+									let response = Response::Encrypted(
+										EncryptedResponse::Database{
+											database_binary,
+											last_modified_time: shared_data_clone.last_modified_time
+										}
+										.encrypt(&password)
+										.unwrap()
+									);
 									match write_ws_sender.send(
-										Message::binary(response.encrypt(&password).unwrap())
+										Message::binary(response.serialize().unwrap())
 									)
 									.await
 									{
@@ -144,7 +168,7 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 									eprintln!("Failed to serialize database to binary in order to send to client");
 									let _ = write_ws_sender.send(Message::binary(
 										Response::InvalidDatabaseBinary
-											.encrypt(&password)
+											.serialize()
 											.unwrap()
 									))
 									.await;
@@ -153,7 +177,38 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 						}
 					}
 				},
-				Err(e) => eprintln!("failed to parse ws request: {e}"),
+				Err(e) => {
+					match e {
+						ServerError::InvalidPassword => {
+							eprintln!("invalid password provided");
+							let _ = write_ws_sender.send(Message::binary(
+								Response::InvalidPassword
+									.serialize()
+									.unwrap()
+							))
+							.await;
+						},
+						ServerError::InvalidDatabaseBinaryFormat => {
+							eprintln!("invalid database binary format");
+							let _ = write_ws_sender.send(Message::binary(
+								Response::InvalidDatabaseBinary
+									.serialize()
+										.unwrap()
+							))
+							.await;
+						},
+						ServerError::ParseError(e) => {
+							eprintln!("failed to parse request: {e}");
+							let _ = write_ws_sender.send(Message::binary(
+								Response::ParseError
+									.serialize()
+										.unwrap()
+							))
+							.await;
+						},
+						_ => eprintln!("failed to parse request: {e}"),
+					}
+				},
 			},
 			Some(Err(ref e)) if matches!(
 				e,

@@ -60,44 +60,56 @@ impl Request {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Response {
+pub enum EncryptedResponse {
 	ModifiedDate(DateTime<Utc>),
 	Database {
 		database_binary: Vec<u8>,
 		last_modified_time: DateTime<Utc>,
 	},
 	DatabaseUpdated,
-	InvalidPassword,
-	InvalidDatabaseBinary,
 }
-impl Response {
-	pub fn decrypt(binary: Vec<u8>, password: &str) -> ServerResult<Self> {
-		let encrypted_message: EncryptedMessage = bincode::deserialize(&binary)?;
-		let response_binary = encrypted_message.decrypt(password)?;
+impl EncryptedResponse {
+	pub fn decrypt(encrypted: EncryptedMessage, password: &str) -> ServerResult<Self> {
+		let response_binary = encrypted.decrypt(password)?;
 		Ok(bincode::deserialize(&response_binary)?)
 	}
 
-	pub fn encrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
+	pub fn encrypt(&self, password: &str) -> ServerResult<EncryptedMessage> {
 		let response_binary = bincode::serialize(self)?;
 
-		Ok(
-			bincode::serialize(&EncryptedMessage::new(
-				&response_binary,
-				password
-			)?)?
+		EncryptedMessage::new(
+			&response_binary,
+			password
 		)
 	}
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct EncryptedMessage {
+pub enum Response {
+	Encrypted(EncryptedMessage),
+	InvalidPassword,
+	InvalidDatabaseBinary,
+	ParseError,
+}
+impl Response {
+	pub fn serialize(&self) -> ServerResult<Vec<u8>> {
+		Ok(bincode::serialize(self)?)
+	}
+
+	pub fn deserialize(binary: Vec<u8>) -> ServerResult<Self> {
+		Ok(bincode::deserialize(&binary)?)
+	}
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptedMessage {
 	encrypted_message: Vec<u8>,
 	salt: [u8; SALT_LENGTH],
 	nonce: [u8; NONCE_LENGTH],
 }
 
 impl EncryptedMessage {
-	fn new(plaintext_message: &[u8], password: &str) -> ServerResult<Self> {
+	pub fn new(plaintext_message: &[u8], password: &str) -> ServerResult<Self> {
 		let (encrypted_message, salt, nonce) = encrypt(plaintext_message, password)
 			.map_err(|_| ServerError::InvalidPassword)?;
 
@@ -108,7 +120,7 @@ impl EncryptedMessage {
 		})
 	}
 
-	fn decrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
+	pub fn decrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
 		decrypt(&self.encrypted_message, password, &self.salt, &self.nonce)
 			.map_err(|_| ServerError::InvalidPassword)
 	}

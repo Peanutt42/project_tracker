@@ -22,7 +22,6 @@ impl Default for ServerConfig {
 	}
 }
 
-
 pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 	stream::channel(100, |mut output| async move {
 		let mut state = WsServerConnectionState {
@@ -69,10 +68,13 @@ pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 								},
 								Err(e) => {
 									eprintln!("failed to connect to ws: {e}");
-									tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+									if output.send(ServerWsEvent::WSError(Arc::new(e))).await.is_err() {
+										return;
+									}
 									if output.send(ServerWsEvent::Disconnected).await.is_err() {
 										return;
 									}
+									tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 								}
 							}
 						},
@@ -90,9 +92,14 @@ pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 							received = fused_websocket.select_next_some() => {
 								match received {
 									Ok(tungstenite::Message::Binary(binary)) => {
-										match Response::decrypt(binary, &server_config.password) {
+										match Response::deserialize(binary) {
 											Ok(response) => {
-												if output.send(ServerWsEvent::Response(response)).await.is_err() {
+												if output.send(ServerWsEvent::Response{
+													response,
+													password: server_config.password.clone()
+												})
+												.await.is_err()
+												{
 													return;
 												}
 											},
@@ -182,8 +189,12 @@ pub enum ServerWsEvent {
 	MessageSender(ServerWsMessageSender),
 	Connected,
 	Disconnected,
-	Response(Response),
+	Response {
+		response: Response,
+		password: String,
+	},
 	ServerError(Arc<ServerError>),
+	WSError(Arc<tungstenite::Error>),
 }
 
 #[derive(Debug, Clone)]

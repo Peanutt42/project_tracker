@@ -8,7 +8,7 @@ use crate::{
 use crate::{LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
 use chrono::Utc;
 use project_tracker_core::{Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, SyncDatabaseResult, TaskId};
-use project_tracker_server::{Request, Response, ServerError};
+use project_tracker_server::{EncryptedResponse, Request, Response, ServerError};
 use iced::{
 	alignment::Horizontal, clipboard, event::Status, keyboard, mouse, time, widget::{
 		center, column, container, markdown, mouse_area, opaque, responsive, row, stack, text, Space, Stack
@@ -31,6 +31,8 @@ pub struct ProjectTrackerApp {
 	pub exporting_database: bool,
 	pub syncing_database: bool,
 	pub syncing_database_from_server: bool,
+	pub connected_to_server: bool,
+	pub connecting_to_server: bool,
 	pub last_sync_time: Option<Instant>,
 	pub server_ws_message_sender: Option<ServerWsMessageSender>,
 	pub preferences: Option<Preferences>,
@@ -180,6 +182,8 @@ impl ProjectTrackerApp {
 				exporting_database: false,
 				syncing_database: false,
 				syncing_database_from_server: false,
+				connected_to_server: false,
+				connecting_to_server: false,
 				last_sync_time: None,
 				server_ws_message_sender: None,
 				preferences: None,
@@ -210,6 +214,9 @@ impl ProjectTrackerApp {
 	pub fn title(&self) -> String {
 		let progress_str = if self.syncing_database || self.syncing_database_from_server {
 			" - Syncing..."
+		}
+		else if self.connecting_to_server && !self.connected_to_server {
+			" - Connecting..."
 		}
 		else if self.exporting_database {
 			" - Exporting..."
@@ -242,7 +249,13 @@ impl ProjectTrackerApp {
 			""
 		};
 
-		format!("Project Tracker{progress_str}{synchronized_status}")
+		let server_connection_status = if self.connected_to_server {
+			" Connected"
+		} else {
+			" Offline"
+		};
+
+		format!("Project Tracker{server_connection_status}{progress_str}{synchronized_status}")
 	}
 
 	pub fn subscription(&self) -> Subscription<Message> {
@@ -721,15 +734,26 @@ impl ProjectTrackerApp {
 				ServerWsEvent::MessageSender(mut message_sender) => {
 					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
 						let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+						self.connecting_to_server = true;
 					}
 					self.server_ws_message_sender = Some(message_sender);
 					Task::none()
 				},
 				ServerWsEvent::Connected => {
 					println!("ws connected!");
+					self.connected_to_server = true;
+					self.connecting_to_server = false;
+					if matches!(self.settings_modal, SettingsModal::Closed) {
+						if let Some(message_sender) = &mut self.server_ws_message_sender {
+							let _ = message_sender.send(ServerWsMessage::Request(Request::GetModifiedDate));
+						}
+					}
 					Task::none()
 				},
 				ServerWsEvent::Disconnected => {
+					self.connected_to_server = false;
+					self.connecting_to_server = false;
+					self.syncing_database_from_server = false;
 					println!("ws disconnected");
 					Task::none()
 				},
@@ -737,32 +761,82 @@ impl ProjectTrackerApp {
 					self.syncing_database_from_server = false;
 					self.update(Message::ServerError(e))
 				},
-				ServerWsEvent::Response(response) => match response {
-					Response::Database { database_binary, last_modified_time } => {
-						let server_is_more_up_to_date = self.database.as_ref()
-							.map(|db| last_modified_time > *db.last_changed_time())
+				ServerWsEvent::WSError(e) => {
+					self.syncing_database_from_server = false;
+					self.update(ConfirmModalMessage::open_labeled(
+						format!("{e}\nReconfigure synchronization settings?"),
+						SettingsModalMessage::OpenTab(SettingTab::Database),
+						"Reconfigure",
+						"Try again",
+					))
+				},
+				ServerWsEvent::Response{ response, password } => match response {
+					Response::Encrypted(encrypted_response) => match EncryptedResponse::decrypt(encrypted_response, &password) {
+						Ok(encrypted_response) => match encrypted_response {
+							EncryptedResponse::Database { database_binary, last_modified_time } => {
+								let server_is_more_up_to_date = self.database.as_ref()
+									.map(|db| last_modified_time > *db.last_changed_time())
         					.unwrap_or(true);
-						if server_is_more_up_to_date {
-							match Database::from_binary(&database_binary, last_modified_time) {
-								Ok(database) => {
-									self.last_sync_time = Some(Instant::now());
-									self.syncing_database_from_server = false;
-									self.update(Message::LoadedDatabase(Ok(database)))
-								},
-								Err(e) => {
-									self.syncing_database_from_server = false;
-									self.update(Message::ServerError(Arc::new(e.into())))
-								},
+								if server_is_more_up_to_date {
+									match Database::from_binary(&database_binary, last_modified_time) {
+										Ok(database) => {
+											self.last_sync_time = Some(Instant::now());
+											self.syncing_database_from_server = false;
+											self.update(Message::LoadedDatabase(Ok(database)))
+										},
+										Err(e) => {
+											self.syncing_database_from_server = false;
+											self.update(Message::ServerError(Arc::new(e.into())))
+										},
+									}
+								}
+								else {
+									Task::none()
+								}
+							},
+							EncryptedResponse::DatabaseUpdated => {
+								self.syncing_database_from_server = false;
+								self.last_sync_time = Some(Instant::now());
+								Task::none()
+							},
+							EncryptedResponse::ModifiedDate(server_modified_date) => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
+								let server_is_more_up_to_date = self.database.as_ref()
+									.map(|db| server_modified_date > *db.last_changed_time())
+        					.unwrap_or(true);
+
+								if server_is_more_up_to_date {
+									let _ = server_ws_message_sender.send(ServerWsMessage::Request(
+											Request::DownloadDatabase
+										));
+									Task::none()
+								}
+								else if let Some(database) = &self.database {
+									match database.clone().to_binary() {
+										Some(database_binary) => {
+											let _ = server_ws_message_sender.send(ServerWsMessage::Request(
+												Request::UpdateDatabase {
+													database_binary,
+													last_modified_time: *database.last_changed_time()
+												}
+											));
+											Task::none()
+										},
+										None => self.update(Message::ServerError(Arc::new(ServerError::InvalidDatabaseBinaryFormat))),
+									}
+								}
+								else {
+									Task::none()
+								}
 							}
+							else {
+								self.syncing_database_from_server = false;
+								Task::none()
+							},
+						},
+						Err(e) => {
+							self.syncing_database_from_server = false;
+							self.update(Message::ServerError(Arc::new(e)))
 						}
-						else {
-							Task::none()
-						}
-					},
-					Response::DatabaseUpdated => {
-						self.syncing_database_from_server = false;
-						self.last_sync_time = Some(Instant::now());
-						Task::none()
 					},
 					Response::InvalidDatabaseBinary => {
 						self.syncing_database_from_server = false;
@@ -772,38 +846,14 @@ impl ProjectTrackerApp {
 						self.syncing_database_from_server = false;
 						self.update(Message::ServerError(Arc::new(ServerError::InvalidPassword)))
 					},
-					Response::ModifiedDate(server_modified_date) => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
-						let server_is_more_up_to_date = self.database.as_ref()
-							.map(|db| server_modified_date > *db.last_changed_time())
-        					.unwrap_or(true);
-
-						if server_is_more_up_to_date {
-							let _ = server_ws_message_sender.send(ServerWsMessage::Request(
-									Request::DownloadDatabase
-								));
-							Task::none()
-						}
-						else if let Some(database) = &self.database {
-							match database.clone().to_binary() {
-								Some(database_binary) => {
-									let _ = server_ws_message_sender.send(ServerWsMessage::Request(
-										Request::UpdateDatabase {
-											database_binary,
-											last_modified_time: *database.last_changed_time()
-										}
-									));
-									Task::none()
-								},
-								None => self.update(Message::ServerError(Arc::new(ServerError::InvalidDatabaseBinaryFormat))),
-							}
-						}
-						else {
-							Task::none()
-						}
-					}
-					else {
+					Response::ParseError => {
 						self.syncing_database_from_server = false;
-						Task::none()
+						self.update(ConfirmModalMessage::open_labeled(
+							"Server failed to parse our request!\nReconfigure synchronization settings?".to_string(),
+							SettingsModalMessage::OpenTab(SettingTab::Database),
+							"Reconfigure",
+							"Try again",
+						))
 					},
 				}
 			},
