@@ -5,4 +5,4 @@ pub use google_tasks::{
 };
 
 mod server;
-pub use server::{ServerConfig, connect_ws, ServerWsEvent, ServerWsMessageSender, ServerWsMessage};
+pub use server::{ServerConfig, connect_ws, ServerWsEvent, ServerWsMessageSender, ServerWsMessage, ServerConnectionStatus};

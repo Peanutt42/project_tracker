@@ -1,9 +1,10 @@
 use crate::components::{
-	create_new_project_button, custom_project_preview, loading_screen, overview_button, project_preview, settings_button, stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE
+	create_new_project_button, custom_project_preview, loading_screen, overview_button, project_preview, retry_connecting_to_server_button, settings_button, show_error_popup_button, stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE
 };
 use crate::core::{IcedColorConversion, ProjectUiIdMap, TaskUiIdMap};
+use crate::integrations::ServerConnectionStatus;
 use crate::project_tracker::ProjectTrackerApp;
-use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT};
+use crate::styles::{danger_text_style, LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::{
 	components::{
 		horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable,
@@ -15,6 +16,7 @@ use crate::{
 		text_input_style_default, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT,
 	},
 };
+use iced::widget::{text, Space};
 use project_tracker_core::{Database, DatabaseMessage, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId};
 use iced::{
 	advanced::widget::Id,
@@ -140,6 +142,7 @@ pub struct SidebarPage {
 	start_dragging_point: Option<Point>,
 	just_minimal_dragging: bool,
 	pub pressed_project_id: Option<ProjectId>,
+	pub server_connection_status: Option<ServerConnectionStatus>,
 }
 
 impl SidebarPage {
@@ -154,6 +157,7 @@ impl SidebarPage {
 			start_dragging_point: None,
 			just_minimal_dragging: true,
 			pressed_project_id: None,
+			server_connection_status: None,
 		}
 	}
 
@@ -608,11 +612,31 @@ impl SidebarPage {
 
 			row![
 				settings_button(),
-				container(create_new_project_button(
+				container(
+					match &self.server_connection_status {
+						Some(ServerConnectionStatus::Error(error_msg)) => row![
+							text("Server Error").style(danger_text_style),
+							show_error_popup_button(error_msg.clone()),
+							retry_connecting_to_server_button()
+						]
+						.spacing(SPACING_AMOUNT)
+						.align_y(Alignment::Center)
+						.into(),
+						Some(ServerConnectionStatus::Disconected) => row![
+							text("Disconnected"),
+							retry_connecting_to_server_button()
+						]
+						.spacing(SPACING_AMOUNT)
+						.align_y(Alignment::Center)
+						.into(),
+						Some(ServerConnectionStatus::Connecting) => text("Connecting").into(),
+						_ => Element::new(Space::new(0.0, 0.0)),
+					}
+				)
+				.center_x(Fill),
+				create_new_project_button(
 					self.create_new_project_name.is_none()
-				))
-				.width(Fill)
-				.align_x(Horizontal::Right),
+				)
 			]
 			.align_y(Alignment::Center)
 			.padding(Padding::new(PADDING_AMOUNT)),

@@ -15,8 +15,8 @@ pub use buttons::{
 	search_tasks_button, select_synchronization_filepath_button, settings_button,
 	settings_tab_button, show_done_tasks_button, show_source_code_todos_button,
 	start_task_timer_button, track_time_button, stop_timer_button, stopwatch_button, overview_button,
-	sync_database_button, task_tag_button, theme_mode_button, toggle_sidebar_button,
-	sync_database_from_server_button, synchronization_type_button, take_break_button,
+	task_tag_button, theme_mode_button, toggle_sidebar_button, retry_connecting_to_server_button,
+	synchronization_type_button, take_break_button, show_error_popup_button,
 	show_password_button, hide_password_button, create_empty_database_button, open_folder_location_button, force_close_anyways_button,
 	sort_dropdown_button, error_msg_ok_button, task_tag_name_button, ICON_BUTTON_WIDTH, ICON_FONT_SIZE
 };

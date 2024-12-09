@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::components::{hide_password_button, show_password_button, sync_database_from_server_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
+use crate::components::{hide_password_button, show_password_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
 use crate::project_tracker::{ProjectTrackerApp, Message};
@@ -11,7 +11,7 @@ use crate::{
 		dangerous_button, export_database_button,
 		file_location, filepath_widget, horizontal_seperator_padded, import_database_button,
 		import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button,
-		sync_database_button, vertical_seperator,
+		vertical_seperator,
 		HORIZONTAL_SCROLLABLE_PADDING, ICON_FONT_SIZE,
 	},
 	modals::ErrorMsgModalMessage,
@@ -209,13 +209,6 @@ Server: your own hosted ProjectTracker-server"
 
 											container(select_synchronization_filepath_button())
 												.padding(horizontal_scrollable_padding),
-
-											container(
-												sync_database_button(app.syncing_database, filepath.clone())
-											)
-											.width(Fill)
-											.padding(horizontal_scrollable_padding)
-											.align_x(Horizontal::Right)
 										]
 										.spacing(SPACING_AMOUNT)
 										.align_y(Alignment::Center)
@@ -283,13 +276,7 @@ Server: your own hosted ProjectTracker-server"
 												]
 												.align_y(Vertical::Center),
 											]
-											.spacing(SPACING_AMOUNT),
-
-											container(
-												sync_database_from_server_button(app.syncing_database_from_server)
-											)
-											.width(Fill)
-											.align_x(Horizontal::Right)
+											.spacing(SPACING_AMOUNT)
 										]
 										.spacing(SPACING_AMOUNT)
 									},

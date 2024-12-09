@@ -1,14 +1,14 @@
 use crate::{
 	components::{
 		create_empty_database_button, generate_task_description_markdown, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
-	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerConfig, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingTab, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
+	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 use crate::{LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
 use chrono::Utc;
 use project_tracker_core::{Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, SyncDatabaseResult, TaskId};
-use project_tracker_server::{EncryptedResponse, Request, Response, ServerError};
+use project_tracker_server::{EncryptedResponse, Request, Response};
 use iced::{
 	alignment::Horizontal, clipboard, event::Status, keyboard, mouse, time, widget::{
 		center, column, container, markdown, mouse_area, opaque, responsive, row, stack, text, Space, Stack
@@ -29,10 +29,6 @@ pub struct ProjectTrackerApp {
 	pub loading_database: bool,
 	pub importing_database: bool,
 	pub exporting_database: bool,
-	pub syncing_database: bool,
-	pub syncing_database_from_server: bool,
-	pub connected_to_server: bool,
-	pub connecting_to_server: bool,
 	pub last_sync_time: Option<Instant>,
 	pub server_ws_message_sender: Option<ServerWsMessageSender>,
 	pub preferences: Option<Preferences>,
@@ -89,8 +85,8 @@ pub enum Message {
 	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	SyncDatabaseFromServer,
-	ServerError(Arc<ServerError>),
 	ServerWsEvent(ServerWsEvent),
+	ConnectToServer,
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
 	SwitchToUpperProject, // switches to upper project when using shortcuts
@@ -180,10 +176,6 @@ impl ProjectTrackerApp {
 				loading_database: true,
 				importing_database: false,
 				exporting_database: false,
-				syncing_database: false,
-				syncing_database_from_server: false,
-				connected_to_server: false,
-				connecting_to_server: false,
 				last_sync_time: None,
 				server_ws_message_sender: None,
 				preferences: None,
@@ -212,13 +204,7 @@ impl ProjectTrackerApp {
 	}
 
 	pub fn title(&self) -> String {
-		let progress_str = if self.syncing_database || self.syncing_database_from_server {
-			" - Syncing..."
-		}
-		else if self.connecting_to_server && !self.connected_to_server {
-			" - Connecting..."
-		}
-		else if self.exporting_database {
+		let progress_str = if self.exporting_database {
 			" - Exporting..."
 		}
 		else if self.importing_database {
@@ -242,20 +228,7 @@ impl ProjectTrackerApp {
 			""
 		};
 
-		let synchronized_status = if !self.syncing_database && !self.syncing_database_from_server && self.has_unsynced_changes() {
-			" *"
-		}
-		else {
-			""
-		};
-
-		let server_connection_status = if self.connected_to_server {
-			" Connected"
-		} else {
-			" Offline"
-		};
-
-		format!("Project Tracker{server_connection_status}{progress_str}{synchronized_status}")
+		format!("Project Tracker{progress_str}")
 	}
 
 	pub fn subscription(&self) -> Subscription<Message> {
@@ -330,25 +303,17 @@ impl ProjectTrackerApp {
 	pub fn update(&mut self, message: Message) -> Task<Message> {
 		let mut task = match message {
 			Message::TryClosing => {
-				if self.syncing_database ||
-					self.exporting_database ||
-					self.importing_database ||
-					self.syncing_database_from_server
+				if self.exporting_database ||
+					self.importing_database
 				{
-					let waiting_reason = if self.syncing_database {
-						"Synchronizing database with filepath"
-					}
-					else if self.exporting_database {
+					let waiting_reason = if self.exporting_database {
 						"Exporting database"
 					}
 					else if self.importing_database {
 						"Importing database"
 					}
-					else if self.syncing_database_from_server {
-						"Synchronizing database with server"
-					}
 					else {
-						unreachable!()
+						"UNREACHABLE"
 					};
 					self.wait_closing_modal = WaitClosingModal::Opened { waiting_reason	};
 					Task::none()
@@ -420,9 +385,7 @@ impl ProjectTrackerApp {
 				Task::batch(commands)
 			}
 			Message::SyncIfChanged => {
-				if !self.syncing_database &&
-					!self.syncing_database_from_server &&
-					self.has_unsynced_changes() &&
+				if self.has_unsynced_changes() &&
 					matches!(self.error_msg_modal, ErrorMsgModal::Closed) && // dont auto sync when an error happened
 					matches!(self.confirm_modal, ConfirmModal::Closed) && // dont auto sync while user needs to confirm something
 					matches!(self.settings_modal, SettingsModal::Closed) // or user is configuring the sync options
@@ -551,7 +514,6 @@ impl ProjectTrackerApp {
 				.chain(self.update(Message::SaveDatabase)),
 			Message::SyncDatabaseFilepath(filepath) => {
 				if let Some(database) = &self.database {
-					self.syncing_database = true;
 					Task::perform(
 						Database::sync(filepath.clone(), *database.last_changed_time()),
 						move |result| match result {
@@ -585,7 +547,6 @@ impl ProjectTrackerApp {
 				}
 			}
 			Message::SyncDatabaseFilepathUploaded => {
-				self.syncing_database = false;
 				self.last_sync_time = Some(Instant::now());
 				Task::none()
 			}
@@ -599,15 +560,10 @@ impl ProjectTrackerApp {
 				},
 				Err(e) => self.update(Message::DatabaseImported(Err(e))),
 			},
-			Message::SyncDatabaseFilepathFailed(error_msg) => {
-				self.syncing_database = false;
-				self.show_error_msg(error_msg)
-			}
+			Message::SyncDatabaseFilepathFailed(error_msg) => self.show_error_msg(error_msg),
 			Message::LoadedDatabase(load_database_result) => {
 				self.loading_database = false;
 				self.importing_database = false;
-				self.syncing_database = false;
-				self.syncing_database_from_server = false;
 
 				match load_database_result {
 					Ok(database) => {
@@ -712,7 +668,6 @@ impl ProjectTrackerApp {
 				}
 			},
 			Message::SyncDatabaseFromServer => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
-				self.syncing_database_from_server = true;
 				let _ = server_ws_message_sender.send(ServerWsMessage::Request(
 					Request::GetModifiedDate
 				));
@@ -721,54 +676,32 @@ impl ProjectTrackerApp {
 			else {
 				Task::none()
 			},
-			Message::ServerError(e) => {
-				self.syncing_database_from_server = false;
-				self.update(ConfirmModalMessage::open_labeled(
-					format!("{e}\nReconfigure synchronization settings?"),
-					SettingsModalMessage::OpenTab(SettingTab::Database),
-					"Reconfigure",
-					"Try again",
-				))
-			},
 			Message::ServerWsEvent(event) => match event {
 				ServerWsEvent::MessageSender(mut message_sender) => {
 					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
 						let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
-						self.connecting_to_server = true;
 					}
 					self.server_ws_message_sender = Some(message_sender);
 					Task::none()
 				},
 				ServerWsEvent::Connected => {
 					println!("ws connected!");
-					self.connected_to_server = true;
-					self.connecting_to_server = false;
 					if matches!(self.settings_modal, SettingsModal::Closed) {
 						if let Some(message_sender) = &mut self.server_ws_message_sender {
 							let _ = message_sender.send(ServerWsMessage::Request(Request::GetModifiedDate));
 						}
 					}
+					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Connected);
 					Task::none()
 				},
 				ServerWsEvent::Disconnected => {
-					self.connected_to_server = false;
-					self.connecting_to_server = false;
-					self.syncing_database_from_server = false;
 					println!("ws disconnected");
+					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Disconected);
 					Task::none()
 				},
-				ServerWsEvent::ServerError(e) => {
-					self.syncing_database_from_server = false;
-					self.update(Message::ServerError(e))
-				},
-				ServerWsEvent::WSError(e) => {
-					self.syncing_database_from_server = false;
-					self.update(ConfirmModalMessage::open_labeled(
-						format!("{e}\nReconfigure synchronization settings?"),
-						SettingsModalMessage::OpenTab(SettingTab::Database),
-						"Reconfigure",
-						"Try again",
-					))
+				ServerWsEvent::Error(error_msg) => {
+					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(error_msg));
+					Task::none()
 				},
 				ServerWsEvent::Response{ response, password } => match response {
 					Response::Encrypted(encrypted_response) => match EncryptedResponse::decrypt(encrypted_response, &password) {
@@ -781,12 +714,11 @@ impl ProjectTrackerApp {
 									match Database::from_binary(&database_binary, last_modified_time) {
 										Ok(database) => {
 											self.last_sync_time = Some(Instant::now());
-											self.syncing_database_from_server = false;
 											self.update(Message::LoadedDatabase(Ok(database)))
 										},
 										Err(e) => {
-											self.syncing_database_from_server = false;
-											self.update(Message::ServerError(Arc::new(e.into())))
+											self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(format!("failed to serialize database: {e}")));
+											Task::none()
 										},
 									}
 								}
@@ -795,7 +727,6 @@ impl ProjectTrackerApp {
 								}
 							},
 							EncryptedResponse::DatabaseUpdated => {
-								self.syncing_database_from_server = false;
 								self.last_sync_time = Some(Instant::now());
 								Task::none()
 							},
@@ -821,7 +752,7 @@ impl ProjectTrackerApp {
 											));
 											Task::none()
 										},
-										None => self.update(Message::ServerError(Arc::new(ServerError::InvalidDatabaseBinaryFormat))),
+										None => self.show_error_msg("failed to serialize database".to_string()),
 									}
 								}
 								else {
@@ -829,34 +760,36 @@ impl ProjectTrackerApp {
 								}
 							}
 							else {
-								self.syncing_database_from_server = false;
 								Task::none()
 							},
 						},
 						Err(e) => {
-							self.syncing_database_from_server = false;
-							self.update(Message::ServerError(Arc::new(e)))
+							self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(format!("{e}")));
+							Task::none()
 						}
 					},
 					Response::InvalidDatabaseBinary => {
-						self.syncing_database_from_server = false;
-						self.update(Message::ServerError(Arc::new(ServerError::InvalidDatabaseBinaryFormat)))
+						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("server failed to parse our database binary format!".to_string()));
+						Task::none()
 					},
 					Response::InvalidPassword => {
-						self.syncing_database_from_server = false;
-						self.update(Message::ServerError(Arc::new(ServerError::InvalidPassword)))
+						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("invalid password!".to_string()));
+						Task::none()
 					},
 					Response::ParseError => {
-						self.syncing_database_from_server = false;
-						self.update(ConfirmModalMessage::open_labeled(
-							"Server failed to parse our request!\nReconfigure synchronization settings?".to_string(),
-							SettingsModalMessage::OpenTab(SettingTab::Database),
-							"Reconfigure",
-							"Try again",
-						))
+						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("server failed to parse request!".to_string()));
+						Task::none()
 					},
 				}
 			},
+			Message::ConnectToServer => {
+				if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
+					if let Some(message_sender) = &mut self.server_ws_message_sender {
+						let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+					}
+				}
+				Task::none()
+			}
 			Message::DatabaseMessage(database_message) => {
 				if let Some(database) = &mut self.database {
 					if let DatabaseMessage::ChangeTaskDescription { task_id, new_task_description, .. } = &database_message {
@@ -1157,10 +1090,8 @@ impl ProjectTrackerApp {
 
 		if matches!(self.wait_closing_modal, WaitClosingModal::Opened { .. }) &&
 			matches!(self.error_msg_modal, ErrorMsgModal::Closed) &&
-			!self.syncing_database &&
 			!self.exporting_database &&
-			!self.importing_database &&
-			!self.syncing_database_from_server
+			!self.importing_database
 		{
 			self.wait_closing_modal = WaitClosingModal::Closed;
 			task = Task::batch([

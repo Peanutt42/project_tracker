@@ -4,7 +4,7 @@ use crate::{
 	}, pages::{
 		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID
 	}, project_tracker::Message, styles::{
-		circle_button_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, rounded_container_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, rounded_container_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	}, theme_mode::ThemeMode, DateFormatting, PreferenceMessage, SynchronizationSetting
 };
 use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId};
@@ -424,58 +424,6 @@ pub fn export_database_button(importing: bool) -> Element<'static, Message> {
 	})
 	.style(dangerous_button_style)
 	.into()
-}
-
-pub fn sync_database_button(
-	synchronizing: bool,
-	synchronization_filepath: Option<PathBuf>,
-) -> Element<'static, Message> {
-	button(
-		row![
-			if synchronizing {
-				Element::new(
-					Spinner::new()
-						.width(Length::Fixed(16.0))
-						.height(Length::Fixed(16.0))
-						.circle_radius(2.0),
-				)
-			} else {
-				icon_to_text(Bootstrap::ArrowClockwise)
-					.align_y(Vertical::Center)
-					.into()
-			},
-			text("Synchronize")
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
-		.align_y(Alignment::Center),
-	)
-	.on_press_maybe(synchronization_filepath.map(Message::SyncDatabaseFilepath))
-	.style(dangerous_button_style)
-	.into()
-}
-
-pub fn sync_database_from_server_button(downloading: bool) -> Button<'static, Message> {
-	button(
-		row![
-			if downloading {
-				Element::new(
-					Spinner::new()
-						.width(Length::Fixed(16.0))
-						.height(Length::Fixed(16.0))
-						.circle_radius(2.0),
-				)
-			} else {
-				icon_to_text(Bootstrap::ArrowClockwise)
-					.align_y(Vertical::Center)
-					.into()
-			},
-			text("Synchronize")
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
-		.align_y(Alignment::Center)
-	)
-	.on_press(Message::SyncDatabaseFromServer)
-	.style(dangerous_button_style)
 }
 
 pub fn task_tag_button<Message>(
@@ -983,4 +931,30 @@ pub fn overview_time_section_button(label: &'static str, task_count: usize, mut 
 		Some(on_toggle_collabsed)
 	})
 	.style(hidden_secondary_button_style)
+}
+
+pub fn show_error_popup_button(error_msg: String) -> Element<'static, Message> {
+	tooltip(
+		button(
+			icon_to_text(Bootstrap::Bug)
+				.style(danger_text_style)
+				.size(ICON_FONT_SIZE)
+				.align_x(Horizontal::Center)
+				.align_y(Vertical::Center),
+		)
+		.width(ICON_BUTTON_WIDTH)
+		.on_press(ErrorMsgModalMessage::open(error_msg))
+		.style(secondary_button_style_default),
+
+		text("Show full error popup").size(SMALL_TEXT_SIZE),
+
+		tooltip::Position::Top
+	)
+	.into()
+}
+
+pub fn retry_connecting_to_server_button() -> Button<'static, Message> {
+	icon_button(Bootstrap::ArrowClockwise)
+		.on_press(Message::ConnectToServer)
+		.style(secondary_button_style_default)
 }

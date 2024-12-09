@@ -30,16 +30,6 @@ impl ConfirmModalMessage {
 		}
 		.into()
 	}
-
-	pub fn open_labeled(title: String, on_confirmed: impl Into<Message>, ok_label: &'static str, cancel_label: &'static str) -> Message {
-		Self::Open {
-			title,
-			on_confirmed: Box::new(on_confirmed.into()),
-			custom_ok_label: Some(ok_label),
-			custom_cancel_label: Some(cancel_label),
-		}
-		.into()
-	}
 }
 
 impl From<ConfirmModalMessage> for Message {

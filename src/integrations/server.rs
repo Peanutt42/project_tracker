@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use iced::{futures::{self, channel::mpsc, SinkExt, Stream, StreamExt}, stream};
-use project_tracker_server::{Request, Response, ServerError, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{Request, Response, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
 use serde::{Deserialize, Serialize};
 use async_tungstenite::tungstenite;
 
@@ -32,21 +30,24 @@ pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 
 		loop {
 			match &mut state.connection {
-				WsServerConnection::Disconnected => if message_sender_sent {
+				WsServerConnection::Disconnected => {
+					if !message_sender_sent {
+						let (sender, receiver) = mpsc::channel(100);
 
-				}
-				else {
-					let (sender, mut receiver) = mpsc::channel(100);
-
-					if output.send(ServerWsEvent::MessageSender(ServerWsMessageSender(sender))).await.is_ok() {
-						message_sender_sent = true;
-					}
-					else {
-						return;
-					}
-					if let Some(ServerWsMessage::Connect(server_config)) = receiver.next().await {
 						state.message_receiver = Some(receiver);
-						state.connection = WsServerConnection::Connecting(server_config);
+
+						if output.send(ServerWsEvent::MessageSender(ServerWsMessageSender(sender))).await.is_ok() {
+							message_sender_sent = true;
+						}
+						else {
+							return;
+						}
+					}
+
+					if let Some(message_receiver) = &mut state.message_receiver {
+						if let Some(ServerWsMessage::Connect(server_config)) = message_receiver.next().await {
+							state.connection = WsServerConnection::Connecting(server_config);
+						}
 					}
 				},
 				WsServerConnection::Connecting(server_config) => {
@@ -68,13 +69,13 @@ pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 								},
 								Err(e) => {
 									eprintln!("failed to connect to ws: {e}");
-									if output.send(ServerWsEvent::WSError(Arc::new(e))).await.is_err() {
+									if output.send(ServerWsEvent::Error(format!("{e}"))).await.is_err() {
 										return;
 									}
 									if output.send(ServerWsEvent::Disconnected).await.is_err() {
 										return;
 									}
-									tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+									tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 								}
 							}
 						},
@@ -105,7 +106,7 @@ pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 											},
 											Err(e) => {
 												eprintln!("failed to parse response from server: {e}");
-												if output.send(ServerWsEvent::ServerError(Arc::new(e))).await.is_err() {
+												if output.send(ServerWsEvent::Error(format!("{e}"))).await.is_err() {
 													return;
 												}
 											}
@@ -147,7 +148,7 @@ pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 										},
 										Err(e) => {
 											eprintln!("failed to encrypt request: {e}");
-											if output.send(ServerWsEvent::ServerError(Arc::new(e))).await.is_err() {
+											if output.send(ServerWsEvent::Error(format!("{e}"))).await.is_err() {
 												return;
 											}
 										}
@@ -193,8 +194,7 @@ pub enum ServerWsEvent {
 		response: Response,
 		password: String,
 	},
-	ServerError(Arc<ServerError>),
-	WSError(Arc<tungstenite::Error>),
+	Error(String),
 }
 
 #[derive(Debug, Clone)]
@@ -210,4 +210,12 @@ impl ServerWsMessageSender {
 pub enum ServerWsMessage {
 	Connect(ServerConfig),
 	Request(Request),
+}
+
+#[derive(Debug, Clone)]
+pub enum ServerConnectionStatus {
+	Disconected,
+	Connected,
+	Connecting,
+	Error(String),
 }
