@@ -1,3 +1,4 @@
+use chrono::{NaiveDate, Datelike};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -25,6 +26,16 @@ impl Ord for SerializableDate {
 				}
 			},
 			other => other
+		}
+	}
+}
+
+impl From<NaiveDate> for SerializableDate {
+	fn from(date: NaiveDate) -> Self {
+		Self {
+			year: date.year(),
+			month: date.month(),
+			day: date.day(),
 		}
 	}
 }

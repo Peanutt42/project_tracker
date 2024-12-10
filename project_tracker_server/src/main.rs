@@ -1,8 +1,7 @@
-use std::fs::{File, read_to_string};
+use std::fs::read_to_string;
 use std::path::PathBuf;
-use std::io::Write;
 use std::process::exit;
-use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{SharedServerData, DEFAULT_PORT};
 
 mod web_server;
 
@@ -18,7 +17,7 @@ async fn main() {
 	let server_data_directory = PathBuf::from(server_data_directory_str);
 
 	if !server_data_directory.exists() {
-		eprintln!("the supplied directory doesn't exist!");
+		eprintln!("the supplied server data directory doesn't exist!");
 		exit(1);
 	}
 
@@ -26,31 +25,18 @@ async fn main() {
 	let password_filepath = server_data_directory.join("password.txt");
 
 	if !database_filepath.exists() {
-		if let Err(e) = File::create(&database_filepath) {
-			eprintln!("failed to create database file: {}, error: {e}", database_filepath.display());
-			exit(1);
-		}
+		eprintln!("no database file found!\nto create a empty database, run the 'scripts/install_server_linux.sh' script again!");
+		exit(1);
 	}
 
 	if !password_filepath.exists() {
-		match File::create(&password_filepath) {
-			Ok(mut file) => {
-				if let Err(e) = file.write_all(DEFAULT_PASSWORD.as_bytes()) {
-					eprintln!("failed to write default password to password file: {}, error: {e}", password_filepath.display());
-					exit(1);
-				}
-				eprintln!("IMPORTANT: Setting default password to {DEFAULT_PASSWORD}! PLEASE change it!");
-			},
-			Err(e) => {
-				eprintln!("failed to create default password file: {}, error: {e}", password_filepath.display());
-				exit(1);
-			}
-		}
+		eprintln!("no password is set, set it using the 'scripts/set_server_password_linux.sh' script!");
+		exit(1);
 	}
 
 	let password = read_to_string(&password_filepath)
 		.unwrap_or_else(|e| {
-			eprintln!("failed to read password file: {}, error: {e}", password_filepath.display());
+			eprintln!("failed to read password file!\nset password using the 'scripts/set_server_password_linux.sh' script\n{}, error: {e}", password_filepath.display());
 			exit(1);
 		});
 

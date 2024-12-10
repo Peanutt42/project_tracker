@@ -22,7 +22,6 @@ Project Tracker Server:
 ```bash
 cd scripts
 ./install_server_linux.sh
-./set_server_password_linux.sh
 ```
 
 ## Installation - Windows - GUI/Client only
