@@ -629,7 +629,7 @@ impl SidebarPage {
 						.spacing(SPACING_AMOUNT)
 						.align_y(Alignment::Center)
 						.into(),
-						Some(ServerConnectionStatus::Connecting) => text("Connecting").into(),
+						Some(ServerConnectionStatus::Connecting) => text("Connecting...").into(),
 						_ => Element::new(Space::new(0.0, 0.0)),
 					}
 				)

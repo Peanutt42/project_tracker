@@ -194,7 +194,7 @@ pub enum SyncDatabaseResult {
 }
 
 impl Database {
-	const FILE_NAME: &'static str = "database.project_tracker";
+	pub const FILE_NAME: &'static str = "database.project_tracker";
 
 	pub fn new(projects: OrderedHashMap<ProjectId, Project>, last_changed_time: DateTime<Utc>) -> Self {
 		Self {
@@ -641,27 +641,6 @@ impl Database {
 			},
 			None => SyncDatabaseResult::Download
 		}
-	}
-
-	pub async fn export_file_dialog() -> Option<PathBuf> {
-		let file_dialog_result = rfd::AsyncFileDialog::new()
-			.set_title("Export ProjectTracker Database")
-			.set_file_name(Self::FILE_NAME)
-			.add_filter("Database (.project_tracker)", &["project_tracker"])
-			.save_file()
-			.await;
-
-		file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
-	}
-
-	pub async fn import_file_dialog() -> Option<PathBuf> {
-		let file_dialog_result = rfd::AsyncFileDialog::new()
-			.set_title("Import ProjectTracker Database")
-			.add_filter("Database (.project_tracker)", &["project_tracker"])
-			.pick_file()
-			.await;
-
-		file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
 	}
 }
 

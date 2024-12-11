@@ -124,28 +124,48 @@ function populate_dom_from_database(database) {
 	for (const project_id in database.projects) {
 		const project = database.projects[project_id];
 		const project_div = document.createElement("div");
-		project_div.className = "project";
-		project_div.textContent = project.name + ':';
+		const project_name = document.createElement("div");
+		project_name.className = "project_name";
+		const todo_task_count = Object.keys(project.todo_tasks).length + Object.keys(project.source_code_todos).length;
+		const all_tasks_count = todo_task_count + Object.keys(project.done_tasks).length;
+		project_name.textContent = project.name + " (" + todo_task_count + '/' + all_tasks_count + ')';
+		project_name.style.textDecorationColor = "rgb(" + project.color[0] + ", " + project.color[1] + ", " + project.color[2] + ")";
+		project_div.appendChild(project_name);
 		const task_list = document.createElement("ul");
 		task_list.className = "task_list";
 		for (const task_id in project.todo_tasks) {
-			populate_dom_with_task(task_list, project.todo_tasks[task_id], 'todo');
+			populate_dom_with_task(task_list, project.todo_tasks[task_id], false);
 		}
 		for (const task_id in project.source_code_todos) {
-			populate_dom_with_task(task_list, project.source_code_todos[task_id], 'source code todo');
+			populate_dom_with_task(task_list, project.source_code_todos[task_id], false);
 		}
+		const done_task_list_section = document.createElement("details");
+		done_task_list_section.className = "show_done_task_details";
+		const show_done_tasks_summary = document.createElement("summary");
+		show_done_tasks_summary.textContent = "Show done tasks";
+		done_task_list_section.appendChild(show_done_tasks_summary);
+		const done_task_list = document.createElement("ul");
+		done_task_list.className = "task_list";
 		for (const task_with_id of project.done_tasks) {
-			populate_dom_with_task(task_list, task_with_id[1], 'done');
+			populate_dom_with_task(done_task_list, task_with_id[1], true);
 		}
+		done_task_list_section.appendChild(done_task_list);
+		task_list.appendChild(done_task_list_section);
 		project_div.appendChild(task_list);
 		database_list.appendChild(project_div);
 	}
 }
 
-function populate_dom_with_task(task_list, task, task_type) {
+function populate_dom_with_task(task_list, task, done) {
 	const task_div = document.createElement("div");
+	const checkbox = document.createElement("input");
+	checkbox.type = "checkbox",
+	checkbox.checked = done;
+	checkbox.disabled = true; // TODO: check/uncheck tasks and send to server
+	task_div.appendChild(checkbox);
 	task_div.className = "task";
-	let task_info = task_type + ' - ';
+
+	let task_info = '';
 	if (task.time_spend) {
 		task_info += Math.floor(task.time_spend.offset_seconds / 60) + 'min';
 		if (task.needed_time_minutes === null) {
@@ -162,7 +182,9 @@ function populate_dom_with_task(task_list, task, task_type) {
 		task_info += task.due_date.day + '.' + task.due_date.month + '.' + task.due_date.year + ' - ';
 	}
 	task_info += task.name;
-	task_div.textContent = task_info;
+	const task_info_div = document.createElement("div");
+	task_info_div.textContent = task_info;
+	task_div.appendChild(task_info_div);
 	task_list.appendChild(task_div);
 }
 

@@ -1,12 +1,12 @@
 use crate::{
 	components::{
 		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button, horizontal_scrollable, open_create_task_modal_button, project_context_menu_button, search_tasks_button, sort_dropdown_button, task_list, task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING
-	}, core::{IcedColorConversion, SortModeUI}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, pages::{ContentPageAction, ContentPageMessage}, project_tracker::{Message, ProjectTrackerApp}, styles::{
+	}, core::{IcedColorConversion, SortModeUI, import_source_code_todos}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, pages::{ContentPageAction, ContentPageMessage}, project_tracker::{Message, ProjectTrackerApp}, styles::{
 		text_input_style_borderless, text_input_style_only_round_left, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE
 	}, OptionalPreference, Preferences
 };
 use chrono::{DateTime, Utc};
-use project_tracker_core::{import_source_code_todos, Database, DatabaseMessage, Project, ProjectId, SerializableColor, SortMode, Task, TaskId, TaskTagId};
+use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, SerializableColor, SortMode, Task, TaskId, TaskTagId};
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use iced::{
 	alignment::{Alignment, Horizontal},

@@ -12,7 +12,5 @@ tokio = { workspace = true }
 rand = { workspace = true }
 directories = { workspace = true }
 thiserror = { workspace = true }
-rfd = { workspace = true }
 chrono = { workspace = true }
 filetime = { workspace = true }
-walkdir = "2.5"

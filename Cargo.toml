@@ -36,6 +36,7 @@ libc = "0.2"
 image = "0.24"
 thiserror = { workspace = true }
 single-instance = "0.3.3"
+walkdir = "2.5"
 
 [dev-dependencies]
 tokio = { version = "1.4", features = ["fs", "rt-multi-thread", "macros", "net", "io-util"] }
@@ -54,7 +55,7 @@ filetime = "0.2"
 thiserror = "1.0"
 directories = "5.0.1"
 rfd = "0.14.1"
-async-tungstenite = { version = "0.25", features = ["tokio-rustls-webpki-roots", "tokio"] }
+async-tungstenite = { version = "0.24", features = ["tokio-rustls-webpki-roots", "tokio"] }
 
 [build-dependencies]
 winresource = "0.1.17"

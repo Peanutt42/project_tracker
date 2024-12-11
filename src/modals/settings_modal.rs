@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use crate::components::{hide_password_button, show_password_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
+use crate::core::export_database_file_dialog;
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
 use crate::project_tracker::{ProjectTrackerApp, Message};
@@ -459,7 +460,7 @@ impl SettingsModal {
 			}
 
 			SettingsModalMessage::BrowseSynchronizationFilepath => {
-				Task::perform(Database::export_file_dialog(), |filepath| match filepath {
+				Task::perform(export_database_file_dialog(), |filepath| match filepath {
 					Some(filepath) => {
 						PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Filepath(Some(filepath)))).into()
 					}

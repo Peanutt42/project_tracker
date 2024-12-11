@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		create_empty_database_button, generate_task_description_markdown, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
-	}, core::{ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
+	}, core::{export_database_file_dialog, import_database_file_dialog, ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -457,7 +457,7 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::ExportDatabaseDialog => {
-				Task::perform(Database::export_file_dialog(), |filepath| match filepath {
+				Task::perform(export_database_file_dialog(), |filepath| match filepath {
 					Some(filepath) => Message::ExportDatabase(filepath),
 					None => Message::ExportDatabaseDialogCanceled,
 				})
@@ -494,7 +494,7 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::ImportDatabaseDialog => {
-				Task::perform(Database::import_file_dialog(), |filepath| {
+				Task::perform(import_database_file_dialog(), |filepath| {
 					if let Some(filepath) = filepath {
 						Message::ImportDatabase(filepath)
 					} else {
@@ -680,6 +680,7 @@ impl ProjectTrackerApp {
 				ServerWsEvent::MessageSender(mut message_sender) => {
 					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
 						let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Connecting);
 					}
 					self.server_ws_message_sender = Some(message_sender);
 					Task::none()
@@ -786,6 +787,7 @@ impl ProjectTrackerApp {
 				if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
 					if let Some(message_sender) = &mut self.server_ws_message_sender {
 						let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Connecting);
 					}
 				}
 				Task::none()

@@ -8,6 +8,8 @@ const INDEX_HTML: &str = include_str!("static/index.html");
 const STYLE_CSS: &str = include_str!("static/style.css");
 const SCRIPT_JS: &str = include_str!("static/script.js");
 const FAVICON_ICO: &[u8] = include_bytes!("static/favicon.ico");
+const CARET_DOWN_SVG: &str = include_str!("static/caret-down-fill.svg");
+const CARET_RIGHT_SVG: &str = include_str!("static/caret-right-fill.svg");
 
 pub async fn run_web_server(password: String, modified_receiver: Receiver<SharedServerData>, shared_data: Arc<RwLock<SharedServerData>>) {
 	let get_database_route = path("load_database")
@@ -42,10 +44,20 @@ pub async fn run_web_server(password: String, modified_receiver: Receiver<Shared
 		.and(path("favicon.ico"))
 		.map(|| with_header(FAVICON_ICO, "Content-Type", "image/x-icon"));
 
+	let caret_down_svg_route = path("static")
+		.and(path("caret-down-fill.svg"))
+		.map(|| with_header(CARET_DOWN_SVG, "Content-Type", "image/svg+xml"));
+
+	let caret_right_svg_route = path("static")
+		.and(path("caret-right-fill.svg"))
+		.map(|| with_header(CARET_RIGHT_SVG, "Content-Type", "image/svg+xml"));
+
 	let routes = index_route
 		.or(style_route)
 		.or(script_route)
 		.or(favicon_route)
+		.or(caret_down_svg_route)
+		.or(caret_right_svg_route)
 		.or(get_database_route)
 		.or(modified_ws_route);
 
@@ -74,13 +86,20 @@ async fn modified_ws_connected(mut ws: WebSocket, mut modified_receiver: Receive
 	loop {
 		match modified_receiver.recv().await {
 			Ok(shared_data) => {
-				if let Ok(database_json) = serde_json::to_string(&shared_data.database.to_serialized()) {
-					if let Err(e) = ws.send(Message::text(database_json)).await {
-						eprintln!("failed to send modified event to ws client: {e}");
-					}
+				match serde_json::to_string(&shared_data.database.to_serialized()) {
+					Ok(database_json) => {
+						if let Err(e) = ws.send(Message::text(database_json)).await {
+							eprintln!("failed to send modified event to ws client: {e}");
+							return;
+						}
+					},
+					Err(e) => eprintln!("failed to serialize database in order to send to ws clients: {e}"),
 				}
 			},
-			Err(e) => panic!("failed to receive further database modified events: {e}"),
+			Err(e) => {
+				eprintln!("failed to receive further database modified events: {e}");
+				return;
+			},
 		};
 	}
 }
