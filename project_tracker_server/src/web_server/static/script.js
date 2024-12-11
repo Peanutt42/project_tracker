@@ -126,9 +126,9 @@ function populate_dom_from_database(database) {
 		const project_div = document.createElement("div");
 		const project_name = document.createElement("div");
 		project_name.className = "project_name";
-		const todo_task_count = Object.keys(project.todo_tasks).length + Object.keys(project.source_code_todos).length;
-		const all_tasks_count = todo_task_count + Object.keys(project.done_tasks).length;
-		project_name.textContent = project.name + " (" + todo_task_count + '/' + all_tasks_count + ')';
+		const done_task_count = Object.keys(project.done_tasks).length
+		const all_task_count = done_task_count + Object.keys(project.todo_tasks).length + Object.keys(project.source_code_todos).length;
+		project_name.textContent = project.name + " (" + done_task_count + '/' + all_task_count + ')';
 		project_name.style.textDecorationColor = "rgb(" + project.color[0] + ", " + project.color[1] + ", " + project.color[2] + ")";
 		project_div.appendChild(project_name);
 		const task_list = document.createElement("ul");
