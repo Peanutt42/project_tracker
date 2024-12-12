@@ -199,3 +199,7 @@ summary::after {
 details[open] > summary::after {
 	background: url('caret-down-fill.svg');
 }
+/* solves ipad-os (and probably all of webkit) still showing a default marker */
+summary::-webkit-details-marker {
+	display: none;
+}
