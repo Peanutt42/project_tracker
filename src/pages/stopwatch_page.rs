@@ -780,7 +780,7 @@ pub fn format_stopwatch_duration(total_seconds: i64) -> String {
 	let factor_str = if total_seconds >= 0 { "" } else { "-" };
 
 	if hours > 0 {
-		format!("{factor_str}{hours:0>2}:{minutes:0>2}:{seconds:0>2}")
+		format!("{factor_str}{hours}:{minutes:0>2}:{seconds:0>2}")
 	} else {
 		format!("{factor_str}{minutes:0>2}:{seconds:0>2}")
 	}
