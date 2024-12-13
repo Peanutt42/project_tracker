@@ -11,11 +11,11 @@ personal project todo list tracker
 ![](Screenshot_Stopwatch.png)
 
 ## Platform support
-| Platform    | GUI/Client | Server | Tested | Installation script |
-| ----------- | ---------- | ------ | ------ | ------------------- |
-| Linux       | ✅         | ✅     | ✅     | ✅                  |
-| Windows     | ✅         | ❌     | ✅     | ✅                  |
-| Macos       | ✅         | ❌     | ❌     | ❌                  |
-| Raspberrypi | ❌         | ✅     | ✅     | ✅                  |
+| Platform    | GUI/Client | Server | Server (Docker) | Tested |
+| ----------- | ---------- | ------ | --------------- | ------ |
+| Linux       | ✅         | ✅     | ✅              | ✅     |
+| Windows     | ✅         | ❌     | ✅              | ✅     |
+| Macos       | ✅         | ❌     | ✅              | ❌     |
+| Raspberrypi | ❌         | ✅     | ✅              | ✅     |
 
 ## Installation (see [INSTALL.md](INSTALL.md))

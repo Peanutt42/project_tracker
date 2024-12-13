@@ -153,4 +153,13 @@ impl SharedServerData {
 
 		Arc::new(RwLock::new(shared_data))
 	}
+
+	pub fn from_memory(database: Database) -> Arc<RwLock<Self>> {
+		let last_modified_time = Utc::now();
+
+		Arc::new(RwLock::new(SharedServerData {
+			database,
+			last_modified_time,
+		}))
+	}
 }
