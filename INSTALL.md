@@ -1,6 +1,8 @@
+
+
 ## Prerequisites
 - Rust (programing lanuage): https://www.rust-lang.org/tools/install
-
+- OpenSSL (probably already installed): for https, self signed ssl certificate generation
 
 ## Client
 
@@ -64,3 +66,17 @@ Project Tracker Server:
 cd project_tracker_server
 cargo r --release -- [SERVER_DATA_DIRECTORY]
 ```
+
+<br>
+
+
+### Configuration - Setting ssl certificates
+By default, the server uses self signed generated ssl certificates for https.
+
+If you are using something like [DuckDNS](https://duckdns.org) with [Nginx Proxy Manager](https://nginxproxymanager.com)
+to have a verified ssl certificate for your selfhosted local server,
+then download the ssl certificates generated and place the 'cert.pem' and 'key.pem' files
+into the 'project_tracker_server/src/web_server/certificates/' directory.
+
+After restarting the server (for native installation -> '/scripts/install_server_linux.sh'),
+the provided certificates are used for the https web server.
