@@ -189,7 +189,7 @@ function populate_dom_with_task(task_list, task, done) {
 }
 
 function connect_ws() {
-	ws = new WebSocket('ws://' + location.host + '/modified');
+	ws = new WebSocket('wss://' + location.host + '/modified');
 	ws.onopen = on_ws_open;
 	ws.onclose = on_ws_close;
 	ws.onmessage = on_ws_message;
