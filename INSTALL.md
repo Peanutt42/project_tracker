@@ -40,6 +40,7 @@ cargo r --release
 > other: write the password in plain text into a 'password.txt' file inside the 'SERVER_DATA_DIRECTORY'
 
 ### Local installation (linux only!)
+with this method, you will be asked to set a new password automatically on first installation
 ```bash
 cd scripts
 ./install_server_linux.sh
@@ -53,7 +54,7 @@ sudo docker build -t project_tracker .
 Run docker image:
 Replace '/path/to/server/' with a actual directory to store persistent data like '/srv/project_tracker_server'
 ```bash
-sudo docker run -d -p 80:80 -p 8080:8080 -v /path/to/server/:/data project_tracker
+sudo docker run -d -p 443:443 -p 8080:8080 -v /path/to/server/:/data project_tracker
 ```
 
 ### Installation - Other platforms

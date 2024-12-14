@@ -1,8 +1,8 @@
 # Use an official Rust image to build the project
-FROM rust:1.83.0 AS builder
+FROM rust:alpine AS builder
 
 # Install dependencies for the build
-RUN apk add --no-cache musl-dev build-base
+RUN apk add --no-cache musl-dev build-base openssl
 
 # Set the working directory inside the container
 WORKDIR /project_tracker
@@ -29,8 +29,8 @@ COPY --from=builder /project_tracker/target/release/project_tracker_server /proj
 VOLUME ["/data"]
 
 # Expose the ports
-# http
-EXPOSE 80
+# https
+EXPOSE 443
 # gui native client ws
 EXPOSE 8080
 

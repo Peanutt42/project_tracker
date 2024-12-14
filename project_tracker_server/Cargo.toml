@@ -18,4 +18,4 @@ sha2 = "0.10.8"
 aes-gcm = "0.10.3"
 pbkdf2 = "0.12.2"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
-warp = { version = "0.3.7", features = ["websocket"] }
+warp = { version = "0.3.7", features = ["websocket", "tls"] }
