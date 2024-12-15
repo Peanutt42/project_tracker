@@ -7,9 +7,9 @@
 </div>
 
 <p align="center">
-  <img src="Screenshot.png" width=42%>
-  <img src="Screenshot_Overview.png" width=24%>
-  <img src="Screenshot_Stopwatch.png" width=32%>
+  <img src="assets/Screenshot.png" width=42%>
+  <img src="assets/Screenshot_Overview.png" width=24%>
+  <img src="assets/Screenshot_Stopwatch.png" width=32%>
 </p>
 
 
