@@ -133,11 +133,16 @@ function populate_dom_from_database(database) {
 		project_div.appendChild(project_name);
 		const task_list = document.createElement("ul");
 		task_list.className = "task_list";
-		for (const task_id in project.todo_tasks) {
-			populate_dom_with_task(task_list, project.todo_tasks[task_id], false);
+
+		const sorted_todo_tasks = field_ordered_tasklist_to_array(project.todo_tasks);
+		sort_project_tasks(project.sort_mode, sorted_todo_tasks);
+		for (const task_with_id of sorted_todo_tasks) {
+			populate_dom_with_task(task_list, task_with_id[1], false);
 		}
-		for (const task_id in project.source_code_todos) {
-			populate_dom_with_task(task_list, project.source_code_todos[task_id], false);
+		const sorted_source_code_todos = field_ordered_tasklist_to_array(project.soure_code_todos);
+		sort_project_tasks(project.sort_mode, sorted_source_code_todos);
+		for (const task_with_id in sorted_source_code_todos) {
+			populate_dom_with_task(task_list, task_with_id[1], false);
 		}
 		const done_task_list_section = document.createElement("details");
 		done_task_list_section.className = "show_done_task_details";
@@ -146,6 +151,7 @@ function populate_dom_from_database(database) {
 		done_task_list_section.appendChild(show_done_tasks_summary);
 		const done_task_list = document.createElement("ul");
 		done_task_list.className = "task_list";
+		sort_project_tasks(project.sort_mode, project.done_tasks);
 		for (const task_with_id of project.done_tasks) {
 			populate_dom_with_task(done_task_list, task_with_id[1], true);
 		}
@@ -153,6 +159,65 @@ function populate_dom_from_database(database) {
 		task_list.appendChild(done_task_list_section);
 		project_div.appendChild(task_list);
 		database_list.appendChild(project_div);
+	}
+}
+
+function field_ordered_tasklist_to_array(tasks) {
+	const array = [];
+	for (const task_id in tasks) {
+		array.push(
+			[
+				task_id,
+				tasks[task_id],
+			]
+		);
+	}
+	return array;
+}
+
+function sort_project_tasks(sort_mode, tasks) {
+	if (sort_mode === "DueDate") {
+		tasks.sort((task_a_with_id, task_b_with_id) => {
+			let task_a = task_a_with_id[1];
+			let task_b = task_b_with_id[1];
+			let due_date_a = task_a.due_date;
+			let due_date_b = task_b.due_date;
+			if (due_date_a) {
+				if (due_date_b) {
+					const date_a = new Date(due_date_a.year, due_date_a.month - 1, due_date_a.day); // months are 0-indexed
+					const date_b = new Date(due_date_b.year, due_date_b.month - 1, due_date_b.day);
+					return date_a - date_b;
+				} else {
+					return -1;
+				}
+			} else {
+				if (due_date_b) {
+					return 1;
+				} else {
+					return 0;
+				}
+			}
+		});
+	} else if (sort_mode === "NeededTime") {
+		tasks.sort((task_a_with_id, task_b_with_id) => {
+			let task_a = task_a_with_id[1];
+			let task_b = task_b_with_id[1];
+			let needed_time_a = task_a.needed_time_minutes;
+			let needed_time_b = task_b.needed_time_minutes;
+			if (needed_time_a) {
+				if (needed_time_b) {
+					return needed_time_a - needed_time_b;
+				} else {
+					return -1;
+				}
+			} else {
+				if (needed_time_b) {
+					return 1;
+				} else {
+					return 0;
+				}
+			}
+		});
 	}
 }
 
