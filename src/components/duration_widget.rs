@@ -6,38 +6,23 @@ use iced::{
 	widget::{container, text, Text},
 	Element,
 };
-use pretty_duration::{pretty_duration, PrettyDurationLabels, PrettyDurationOptions};
+use humantime::format_duration;
 use std::time::Duration;
 
 pub fn round_duration_to_seconds(duration: Duration) -> Duration {
 	Duration::from_secs(duration.as_secs())
 }
 
+pub fn duration_to_minutes(duration: Duration) -> usize {
+	duration.as_secs() as usize / 60
+}
+
+pub fn parse_duration_from_str(string: &str) -> Option<Duration> {
+	humantime::parse_duration(string).ok()
+}
+
 pub fn duration_str(duration: Duration) -> String {
-	pretty_duration(
-		&duration,
-		Some(PrettyDurationOptions {
-			output_format: None,
-			singular_labels: Some(PrettyDurationLabels {
-				year: "year",
-				month: "month",
-				day: "day",
-				hour: "h",
-				minute: "min",
-				second: "s",
-				millisecond: "ms",
-			}),
-			plural_labels: Some(PrettyDurationLabels {
-				year: "years",
-				month: "months",
-				day: "days",
-				hour: "h",
-				minute: "min",
-				second: "s",
-				millisecond: "ms",
-			}),
-		}),
-	)
+	format_duration(duration).to_string()
 }
 
 pub fn duration_text(duration: Duration) -> Text<'static> {

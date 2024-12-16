@@ -1,7 +1,9 @@
+use std::time::Duration;
+
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::{Fill, Fixed}, Padding};
 use iced_aw::{card, date_picker};
 use once_cell::sync::Lazy;
-use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, start_task_timer_button, task_description, task_tag_button, unfocusable, vertical_scrollable, view_task_description_button, ICON_BUTTON_WIDTH, SCROLLBAR_WIDTH}, core::SerializableDateConversion, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, on_number_input, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, ProjectTrackerApp};
+use crate::{components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, delete_task_button, duration_str, duration_to_minutes, edit_due_date_button, edit_task_description_button, edit_task_needed_time_button, horizontal_scrollable, parse_duration_from_str, start_task_timer_button, task_description, task_tag_button, unfocusable, vertical_scrollable, view_task_description_button, ICON_BUTTON_WIDTH, SCROLLBAR_WIDTH}, core::SerializableDateConversion, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, text_editor_keybindings, text_input_style, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, ProjectTrackerApp};
 use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, TaskId};
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -26,7 +28,7 @@ pub enum TaskModalMessage {
 	EditNeededTime,
 	StopEditingNeededTime,
 	ClearTaskNeededTime,
-	ChangeNeededTimeInput(Option<usize>),
+	ChangeNeededTimeInput(String),
 	ChangeNeededTime,
 	InvalidNeededTimeInput,
 
@@ -62,7 +64,7 @@ pub enum TaskModal {
 		task_id: TaskId,
 		new_description: Option<text_editor::Content>,
 		edit_due_date: bool,
-		new_needed_time_minutes: Option<Option<usize>>,
+		new_needed_time_minutes: Option<String>,
 	},
 	Closed,
 }
@@ -166,7 +168,9 @@ impl TaskModal {
 						db.get_task(project_id, task_id)
 							.and_then(|task| task.needed_time_minutes)
 					});
-					*new_needed_time_minutes = Some(previous_task_needed_minutes);
+					*new_needed_time_minutes = previous_task_needed_minutes.map(|minutes|
+						duration_str(Duration::from_secs(minutes as u64 * 60))
+					);
 				}
 				text_input::focus(EDIT_NEEDED_TIME_INPUT_ID.clone()).into()
 			},
@@ -184,12 +188,13 @@ impl TaskModal {
 			},
 			TaskModalMessage::ChangeNeededTime => {
 				if let TaskModal::Opened { project_id, task_id, new_needed_time_minutes, .. } = self {
-					if let Some(new_needed_time_minutes_clone) = *new_needed_time_minutes {
+					if let Some(new_needed_time_minutes_clone) = new_needed_time_minutes.clone() {
 						*new_needed_time_minutes = None;
 						return DatabaseMessage::ChangeTaskNeededTime {
 							project_id: *project_id,
 							task_id: *task_id,
-							new_needed_time_minutes: new_needed_time_minutes_clone
+							new_needed_time_minutes: parse_duration_from_str(&new_needed_time_minutes_clone)
+								.map(duration_to_minutes),
 						}
 						.into();
 					}
@@ -253,21 +258,12 @@ impl TaskModal {
 							let edit_needed_time_view: Element<'a, Message> = if let Some(new_needed_time_minutes) = new_needed_time_minutes {
 								let edit_needed_time_element = unfocusable(
 									text_input(
-										"mins",
-										&match new_needed_time_minutes {
-											Some(new_needed_time_minutes) => {
-												format!("{new_needed_time_minutes}")
-											}
-											None => String::new(),
-										},
+										"ex: 30min",
+										new_needed_time_minutes,
 									)
 									.id(EDIT_NEEDED_TIME_INPUT_ID.clone())
-									.width(Fixed(50.0))
-									.on_input(move |input| on_number_input(
-										input,
-										|new_time| TaskModalMessage::ChangeNeededTimeInput(new_time).into(),
-										TaskModalMessage::InvalidNeededTimeInput.into(),
-									))
+									.width(Fixed(80.0))
+									.on_input(move |input| TaskModalMessage::ChangeNeededTimeInput(input).into())
 									.on_submit(TaskModalMessage::ChangeNeededTime.into())
 									.style(move |t, s| {
 										text_input_style(t, s, true, false, false, true)

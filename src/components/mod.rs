@@ -31,7 +31,7 @@ mod task_description;
 pub use task_description::{task_description, generate_task_description_markdown};
 
 mod duration_widget;
-pub use duration_widget::{round_duration_to_seconds, duration_str, duration_text, duration_widget};
+pub use duration_widget::{round_duration_to_seconds, duration_to_minutes, duration_str, parse_duration_from_str, duration_text, duration_widget};
 
 mod date_widget;
 pub use date_widget::{date_text, days_left_widget};
