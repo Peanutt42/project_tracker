@@ -1,4 +1,4 @@
-use project_tracker_server::SharedServerData;
+use project_tracker_server::{ModifiedEvent, SharedServerData};
 use warp::{body, http::StatusCode, path, path::end, post, reply::{self, html, with_header, with_status, Reply, Response}, serve, ws, ws::{WebSocket, Ws, Message}, Filter};
 use futures_util::SinkExt;
 use std::sync::{Arc, RwLock};
@@ -16,7 +16,7 @@ const ICON_180X180_PNG: &[u8] = include_bytes!("static/icon_180x180.png");
 const CARET_DOWN_SVG: &str = include_str!("static/caret-down-fill.svg");
 const CARET_RIGHT_SVG: &str = include_str!("static/caret-right-fill.svg");
 
-pub async fn run_web_server(password: String, modified_receiver: Receiver<SharedServerData>, shared_data: Arc<RwLock<SharedServerData>>) {
+pub async fn run_web_server(password: String, modified_receiver: Receiver<ModifiedEvent>, shared_data: Arc<RwLock<SharedServerData>>) {
 	let get_database_route = path("load_database")
 		.and(post())
 		.and(body::json())
@@ -30,7 +30,7 @@ pub async fn run_web_server(password: String, modified_receiver: Receiver<Shared
 	let modified_ws_route = path("modified")
 		.and(ws())
 		.and(modified_receiver)
-		.map(|ws: Ws, modified_receiver: Arc<RwLock<Receiver<SharedServerData>>>| {
+		.map(|ws: Ws, modified_receiver: Arc<RwLock<Receiver<ModifiedEvent>>>| {
 			ws.on_upgrade(move |socket| modified_ws_connected(socket, modified_receiver.read().unwrap().resubscribe()))
 		});
 
@@ -96,11 +96,11 @@ fn load_database(body: serde_json::Value, password: String, shared_data: Arc<RwL
 	}
 }
 
-async fn modified_ws_connected(mut ws: WebSocket, mut modified_receiver: Receiver<SharedServerData>) {
+async fn modified_ws_connected(mut ws: WebSocket, mut modified_receiver: Receiver<ModifiedEvent>) {
 	loop {
 		match modified_receiver.recv().await {
-			Ok(shared_data) => {
-				match serde_json::to_string(&shared_data.database.to_serialized()) {
+			Ok(modified_event) => {
+				match serde_json::to_string(&modified_event.shared_data.database.to_serialized()) {
 					Ok(database_json) => {
 						if let Err(e) = ws.send(Message::text(database_json)).await {
 							eprintln!("failed to send modified event to ws client: {e}");

@@ -6,9 +6,9 @@ use std::sync::{Arc, RwLock};
 use async_tungstenite::{tungstenite::{self, Message}, tokio::accept_async};
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
-use crate::{EncryptedResponse, Request, Response, ServerError, SharedServerData};
+use crate::{EncryptedResponse, ModifiedEvent, Request, Response, ServerError, SharedServerData};
 
-pub async fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<SharedServerData>, shared_data: Arc<RwLock<SharedServerData>>) {
+pub async fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<ModifiedEvent>, shared_data: Arc<RwLock<SharedServerData>>) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await.expect("Failed to bind to port");
 
 	println!("WebServer is listening on port {}", port);
@@ -32,7 +32,14 @@ pub async fn run_server(port: usize, database_filepath: PathBuf, password: Strin
 	}
 }
 
-async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, password: String, modified_sender: Sender<SharedServerData>, mut modified_receiver: Receiver<SharedServerData>, shared_data: Arc<RwLock<SharedServerData>>) {
+async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, password: String, modified_sender: Sender<ModifiedEvent>, mut modified_receiver: Receiver<ModifiedEvent>, shared_data: Arc<RwLock<SharedServerData>>) {
+	let client_addr = match stream.peer_addr() {
+		Ok(client_addr) => client_addr,
+		Err(e) => {
+			eprintln!("failed to get clients socket address, ignoring client, error: {e}");
+			return;
+		},
+	};
 	let ws_stream = match accept_async(stream).await {
 		Ok(ws) => {
 			println!("client connected");
@@ -66,23 +73,27 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 	let password_clone = password.clone();
 	let write_ws_sender_clone = write_ws_sender.clone();
 	tokio::spawn(async move {
-		while let Ok(shared_data) = modified_receiver.recv().await {
-			if write_ws_sender_clone.send(Message::binary(
-				Response::Encrypted(
-					EncryptedResponse::Database{
-						database_binary: shared_data.database.to_binary().unwrap(),
-						last_modified_time: shared_data.last_modified_time
-					}
-					.encrypt(&password_clone)
+		while let Ok(modified_event) = modified_receiver.recv().await {
+			// do not resend database updated msg to the sender that made that update
+			if modified_event.modified_sender_address != client_addr {
+				let failed_to_send_msg = write_ws_sender_clone.send(Message::binary(
+					Response::Encrypted(
+						EncryptedResponse::Database{
+							database_binary: modified_event.shared_data.database.to_binary().unwrap(),
+							last_modified_time: modified_event.shared_data.last_modified_time
+						}
+						.encrypt(&password_clone)
+						.unwrap()
+					)
+					.serialize()
 					.unwrap()
-				)
-				.serialize()
-				.unwrap()
-			))
-			.await
-			.is_err()
-			{
-				break;
+				))
+				.await
+				.is_err();
+
+				if failed_to_send_msg {
+					break;
+				}
 			}
 		}
 	});
@@ -129,7 +140,7 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 										.unwrap()
 									))
 									.await;
-									let _ = modified_sender.send(shared_data_clone);
+									let _ = modified_sender.send(ModifiedEvent::new(shared_data_clone, client_addr));
 									println!("Updated database file");
 								},
 								Err(e) => {

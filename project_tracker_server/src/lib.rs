@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::{Arc, RwLock}};
+use std::{net::SocketAddr, path::PathBuf, sync::{Arc, RwLock}};
 use chrono::{DateTime, Utc};
 use project_tracker_core::{get_last_modification_date_time, Database};
 use thiserror::Error;
@@ -126,6 +126,20 @@ impl EncryptedMessage {
 	}
 }
 
+#[derive(Debug, Clone)]
+pub struct ModifiedEvent {
+	pub shared_data: SharedServerData,
+	pub modified_sender_address: SocketAddr,
+}
+
+impl ModifiedEvent {
+	pub fn new(shared_data: SharedServerData, sender_addr: SocketAddr) -> Self {
+		Self {
+			shared_data,
+			modified_sender_address: sender_addr,
+		}
+	}
+}
 
 #[derive(Debug, Clone)]
 pub struct SharedServerData {
