@@ -12,6 +12,7 @@ const INDEX_HTML: &str = include_str!("static/index.html");
 const STYLE_CSS: &str = include_str!("static/style.css");
 const SCRIPT_JS: &str = include_str!("static/script.js");
 const FAVICON_ICO: &[u8] = include_bytes!("static/favicon.ico");
+const ICON_180X180_PNG: &[u8] = include_bytes!("static/icon_180x180.png");
 const CARET_DOWN_SVG: &str = include_str!("static/caret-down-fill.svg");
 const CARET_RIGHT_SVG: &str = include_str!("static/caret-right-fill.svg");
 
@@ -48,6 +49,10 @@ pub async fn run_web_server(password: String, modified_receiver: Receiver<Shared
 		.and(path("favicon.ico"))
 		.map(|| with_header(FAVICON_ICO, "Content-Type", "image/x-icon"));
 
+	let icon_180x180_png_route = path("static")
+		.and(path("icon_180x180.png"))
+		.map(|| with_header(ICON_180X180_PNG, "Content-Type", "image/png"));
+
 	let caret_down_svg_route = path("static")
 		.and(path("caret-down-fill.svg"))
 		.map(|| with_header(CARET_DOWN_SVG, "Content-Type", "image/svg+xml"));
@@ -60,6 +65,7 @@ pub async fn run_web_server(password: String, modified_receiver: Receiver<Shared
 		.or(style_route)
 		.or(script_route)
 		.or(favicon_route)
+		.or(icon_180x180_png_route)
 		.or(caret_down_svg_route)
 		.or(caret_right_svg_route)
 		.or(get_database_route)
