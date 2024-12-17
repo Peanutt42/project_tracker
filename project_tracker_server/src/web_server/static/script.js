@@ -119,30 +119,38 @@ function logout() {
 	localStorage.removeItem("password");
 }
 
+function color_to_str(color) {
+	return "rgb(" + color[0] + ", " + color[1] + ", " + color[2] + ")";
+}
+
 function populate_dom_from_database(database) {
 	database_list.innerHTML = "";
 	for (const project_id in database.projects) {
 		const project = database.projects[project_id];
+		const sanitized_task_tags = sanitize_task_tags(project.task_tags);
+
 		const project_div = document.createElement("div");
+		project_div.className = "project";
 		const project_name = document.createElement("div");
 		project_name.className = "project_name";
 		const done_task_count = Object.keys(project.done_tasks).length
 		const all_task_count = done_task_count + Object.keys(project.todo_tasks).length + Object.keys(project.source_code_todos).length;
 		project_name.textContent = project.name + " (" + done_task_count + '/' + all_task_count + ')';
-		project_name.style.textDecorationColor = "rgb(" + project.color[0] + ", " + project.color[1] + ", " + project.color[2] + ")";
+		project_name.style.textDecorationColor = color_to_str(project.color);
 		project_div.appendChild(project_name);
+
 		const task_list = document.createElement("ul");
 		task_list.className = "task_list";
 
 		const sorted_todo_tasks = field_ordered_tasklist_to_array(project.todo_tasks);
 		sort_project_tasks(project.sort_mode, sorted_todo_tasks);
 		for (const task_with_id of sorted_todo_tasks) {
-			populate_dom_with_task(task_list, task_with_id[1], false);
+			populate_dom_with_task(task_list, task_with_id[1], sanitized_task_tags, false);
 		}
 		const sorted_source_code_todos = field_ordered_tasklist_to_array(project.soure_code_todos);
 		sort_project_tasks(project.sort_mode, sorted_source_code_todos);
 		for (const task_with_id in sorted_source_code_todos) {
-			populate_dom_with_task(task_list, task_with_id[1], false);
+			populate_dom_with_task(task_list, task_with_id[1], sanitized_task_tags, false);
 		}
 		const done_task_list_section = document.createElement("details");
 		done_task_list_section.className = "show_done_task_details";
@@ -153,13 +161,21 @@ function populate_dom_from_database(database) {
 		done_task_list.className = "task_list";
 		sort_project_tasks(project.sort_mode, project.done_tasks);
 		for (const task_with_id of project.done_tasks) {
-			populate_dom_with_task(done_task_list, task_with_id[1], true);
+			populate_dom_with_task(done_task_list, task_with_id[1], sanitized_task_tags, true);
 		}
 		done_task_list_section.appendChild(done_task_list);
 		task_list.appendChild(done_task_list_section);
 		project_div.appendChild(task_list);
 		database_list.appendChild(project_div);
 	}
+}
+
+function task_tag_dom(task_tag) {
+	const tag_div = document.createElement("div");
+	tag_div.className = "tag";
+	tag_div.textContent = task_tag.name;
+	tag_div.style.borderColor = color_to_str(task_tag.color);
+	return tag_div;
 }
 
 function field_ordered_tasklist_to_array(tasks) {
@@ -173,6 +189,16 @@ function field_ordered_tasklist_to_array(tasks) {
 		);
 	}
 	return array;
+}
+
+// json field names, if numbers, are auto casted to 'number' type
+// loosing the precision 'BigInt' might have had
+function sanitize_task_tags(task_tags) {
+	const sanitized_task_tags = {};
+	Object.keys(task_tags).forEach((tag_id) => {
+		sanitized_task_tags[Number(tag_id)] = task_tags[tag_id];
+	});
+	return sanitized_task_tags;
 }
 
 function sort_project_tasks(sort_mode, tasks) {
@@ -221,7 +247,7 @@ function sort_project_tasks(sort_mode, tasks) {
 	}
 }
 
-function populate_dom_with_task(task_list, task, done) {
+function populate_dom_with_task(task_list, task, task_tags, done) {
 	const task_div = document.createElement("div");
 	const checkbox = document.createElement("input");
 	checkbox.type = "checkbox",
@@ -229,6 +255,14 @@ function populate_dom_with_task(task_list, task, done) {
 	checkbox.disabled = true; // TODO: check/uncheck tasks and send to server
 	task_div.appendChild(checkbox);
 	task_div.className = "task";
+
+	const task_tags_list = document.createElement("ul");
+	task_tags_list.className = "tag_list";
+	for (const tag_id of task.tags) {
+		let task_tag = task_tags[tag_id];
+		task_tags_list.appendChild(task_tag_dom(task_tag));
+	}
+	task_div.appendChild(task_tags_list);
 
 	let task_info = '';
 	if (task.time_spend) {
@@ -247,9 +281,11 @@ function populate_dom_with_task(task_list, task, done) {
 		task_info += task.due_date.day + '.' + task.due_date.month + '.' + task.due_date.year + ' - ';
 	}
 	task_info += task.name;
+
 	const task_info_div = document.createElement("div");
 	task_info_div.textContent = task_info;
 	task_div.appendChild(task_info_div);
+
 	task_list.appendChild(task_div);
 }
 

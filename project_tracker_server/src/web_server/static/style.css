@@ -140,6 +140,11 @@ a:hover {
 	flex-direction: column;
 	gap: 20px;
 }
+.project {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
 .project_name {
 	font-size: large;
 	font-weight: bold;
@@ -172,6 +177,21 @@ a:hover {
 	gap: 10px;
 	margin-left: 5px;
 	text-decoration: none;
+}
+.tag_list {
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	padding: 0;
+}
+.tag {
+	border-style: solid;
+	border-width: 1px;
+	padding-top: 1px;
+	padding-bottom: 1px;
+	padding-left: 5px;
+	padding-right: 5px;
+	border-radius: 10px;
 }
 summary {
 	list-style: none;
