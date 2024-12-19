@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, path::PathBuf, sync::{Arc, RwLock}};
 use chrono::{DateTime, Utc};
-use project_tracker_core::{get_last_modification_date_time, Database};
+use project_tracker_core::{get_last_modification_date_time, Database, SerializedDatabase};
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
 
@@ -63,7 +63,7 @@ impl Request {
 pub enum EncryptedResponse {
 	ModifiedDate(DateTime<Utc>),
 	Database {
-		database_binary: Vec<u8>,
+		database: SerializedDatabase,
 		last_modified_time: DateTime<Utc>,
 	},
 	DatabaseUpdated,

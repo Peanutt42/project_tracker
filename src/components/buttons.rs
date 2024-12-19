@@ -1,16 +1,16 @@
 use crate::{
-	components::{date_text, duration_text}, core::{IcedColorConversion, SortModeUI}, icons::{icon_to_text, Bootstrap}, modals::{
+	components::{date_text, duration_text, unfocusable}, core::{IcedColorConversion, SerializableDateConversion, SortModeUI}, icons::{icon_to_text, Bootstrap}, modals::{
 		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage, WaitClosingModalMessage
 	}, pages::{
 		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID
 	}, project_tracker::Message, styles::{
-		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, rounded_container_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, rounded_container_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, text_input_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
 	}, theme_mode::ThemeMode, DateFormatting, PreferenceMessage, SynchronizationSetting
 };
 use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId};
 use iced::{
-	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, rich_text, row, text, text::Span, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
-use iced_aw::{drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
+	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, rich_text, row, text, text::Span, text_input, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
+use iced_aw::{date_picker, date_picker::Date, drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
 use std::{path::PathBuf, time::Duration};
 
 pub const ICON_FONT_SIZE: f32 = 16.0;
@@ -473,18 +473,6 @@ pub fn clear_task_needed_time_button<Message>(on_press: Message) -> Button<'stat
 	icon_button(Bootstrap::XLg)
 		.on_press(on_press)
 		.style(secondary_button_style_only_round_right)
-}
-
-pub fn edit_task_needed_time_button<Message>(needed_time_minutes: Option<usize>, on_press: Message) -> Button<'static, Message> {
-	button(
-		if let Some(needed_time_minutes) = needed_time_minutes {
-			duration_text(Duration::from_secs(needed_time_minutes as u64 * 60))
-		} else {
-			text("Add needed time")
-		}
-	)
-	.on_press(on_press)
-	.style(secondary_button_style_default)
 }
 
 pub fn clear_task_due_date_button<Message>(on_press: Message) -> Button<'static, Message> {
@@ -957,4 +945,69 @@ pub fn retry_connecting_to_server_button() -> Button<'static, Message> {
 	icon_button(Bootstrap::ArrowClockwise)
 		.on_press(Message::ConnectToServer)
 		.style(secondary_button_style_default)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn edit_needed_time_button<'a, Message: 'static + Clone>(task_needed_time_minutes: Option<usize>, new_needed_time_minutes: &'a Option<String>, on_edit: Message, on_input: impl Fn(String) -> Message + 'a, on_submit: Option<Message>, stop_editing: Message, clear_needed_time: Message, text_input_id: text_input::Id) -> Element<'a, Message> {
+	if let Some(new_needed_time_minutes) = new_needed_time_minutes {
+		let edit_needed_time_element = unfocusable(
+			text_input(
+				"ex: 30min",
+				new_needed_time_minutes,
+			)
+			.id(text_input_id)
+			.width(Fixed(80.0))
+			.on_input(on_input)
+			.on_submit_maybe(on_submit)
+			.style(move |t, s| {
+				text_input_style(t, s, true, false, false, true)
+			}),
+
+			stop_editing
+		);
+
+		row![
+			edit_needed_time_element,
+			clear_task_needed_time_button(clear_needed_time)
+		]
+		.into()
+	}
+	else {
+		button(
+			if let Some(needed_time_minutes) = task_needed_time_minutes {
+				duration_text(Duration::from_secs(needed_time_minutes as u64 * 60))
+			} else {
+				text("Add needed time")
+			}
+		)
+		.on_press(on_edit)
+		.style(secondary_button_style_default)
+		.into()
+	}
+}
+
+pub fn due_date_button<Message: 'static + Clone>(edit_due_date: bool, due_date: &Option<SerializableDate>, date_formatting: DateFormatting, on_edit: Message, stop_editing: Message, on_submit: impl Fn(Date) -> Message + 'static, on_clear: Message) -> Element<Message> {
+	let add_due_date_button = add_due_date_button(on_edit.clone());
+
+	if edit_due_date {
+		date_picker(
+			true,
+			due_date.map(|due_date| due_date.to_iced_date())
+				.unwrap_or(date_picker::Date::today()),
+			add_due_date_button,
+			stop_editing,
+			on_submit
+		)
+		.into()
+	}
+	else if let Some(due_date) = due_date {
+		row![
+			edit_due_date_button(due_date, date_formatting, on_edit),
+			clear_task_due_date_button(on_clear),
+		]
+		.into()
+	}
+	else {
+		add_due_date_button.into()
+	}
 }

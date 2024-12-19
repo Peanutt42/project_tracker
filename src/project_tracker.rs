@@ -704,84 +704,7 @@ impl ProjectTrackerApp {
 					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(error_msg));
 					Task::none()
 				},
-				ServerWsEvent::Response{ response, password } => match response {
-					Response::Encrypted(encrypted_response) => match EncryptedResponse::decrypt(encrypted_response, &password) {
-						Ok(encrypted_response) => match encrypted_response {
-							EncryptedResponse::Database { database_binary, last_modified_time } => {
-								let server_is_more_up_to_date = self.database.as_ref()
-									.map(|db| last_modified_time > *db.last_changed_time())
-        					.unwrap_or(true);
-								if server_is_more_up_to_date {
-									match Database::from_binary(&database_binary, last_modified_time) {
-										Ok(database) => {
-											self.last_sync_time = Some(Instant::now());
-											self.update(Message::LoadedDatabase(Ok(database)))
-										},
-										Err(e) => {
-											self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(format!("failed to serialize database: {e}")));
-											Task::none()
-										},
-									}
-								}
-								else {
-									Task::none()
-								}
-							},
-							EncryptedResponse::DatabaseUpdated => {
-								self.last_sync_time = Some(Instant::now());
-								Task::none()
-							},
-							EncryptedResponse::ModifiedDate(server_modified_date) => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
-								let server_is_more_up_to_date = self.database.as_ref()
-									.map(|db| server_modified_date > *db.last_changed_time())
-        					.unwrap_or(true);
-
-								if server_is_more_up_to_date {
-									let _ = server_ws_message_sender.send(ServerWsMessage::Request(
-											Request::DownloadDatabase
-										));
-									Task::none()
-								}
-								else if let Some(database) = &self.database {
-									match database.clone().to_binary() {
-										Some(database_binary) => {
-											let _ = server_ws_message_sender.send(ServerWsMessage::Request(
-												Request::UpdateDatabase {
-													database_binary,
-													last_modified_time: *database.last_changed_time()
-												}
-											));
-											Task::none()
-										},
-										None => self.show_error_msg("failed to serialize database".to_string()),
-									}
-								}
-								else {
-									Task::none()
-								}
-							}
-							else {
-								Task::none()
-							},
-						},
-						Err(e) => {
-							self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(format!("{e}")));
-							Task::none()
-						}
-					},
-					Response::InvalidDatabaseBinary => {
-						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("server failed to parse our database binary format!".to_string()));
-						Task::none()
-					},
-					Response::InvalidPassword => {
-						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("invalid password!".to_string()));
-						Task::none()
-					},
-					Response::ParseError => {
-						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("server failed to parse request!".to_string()));
-						Task::none()
-					},
-				}
+				ServerWsEvent::Response{ response, password } => self.handle_server_response(response, password),
 			},
 			Message::ConnectToServer => {
 				if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
@@ -1168,6 +1091,84 @@ impl ProjectTrackerApp {
 			ManageTaskTagsModalAction::None => Task::none(),
 			ManageTaskTagsModalAction::Task(task) => task,
 			ManageTaskTagsModalAction::DatabaseMessage(message) => self.update(message.into()),
+		}
+	}
+
+	fn handle_server_response(&mut self, response: Response, password: String) -> Task<Message> {
+		match response {
+			Response::Encrypted(encrypted_response) => match EncryptedResponse::decrypt(encrypted_response, &password) {
+				Ok(encrypted_response) => self.handle_encrypted_server_response(encrypted_response),
+				Err(e) => {
+					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(format!("{e}")));
+					Task::none()
+				}
+			},
+			Response::InvalidDatabaseBinary => {
+				self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("server failed to parse our database binary format!".to_string()));
+				Task::none()
+			},
+			Response::InvalidPassword => {
+				self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("invalid password!".to_string()));
+				Task::none()
+			},
+			Response::ParseError => {
+				self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("server failed to parse request!".to_string()));
+				Task::none()
+			},
+		}
+	}
+
+	fn handle_encrypted_server_response(&mut self, encrypted_response: EncryptedResponse) -> Task<Message> {
+		match encrypted_response {
+			EncryptedResponse::Database { database, last_modified_time } => {
+				let server_is_more_up_to_date = self.database.as_ref()
+					.map(|db| last_modified_time > *db.last_changed_time())
+					.unwrap_or(true);
+
+				if server_is_more_up_to_date {
+					self.last_sync_time = Some(Instant::now());
+					self.update(Message::LoadedDatabase(Ok(Database::from_serialized(database, last_modified_time))))
+				}
+				else {
+					Task::none()
+				}
+			},
+			EncryptedResponse::DatabaseUpdated => {
+				self.last_sync_time = Some(Instant::now());
+				Task::none()
+			},
+			EncryptedResponse::ModifiedDate(server_modified_date) => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
+				let server_is_more_up_to_date = self.database.as_ref()
+					.map(|db| server_modified_date > *db.last_changed_time())
+					.unwrap_or(true);
+
+				if server_is_more_up_to_date {
+					let _ = server_ws_message_sender.send(ServerWsMessage::Request(
+							Request::DownloadDatabase
+						));
+					Task::none()
+				}
+				else if let Some(database) = &self.database {
+					match database.clone().to_binary() {
+						Some(database_binary) => {
+							let _ = server_ws_message_sender.send(ServerWsMessage::Request(
+								Request::UpdateDatabase {
+									database_binary,
+									last_modified_time: *database.last_changed_time()
+								}
+							));
+							Task::none()
+						},
+						None => self.show_error_msg("failed to serialize database".to_string()),
+					}
+				}
+				else {
+					Task::none()
+				}
+			}
+			else {
+				Task::none()
+			},
 		}
 	}
 

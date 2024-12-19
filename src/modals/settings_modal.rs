@@ -101,298 +101,9 @@ impl SettingTab {
 	) -> Element<'a, Message> {
 		match self {
 			SettingTab::General => preferences.view(),
-			SettingTab::Database => {
-				column![
-					row![
-						container("Database file location: ").padding(HORIZONTAL_SCROLLABLE_PADDING),
-						container(match Database::get_filepath() {
-							Some(filepath) => file_location(filepath),
-							None => text("couldnt find database filepath").into(),
-						})
-						.width(Fill)
-						.align_x(Horizontal::Right),
-					]
-					.align_y(Alignment::Center),
-
-					container(
-						row![
-							dangerous_button(
-								Bootstrap::Trash,
-								"Clear",
-								Some("Clear Database".to_string()),
-								DatabaseMessage::Clear
-							),
-							import_database_button(app.importing_database),
-							export_database_button(app.exporting_database),
-						]
-						.spacing(SPACING_AMOUNT)
-					)
-					.width(Fill)
-					.align_x(Horizontal::Right),
-
-					horizontal_seperator_padded(),
-
-					column![
-						row![
-							text("Synchronization:"),
-
-							container(
-								toggler(preferences.synchronization().is_some())
-									.size(27.5)
-									.on_toggle(|enable| if enable {
-										SettingsModalMessage::EnableSynchronization.into()
-									}
-									else {
-										SettingsModalMessage::DisableSynchronization.into()
-									})
-							)
-							.width(Fill)
-							.align_x(Horizontal::Right)
-						]
-						.spacing(SPACING_AMOUNT)
-						.align_y(Alignment::Center)
-					]
-					.push_maybe(
-						preferences.synchronization().as_ref().map(|synchronization_setting| {
-							column![
-								row![
-									text("Type: "),
-									tooltip(
-										icon_to_text(Bootstrap::QuestionCircleFill).size(ICON_FONT_SIZE),
-										text("Either a filepath or a server
-Filepath: select a file on a different drive, a network shared drive or your own cloud like onedrive, google drive, etc.
-Server: your own hosted ProjectTracker-server"
-										)
-										.size(SMALL_TEXT_SIZE),
-										tooltip::Position::Bottom,
-									)
-									.gap(GAP)
-									.style(tooltip_container_style),
-									container(
-										row![
-											synchronization_type_button(
-												SynchronizationSetting::Filepath(None),
-												synchronization_setting,
-												true,
-												false
-											),
-											synchronization_type_button(
-												SynchronizationSetting::Server(ServerConfig::default()),
-												synchronization_setting,
-												false,
-												true
-											),
-										]
-									)
-									.width(Fill)
-									.align_x(Horizontal::Right),
-								]
-								.align_y(Alignment::Center),
-
-								match synchronization_setting {
-									SynchronizationSetting::Filepath(filepath) => {
-										let horizontal_scrollable_padding = if filepath.is_some() {
-											HORIZONTAL_SCROLLABLE_PADDING
-										}
-										else {
-											Padding::ZERO
-										};
-
-										row![
-											if let Some(filepath) = filepath {
-												filepath_widget(filepath.clone())
-													.width(Fill)
-													.into()
-											}
-											else {
-												Element::new(text("Filepath not specified!"))
-											},
-
-											container(select_synchronization_filepath_button())
-												.padding(horizontal_scrollable_padding),
-										]
-										.spacing(SPACING_AMOUNT)
-										.align_y(Alignment::Center)
-									},
-									SynchronizationSetting::Server(server_config) => {
-										row![
-											column![
-												row![
-													container("Hostname: ")
-														.width(100.0),
-
-													text_input("ex. 127.0.0.1 or raspberrypi.local", &server_config.hostname)
-														.on_input(|hostname| SettingsModalMessage::SetServerHostname(hostname).into())
-														.style(text_input_style_default),
-												]
-												.align_y(Vertical::Center),
-
-												row![
-													container("Port: ")
-														.width(100.0),
-
-													text_input("ex. 8080", &format!("{}", server_config.port))
-														.on_input(|input| {
-															let new_port = match usize::from_str(&input) {
-																Ok(new_port) => {
-																	Some(new_port)
-																}
-																Err(_) => {
-																	if input.is_empty() {
-																		Some(8080)
-																	} else {
-																		None
-																	}
-																}
-															};
-															match new_port {
-																Some(new_port) => SettingsModalMessage::SetServerPort(new_port).into(),
-																None => SettingsModalMessage::InvalidPortInput.into(),
-															}
-														})
-														.style(text_input_style_default)
-														.width(55.0),
-												]
-												.align_y(Vertical::Center),
-
-												row![
-													container("Password: ")
-														.width(100.0),
-
-													if show_password {
-														row![
-															text_input(format!("default: {}", DEFAULT_PASSWORD).as_str(), &server_config.password)
-																.on_input(|password| SettingsModalMessage::SetServerPassword(password).into())
-																.style(text_input_style_default),
-
-															hide_password_button(),
-														]
-														.align_y(Vertical::Center)
-														.spacing(SPACING_AMOUNT)
-														.into()
-													}
-													else {
-														show_password_button()
-													},
-												]
-												.align_y(Vertical::Center),
-											]
-											.spacing(SPACING_AMOUNT)
-										]
-										.spacing(SPACING_AMOUNT)
-									},
-								}
-							]
-							.spacing(SPACING_AMOUNT)
-						})
-					)
-					.spacing(SPACING_AMOUNT),
-
-					horizontal_seperator_padded(),
-
-					column![
-						row![
-							"Import Google Tasks:",
-
-							container(
-								import_google_tasks_button()
-							)
-							.width(Fill)
-							.align_x(Horizontal::Right),
-						]
-						.spacing(SPACING_AMOUNT)
-						.align_y(Alignment::Center),
-
-						container(
-							rich_text![
-								Span::new("Go to "),
-								Span::new("https://myaccount.google.com/dashboard")
-									.color(link_color(app.is_theme_dark()))
-									.link(Message::OpenUrl("https://myaccount.google.com/dashboard".to_string())),
-								Span::new(" and download the Tasks data.\nThen extract the Takeout.zip and import the \"Tasks.json\" file inside under the \"Tasks\" folder.")
-							]
-							.style(grey_text_style)
-						)
-						.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
-					]
-					.spacing(SPACING_AMOUNT),
-				]
-				.spacing(SPACING_AMOUNT)
-				.into()
-			},
-			SettingTab::Shortcuts => {
-				let shortcut = |name, shortcut| {
-					row![
-						text(name),
-						Space::new(Fill, 0.0),
-						container(
-							container(shortcut).padding(SMALL_HORIZONTAL_PADDING)
-						)
-						.style(rounded_container_style)
-					]
-					.spacing(SMALL_SPACING_AMOUNT)
-				};
-
-				column![
-					shortcut("Open Settings:", "Ctrl + ,"),
-					shortcut("Open Overview:", "Ctrl + H"),
-					shortcut("New Project:", "Ctrl + Shift + N"),
-					shortcut("Search Tasks:", "Ctrl + F"),
-					shortcut("Delete Project:", "Ctrl + Del"),
-					shortcut("Switch to lower Project:", "Ctrl + Tab"),
-					shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
-					shortcut("New Task:", "Ctrl + N"),
-					shortcut("Toggle Sidebar:", "Ctrl + B"),
-					shortcut("Start/Pause/Resume Stopwatch:", "Space"),
-					shortcut("Stop Stopwatch:", "Esc"),
-				]
-				.spacing(SPACING_AMOUNT)
-				.into()
-			},
-			SettingTab::About => {
-				let item = |label: &'static str, content: Element<'static, Message>| {
-					row![
-						label,
-						Space::new(Fill, 0.0),
-						content,
-					]
-					.spacing(SMALL_SPACING_AMOUNT)
-					.align_y(Vertical::Center)
-				};
-
-				let repository = env!("CARGO_PKG_REPOSITORY");
-
-				let author_link = "https://github.com/Peanutt42";
-
-				column![
-					item("Project Tracker:", text("Project Todo Tracker for personal programming projects").into()),
-
-					item(
-						"Author:",
-						rich_text![
-							Span::new(author_link)
-								.color(link_color(app.is_theme_dark()))
-								.link(Message::OpenUrl(author_link.to_string()))
-						]
-						.into()
-					),
-
-					item("Version:", text(env!("CARGO_PKG_VERSION")).into()),
-
-					item(
-						"Repository:",
-						rich_text![
-							Span::new(repository)
-								.color(link_color(app.is_theme_dark()))
-								.link(Message::OpenUrl(repository.to_string()))
-						]
-						.into()
-					),
-				]
-				.spacing(SPACING_AMOUNT)
-				.width(Fill)
-				.into()
-			},
+			SettingTab::Database => database_settings_tab_view(app, preferences, show_password),
+			SettingTab::Shortcuts => shortcuts_settings_tab_view(),
+			SettingTab::About => about_settings_tab_view(app),
 		}
 	}
 }
@@ -578,4 +289,300 @@ impl SettingsModal {
 			}),
 		}
 	}
+}
+
+
+fn database_settings_tab_view<'a>(app: &'a ProjectTrackerApp, preferences: &'a Preferences, show_password: bool) -> Element<'a, Message> {
+	column![
+		row![
+			container("Database file location: ").padding(HORIZONTAL_SCROLLABLE_PADDING),
+			container(match Database::get_filepath() {
+				Some(filepath) => file_location(filepath),
+				None => text("couldnt find database filepath").into(),
+			})
+			.width(Fill)
+			.align_x(Horizontal::Right),
+		]
+		.align_y(Alignment::Center),
+
+		container(
+			row![
+				dangerous_button(
+					Bootstrap::Trash,
+					"Clear",
+					Some("Clear Database".to_string()),
+					DatabaseMessage::Clear
+				),
+				import_database_button(app.importing_database),
+				export_database_button(app.exporting_database),
+			]
+			.spacing(SPACING_AMOUNT)
+		)
+		.width(Fill)
+		.align_x(Horizontal::Right),
+
+		horizontal_seperator_padded(),
+
+		column![
+			row![
+				text("Synchronization:"),
+
+				container(
+					toggler(preferences.synchronization().is_some())
+						.size(27.5)
+						.on_toggle(|enable| if enable {
+							SettingsModalMessage::EnableSynchronization.into()
+						}
+						else {
+							SettingsModalMessage::DisableSynchronization.into()
+						})
+				)
+				.width(Fill)
+				.align_x(Horizontal::Right)
+			]
+			.spacing(SPACING_AMOUNT)
+			.align_y(Alignment::Center)
+		]
+		.push_maybe(
+			preferences.synchronization().as_ref().map(|synchronization_setting| {
+				column![
+					row![
+						text("Type: "),
+						tooltip(
+							icon_to_text(Bootstrap::QuestionCircleFill).size(ICON_FONT_SIZE),
+							text("Either a filepath or a server
+Filepath: select a file on a different drive, a network shared drive or your own cloud like onedrive, google drive, etc.
+Server: your own hosted ProjectTracker-server"
+							)
+							.size(SMALL_TEXT_SIZE),
+							tooltip::Position::Bottom,
+						)
+						.gap(GAP)
+						.style(tooltip_container_style),
+						container(
+							row![
+								synchronization_type_button(
+									SynchronizationSetting::Filepath(None),
+									synchronization_setting,
+									true,
+									false
+								),
+								synchronization_type_button(
+									SynchronizationSetting::Server(ServerConfig::default()),
+									synchronization_setting,
+									false,
+									true
+								),
+							]
+						)
+						.width(Fill)
+						.align_x(Horizontal::Right),
+					]
+					.align_y(Alignment::Center),
+
+					match synchronization_setting {
+						SynchronizationSetting::Filepath(filepath) => {
+							let horizontal_scrollable_padding = if filepath.is_some() {
+								HORIZONTAL_SCROLLABLE_PADDING
+							}
+							else {
+								Padding::ZERO
+							};
+
+							row![
+								if let Some(filepath) = filepath {
+									filepath_widget(filepath.clone())
+										.width(Fill)
+										.into()
+								}
+								else {
+									Element::new(text("Filepath not specified!"))
+								},
+
+								container(select_synchronization_filepath_button())
+									.padding(horizontal_scrollable_padding),
+							]
+							.spacing(SPACING_AMOUNT)
+							.align_y(Alignment::Center)
+						},
+						SynchronizationSetting::Server(server_config) => {
+							row![
+								column![
+									row![
+										container("Hostname: ")
+											.width(100.0),
+
+										text_input("ex. 127.0.0.1 or raspberrypi.local", &server_config.hostname)
+											.on_input(|hostname| SettingsModalMessage::SetServerHostname(hostname).into())
+											.style(text_input_style_default),
+									]
+									.align_y(Vertical::Center),
+
+									row![
+										container("Port: ")
+											.width(100.0),
+
+										text_input("ex. 8080", &format!("{}", server_config.port))
+											.on_input(|input| {
+												let new_port = match usize::from_str(&input) {
+													Ok(new_port) => {
+														Some(new_port)
+													}
+													Err(_) => {
+														if input.is_empty() {
+															Some(8080)
+														} else {
+															None
+														}
+													}
+												};
+												match new_port {
+													Some(new_port) => SettingsModalMessage::SetServerPort(new_port).into(),
+													None => SettingsModalMessage::InvalidPortInput.into(),
+												}
+											})
+											.style(text_input_style_default)
+											.width(55.0),
+									]
+									.align_y(Vertical::Center),
+
+									row![
+										container("Password: ")
+											.width(100.0),
+
+										if show_password {
+											row![
+												text_input(format!("default: {}", DEFAULT_PASSWORD).as_str(), &server_config.password)
+													.on_input(|password| SettingsModalMessage::SetServerPassword(password).into())
+													.style(text_input_style_default),
+
+												hide_password_button(),
+											]
+											.align_y(Vertical::Center)
+											.spacing(SPACING_AMOUNT)
+											.into()
+										}
+										else {
+											show_password_button()
+										},
+									]
+									.align_y(Vertical::Center),
+								]
+								.spacing(SPACING_AMOUNT)
+							]
+							.spacing(SPACING_AMOUNT)
+						},
+					}
+				]
+				.spacing(SPACING_AMOUNT)
+			})
+		)
+		.spacing(SPACING_AMOUNT),
+
+		horizontal_seperator_padded(),
+
+		column![
+			row![
+				"Import Google Tasks:",
+
+				container(
+					import_google_tasks_button()
+				)
+				.width(Fill)
+				.align_x(Horizontal::Right),
+			]
+			.spacing(SPACING_AMOUNT)
+			.align_y(Alignment::Center),
+
+			container(
+				rich_text![
+					Span::new("Go to "),
+					Span::new("https://myaccount.google.com/dashboard")
+						.color(link_color(app.is_theme_dark()))
+						.link(Message::OpenUrl("https://myaccount.google.com/dashboard".to_string())),
+					Span::new(" and download the Tasks data.\nThen extract the Takeout.zip and import the \"Tasks.json\" file inside under the \"Tasks\" folder.")
+				]
+				.style(grey_text_style)
+			)
+			.padding(Padding{ left: PADDING_AMOUNT, ..Padding::ZERO })
+		]
+		.spacing(SPACING_AMOUNT),
+	]
+	.spacing(SPACING_AMOUNT)
+	.into()
+}
+
+fn shortcuts_settings_tab_view() -> Element<'static, Message> {
+	let shortcut = |name, shortcut| {
+		row![
+			text(name),
+			Space::new(Fill, 0.0),
+			container(
+				container(shortcut).padding(SMALL_HORIZONTAL_PADDING)
+			)
+			.style(rounded_container_style)
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+	};
+
+	column![
+		shortcut("Open Settings:", "Ctrl + ,"),
+		shortcut("Open Overview:", "Ctrl + H"),
+		shortcut("New Project:", "Ctrl + Shift + N"),
+		shortcut("Search Tasks:", "Ctrl + F"),
+		shortcut("Delete Project:", "Ctrl + Del"),
+		shortcut("Switch to lower Project:", "Ctrl + Tab"),
+		shortcut("Switch to upper Project:", "Ctrl + Shift + Tab"),
+		shortcut("New Task:", "Ctrl + N"),
+		shortcut("Toggle Sidebar:", "Ctrl + B"),
+		shortcut("Start/Pause/Resume Stopwatch:", "Space"),
+		shortcut("Stop Stopwatch:", "Esc"),
+	]
+	.spacing(SPACING_AMOUNT)
+	.into()
+}
+
+fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
+	let item = |label: &'static str, content: Element<'static, Message>| {
+		row![
+			label,
+			Space::new(Fill, 0.0),
+			content,
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_y(Vertical::Center)
+	};
+
+	let repository = env!("CARGO_PKG_REPOSITORY");
+
+	let author_link = "https://github.com/Peanutt42";
+
+	column![
+		item("Project Tracker:", text("Project Todo Tracker for personal programming projects").into()),
+
+		item(
+			"Author:",
+			rich_text![
+				Span::new(author_link)
+					.color(link_color(app.is_theme_dark()))
+					.link(Message::OpenUrl(author_link.to_string()))
+			]
+			.into()
+		),
+
+		item("Version:", text(env!("CARGO_PKG_VERSION")).into()),
+
+		item(
+			"Repository:",
+			rich_text![
+				Span::new(repository)
+					.color(link_color(app.is_theme_dark()))
+					.link(Message::OpenUrl(repository.to_string()))
+			]
+			.into()
+		),
+	]
+	.spacing(SPACING_AMOUNT)
+	.width(Fill)
+	.into()
 }

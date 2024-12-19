@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 use crate::{
-	components::{add_due_date_button, clear_task_due_date_button, clear_task_needed_time_button, close_create_new_task_modal_button, create_new_task_modal_button, duration_to_minutes, edit_due_date_button, edit_task_needed_time_button, horizontal_scrollable, parse_duration_from_str, task_tag_button, unfocusable, vertical_scrollable, SCROLLBAR_WIDTH}, core::SerializableDateConversion, project_tracker::Message, styles::{card_style, description_text_editor_style, text_editor_keybindings, text_input_style, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, Preferences
+	components::{close_create_new_task_modal_button, create_new_task_modal_button, due_date_button, duration_to_minutes, edit_needed_time_button, horizontal_scrollable, parse_duration_from_str, task_tag_button, vertical_scrollable, SCROLLBAR_WIDTH}, core::SerializableDateConversion, project_tracker::Message, styles::{card_style, description_text_editor_style, text_editor_keybindings, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, Preferences
 };
 use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, TaskId, TaskTagId};
 use iced::{
-	font, keyboard, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::{Fill, Fixed}, Padding, Subscription
+	font, keyboard, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::Fill, Padding, Subscription
 };
-use iced_aw::{card, date_picker};
+use iced_aw::card;
 use once_cell::sync::Lazy;
 
 static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
@@ -203,60 +203,28 @@ impl CreateTaskModal {
 		match self {
 			Self::Closed => None,
 			Self::Opened { task_name, task_description, task_tags, project_id, due_date, edit_due_date, needed_time_minutes } => {
-				let edit_needed_time_view: Element<'a, CreateTaskModalMessage> = if let Some(new_needed_time_minutes) = needed_time_minutes {
-					let edit_needed_time_element = unfocusable(
-						text_input(
-							"ex: 30min",
-							new_needed_time_minutes,
-						)
-						.id(EDIT_NEEDED_TIME_INPUT_ID.clone())
-						.width(Fixed(80.0))
-						.on_input(CreateTaskModalMessage::ChangeNeededTimeInput)
-						.style(move |t, s| {
-							text_input_style(t, s, true, false, false, true)
-						}),
+				let edit_needed_time_view = edit_needed_time_button(
+					None,
+					needed_time_minutes,
+					CreateTaskModalMessage::EditNeededTime,
+					CreateTaskModalMessage::ChangeNeededTimeInput,
+					None,
+					CreateTaskModalMessage::StopEditingNeededTime,
+					CreateTaskModalMessage::StopEditingNeededTime,
+					EDIT_NEEDED_TIME_INPUT_ID.clone()
+				);
 
-						CreateTaskModalMessage::StopEditingNeededTime
-					);
 
-					row![
-						edit_needed_time_element,
-						clear_task_needed_time_button(CreateTaskModalMessage::StopEditingNeededTime)
-					]
-					.into()
-				}
-				else {
-					edit_task_needed_time_button(
-						None,
-						CreateTaskModalMessage::EditNeededTime
-					).into()
-				};
-
-				let add_due_date_button = add_due_date_button(CreateTaskModalMessage::EditDueDate);
-
-				let due_date_view: Element<'a, CreateTaskModalMessage> = if *edit_due_date {
-					date_picker(
-						true,
-						due_date.map(|due_date| due_date.to_iced_date())
-							.unwrap_or(date_picker::Date::today()),
-						add_due_date_button,
-						CreateTaskModalMessage::StopEditingDueDate,
-						|date| CreateTaskModalMessage::ChangeDueDate(SerializableDate::from_iced_date(date))
-					)
-					.into()
-				}
-				else if let Some(due_date) = &due_date {
-					let date_formatting = preferences.date_formatting();
-
-					row![
-						edit_due_date_button(due_date, date_formatting, CreateTaskModalMessage::EditDueDate),
-						clear_task_due_date_button(CreateTaskModalMessage::ClearDueDate),
-					]
-					.into()
-				}
-				else {
-					add_due_date_button.into()
-				};
+				let date_formatting = preferences.date_formatting();
+				let due_date_view = due_date_button(
+					*edit_due_date,
+					due_date,
+					date_formatting,
+					CreateTaskModalMessage::EditDueDate,
+					CreateTaskModalMessage::StopEditingDueDate,
+					|date| CreateTaskModalMessage::ChangeDueDate(SerializableDate::from_iced_date(date)),
+					CreateTaskModalMessage::ClearDueDate
+				);
 
 				Some(
 					card(

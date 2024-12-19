@@ -149,30 +149,12 @@ impl OverviewPage {
 		container(
 			vertical_scrollable(
 				column![
-					Column::new()
-						.push(overview_time_section_button(
-							"Overdue",
-							overdue_tasks_len,
-							!self.show_overdue_tasks,
-							OverviewPageMessage::ToggleShowOverdueTasks.into()
-						))
-						.push_maybe(if self.overdue_tasks.is_empty() || !self.show_overdue_tasks {
-							None
-						} else {
-							Some(
-								Column::with_children(self.overdue_tasks.iter()
-									.map(|(date, tasks)| {
-										column![
-											days_left_widget(*date, false),
-											Self::view_tasks(tasks, app),
-										]
-										.spacing(SPACING_AMOUNT)
-										.padding(Padding::default().left(PADDING_AMOUNT))
-										.into()
-									}))
-									.spacing(SPACING_AMOUNT)
-							)
-						}),
+					Self::view_overdue_tasks(
+						self.show_overdue_tasks,
+						&self.overdue_tasks,
+						overdue_tasks_len,
+						app
+					),
 
 					Self::view_tasks_for_day(
 						"Today",
@@ -200,6 +182,34 @@ impl OverviewPage {
 		.width(Fill)
 		.height(Fill)
 		.into()
+	}
+
+	fn view_overdue_tasks<'a>(show_overdue_tasks: bool, overdue_tasks: &'a BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>, overdue_tasks_len: usize, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
+		Column::new()
+			.push(overview_time_section_button(
+				"Overdue",
+				overdue_tasks_len,
+				!show_overdue_tasks,
+				OverviewPageMessage::ToggleShowOverdueTasks.into()
+			))
+			.push_maybe(if overdue_tasks.is_empty() || !show_overdue_tasks {
+				None
+			} else {
+				Some(
+					Column::with_children(overdue_tasks.iter()
+						.map(|(date, tasks)| {
+							column![
+								days_left_widget(*date, false),
+								Self::view_tasks(tasks, app),
+							]
+							.spacing(SPACING_AMOUNT)
+							.padding(Padding::default().left(PADDING_AMOUNT))
+							.into()
+						}))
+						.spacing(SPACING_AMOUNT)
+				)
+			})
+			.into()
 	}
 
 	fn view_tasks_for_day<'a>(time_label: &'static str, task_count: usize, collapsed: bool, on_toggle_collabsed: Message, tasks: &'a HashMap<ProjectId, Vec<TaskId>>, app: &'a ProjectTrackerApp)

@@ -8,7 +8,7 @@ pub use buttons::{
 	complete_task_timer_button, confirm_cancel_button, confirm_ok_button, copy_to_clipboard_button,
 	create_new_project_button, open_create_task_modal_button, create_new_task_modal_button, close_create_new_task_modal_button, create_new_task_tags_button,
 	dangerous_button, date_formatting_button, delete_all_done_tasks_button,
-	project_context_menu_button, delete_task_button, clear_task_needed_time_button, edit_task_needed_time_button, clear_task_due_date_button, add_due_date_button, edit_due_date_button, delete_task_tag_button, edit_color_palette_button,
+	project_context_menu_button, delete_task_button, due_date_button, edit_needed_time_button, delete_task_tag_button, edit_color_palette_button,
 	export_database_button, import_database_button, open_project_button, overview_time_section_button,
 	import_google_tasks_button, edit_task_description_button, view_task_description_button,
 	pause_timer_button, reimport_source_code_todos_button, resume_timer_button,
