@@ -2,7 +2,6 @@
 
 ## Prerequisites
 - Rust (programing lanuage): https://www.rust-lang.org/tools/install
-- OpenSSL (probably already installed): for https, self signed ssl certificate generation
 
 ## Client
 
@@ -35,6 +34,11 @@ cargo r --release
 
 
 ## Server
+
+### Prerequisites (excluding docker)
+- OpenSSL (probably already installed): for https, self signed ssl certificate generation
+
+<br>
 
 > [!IMPORTANT]
 > Make sure to set a different password for the server! The default password is: 1234

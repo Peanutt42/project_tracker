@@ -4,6 +4,7 @@ use std::process::exit;
 use project_tracker_core::Database;
 use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
 
+#[cfg(feature = "web_server")]
 mod web_server;
 
 #[tokio::main]
@@ -47,20 +48,24 @@ async fn main() {
 		SharedServerData::from_memory(Database::default())
 	};
 
+	#[allow(unused)]
 	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
 
-	let password_clone = password.clone();
-	let shared_data_clone = shared_data.clone();
-	std::thread::Builder::new()
-		.name("Web Server".to_string())
-		.spawn(move || {
-			let rt = tokio::runtime::Runtime::new().unwrap();
+	#[cfg(feature = "web_server")]
+	{
+		let password_clone = password.clone();
+		let shared_data_clone = shared_data.clone();
+		std::thread::Builder::new()
+			.name("Web Server".to_string())
+			.spawn(move || {
+				let rt = tokio::runtime::Runtime::new().unwrap();
 
-			rt.block_on(async {
-				web_server::run_web_server(password_clone, modified_receiver, shared_data_clone).await;
-			});
-		})
-		.expect("failed to start web server thread");
+				rt.block_on(async {
+					web_server::run_web_server(password_clone, modified_receiver, shared_data_clone).await;
+				});
+			})
+			.expect("failed to start web server thread");
+	}
 
 	project_tracker_server::run_server(
 		DEFAULT_PORT,
