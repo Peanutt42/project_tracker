@@ -1,18 +1,19 @@
 use std::collections::HashMap;
-
-use crate::{components::{
-	delete_all_done_tasks_button, in_between_dropzone,
-	reimport_source_code_todos_button, show_done_tasks_button, show_source_code_todos_button,
-	task_widget, vertical_scrollable,
-}, core::TaskUiIdMap};
-use project_tracker_core::{Project, ProjectId, Task, TaskId, TaskType};
+use std::sync::LazyLock;
 use crate::{
+	components::{
+		delete_all_done_tasks_button, in_between_dropzone,
+		reimport_source_code_todos_button, show_done_tasks_button, show_source_code_todos_button,
+		task_widget, vertical_scrollable,
+	},
 	pages::{
 		CachedTaskList, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
 	},
 	project_tracker::Message,
 	styles::PADDING_AMOUNT,
+	core::TaskUiIdMap
 };
+use project_tracker_core::{Project, ProjectId, Task, TaskId, TaskType};
 use iced::widget::{container::Id, markdown, Space};
 use iced::{
 	alignment::Horizontal,
@@ -21,9 +22,8 @@ use iced::{
 	Length::Fill,
 	Padding,
 };
-use once_cell::sync::Lazy;
 
-pub static TASK_LIST_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
+pub static TASK_LIST_ID: LazyLock<scrollable::Id> = LazyLock::new(scrollable::Id::unique);
 
 #[allow(clippy::too_many_arguments)]
 pub fn task_list<'a>(

@@ -1,12 +1,12 @@
 use std::time::Duration;
-
+use std::sync::LazyLock;
 use iced::{alignment::{Horizontal, Vertical}, widget::{column, container, row, stack, text, text_editor, text_input, Row, Space}, Element, Length::Fill, Padding};
 use iced_aw::card;
-use once_cell::sync::Lazy;
 use crate::{components::{delete_task_button, due_date_button, duration_str, duration_to_minutes, edit_needed_time_button, edit_task_description_button, horizontal_scrollable, parse_duration_from_str, start_task_timer_button, task_description, task_tag_button, vertical_scrollable, view_task_description_button, ICON_BUTTON_WIDTH, SCROLLBAR_WIDTH}, core::SerializableDateConversion, project_tracker::Message, styles::{card_style, description_text_editor_style, markdown_background_container_style, text_editor_keybindings, text_input_style_borderless, tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, ProjectTrackerApp};
 use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, TaskId};
-static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
-static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+
+static TASK_NAME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
+static EDIT_NEEDED_TIME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 
 #[derive(Debug, Clone)]
 pub enum TaskModalMessage {

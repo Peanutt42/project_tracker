@@ -3625,7 +3625,6 @@ dependencies = [
  "indexmap",
  "libc",
  "notify-rust",
- "once_cell",
  "open",
  "project_tracker_core",
  "project_tracker_server",

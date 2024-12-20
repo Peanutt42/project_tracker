@@ -20,14 +20,14 @@ use iced::{
 	Padding, Subscription,
 };
 use iced_aw::{drop_down, DropDown};
-use once_cell::sync::Lazy;
 use std::{
 	collections::HashSet,
 	time::SystemTime,
+	sync::LazyLock,
 };
 
-static PROJECT_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
-static SEARCH_TASKS_TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+static PROJECT_NAME_TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
+static SEARCH_TASKS_TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 
 #[derive(Clone, Debug)]
 pub enum ProjectPageMessage {

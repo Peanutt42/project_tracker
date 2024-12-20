@@ -32,13 +32,13 @@ use iced::{
 	Padding, Point, Rectangle, Subscription, Task,
 };
 use iced_drop::{find_zones, zones_on_point};
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
-static SCROLLABLE_ID: Lazy<scrollable::Id> = Lazy::new(scrollable::Id::unique);
-static TEXT_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
-static BOTTOM_PROJECT_DROPZONE_ID: Lazy<container::Id> = Lazy::new(container::Id::unique);
-pub static BOTTOM_TODO_TASK_DROPZONE_ID: Lazy<container::Id> = Lazy::new(container::Id::unique);
-pub static STOPWATCH_TASK_DROPZONE_ID: Lazy<container::Id> = Lazy::new(container::Id::unique);
+static SCROLLABLE_ID: LazyLock<scrollable::Id> = LazyLock::new(scrollable::Id::unique);
+static TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
+static BOTTOM_PROJECT_DROPZONE_ID: LazyLock<container::Id> = LazyLock::new(container::Id::unique);
+pub static BOTTOM_TODO_TASK_DROPZONE_ID: LazyLock<container::Id> = LazyLock::new(container::Id::unique);
+pub static STOPWATCH_TASK_DROPZONE_ID: LazyLock<container::Id> = LazyLock::new(container::Id::unique);
 
 #[derive(Clone, Debug)]
 pub enum SidebarPageMessage {

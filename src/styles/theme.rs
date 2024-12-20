@@ -6,8 +6,7 @@ use iced::{
 	},
 	Color, Theme,
 };
-use once_cell::sync::Lazy;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 #[derive(Copy, Clone, Default)]
 pub enum ProjectTrackerTheme {
@@ -16,7 +15,7 @@ pub enum ProjectTrackerTheme {
 	Light,
 }
 
-pub static DARK_THEME: Lazy<Theme> = Lazy::new(|| {
+pub static DARK_THEME: LazyLock<Theme> = LazyLock::new(|| {
 	let palette = Palette {
 		background: Color::from_rgb(0.05, 0.05, 0.05),
 		text: Color::from_rgb(0.95, 0.95, 0.95),
@@ -35,7 +34,7 @@ pub static DARK_THEME: Lazy<Theme> = Lazy::new(|| {
 	)))
 });
 
-pub static LIGHT_THEME: Lazy<Theme> = Lazy::new(|| {
+pub static LIGHT_THEME: LazyLock<Theme> = LazyLock::new(|| {
 	let palette = Palette {
 		background: Color::from_rgb(0.95, 0.95, 0.95),
 		text: Color::from_rgb(0.05, 0.05, 0.05),

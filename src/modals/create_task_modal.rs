@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::sync::LazyLock;
 use crate::{
 	components::{close_create_new_task_modal_button, create_new_task_modal_button, due_date_button, duration_to_minutes, edit_needed_time_button, horizontal_scrollable, parse_duration_from_str, task_tag_button, vertical_scrollable, SCROLLBAR_WIDTH}, core::SerializableDateConversion, project_tracker::Message, styles::{card_style, description_text_editor_style, text_editor_keybindings, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, Preferences
 };
@@ -7,10 +8,9 @@ use iced::{
 	font, keyboard, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::Fill, Padding, Subscription
 };
 use iced_aw::card;
-use once_cell::sync::Lazy;
 
-static TASK_NAME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
-static EDIT_NEEDED_TIME_INPUT_ID: Lazy<text_input::Id> = Lazy::new(text_input::Id::unique);
+static TASK_NAME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
+static EDIT_NEEDED_TIME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 
 #[derive(Debug, Clone)]
 pub enum CreateTaskModalMessage {

@@ -14,10 +14,10 @@ use iced::{
 	Task,
 };
 use iced_aw::{card, drop_down, DropDown};
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
-static CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID: Lazy<text_input::Id> =
-	Lazy::new(text_input::Id::unique);
+static CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID: LazyLock<text_input::Id> =
+	LazyLock::new(text_input::Id::unique);
 
 #[derive(Debug, Clone)]
 pub enum ManageTaskTagsModalMessage {
