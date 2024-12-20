@@ -10,7 +10,8 @@ use project_tracker_core::Database;
 use crate::{EncryptedResponse, ModifiedEvent, Request, Response, ServerError, SharedServerData};
 
 pub async fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<ModifiedEvent>, shared_data: Arc<RwLock<SharedServerData>>) {
-	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await.expect("Failed to bind to port");
+	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await
+		.expect("Failed to bind to port");
 
 	println!("WebServer is listening on port {}", port);
 
@@ -23,12 +24,18 @@ pub async fn run_server(port: usize, database_filepath: PathBuf, password: Strin
 				let modified_receiver = modified_sender.subscribe();
 				let shared_data_clone = shared_data.clone();
 				tokio::spawn(async move {
-					listen_client_thread(stream, database_filepath_clone, password_clone, modified_sender_clone, modified_receiver, shared_data_clone).await
+					listen_client_thread(
+						stream,
+						database_filepath_clone,
+						password_clone,
+						modified_sender_clone,
+						modified_receiver,
+						shared_data_clone
+					)
+					.await
 				});
 			}
-			Err(e) => {
-				eprintln!("Failed to establish a connection: {e}");
-			}
+			Err(e) => eprintln!("Failed to establish a connection: {e}"),
 		}
 	}
 }
@@ -108,8 +115,12 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 				println!("client disconnected");
 				return;
 			},
+			None => {
+				println!("client disconnected");
+				return;
+			},
 			Some(Err(e)) => eprintln!("failed to read ws message: {e}"),
-			_ => {}, // ignore
+			Some(Ok(_)) => {}, // ignore
 		}
 	}
 }
@@ -125,6 +136,7 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 			)
 			.serialize()
 			.unwrap();
+
 			if let Err(e) = write_ws_sender.send(Message::binary(response)).await {
 				eprintln!("failed to respond to 'GetModifiedDate' request: {e}");
 			}
@@ -153,11 +165,14 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 						.unwrap()
 					))
 					.await;
+
 					let _ = modified_sender.send(ModifiedEvent::new(shared_data_clone, client_addr));
+
 					println!("Updated database file");
 				},
 				Err(e) => {
 					eprintln!("failed to parse database binary of client: {e}");
+
 					let _ = write_ws_sender.send(Message::binary(
 						Response::InvalidDatabaseBinary
 							.serialize()

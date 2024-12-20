@@ -29,7 +29,8 @@ pub struct ProjectTrackerApp {
 	pub loading_database: bool,
 	pub importing_database: bool,
 	pub exporting_database: bool,
-	pub last_sync_time: Option<Instant>,
+	pub last_sync_start_time: Option<Instant>,
+	pub last_sync_finish_time: Option<Instant>,
 	pub server_ws_message_sender: Option<ServerWsMessageSender>,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: ConfirmModal,
@@ -129,7 +130,7 @@ impl ProjectTrackerApp {
 	}
 
 	fn has_unsynced_changes(&self) -> bool {
-		if let Some(last_sync_time) = self.last_sync_time {
+		if let Some(last_sync_time) = self.last_sync_start_time {
 			if let Some(database) = &self.database {
 				if let Ok(last_database_save_duration) = (Utc::now() - database.last_changed_time()).abs().to_std() {
 					last_database_save_duration < last_sync_time.elapsed()
@@ -176,7 +177,8 @@ impl ProjectTrackerApp {
 				loading_database: true,
 				importing_database: false,
 				exporting_database: false,
-				last_sync_time: None,
+				last_sync_start_time: None,
+				last_sync_finish_time: None,
 				server_ws_message_sender: None,
 				preferences: None,
 				confirm_modal: ConfirmModal::Closed,
@@ -204,31 +206,35 @@ impl ProjectTrackerApp {
 	}
 
 	pub fn title(&self) -> String {
-		let progress_str = if self.exporting_database {
-			" - Exporting..."
+		let mut title = "Project Tracker".to_string();
+
+		if self.exporting_database {
+			title += " - Exporting...";
 		}
-		else if self.importing_database {
-			" - Importing..."
+		if self.importing_database {
+			title += " - Importing...";
 		}
-		else if let Some(last_sync_time) = &self.last_sync_time {
-			if Instant::now().duration_since(*last_sync_time) <= Duration::from_millis(500) {
-				" - Synced"
+		if let Some(last_finish_time) = &self.last_sync_finish_time {
+			if Instant::now().duration_since(*last_finish_time) <= Duration::from_millis(500) {
+				title += " - Synced";
 			}
-			else {
-				""
+			else if let Some(last_start_time) = &self.last_sync_start_time {
+				if *last_start_time > *last_finish_time {
+					title += " - Syncing...";
+				}
 			}
 		}
-		else if self.content_page.project_page.as_ref()
+		else if self.last_sync_start_time.is_some() {
+			title += " - Syncing...";
+		}
+		if self.content_page.project_page.as_ref()
 			.map(|project_page| project_page.importing_source_code_todos)
 			.unwrap_or(false)
 		{
-			" - Importing Todos..."
+			title += " - Importing Todos...";
 		}
-		else {
-			""
-		};
 
-		format!("Project Tracker{progress_str}")
+		title
 	}
 
 	pub fn subscription(&self) -> Subscription<Message> {
@@ -445,6 +451,8 @@ impl ProjectTrackerApp {
 			Message::SyncDatabase => {
 				if let Some(preferences) = &self.preferences {
 					if let Some(synchronization_settings) = preferences.synchronization() {
+						self.last_sync_start_time = Some(Instant::now());
+
 						return match synchronization_settings {
 							SynchronizationSetting::Server(_) => self.update(Message::SyncDatabaseFromServer),
 							SynchronizationSetting::Filepath(filepath) => match filepath {
@@ -547,7 +555,7 @@ impl ProjectTrackerApp {
 				}
 			}
 			Message::SyncDatabaseFilepathUploaded => {
-				self.last_sync_time = Some(Instant::now());
+				self.last_sync_finish_time = Some(Instant::now());
 				Task::none()
 			}
 			Message::SyncDatabaseFilepathDownload(filepath) => {
@@ -555,7 +563,7 @@ impl ProjectTrackerApp {
 			},
 			Message::SyncDatabaseFilepathDownloaded(result) => match result {
 				Ok(database) => {
-					self.last_sync_time = Some(Instant::now());
+					self.last_sync_finish_time = Some(Instant::now());
 					self.update(Message::DatabaseImported(Ok(database)))
 				},
 				Err(e) => self.update(Message::DatabaseImported(Err(e))),
@@ -731,7 +739,7 @@ impl ProjectTrackerApp {
 					let should_save = database.last_saved_time().elapsed()
 						.map(|last_save_duration| last_save_duration >= Duration::from_secs(1))
 						.unwrap_or(false);
-					let should_sync = match self.last_sync_time {
+					let should_sync = match self.last_sync_start_time {
 						Some(last_sync_time) => Instant::now().duration_since(last_sync_time) >= Duration::from_secs(1),
 						None => true,
 					};
@@ -1126,7 +1134,7 @@ impl ProjectTrackerApp {
 					.unwrap_or(true);
 
 				if server_is_more_up_to_date {
-					self.last_sync_time = Some(Instant::now());
+					self.last_sync_finish_time = Some(Instant::now());
 					self.update(Message::LoadedDatabase(Ok(Database::from_serialized(database, last_modified_time))))
 				}
 				else {
@@ -1134,7 +1142,7 @@ impl ProjectTrackerApp {
 				}
 			},
 			EncryptedResponse::DatabaseUpdated => {
-				self.last_sync_time = Some(Instant::now());
+				self.last_sync_finish_time = Some(Instant::now());
 				Task::none()
 			},
 			EncryptedResponse::ModifiedDate(server_modified_date) => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
