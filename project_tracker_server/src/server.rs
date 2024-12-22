@@ -13,7 +13,7 @@ pub async fn run_server(port: usize, database_filepath: PathBuf, password: Strin
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await
 		.expect("Failed to bind to port");
 
-	println!("WebServer is listening on port {}", port);
+	println!("[Native WS] listening on port {}", port);
 
 	loop {
 		match listener.accept().await {
@@ -35,7 +35,7 @@ pub async fn run_server(port: usize, database_filepath: PathBuf, password: Strin
 					.await
 				});
 			}
-			Err(e) => eprintln!("Failed to establish a connection: {e}"),
+			Err(e) => eprintln!("[Native WS] Failed to establish a connection: {e}"),
 		}
 	}
 }
@@ -52,7 +52,7 @@ async fn handle_client(
 	let client_addr = match stream.peer_addr() {
 		Ok(client_addr) => client_addr,
 		Err(e) => {
-			eprintln!("failed to get clients socket address, ignoring client, error: {e}");
+			eprintln!("[Native WS] failed to get clients socket address, ignoring client, error: {e}");
 			return;
 		},
 	};
@@ -78,11 +78,11 @@ async fn listen_client_thread(
 {
 	let ws_stream = match accept_async(stream).await {
 		Ok(ws) => {
-			println!("client connected");
+			println!("[Native WS] client connected");
 			ws
 		},
 		Err(e) => {
-			eprintln!("WebSocket Handshake failed: {e}");
+			eprintln!("[Native WS] WebSocket Handshake failed: {e}");
 			return;
 		}
 	};
@@ -104,7 +104,7 @@ async fn listen_client_thread(
 				Err(e) => {
 					match e {
 						ServerError::InvalidPassword => {
-							eprintln!("invalid password provided");
+							eprintln!("[Native WS] invalid password provided");
 							let _ = write_ws_sender.send(Message::binary(
 								Response::InvalidPassword
 									.serialize()
@@ -113,7 +113,7 @@ async fn listen_client_thread(
 							.await;
 						},
 						ServerError::InvalidDatabaseBinaryFormat => {
-							eprintln!("invalid database binary format");
+							eprintln!("[Native WS] invalid database binary format");
 							let _ = write_ws_sender.send(Message::binary(
 								Response::InvalidDatabaseBinary
 									.serialize()
@@ -122,7 +122,7 @@ async fn listen_client_thread(
 							.await;
 						},
 						ServerError::ParseError(e) => {
-							eprintln!("failed to parse request: {e}");
+							eprintln!("[Native WS] failed to parse request: {e}");
 							let _ = write_ws_sender.send(Message::binary(
 								Response::ParseError
 									.serialize()
@@ -130,7 +130,7 @@ async fn listen_client_thread(
 							))
 							.await;
 						},
-						_ => eprintln!("failed to parse request: {e}"),
+						_ => eprintln!("[Native WS] failed to parse request: {e}"),
 					}
 				},
 			},
@@ -140,14 +140,14 @@ async fn listen_client_thread(
 				tungstenite::Error::AlreadyClosed |
 				tungstenite::Error::Protocol(tungstenite::error::ProtocolError::ResetWithoutClosingHandshake)
 			) => {
-				println!("client disconnected");
+				println!("[Native WS] client disconnected");
 				return;
 			},
 			None => {
-				println!("client disconnected");
+				println!("[Native WS] client disconnected");
 				return;
 			},
-			Some(Err(e)) => eprintln!("failed to read ws message: {e}"),
+			Some(Err(e)) => eprintln!("[Native WS] failed to read ws message: {e}"),
 			Some(Ok(_)) => {}, // ignore
 		}
 	}
@@ -156,7 +156,7 @@ async fn listen_client_thread(
 async fn respond_to_client_request(request: Request, client_addr: SocketAddr, shared_data: &Arc<RwLock<SharedServerData>>, modified_sender: &Sender<ModifiedEvent>, write_ws_sender: &tokio::sync::mpsc::Sender<Message>, database_filepath: &PathBuf, password: &str) {
 	match request {
 		Request::GetModifiedDate => {
-			println!("sending last modified date");
+			println!("[Native WS] sending last modified date");
 			let response = Response::Encrypted(
 				EncryptedResponse::ModifiedDate(*shared_data.read().unwrap().database.last_changed_time())
 					.encrypt(password)
@@ -166,7 +166,7 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 			.unwrap();
 
 			if let Err(e) = write_ws_sender.send(Message::binary(response)).await {
-				eprintln!("failed to respond to 'GetModifiedDate' request: {e}");
+				eprintln!("[Native WS] failed to respond to 'GetModifiedDate' request: {e}");
 			}
 		},
 		Request::UpdateDatabase { database_binary, last_modified_time } => {
@@ -179,7 +179,7 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 					};
 
 					if let Err(e) = std::fs::write(database_filepath, database_binary) {
-						panic!("cant write to database file: {}, error: {e}", database_filepath.display());
+						panic!("[Native WS] cant write to database file: {}, error: {e}", database_filepath.display());
 					}
 
 					let _ = write_ws_sender.send(Message::binary(
@@ -195,10 +195,10 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 
 					let _ = modified_sender.send(ModifiedEvent::new(database_clone, client_addr));
 
-					println!("Updated database file");
+					println!("[Native WS] Updated database file");
 				},
 				Err(e) => {
-					eprintln!("failed to parse database binary of client: {e}");
+					eprintln!("[Native WS] failed to parse database binary of client: {e}");
 
 					let _ = write_ws_sender.send(Message::binary(
 						Response::InvalidDatabaseBinary
@@ -225,8 +225,8 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 			)
 			.await
 			{
-				Ok(_) => println!("Sent database"),
-				Err(e) => eprintln!("failed to send database to client: {e}"),
+				Ok(_) => println!("[Native WS] sent database"),
+				Err(e) => eprintln!("[Native WS] failed to send database to client: {e}"),
 			}
 		}
 	}
@@ -272,7 +272,7 @@ fn ws_write_thread(mut write: WsWriteSink, mut write_ws_receiver: tokio::sync::m
 					tungstenite::Error::Protocol(tungstenite::error::ProtocolError::ResetWithoutClosingHandshake) => {
 						return;
 					},
-					_ => eprintln!("failed to send response: {e}"),
+					_ => eprintln!("[Native WS] failed to send response: {e}"),
 				}
 			}
 		}

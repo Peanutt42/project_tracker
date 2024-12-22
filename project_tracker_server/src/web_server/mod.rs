@@ -233,7 +233,7 @@ pub async fn run_web_server(password: String, modified_receiver: Receiver<Modifi
 		.key(KEY_PEM)
 		.bind_ephemeral(([0, 0, 0, 0], 443));
 
-	println!("Starting web server: {https_addr}");
+	println!("[Web Server] listening on {https_addr}");
 
 	tokio::spawn(messure_cpu_usage_avg_thread(shared_data.clone()));
 
@@ -251,7 +251,7 @@ fn load_database(body: serde_json::Value, password: String, shared_data: Arc<RwL
 		)
 		.into_response()
 	} else {
-		println!("web-server: invalid password providied, refusing access!");
+		println!("[Web Server] invalid password providied, refusing access!");
 		with_status(
 			html("Unauthorized".to_string()),
 			StatusCode::UNAUTHORIZED,
@@ -313,7 +313,7 @@ fn get_admin_infos(body: serde_json::Value, password: String, shared_data: Arc<R
 		.into_response()
 	}
 	else {
-		println!("web-server: invalid password, refusing admin infos!");
+		println!("[Web Server] invalid password, refusing admin infos!");
 		with_status(
 			html("Unauthorized".to_string()),
 			StatusCode::UNAUTHORIZED,
@@ -359,15 +359,15 @@ async fn handle_modified_ws(ws: WebSocket, mut modified_receiver: Receiver<Modif
 						match serde_json::to_string(&modified_event.modified_database.to_serialized()) {
 							Ok(database_json) => {
 								if let Err(e) = write_ws.send(Message::text(database_json)).await {
-									eprintln!("failed to send modified event to ws client: {e}");
+									eprintln!("[Modified WS] failed to send modified event: {e}");
 									return;
 								}
 							},
-							Err(e) => eprintln!("failed to serialize database in order to send to ws clients: {e}"),
+							Err(e) => eprintln!("[Modified WS] failed to serialize database in order to send to ws clients: {e}"),
 						}
 					},
 					Err(e) => {
-						eprintln!("failed to receive further database modified events: {e}");
+						eprintln!("[Modified WS] failed to receive further database modified events: {e}");
 						return;
 					},
 				}
@@ -426,7 +426,7 @@ async fn recover_rejection(rejection: Rejection) -> Result<impl Reply, Infallibl
 		code = StatusCode::INTERNAL_SERVER_ERROR;
 		message = String::new();
 	} else {
-		eprintln!("unhandled rejection: {rejection:?}");
+		eprintln!("[Web Server] unhandled rejection: {rejection:?}");
 		code = StatusCode::INTERNAL_SERVER_ERROR;
 		message = "Unhandled Rejection".to_string();
 	}
