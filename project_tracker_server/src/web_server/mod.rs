@@ -2,7 +2,7 @@ use project_tracker_server::{ConnectedClient, ModifiedEvent, SharedServerData};
 use serde::Serialize;
 use systemstat::{saturating_sub_bytes, Platform, System};
 use warp::{body, filters::{body::BodyDeserializeError, cors::CorsForbidden, ext::MissingExtension, ws::MissingConnectionUpgrade}, http::StatusCode, path, path::end, post, reject::{InvalidHeader, InvalidQuery, LengthRequired, MethodNotAllowed, MissingCookie, MissingHeader, PayloadTooLarge, Rejection, UnsupportedMediaType}, reply, reply::{html, with_header, with_status, Reply, Response}, serve, ws, ws::{Message, WebSocket, Ws}, Filter};
-use futures_util::SinkExt;
+use futures_util::{SinkExt, StreamExt};
 use std::{convert::Infallible, net::SocketAddr, sync::{Arc, RwLock}};
 use tokio::sync::broadcast::Receiver;
 use humantime::format_duration;
@@ -348,23 +348,35 @@ async fn on_upgrade_modified_ws(ws: WebSocket, client_addr: Option<SocketAddr>, 
 	}
 }
 
-async fn handle_modified_ws(mut ws: WebSocket, mut modified_receiver: Receiver<ModifiedEvent>) {
+async fn handle_modified_ws(ws: WebSocket, mut modified_receiver: Receiver<ModifiedEvent>) {
+	let (mut write_ws, mut read_ws) = ws.split();
+
 	loop {
-		match modified_receiver.recv().await {
-			Ok(modified_event) => {
-				match serde_json::to_string(&modified_event.modified_database.to_serialized()) {
-					Ok(database_json) => {
-						if let Err(e) = ws.send(Message::text(database_json)).await {
-							eprintln!("failed to send modified event to ws client: {e}");
-							return;
+		tokio::select! {
+			modified_event_result = modified_receiver.recv() => {
+				match modified_event_result {
+					Ok(modified_event) => {
+						match serde_json::to_string(&modified_event.modified_database.to_serialized()) {
+							Ok(database_json) => {
+								if let Err(e) = write_ws.send(Message::text(database_json)).await {
+									eprintln!("failed to send modified event to ws client: {e}");
+									return;
+								}
+							},
+							Err(e) => eprintln!("failed to serialize database in order to send to ws clients: {e}"),
 						}
 					},
-					Err(e) => eprintln!("failed to serialize database in order to send to ws clients: {e}"),
+					Err(e) => {
+						eprintln!("failed to receive further database modified events: {e}");
+						return;
+					},
 				}
 			},
-			Err(e) => {
-				eprintln!("failed to receive further database modified events: {e}");
-				return;
+			message = read_ws.next() => {
+				if matches!(message, None | Some(Err(_))) {
+					let _ = write_ws.close().await;
+					return;
+				}
 			},
 		};
 	}

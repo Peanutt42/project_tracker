@@ -15,8 +15,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 	logout_button.addEventListener("click", logout);
 
-	// every 5s
-	setInterval(populate_dom_with_admin_infos, 5000);
+	// every 2s
+	setInterval(populate_dom_with_admin_infos, 2000);
 
 	function open_home_page() {
 		window.location.href = "/";
@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 		if (admin_infos) {
 			cpu_usage_div.textContent = Math.round(admin_infos.cpu_usage * 100) + '%';
-			cpu_temp_div.textContent = Math.round(admin_infos.cpu_temp) + ' (°C)';
+			cpu_temp_div.textContent = Math.round(admin_infos.cpu_temp) + ' °C';
 			ram_div.textContent = admin_infos.ram_info;
 			uptime_div.textContent = admin_infos.uptime;
 			connected_native_gui_clients_list.innerHTML = "";
