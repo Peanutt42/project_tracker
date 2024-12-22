@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock};
 use async_tungstenite::{tungstenite::{self, Message}, tokio::accept_async};
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
-use crate::{EncryptedResponse, ModifiedEvent, Request, Response, ServerError, SharedServerData};
+use crate::{ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ServerError, SharedServerData};
 
 pub async fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<ModifiedEvent>, shared_data: Arc<RwLock<SharedServerData>>) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await
@@ -24,7 +24,7 @@ pub async fn run_server(port: usize, database_filepath: PathBuf, password: Strin
 				let modified_receiver = modified_sender.subscribe();
 				let shared_data_clone = shared_data.clone();
 				tokio::spawn(async move {
-					listen_client_thread(
+					handle_client(
 						stream,
 						database_filepath_clone,
 						password_clone,
@@ -40,7 +40,15 @@ pub async fn run_server(port: usize, database_filepath: PathBuf, password: Strin
 	}
 }
 
-async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, password: String, modified_sender: Sender<ModifiedEvent>, modified_receiver: Receiver<ModifiedEvent>, shared_data: Arc<RwLock<SharedServerData>>) {
+async fn handle_client(
+	stream: TcpStream,
+	database_filepath: PathBuf,
+	password: String,
+	modified_sender: Sender<ModifiedEvent>,
+	modified_receiver: Receiver<ModifiedEvent>,
+	shared_data: Arc<RwLock<SharedServerData>>
+)
+{
 	let client_addr = match stream.peer_addr() {
 		Ok(client_addr) => client_addr,
 		Err(e) => {
@@ -48,6 +56,26 @@ async fn listen_client_thread(stream: TcpStream, database_filepath: PathBuf, pas
 			return;
 		},
 	};
+
+	let connected_client = ConnectedClient::NativeGUI(client_addr);
+
+	shared_data.write().unwrap().connected_clients.insert(connected_client);
+
+	listen_client_thread(stream, client_addr, database_filepath, password, modified_sender, modified_receiver, shared_data.clone()).await;
+
+	shared_data.write().unwrap().connected_clients.remove(&connected_client);
+}
+
+async fn listen_client_thread(
+	stream: TcpStream,
+	client_addr: SocketAddr,
+	database_filepath: PathBuf,
+	password: String,
+	modified_sender: Sender<ModifiedEvent>,
+	modified_receiver: Receiver<ModifiedEvent>,
+	shared_data: Arc<RwLock<SharedServerData>>
+)
+{
 	let ws_stream = match accept_async(stream).await {
 		Ok(ws) => {
 			println!("client connected");
@@ -130,7 +158,7 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 		Request::GetModifiedDate => {
 			println!("sending last modified date");
 			let response = Response::Encrypted(
-				EncryptedResponse::ModifiedDate(shared_data.read().unwrap().last_modified_time)
+				EncryptedResponse::ModifiedDate(*shared_data.read().unwrap().database.last_changed_time())
 					.encrypt(password)
 					.unwrap()
 			)
@@ -144,11 +172,10 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 		Request::UpdateDatabase { database_binary, last_modified_time } => {
 			match Database::from_binary(&database_binary, last_modified_time) {
 				Ok(database) => {
-					let shared_data_clone = {
+					let database_clone = {
 						let mut shared_data = shared_data.write().unwrap();
-						shared_data.last_modified_time = last_modified_time;
 						shared_data.database = database;
-						shared_data.clone()
+						shared_data.database.clone()
 					};
 
 					if let Err(e) = std::fs::write(database_filepath, database_binary) {
@@ -166,7 +193,7 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 					))
 					.await;
 
-					let _ = modified_sender.send(ModifiedEvent::new(shared_data_clone, client_addr));
+					let _ = modified_sender.send(ModifiedEvent::new(database_clone, client_addr));
 
 					println!("Updated database file");
 				},
@@ -184,10 +211,11 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 		},
 		Request::DownloadDatabase => {
 			let shared_data_clone = shared_data.read().unwrap().clone();
+			let last_modified_time = *shared_data_clone.database.last_changed_time();
 			let response = Response::Encrypted(
 				EncryptedResponse::Database{
 					database: shared_data_clone.database.to_serialized(),
-					last_modified_time: shared_data_clone.last_modified_time
+					last_modified_time,
 				}
 				.encrypt(password)
 				.unwrap()
@@ -209,11 +237,12 @@ fn modified_event_ws_sender_thread(client_addr: SocketAddr, password: String, mu
 		while let Ok(modified_event) = modified_receiver.recv().await {
 			// do not resend database updated msg to the sender that made that update
 			if modified_event.modified_sender_address != client_addr {
+				let last_modified_time = *modified_event.modified_database.last_changed_time();
 				let failed_to_send_msg = write_ws_sender.send(Message::binary(
 					Response::Encrypted(
 						EncryptedResponse::Database{
-							database: modified_event.shared_data.database.to_serialized(),
-							last_modified_time: modified_event.shared_data.last_modified_time
+							database: modified_event.modified_database.to_serialized(),
+							last_modified_time,
 						}
 						.encrypt(&password)
 						.unwrap()

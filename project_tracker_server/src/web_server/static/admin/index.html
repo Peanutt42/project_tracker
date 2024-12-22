@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Project Tracker Admin</title>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width" />
+	<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+	<link rel="apple-touch-icon" sizes="180x180" href="/static/icon_180x180.png">
+	<link rel="stylesheet" href="/static/admin/style.css">
+</head>
+<body>
+	<script src="/static/admin/script.js"></script>
+	<div id="nav_bar">
+		<button id="home_button">
+			<img src="/static/house-fill.svg"></img>
+			Home
+		</button>
+		<div style="width: 100%; display: flex; flex-direction: row;">
+			<div style="width: 100%;"></div>
+			<button id="logout_button">Logout</button>
+		</div>
+	</div>
+	<div id="admin_infos_div">
+		<div id="cpu_usage" class="info_card">
+			<div style="display: flex; flex-direction: row; gap: 10px; width: 50%;">
+				<img src="/static/cpu.svg" />
+				<div>Cpu Usage:</div>
+			</div>
+			<div id="cpu_usage_text"></div>
+		</div>
+		<div id="cpu_temp" class="info_card">
+			<div style="display: flex; flex-direction: row; gap: 10px; width: 50%;">
+				<img src="/static/thermometer-half.svg" />
+				<div>Cpu Temp:</div>
+			</div>
+			<div id="cpu_temp_text"></div>
+		</div>
+		<div id="ram" class="info_card">
+			<div style="display: flex; flex-direction: row; gap: 10px; width: 50%;">
+				<img src="/static/memory.svg" />
+				<div>Ram Usage:</div>
+			</div>
+			<div id="ram_text"></div>
+		</div>
+		<div id="uptime" class="info_card">
+			<div style="display: flex; flex-direction: row; gap: 10px width: 50%;">
+				<img src="/static/hourglass-split.svg" />
+				<div>Uptime:</div>
+			</div>
+			<div id="uptime_text"></div>
+		</div>
+		<div id="connected_native_gui_clients_div" class="address_list_card">
+			<div style="display: flex; flex-direction: row; gap: 10px;">
+				<img src="/static/window.svg" />
+				<div>Native GUI Clients:</div>
+			</div>
+			<ul id="connected_native_gui_clients_list" class="connected_address_list"></ul>
+		</div>
+		<div id="connected_web_clients_div" class="address_list_card">
+			<div style="display: flex; flex-direction: row; gap: 10px;">
+				<img src="/static/globe.svg" />
+				<div>Web Clients:</div>
+			</div>
+			<ul id="connected_web_clients_list" class="connected_address_list"></ul>
+		</div>
+	</div>
+</body>
+</html>

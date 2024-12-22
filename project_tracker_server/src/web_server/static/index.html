@@ -9,19 +9,16 @@
 	<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-	<div class="login_page" id="login_page" style="display: none;" >
-		<h1>Project Tracker Web</h1>
-		<div class="password">
-			<input type="password" id="password_input" placeholder="Password" autofocus="true" autocomplete="current-password" required />
-			<button id="login_button">Login</button>
-			<div class="invalid_password" id="invalid_password">Invalid Password!</div>
-			<div id="show_password" style="display: flex; flex-direction: row; gap: 5px; padding-left: 15px;">
-				<input type="checkbox" id="show_password_checkbox" >
-				<label for="show_password_checkbox">Show Password</label>
-			</div>
+	<div id="nav_bar">
+		<button id="admin_dashboard_button">
+			<img src="/static/bar-chart-fill.svg" />
+			Admin
+		</button>
+		<div style="width: 100%; display: flex; flex-direction: row;">
+			<div style="width: 100%;"></div>
+			<button id="logout_button">Logout</button>
 		</div>
 	</div>
-	<button id="logout_button">Logout</button>
 	<ul id="database" class="database"></ul>
 	<script src="/static/script.js"></script>
 </body>

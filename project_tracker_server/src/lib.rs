@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf, sync::{Arc, RwLock}};
+use std::{collections::HashSet, net::SocketAddr, path::PathBuf, sync::{Arc, RwLock}};
 use chrono::{DateTime, Utc};
 use project_tracker_core::{get_last_modification_date_time, Database, SerializedDatabase};
 use thiserror::Error;
@@ -128,23 +128,31 @@ impl EncryptedMessage {
 
 #[derive(Debug, Clone)]
 pub struct ModifiedEvent {
-	pub shared_data: SharedServerData,
+	pub modified_database: Database,
 	pub modified_sender_address: SocketAddr,
 }
 
 impl ModifiedEvent {
-	pub fn new(shared_data: SharedServerData, sender_addr: SocketAddr) -> Self {
+	pub fn new(modified_database: Database, sender_addr: SocketAddr) -> Self {
 		Self {
-			shared_data,
+			modified_database,
 			modified_sender_address: sender_addr,
 		}
 	}
 }
 
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum ConnectedClient {
+	NativeGUI(SocketAddr),
+	Web(SocketAddr),
+}
+
 #[derive(Debug, Clone)]
 pub struct SharedServerData {
 	pub database: Database,
-	pub last_modified_time: DateTime<Utc>,
+	pub connected_clients: HashSet<ConnectedClient>,
+	pub cpu_usage_avg: f32,
 }
 
 impl SharedServerData {
@@ -162,18 +170,18 @@ impl SharedServerData {
 
 		let shared_data = SharedServerData {
 			database,
-			last_modified_time,
+			connected_clients: HashSet::new(),
+			cpu_usage_avg: 0.0,
 		};
 
 		Arc::new(RwLock::new(shared_data))
 	}
 
 	pub fn from_memory(database: Database) -> Arc<RwLock<Self>> {
-		let last_modified_time = Utc::now();
-
 		Arc::new(RwLock::new(SharedServerData {
 			database,
-			last_modified_time,
+			connected_clients: HashSet::new(),
+			cpu_usage_avg: 0.0,
 		}))
 	}
 }
