@@ -1,8 +1,10 @@
 [package]
 name = "project_tracker_server"
+description = "Runs the server to host the Project Tracker synchronization"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/Peanutt42/project_tracker"
+license = "MIT"
 
 [dependencies]
 project_tracker_core = { path = "../project_tracker_core" }
@@ -25,3 +27,11 @@ systemstat = "0.2.4"
 [features]
 default = ["web_server"]
 web_server = []
+
+[package.metadata.generate-rpm]
+assets = [
+	{ source = "target/release/project_tracker_server", dest = "/usr/bin/project_tracker_server", mode = "755" },
+	{ source = "assets/ProjectTrackerServer.service", dest = "/usr/lib/systemd/system/ProjectTrackerServer.service" }
+]
+post_install_script = "scripts/enable_server_linux_service.sh"
+post_uninstall_script = "scripts/remove_server_linux_service.sh"

@@ -1,5 +1,10 @@
 ## Install Client (for now only rpm packages available)
-Just download the latest rpm package from [latest releases](https://github.com/Peanutt42/project_tracker/releases/latest)
+Just download the latest project_tracker-X.X.X-1.ARCH.rpm package from [latest releases](https://github.com/Peanutt42/project_tracker/releases/latest)
+
+<br>
+
+## Install Server (for now only rpm packages available)
+Just download the latest project_tracker_server-X.X.X-1.ARCH.rpm package from [latest releases](https://github.com/Peanutt42/project_tracker/releases/latest)
 
 <br>
 
@@ -52,7 +57,7 @@ strip -s ./target/release/project_tracker
 ```bash
 cargo generate-rpm
 ```
-the rpm package will be generated inside 'target/generate-rpm/project_tracker-X.X.X-1.x86_64.rpm'
+the rpm package will be generated inside 'target/generate-rpm/project_tracker-X.X.X-1.ARCH.rpm'
 
 <br>
 
@@ -93,6 +98,26 @@ Project Tracker Server:
 cd project_tracker_server
 cargo r --release -- [SERVER_DATA_DIRECTORY]
 ```
+
+### Generate rpm package (using cargo-generate-rpm):
+1. install needed packages to build the rust crate (see Linux/Fedora development packages)
+2. install 'cargo-generate-rpm'
+```bash
+cargo install cargo-generate-rpm
+```
+3. build the binary:
+```bash
+cargo b --release -p project_tracker_server
+```
+4. strip out debug symbols
+```bash
+strip -s ./target/release/project_tracker_server
+```
+5. package the crate into a rpm
+```bash
+cargo generate-rpm -p project_tracker_server
+```
+the rpm package will be generated inside 'target/generate-rpm/project_tracker_server-X.X.X-1.ARCH.rpm'
 
 <br>
 

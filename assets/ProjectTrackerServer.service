@@ -1,0 +1,8 @@
+[Unit]
+Description=Runs the server to host the Project Tracker synchronization
+
+[Service]
+ExecStart=/usr/bin/project_tracker_server /srv/project_tracker_server
+
+[Install]
+WantedBy=default.target
