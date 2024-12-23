@@ -17,6 +17,7 @@ cargo b --release
 echo "Installing files..."
 binary_filepath="/usr/local/bin/project_tracker_server"
 sudo cp "$project_root/target/release/project_tracker_server" "$binary_filepath"
+server_data_directory="/srv/project_tracker_server"
 sudo mkdir -p "$server_data_directory"
 
 ORANGE='\033[0;33m'
@@ -53,7 +54,8 @@ fi
 
 echo "Enabling systemd service..."
 sudo cp "$project_root/scripts/project_tracker_server.service" "/usr/lib/systemd/system/project_tracker_server.service"
-cd "$project_root/scripts"
-sudo ./enable_server_linux_service.sh
+sudo systemctl daemon-reload
+sudo systemctl enable project_tracker_server.service >/dev/null 2>&1
+sudo systemctl start project_tracker_server.service >/dev/null 2>&1
 
 echo "Finished!"
