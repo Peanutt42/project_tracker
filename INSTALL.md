@@ -1,9 +1,9 @@
-## Install Client (for now only rpm packages available)
-Just download the latest project_tracker-X.X.X-1.ARCH.rpm package from [latest releases](https://github.com/Peanutt42/project_tracker/releases/latest)
+## Install Client (.exe, deb and rpm packages available)
+Just download the latest package from the [latest releases](https://github.com/Peanutt42/project_tracker/releases/latest)
 
 <br>
 
-## Install Server (for now only rpm packages available)
+## Install Server (deb and rpm packages available)
 Just download the latest project_tracker_server-X.X.X-1.ARCH.rpm package from [latest releases](https://github.com/Peanutt42/project_tracker/releases/latest)
 
 <br>
@@ -38,6 +38,18 @@ cd .\scripts\
 ```bash
 cargo r --release
 ```
+
+### Generate deb package (using cargo-deb):
+1. install needed packages to build the rust crate (see Linux/Debian development packages)
+2. install 'cargo-deb'
+```bash
+cargo install cargo-deb
+```
+3. build the deb package
+```bash
+cargo deb
+```
+the deb package will be generated inside 'target/debian/project_tracker_<version>-1_<arch>.deb'
 
 ### Generate rpm package (using cargo-generate-rpm):
 1. install needed packages to build the rust crate (see Linux/Fedora development packages)
@@ -99,6 +111,19 @@ cd project_tracker_server
 cargo r --release -- [SERVER_DATA_DIRECTORY]
 ```
 
+### Generate deb package (using cargo-deb):
+1. install needed packages to build the rust crate (see Linux/Debian development packages)
+2. install 'cargo-deb'
+```bash
+cargo install cargo-deb
+```
+3. build the deb package
+```bash
+cd project_tracker_server
+cargo deb
+```
+the deb package will be generated inside 'target/debian/project_tracker_server_<version>-1_<arch>.deb'
+
 ### Generate rpm package (using cargo-generate-rpm):
 1. install needed packages to build the rust crate (see Linux/Fedora development packages)
 2. install 'cargo-generate-rpm'
@@ -130,5 +155,5 @@ to have a verified ssl certificate for your selfhosted local server,
 then download the ssl certificates generated and place the 'cert.pem' and 'key.pem' files
 into the 'project_tracker_server/src/web_server/certificates/' directory.
 
-After restarting the server (for native installation -> '/scripts/install_server_linux.sh'),
+After reinstalling the server,
 the provided certificates are used for the https web server.

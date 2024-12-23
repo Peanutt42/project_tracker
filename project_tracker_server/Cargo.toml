@@ -3,6 +3,7 @@ name = "project_tracker_server"
 description = "Runs the server to host the Project Tracker synchronization"
 version = "0.1.0"
 edition = "2021"
+authors = ["Peanutt42 p3anutt42@gmail.com"]
 repository = "https://github.com/Peanutt42/project_tracker"
 license = "MIT"
 
@@ -28,10 +29,18 @@ systemstat = "0.2.4"
 default = ["web_server"]
 web_server = []
 
+[package.metadata.deb]
+assets = [
+	{ source = "target/release/project_tracker_server", dest = "/usr/bin/project_tracker_server", mode = "755" }
+]
+systemd-units = { enable = true, start = true, unit-name = "project_tracker_server" }
+maintainer-scripts = "../scripts/"
+
+
 [package.metadata.generate-rpm]
 assets = [
 	{ source = "target/release/project_tracker_server", dest = "/usr/bin/project_tracker_server", mode = "755" },
-	{ source = "assets/ProjectTrackerServer.service", dest = "/usr/lib/systemd/system/ProjectTrackerServer.service" }
+	{ source = "scripts/project_tracker_server.service", dest = "/usr/lib/systemd/system/project_tracker_server.service", mode = "644" }
 ]
-post_install_script = "scripts/enable_server_linux_service.sh"
-post_uninstall_script = "scripts/remove_server_linux_service.sh"
+post_install_script = "scripts/project_tracker_server.postinst"
+post_uninstall_script = "scripts/project_tracker_server.postrm"

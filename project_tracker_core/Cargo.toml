@@ -2,6 +2,7 @@
 name = "project_tracker_core"
 version = "0.1.0"
 edition = "2021"
+authors = ["Peanutt42 p3anutt42@gmail.com"]
 repository = "https://github.com/Peanutt42/project_tracker"
 
 [dependencies]

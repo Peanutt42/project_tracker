@@ -1,0 +1,8 @@
+#!/bin/bash
+
+sudo systemctl daemon-reload
+sudo systemctl stop project_tracker_server.service >/dev/null 2>&1 || true
+sudo systemctl disable project_tracker_server.service >/dev/null 2>&1 || true
+sudo systemctl daemon-reload
+
+#DEBHELPER#

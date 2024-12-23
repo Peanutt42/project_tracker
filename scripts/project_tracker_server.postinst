@@ -1,0 +1,7 @@
+#!/bin/sh
+
+#DEBHELPER#
+
+sudo systemctl daemon-reload
+sudo systemctl enable project_tracker_server.service >/dev/null 2>&1
+sudo systemctl start project_tracker_server.service >/dev/null 2>&1

@@ -8,7 +8,7 @@ if [ "$project_root" = "" ]; then
 fi
 
 echo "Stopping service if already running"
-sudo systemctl stop ProjectTrackerServer.service >/dev/null 2>&1
+sudo systemctl stop project_tracker_server.service >/dev/null 2>&1
 
 echo "Compiling..."
 cd "$project_root/project_tracker_server"
@@ -17,24 +17,7 @@ cargo b --release
 echo "Installing files..."
 binary_filepath="/usr/local/bin/project_tracker_server"
 sudo cp "$project_root/target/release/project_tracker_server" "$binary_filepath"
-
-echo "Enabling systemd service..."
-cd "$project_root/scripts"
-server_data_directory="/srv/project_tracker_server"
 sudo mkdir -p "$server_data_directory"
-service_file="$project_root/target/release/ProjectTrackerServer.service"
-echo "[Unit]" > "$service_file"
-echo "Description=Runs the server to host the Project Tracker synchronization" >> "$service_file"
-echo "" >> "$service_file"
-echo "[Service]" >> "$service_file"
-echo "ExecStart=$binary_filepath $server_data_directory" >> "$service_file"
-echo "" >> "$service_file"
-echo "[Install]" >> "$service_file"
-echo "WantedBy=default.target" >> "$service_file"
-sudo systemctl enable "$service_file"
-
-echo "Starting service..."
-sudo systemctl start ProjectTrackerServer.service
 
 ORANGE='\033[0;33m'
 RESET='\033[0;0m'
@@ -67,5 +50,10 @@ if [ ! -f "$server_data_directory/password.txt" ]; then
 			;;
 	esac
 fi
+
+echo "Enabling systemd service..."
+sudo cp "$project_root/scripts/project_tracker_server.service" "/usr/lib/systemd/system/project_tracker_server.service"
+cd "$project_root/scripts"
+sudo ./enable_server_linux_service.sh
 
 echo "Finished!"
