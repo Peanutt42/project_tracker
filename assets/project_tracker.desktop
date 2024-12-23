@@ -4,11 +4,9 @@ Type=Application
 Name=Project Tracker
 Terminal=false
 Categories=Utility;
+Exec=/usr/bin/project_tracker
+Icon=/usr/share/icons/hicolor/512x512/apps/project_tracker.png
 StartupWMClass=Project Tracker
 StartupNotify=true
 X-GNOME-UsesNotifications=true
 X-GNOME-SingleWindow=true
-
-# this gets added when running install_project_tracker_linux.sh:
-# Exec=...
-# Icon=...

@@ -1,8 +1,10 @@
 [package]
 name = "project_tracker"
+description = "personal project todo list tracker"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/Peanutt42/project_tracker"
+license = "MIT"
 
 [workspace]
 members = ["project_tracker_core", "project_tracker_server", "iced_drop"]
@@ -59,3 +61,10 @@ humantime = "2.1"
 
 [build-dependencies]
 winresource = "0.1.17"
+
+[package.metadata.generate-rpm]
+assets = [
+	{ source = "target/release/project_tracker", dest = "/usr/bin/project_tracker", mode = "755" },
+	{ source = "assets/icon.png", dest = "/usr/share/icons/hicolor/512x512/apps/project_tracker.png", mode = "644" },
+	{ source = "assets/project_tracker.desktop", dest = "/usr/share/applications/project_tracker.desktop", mode = "644" },
+]

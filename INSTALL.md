@@ -1,9 +1,12 @@
+## Install Client (for now only rpm packages available)
+Just download the latest rpm package from [latest releases](https://github.com/Peanutt42/project_tracker/releases/latest)
 
+<br>
 
-## Prerequisites
+## Build from source - Prerequisites
 - Rust (programing lanuage): https://www.rust-lang.org/tools/install
 
-## Client
+## Build from source - Client
 
 ### Linux
 install alsa development files, to play the notification sound:
@@ -17,8 +20,7 @@ install alsa development files, to play the notification sound:
 	```
 to install locally:
 ```bash
-cd scripts
-./install_linux.sh
+./scripts/install_linux.sh
 ```
 
 ### Windows
@@ -32,8 +34,29 @@ cd .\scripts\
 cargo r --release
 ```
 
+### Generate rpm package (using cargo-generate-rpm):
+1. install needed packages to build the rust crate (see Linux/Fedora development packages)
+2. install 'cargo-generate-rpm'
+```bash
+cargo install cargo-generate-rpm
+```
+3. build the binary:
+```bash
+cargo b --release
+```
+4. strip out debug symbols
+```bash
+strip -s ./target/release/project_tracker
+```
+5. package the crate into a rpm
+```bash
+cargo generate-rpm
+```
+the rpm package will be generated inside 'target/generate-rpm/project_tracker-X.X.X-1.x86_64.rpm'
 
-## Server
+<br>
+
+## Build from source - Server
 
 ### Prerequisites (excluding docker)
 - OpenSSL (probably already installed): for https, self signed ssl certificate generation
