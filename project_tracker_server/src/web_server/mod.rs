@@ -265,7 +265,7 @@ struct AdminInfos {
 	connected_native_gui_clients: Vec<SocketAddr>,
 	connected_web_clients: Vec<SocketAddr>,
 	cpu_usage: f32,
-	cpu_temp: f32,
+	cpu_temp: Option<f32>,
 	ram_info: String,
 	uptime: String,
 }
@@ -289,8 +289,7 @@ fn get_admin_infos(body: serde_json::Value, password: String, shared_data: Arc<R
 
 		let sys = System::new();
 
-		let cpu_temp = sys.cpu_temp()
-    		.unwrap_or(-1.0);
+		let cpu_temp = sys.cpu_temp().ok();
 
 		let ram_info = match sys.memory() {
 			Ok(mem) => format!("{} / {}", saturating_sub_bytes(mem.total, mem.free), mem.total),

@@ -26,36 +26,35 @@ document.addEventListener("DOMContentLoaded", () => {
 			password_input.type = "password";
 		}
 	}
-	
+
 	function style_invalid_password() {
 		password_input.classList.add("invalid");
 		invalid_password.style.display = "block";
 	}
-	
+
 	function style_valid_password() {
 		password_input.classList.remove("invalid");
 		invalid_password.style.display = "none";
 	}
-	
+
 	async function submit_password() {
 		const password = password_input.value;
 		await login(password);
 	}
-	
+
 	async function login(password) {
 		if (!password) {
 			logout();
-			alert("Please enter a password!");
 			return;
 		}
-	
+
 		try {
 			const response = await fetch("/load_database", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ password }),
 			});
-	
+
 			if (response.ok) {
 				const database = await response.json();
 				style_valid_password();
@@ -63,20 +62,18 @@ document.addEventListener("DOMContentLoaded", () => {
 				localStorage.setItem("last_loaded_database", database);
 				window.location.href = "/";
 			} else if (response.status === 401) {
-				logout();
 				style_invalid_password();
+				console.error('invalid password, unauthorized!');
 			} else {
-				logout();
 				style_invalid_password();
-				alert("An error occurred: " + response.statusText);
+				console.error('invalid response!');
 			}
 		} catch (error) {
-			logout();
-			console.error("Failed to load database", error);
-			alert("Failed to load database!");
+			console.error('failed to fetch response: ' + error + '!');
+			style_invalid_password();
 		}
 	}
-	
+
 	function logout() {
 		localStorage.removeItem("password");
 	}

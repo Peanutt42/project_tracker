@@ -104,11 +104,6 @@ button:hover {
 	gap: 10px;
 	padding: 0;
 }
-@media screen and (orientation: portrait) {
-	.tag_list {
-		flex-direction: column;
-	}
-}
 .tag {
 	border-style: solid;
 	border-width: 1px;

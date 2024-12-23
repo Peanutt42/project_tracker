@@ -32,7 +32,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 		if (admin_infos) {
 			cpu_usage_div.textContent = Math.round(admin_infos.cpu_usage * 100) + '%';
-			cpu_temp_div.textContent = Math.round(admin_infos.cpu_temp) + ' °C';
+			if (admin_infos.cpu_temp) {
+				cpu_temp_div.textContent = Math.round(admin_infos.cpu_temp) + ' °C';
+			} else {
+				cpu_temp_div.textContent = 'failed to get cpu temp!';
+			}
 			ram_div.textContent = admin_infos.ram_info;
 			uptime_div.textContent = admin_infos.uptime;
 			connected_native_gui_clients_list.innerHTML = "";

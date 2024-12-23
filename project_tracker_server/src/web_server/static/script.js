@@ -45,12 +45,13 @@ document.addEventListener("DOMContentLoaded", () => {
 				localStorage.setItem("last_loaded_database", database);
 				populate_dom_from_database(database);
 			} else if (response.status === 401) {
+				console.error('invalid password, unauthorized!');
 				logout();
 			} else {
-				logout();
+				console.error('invalid response!');
 			}
 		} catch (error) {
-			logout();
+			console.error('failed to fetch response: ' + error + '!');
 		}
 	}
 
@@ -193,12 +194,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	function populate_dom_with_task(task_list, task, task_tags, done) {
 		const task_div = document.createElement("div");
+		task_div.className = "task";
+
 		const checkbox = document.createElement("input");
 		checkbox.type = "checkbox",
 		checkbox.checked = done;
 		checkbox.disabled = true; // TODO: check/uncheck tasks and send to server
 		task_div.appendChild(checkbox);
-		task_div.className = "task";
+
+		const task_tags_and_name_div = document.createElement("div");
+		task_tags_and_name_div.style.display = "flex";
+		task_tags_and_name_div.style.flexDirection = "column";
 
 		const task_tags_list = document.createElement("ul");
 		task_tags_list.className = "tag_list";
@@ -206,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			let task_tag = task_tags[tag_id];
 			task_tags_list.appendChild(task_tag_dom(task_tag));
 		}
-		task_div.appendChild(task_tags_list);
+		task_tags_and_name_div.appendChild(task_tags_list);
 
 		let task_info = '';
 		if (task.time_spend) {
@@ -228,12 +234,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		const task_info_div = document.createElement("div");
 		task_info_div.textContent = task_info;
-		task_div.appendChild(task_info_div);
+
+		task_tags_and_name_div.appendChild(task_info_div);
+
+		task_div.appendChild(task_tags_and_name_div);
 
 		task_list.appendChild(task_div);
 	}
 
 	function connect_ws(password) {
+		console.log('connecting to modifed ws endpoint...');
 		ws = new WebSocket('wss://' + location.host + '/modified/' + password);
 		ws.onopen = on_ws_open;
 		ws.onclose = on_ws_close;
@@ -258,12 +268,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// fetch updated database
 	function on_ws_message(msg) {
-		if (msg.data == 'invalid_password') {
-			ws.close();
-			logout();
-		}
-		else {
-			populate_dom_from_database(JSON.parse(msg.data));
-		}
+		populate_dom_from_database(JSON.parse(msg.data));
 	}
 });
