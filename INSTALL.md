@@ -153,7 +153,7 @@ By default, the server uses self signed generated ssl certificates for https.
 If you are using something like [DuckDNS](https://duckdns.org) with [Nginx Proxy Manager](https://nginxproxymanager.com)
 to have a verified ssl certificate for your selfhosted local server,
 then download the ssl certificates generated and place the 'cert.pem' and 'key.pem' files
-into the 'project_tracker_server/src/web_server/certificates/' directory.
+into the 'server_data_directory' directory (by default: '/srv/project_tracker_server/').
 
-After reinstalling the server,
+After restarting the server service (or just restarting the machine),
 the provided certificates are used for the https web server.

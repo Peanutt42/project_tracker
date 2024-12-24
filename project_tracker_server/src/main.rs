@@ -51,17 +51,30 @@ async fn main() {
 	#[allow(unused)]
 	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
 
+
+
 	#[cfg(feature = "web_server")]
 	{
 		let password_clone = password.clone();
 		let shared_data_clone = shared_data.clone();
+		let opt_custom_cert_pem_filepath = server_data_directory.join("cert.pem");
+		let opt_custom_key_pem_filepath = server_data_directory.join("key.pem");
+		let custom_cert_pem = tokio::fs::read(opt_custom_cert_pem_filepath).await.ok();
+		let custom_key_pem = tokio::fs::read(opt_custom_key_pem_filepath).await.ok();
 		std::thread::Builder::new()
 			.name("Web Server".to_string())
 			.spawn(move || {
 				let rt = tokio::runtime::Runtime::new().unwrap();
 
 				rt.block_on(async {
-					web_server::run_web_server(password_clone, modified_receiver, shared_data_clone).await;
+					web_server::run_web_server(
+						password_clone,
+						modified_receiver,
+						shared_data_clone,
+						custom_cert_pem,
+						custom_key_pem,
+					)
+					.await;
 				});
 			})
 			.expect("failed to start web server thread");

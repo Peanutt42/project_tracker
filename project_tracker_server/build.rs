@@ -9,7 +9,7 @@ fn main() {
 	let certificates_output_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
 		.join("src")
 		.join("web_server")
-		.join("certificates");
+		.join("self_signed_certificates");
 
 	let key_path = certificates_output_dir.join("key.pem");
 	let cert_path = certificates_output_dir.join("cert.pem");
