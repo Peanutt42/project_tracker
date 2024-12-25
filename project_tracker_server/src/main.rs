@@ -19,8 +19,8 @@ async fn main() {
 	let server_data_directory = PathBuf::from(server_data_directory_str);
 
 	if !server_data_directory.exists() {
-		eprintln!("the supplied server data directory doesn't exist!");
-		exit(1);
+		std::fs::create_dir_all(&server_data_directory)
+			.expect("failed to create the supplied 'server_data_directory'");
 	}
 
 	let database_filepath = server_data_directory.join("database.project_tracker");

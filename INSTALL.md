@@ -1,4 +1,4 @@
-## Install Client (.exe, deb and rpm packages available)
+## Install Client (deb and rpm, .exe packages available)
 Just download the latest package from the [latest releases](https://github.com/Peanutt42/project_tracker/releases/latest)
 
 <br>
@@ -36,35 +36,19 @@ Run 'install_windows.bat' inside the 'scripts' folder as administrator
 cargo r --release
 ```
 
-### Generate deb package (using cargo-deb):
+### Generate deb package:
 1. install needed packages to build the rust crate (see Linux/Debian development packages)
-2. install 'cargo-deb'
+2. run generate script:
 ```bash
-cargo install cargo-deb
-```
-3. build the deb package
-```bash
-cargo deb
+./scripts/generate_deb.sh
 ```
 the deb package will be generated inside 'target/debian/project_tracker_<version>-1_<arch>.deb'
 
-### Generate rpm package (using cargo-generate-rpm):
+### Generate rpm package:
 1. install needed packages to build the rust crate (see Linux/Fedora development packages)
-2. install 'cargo-generate-rpm'
+2. run generate script:
 ```bash
-cargo install cargo-generate-rpm
-```
-3. build the binary:
-```bash
-cargo b --release
-```
-4. strip out debug symbols
-```bash
-strip -s ./target/release/project_tracker
-```
-5. package the crate into a rpm
-```bash
-cargo generate-rpm
+./scripts/generate_rpm.sh
 ```
 the rpm package will be generated inside 'target/generate-rpm/project_tracker-X.X.X-1.ARCH.rpm'
 
@@ -110,34 +94,17 @@ cargo r --release -- [SERVER_DATA_DIRECTORY]
 
 ### Generate deb package (using cargo-deb):
 1. install needed packages to build the rust crate (see Linux/Debian development packages)
-2. install 'cargo-deb'
+2. run generate script
 ```bash
-cargo install cargo-deb
-```
-3. build the deb package
-```bash
-cd project_tracker_server
-cargo deb
+./scripts/generate_server_deb.sh
 ```
 the deb package will be generated inside 'target/debian/project_tracker_server_<version>-1_<arch>.deb'
 
 ### Generate rpm package (using cargo-generate-rpm):
 1. install needed packages to build the rust crate (see Linux/Fedora development packages)
-2. install 'cargo-generate-rpm'
+2. run generate script
 ```bash
-cargo install cargo-generate-rpm
-```
-3. build the binary:
-```bash
-cargo b --release -p project_tracker_server
-```
-4. strip out debug symbols
-```bash
-strip -s ./target/release/project_tracker_server
-```
-5. package the crate into a rpm
-```bash
-cargo generate-rpm -p project_tracker_server
+./scripts/generate_server.rpm.sh
 ```
 the rpm package will be generated inside 'target/generate-rpm/project_tracker_server-X.X.X-1.ARCH.rpm'
 
