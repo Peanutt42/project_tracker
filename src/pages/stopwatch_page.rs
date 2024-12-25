@@ -697,24 +697,20 @@ fn timer_notification(summary: String, body: String) {
 	});
 
 	// show notification
-	let notification_result = if cfg!(target_os = "linux") {
-		use notify_rust::Hint;
+	let mut notification = Notification::new();
+	notification
+		.summary(&summary)
+		.body(&body)
+		.appname("Project Tracker")
+		.icon("Project Tracker");
 
-		Notification::new()
-			.summary(&summary)
-			.body(&body)
-			.appname("Project Tracker")
-			.icon("Project Tracker")
-			.hint(Hint::DesktopEntry("Project Tracker".to_string()))
-			.show()
-	}
-	else {
-		Notification::new()
-			.summary(&summary)
-			.body(&body)
-			.show()
-	};
+	#[cfg(target_os = "linux")]
+	notification.hint(notify_rust::Hint::DesktopEntry("Project Tracker".to_string()));
 
+	#[allow(unused)]
+	let notification_result = notification.show();
+
+	#[cfg(target_os = "linux")]
 	thread::spawn(|| {
 		match notification_result {
 			Ok(notification_handle) => notification_handle.on_close(|| {}),

@@ -29,10 +29,7 @@ to install locally:
 ```
 
 ### Windows
-```bat
-cd .\scripts\
-.\install_windows.bat
-```
+Run 'install_windows.bat' inside the 'scripts' folder as administrator
 
 ### Other platforms (no installation --> portable)
 ```bash
