@@ -52,6 +52,7 @@ pub enum StopwatchPageMessage {
 	Toggle,
 	CompleteTask,
 	Update,
+	SaveTaskTimeSpendBeforeClosing,
 }
 
 impl From<StopwatchPageMessage> for Message {
@@ -399,7 +400,21 @@ impl StopwatchPage {
 				self.set_stopwatch_progress(preferences);
 
 				ContentPageAction::None
+			},
+			StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing => if let StopwatchPage::StopTaskTime {
+				project_id,
+				task_id,
+				..
+			} = self {
+				DatabaseMessage::StopTaskTimeSpend {
+					project_id: *project_id,
+					task_id: *task_id
+				}
+				.into()
 			}
+			else {
+				ContentPageAction::None
+			},
 		}
 	}
 

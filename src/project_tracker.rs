@@ -330,6 +330,7 @@ impl ProjectTrackerApp {
 				}
 				else {
 					Task::batch([
+						self.update(StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing.into()),
 						self.update(Message::SaveDatabase),
 						self.update(PreferenceMessage::Save.into()),
 						window::get_latest().and_then(window::close),
