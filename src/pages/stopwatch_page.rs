@@ -9,7 +9,7 @@ use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, Task, 
 use iced::{
 	alignment::{Horizontal, Vertical}, keyboard, time, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Length::{self, Fill}, Padding, Subscription
 };
-use notify_rust::Notification;
+use notify_rust::{Notification, Timeout};
 use std::{io::Cursor, thread, time::{Duration, Instant}};
 
 #[derive(Debug, Default)]
@@ -701,11 +701,15 @@ fn timer_notification(summary: String, body: String) {
 	notification
 		.summary(&summary)
 		.body(&body)
-		.appname("Project Tracker")
-		.icon("Project Tracker");
+		.appname("Project Tracker") // only used to display app name text inside the notification, nothing else
+		.icon("project_tracker") // will resolve into 'project_tracker.png'
+		.timeout(Timeout::Never);
 
 	#[cfg(target_os = "linux")]
-	notification.hint(notify_rust::Hint::DesktopEntry("Project Tracker".to_string()));
+	notification.hint(notify_rust::Hint::DesktopEntry("project_tracker".to_string()));
+
+	#[cfg(target_os = "linux")]
+	notification.hint(notify_rust::Hint::Resident(true));
 
 	#[allow(unused)]
 	let notification_result = notification.show();
