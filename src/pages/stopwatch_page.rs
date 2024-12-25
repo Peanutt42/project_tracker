@@ -9,8 +9,7 @@ use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, Task, 
 use iced::{
 	alignment::{Horizontal, Vertical}, keyboard, time, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Length::{self, Fill}, Padding, Subscription
 };
-use notify_rust::{Notification, Timeout};
-use std::{io::Cursor, thread, time::{Duration, Instant}};
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Default)]
 pub enum StopwatchPage {
@@ -681,7 +680,35 @@ impl StopwatchPage {
 	}
 }
 
+
+#[cfg(target_os = "windows")]
 fn timer_notification(summary: String, body: String) {
+	use std::path::Path;
+
+	use winrt_notification::{Duration, IconCrop, Sound, Toast };
+
+	let notification_result = Toast::new(Toast::POWERSHELL_APP_ID)
+		.title(&summary)
+		.text1(&body)
+		.icon(
+			Path::new("C:\\Users\\madca\\AppData\\Local\\Programs\\Project Tracker\\ProjectTracker.ico"),
+			IconCrop::Square,
+			"Project Tracker Icon"
+		)
+		.duration(Duration::Long)
+		.sound(Some(Sound::Reminder))
+		.show();
+
+	if let Err(e) = notification_result {
+		eprintln!("failed to show timer notification: {e}");
+	}
+}
+
+#[cfg(not(target_os = "windows"))]
+fn timer_notification(summary: String, body: String) {
+	use std::{io::Cursor, thread};
+	use notify_rust::{Notification, Timeout};
+
 	// play notification sound
 	thread::spawn(|| {
 		match rodio::OutputStream::try_default() {
