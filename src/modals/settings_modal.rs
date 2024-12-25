@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::components::{hide_password_button, show_password_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
+use crate::components::{export_as_json_database_button, hide_password_button, import_json_database_button, show_password_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
 use crate::core::export_database_file_dialog;
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::ServerConfig;
@@ -306,15 +306,24 @@ fn database_settings_tab_view<'a>(app: &'a ProjectTrackerApp, preferences: &'a P
 		.align_y(Alignment::Center),
 
 		container(
-			row![
-				dangerous_button(
-					Bootstrap::Trash,
-					"Clear",
-					Some("Clear Database".to_string()),
-					DatabaseMessage::Clear
-				),
-				import_database_button(app.importing_database),
-				export_database_button(app.exporting_database),
+			column![
+				row![
+					dangerous_button(
+						Bootstrap::Trash,
+						"Clear",
+						Some("Clear Database".to_string()),
+						DatabaseMessage::Clear
+					),
+					import_database_button(app.importing_database),
+					export_database_button(app.exporting_database),
+				]
+				.spacing(SPACING_AMOUNT),
+
+				row![
+					import_json_database_button(app.importing_database),
+					export_as_json_database_button(app.exporting_database),
+				]
+				.spacing(SPACING_AMOUNT),
 			]
 			.spacing(SPACING_AMOUNT)
 		)

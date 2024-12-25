@@ -397,10 +397,10 @@ pub fn import_database_button(importing: bool) -> Element<'static, Message> {
 	.into()
 }
 
-pub fn export_database_button(importing: bool) -> Element<'static, Message> {
+pub fn export_database_button(exporting: bool) -> Element<'static, Message> {
 	button(
 		row![
-			if importing {
+			if exporting {
 				Element::new(
 					Spinner::new()
 						.width(Length::Fixed(16.0))
@@ -417,10 +417,68 @@ pub fn export_database_button(importing: bool) -> Element<'static, Message> {
 		.spacing(SMALL_SPACING_AMOUNT)
 		.align_y(Alignment::Center),
 	)
-	.on_press_maybe(if importing {
+	.on_press_maybe(if exporting {
 		None
 	} else {
 		Some(Message::ExportDatabaseDialog)
+	})
+	.style(dangerous_button_style)
+	.into()
+}
+
+pub fn import_json_database_button(importing_json: bool) -> Element<'static, Message> {
+	button(
+		row![
+			if importing_json {
+				Element::new(
+					Spinner::new()
+						.width(Length::Fixed(16.0))
+						.height(Length::Fixed(16.0))
+						.circle_radius(2.0),
+				)
+			} else {
+				icon_to_text(Bootstrap::FiletypeJson)
+					.align_y(Vertical::Center)
+					.into()
+			},
+			text("Import Json")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_y(Alignment::Center),
+	)
+	.on_press_maybe(if importing_json {
+		None
+	} else {
+		Some(Message::ImportJsonDatabaseDialog)
+	})
+	.style(dangerous_button_style)
+	.into()
+}
+
+pub fn export_as_json_database_button(exporting_json: bool) -> Element<'static, Message> {
+	button(
+		row![
+			if exporting_json {
+				Element::new(
+					Spinner::new()
+						.width(Length::Fixed(16.0))
+						.height(Length::Fixed(16.0))
+						.circle_radius(2.0),
+				)
+			} else {
+				icon_to_text(Bootstrap::FiletypeJson)
+					.align_y(Vertical::Center)
+					.into()
+			},
+			text("Export as Json")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_y(Alignment::Center),
+	)
+	.on_press_maybe(if exporting_json {
+		None
+	} else {
+		Some(Message::ExportDatabaseAsJsonDialog)
 	})
 	.style(dangerous_button_style)
 	.into()

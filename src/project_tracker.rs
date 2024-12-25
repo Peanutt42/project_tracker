@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		create_empty_database_button, generate_task_description_markdown, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
-	}, core::{export_database_file_dialog, import_database_file_dialog, ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
+	}, core::{export_database_as_json_file_dialog, export_database_file_dialog, import_database_file_dialog, import_json_database_file_dialog, ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
 		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
@@ -68,13 +68,17 @@ pub enum Message {
 	SaveDatabase,
 	DatabaseSaved(SystemTime), // begin_time since saving
 	ExportDatabase(PathBuf),
+	ExportDatabaseAsJson(PathBuf),
 	ExportDatabaseDialog,
+	ExportDatabaseAsJsonDialog,
 	ExportDatabaseFailed(Arc<SaveDatabaseError>),
 	ExportDatabaseDialogCanceled,
 	DatabaseExported,
 	ImportDatabase(PathBuf),
+	ImportJsonDatabase(PathBuf),
 	DatabaseImported(Result<Database, Arc<LoadDatabaseError>>),
 	ImportDatabaseDialog,
+	ImportJsonDatabaseDialog,
 	ImportDatabaseDialogCanceled,
 	SyncDatabase,
 	SyncDatabaseFilepath(PathBuf),
@@ -470,6 +474,12 @@ impl ProjectTrackerApp {
 					None => Message::ExportDatabaseDialogCanceled,
 				})
 			}
+			Message::ExportDatabaseAsJsonDialog => {
+				Task::perform(export_database_as_json_file_dialog(), |filepath| match filepath {
+					Some(filepath) => Message::ExportDatabaseAsJson(filepath),
+					None => Message::ExportDatabaseDialogCanceled,
+				})
+			}
 			Message::ExportDatabaseDialogCanceled => {
 				self.exporting_database = false;
 				Task::none()
@@ -493,6 +503,25 @@ impl ProjectTrackerApp {
 					Task::none()
 				}
 			}
+			Message::ExportDatabaseAsJson(filepath) => {
+				if let Some(database) = self.database.clone() {
+					match database.to_json() {
+						Some(database_json) => {
+							self.exporting_database = true;
+							Task::perform(Database::export_as_json(filepath, database_json), |result| {
+								match result {
+									Ok(_) => Message::DatabaseExported,
+									Err(e) => Message::ExportDatabaseFailed(Arc::new(e)),
+								}
+							})
+						},
+						None => self.show_error_msg("failed to serialize database to json to export to file!".to_string()),
+					}
+				}
+				else {
+					Task::none()
+				}
+			}
 			Message::ExportDatabaseFailed(error) => {
 				self.exporting_database = false;
 				self.show_error(error)
@@ -510,6 +539,15 @@ impl ProjectTrackerApp {
 					}
 				})
 			}
+			Message::ImportJsonDatabaseDialog => {
+				Task::perform(import_json_database_file_dialog(), |filepath| {
+					if let Some(filepath) = filepath {
+						Message::ImportJsonDatabase(filepath)
+					} else {
+						Message::ImportDatabaseDialogCanceled
+					}
+				})
+			}
 			Message::ImportDatabaseDialogCanceled => {
 				self.importing_database = false;
 				Task::none()
@@ -517,6 +555,10 @@ impl ProjectTrackerApp {
 			Message::ImportDatabase(filepath) => {
 				self.importing_database = true;
 				Task::perform(Database::load_from(filepath), |result| Message::DatabaseImported(result.map_err(Arc::new)))
+			}
+			Message::ImportJsonDatabase(filepath) => {
+				self.importing_database = true;
+				Task::perform(Database::load_json(filepath), |result| Message::DatabaseImported(result.map_err(Arc::new)))
 			}
 			Message::DatabaseImported(result) => self.update(Message::LoadedDatabase(result))
 				.chain(self.update(Message::SaveDatabase)),
@@ -610,7 +652,9 @@ impl ProjectTrackerApp {
 								Task::none()
 							}
 						},
-						LoadDatabaseError::FailedToParse{ filepath, .. } => {
+						LoadDatabaseError::FailedToParseBinary{ filepath, .. } |
+					 	LoadDatabaseError::FailedToParseJson{ filepath, .. }
+							=> {
 							// saves the corrupted database, just so we don't lose the progress and can correct it afterwards
 							if let Some(mut saved_corrupted_filepath) = Database::get_filepath() {
 								saved_corrupted_filepath.set_file_name("corrupted - database.project_tracker");

@@ -29,3 +29,24 @@ pub async fn import_database_file_dialog() -> Option<PathBuf> {
 
 	file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
 }
+
+pub async fn export_database_as_json_file_dialog() -> Option<PathBuf> {
+	let file_dialog_result = rfd::AsyncFileDialog::new()
+		.set_title("Export ProjectTracker Database as Json")
+		.set_file_name(Database::JSON_FILE_NAME)
+		.add_filter("Database (.json)", &["json"])
+		.save_file()
+		.await;
+
+	file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
+}
+
+pub async fn import_json_database_file_dialog() -> Option<PathBuf> {
+	let file_dialog_result = rfd::AsyncFileDialog::new()
+		.set_title("Import Json ProjectTracker Database")
+		.add_filter("Database (.json)", &["json"])
+		.pick_file()
+		.await;
+
+	file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
+}

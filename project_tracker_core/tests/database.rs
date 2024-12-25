@@ -39,7 +39,8 @@ async fn test_database_serialization() {
 		Err(e) => match e {
 			LoadDatabaseError::FailedToFindDatbaseFilepath => panic!("Failed to find database filepath!"),
 			LoadDatabaseError::FailedToOpenFile{ .. } => panic!("Failed to find serialized file, maybe database.save_to failed?"),
-			LoadDatabaseError::FailedToParse{ .. } => panic!("Failed to parse serialized file!"),
+			LoadDatabaseError::FailedToParseBinary{ .. } |
+		 	LoadDatabaseError::FailedToParseJson { .. } => panic!("Failed to parse serialized file!"),
 		}
 	};
 

@@ -167,9 +167,14 @@ pub enum LoadDatabaseError {
 		error: Option<std::io::Error>,
 	},
 	#[error("failed to parse database: {filepath}, error: {error}")]
-	FailedToParse {
+	FailedToParseBinary {
 		filepath: PathBuf,
 		error: bincode::Error,
+	},
+	#[error("failed to parse database: {filepath}, error: {error}")]
+	FailedToParseJson {
+		filepath: PathBuf,
+		error: serde_json::Error,
 	},
 }
 pub type LoadDatabaseResult = Result<Database, LoadDatabaseError>;
@@ -195,6 +200,7 @@ pub enum SyncDatabaseResult {
 
 impl Database {
 	pub const FILE_NAME: &'static str = "database.project_tracker";
+	pub const JSON_FILE_NAME: &'static str = "database.json";
 
 	pub fn new(projects: OrderedHashMap<ProjectId, Project>, last_changed_time: DateTime<Utc>) -> Self {
 		Self {
@@ -557,6 +563,41 @@ impl Database {
 		Some(filepath)
 	}
 
+	pub async fn load_json(filepath: PathBuf) -> LoadDatabaseResult {
+		let file_metadata = filepath.metadata()
+			.map_err(|e| LoadDatabaseError::FailedToOpenFile {
+				filepath: filepath.clone(),
+				error: Some(e)
+			})?;
+		let file_last_modification_time = get_last_modification_date_time(&file_metadata)
+			.ok_or(LoadDatabaseError::FailedToOpenFile {
+				filepath: filepath.clone(),
+				error: None
+			})?;
+		let file_content = tokio::fs::read_to_string(&filepath).await
+			.map_err(|e| LoadDatabaseError::FailedToOpenFile{
+				filepath: filepath.clone(),
+				error: Some(e)
+			})?;
+
+		let serialized = serde_json::from_str(&file_content)
+			.map_err(|error| LoadDatabaseError::FailedToParseJson{
+				filepath: filepath.clone(),
+				error
+			})?;
+
+		Ok(Self::from_serialized(serialized, file_last_modification_time))
+	}
+
+	pub fn to_json(self) -> Option<String> {
+		serde_json::to_string(&self.to_serialized()).ok()
+	}
+
+	pub async fn export_as_json(filepath: PathBuf, json: String) -> SaveDatabaseResult<()> {
+		tokio::fs::write(filepath.as_path(), json).await
+			.map_err(|error| SaveDatabaseError::FailedToWriteToFile { filepath, error })
+	}
+
 	pub async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
 		let file_metadata = filepath.metadata()
 			.map_err(|e| LoadDatabaseError::FailedToOpenFile {
@@ -564,10 +605,10 @@ impl Database {
 				error: Some(e)
 			})?;
 		let file_last_modification_time = get_last_modification_date_time(&file_metadata)
-    		.ok_or(LoadDatabaseError::FailedToOpenFile {
-      			filepath: filepath.clone(),
-         		error: None
-      		})?;
+			.ok_or(LoadDatabaseError::FailedToOpenFile {
+				filepath: filepath.clone(),
+				error: None
+			})?;
 		let file_content = tokio::fs::read(&filepath).await
 			.map_err(|e| LoadDatabaseError::FailedToOpenFile{
 				filepath: filepath.clone(),
@@ -575,7 +616,7 @@ impl Database {
 			})?;
 
 		Self::from_binary(&file_content, file_last_modification_time)
-			.map_err(|error| LoadDatabaseError::FailedToParse{
+			.map_err(|error| LoadDatabaseError::FailedToParseBinary{
 				filepath: filepath.clone(),
 				error
 			})
