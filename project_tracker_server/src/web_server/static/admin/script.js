@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 	const uptime_div = document.getElementById("uptime_text");
 	const connected_native_gui_clients_list = document.getElementById("connected_native_gui_clients_list");
 	const connected_web_clients_list = document.getElementById("connected_web_clients_list");
+	const latest_logs_text = document.getElementById("latest_logs_text");
 
 	await populate_dom_with_admin_infos();
 
@@ -52,6 +53,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 				address_div.className = "address";
 				address_div.textContent = address;
 				connected_web_clients_list.appendChild(address_div);
+			}
+
+			latest_logs_text.textContent = admin_infos.latest_logs_of_the_day;
+			// scrolls to the end/bottom
+			if (latest_logs_text.scrollTop === 0) {
+				latest_logs_text.scrollTop = latest_logs_text.scrollHeight;
 			}
 		} else {
 			admin_infos_div.textContent = "Loading admin infos...";

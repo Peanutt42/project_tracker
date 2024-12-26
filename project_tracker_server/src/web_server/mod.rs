@@ -3,7 +3,7 @@ use serde::Serialize;
 use systemstat::{saturating_sub_bytes, Platform, System};
 use warp::{body, filters::{body::BodyDeserializeError, cors::CorsForbidden, ext::MissingExtension, ws::MissingConnectionUpgrade}, http::StatusCode, path, path::end, post, reject::{InvalidHeader, InvalidQuery, LengthRequired, MethodNotAllowed, MissingCookie, MissingHeader, PayloadTooLarge, Rejection, UnsupportedMediaType}, reply, reply::{html, with_header, with_status, Reply, Response}, serve, ws, ws::{Message, WebSocket, Ws}, Filter};
 use futures_util::{SinkExt, StreamExt};
-use std::{convert::Infallible, net::SocketAddr, sync::{Arc, RwLock}};
+use std::{convert::Infallible, net::SocketAddr, process::{Command, Stdio}, str::from_utf8, sync::{Arc, RwLock}};
 use tokio::sync::broadcast::Receiver;
 use humantime::format_duration;
 
@@ -23,6 +23,7 @@ const CPU_SVG: &str = include_str!("static/cpu.svg");
 const HOURGLASS_SVG: &str = include_str!("static/hourglass-split.svg");
 const MEMORY_SVG: &str = include_str!("static/memory.svg");
 const THERMOMETER_HALF_SVG: &str = include_str!("static/thermometer-half.svg");
+const FILE_TEXT_SVG: &str = include_str!("static/file-earmark-text.svg");
 
 const INDEX_HTML: &str = include_str!("static/index.html");
 const STYLE_CSS: &str = include_str!("static/style.css");
@@ -137,20 +138,24 @@ pub async fn run_web_server(
 		.map(|| with_header(WINDOW_SVG, "Content-Type", "image/svg+xml"));
 
 	let cpu_svg_route = static_path
-			.and(path("cpu.svg"))
-			.map(|| with_header(CPU_SVG, "Content-Type", "image/svg+xml"));
+		.and(path("cpu.svg"))
+		.map(|| with_header(CPU_SVG, "Content-Type", "image/svg+xml"));
 
 	let hourglass_svg_route = static_path
-			.and(path("hourglass-split.svg"))
-			.map(|| with_header(HOURGLASS_SVG, "Content-Type", "image/svg+xml"));
+		.and(path("hourglass-split.svg"))
+		.map(|| with_header(HOURGLASS_SVG, "Content-Type", "image/svg+xml"));
 
 	let memory_svg_route = static_path
-			.and(path("memory.svg"))
-			.map(|| with_header(MEMORY_SVG, "Content-Type", "image/svg+xml"));
+		.and(path("memory.svg"))
+		.map(|| with_header(MEMORY_SVG, "Content-Type", "image/svg+xml"));
 
 	let thermometer_svg_route = static_path
-			.and(path("thermometer-half.svg"))
-			.map(|| with_header(THERMOMETER_HALF_SVG, "Content-Type", "image/svg+xml"));
+		.and(path("thermometer-half.svg"))
+		.map(|| with_header(THERMOMETER_HALF_SVG, "Content-Type", "image/svg+xml"));
+
+	let file_text_svg_route = static_path
+			.and(path("file-earmark-text.svg"))
+			.map(|| with_header(FILE_TEXT_SVG, "Content-Type", "image/svg+xml"));
 
 	let asset_routes = favicon_route
 		.or(icon_180x180_png_route)
@@ -163,7 +168,8 @@ pub async fn run_web_server(
 		.or(cpu_svg_route)
 		.or(hourglass_svg_route)
 		.or(memory_svg_route)
-		.or(thermometer_svg_route);
+		.or(thermometer_svg_route)
+		.or(file_text_svg_route);
 
 	let index_route = end()
 		.map(|| html(INDEX_HTML));
@@ -275,6 +281,7 @@ struct AdminInfos {
 	cpu_temp: Option<f32>,
 	ram_info: String,
 	uptime: String,
+	latest_logs_of_the_day: String,
 }
 
 fn get_admin_infos(body: serde_json::Value, password: String, shared_data: Arc<RwLock<SharedServerData>>) -> Response {
@@ -308,6 +315,11 @@ fn get_admin_infos(body: serde_json::Value, password: String, shared_data: Arc<R
 			Err(_) => "failed to get uptime".to_string(),
 		};
 
+		let latest_logs_of_the_day = match get_latest_logs_of_the_day() {
+			Ok(logs) => logs,
+			Err(error_str) => error_str,
+		};
+
 		reply::json(&AdminInfos{
 			connected_native_gui_clients,
 			connected_web_clients,
@@ -315,6 +327,7 @@ fn get_admin_infos(body: serde_json::Value, password: String, shared_data: Arc<R
 			cpu_temp,
 			ram_info,
 			uptime,
+			latest_logs_of_the_day
 		})
 		.into_response()
 	}
@@ -326,6 +339,31 @@ fn get_admin_infos(body: serde_json::Value, password: String, shared_data: Arc<R
 		)
 		.into_response()
 	}
+}
+
+fn get_latest_logs_of_the_day() -> Result<String, String> {
+	let output = Command::new("journalctl")
+		.arg("-u")
+		.arg("project_tracker_server.service")
+		.arg("--since")
+		.arg("1 day ago")
+		.stdout(Stdio::piped())
+		.stderr(Stdio::piped())
+		.output()
+		.map_err(|e| format!("Failed to execute journalctl: {}", e))?;
+
+	if !output.status.success() {
+		let err_msg = from_utf8(&output.stderr)
+			.unwrap_or("Unknown error")
+			.to_string();
+
+		return Err(format!("journalctl error: {}", err_msg));
+	}
+
+	let logs = from_utf8(&output.stdout)
+		.map_err(|e| format!("Failed to convert output to string: {}", e))?;
+
+	Ok(logs.to_string())
 }
 
 async fn messure_cpu_usage_avg_thread(shared_data: Arc<RwLock<SharedServerData>>) {

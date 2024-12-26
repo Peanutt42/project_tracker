@@ -49,19 +49,26 @@
 			</div>
 			<div id="uptime_text"></div>
 		</div>
-		<div id="connected_native_gui_clients_div" class="address_list_card">
+		<div id="connected_native_gui_clients_div" class="info_list_card">
 			<div style="display: flex; flex-direction: row; gap: 10px;">
 				<img src="/static/window.svg" style="width: 25px; padding-right: 10px;" />
 				<div>Native GUI Clients:</div>
 			</div>
 			<ul id="connected_native_gui_clients_list" class="connected_address_list"></ul>
 		</div>
-		<div id="connected_web_clients_div" class="address_list_card">
+		<div id="connected_web_clients_div" class="info_list_card">
 			<div style="display: flex; flex-direction: row; gap: 10px;">
 				<img src="/static/globe.svg" style="width: 25px; padding-right: 10px;" />
 				<div>Web Clients:</div>
 			</div>
 			<ul id="connected_web_clients_list" class="connected_address_list"></ul>
+		</div>
+		<div id="latest_logs" class="info_list_card">
+			<div style="display: flex; flex-direction: row; gap: 10px; width: 150px; text-wrap-mode: nowrap;">
+				<img src="/static/file-earmark-text.svg" style="height: 25px; padding-right: 10px;" />
+				<div>Latest Logs (last 24h):</div>
+			</div>
+			<code id="latest_logs_text" class="latest_logs_text"></code>
 		</div>
 	</div>
 </body>

@@ -15,7 +15,7 @@ cd "$project_root/project_tracker_server"
 cargo b --release
 
 echo "Installing files..."
-binary_filepath="/usr/local/bin/project_tracker_server"
+binary_filepath="/usr/bin/project_tracker_server"
 sudo cp "$project_root/target/release/project_tracker_server" "$binary_filepath"
 server_data_directory="/srv/project_tracker_server"
 sudo mkdir -p "$server_data_directory"
