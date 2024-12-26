@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 			}
 
 			const scrollToBottom = latest_logs_text.scrollTop === 0 ||
-				latest_logs_text.scrollTop === latest_logs_text.scrollHeight;
+				latest_logs_text.scrollTop >= latest_logs_text.scrollHeight - latest_logs_text.clientHeight;
 
 			latest_logs_text.textContent = admin_infos.latest_logs_of_the_day;
 
