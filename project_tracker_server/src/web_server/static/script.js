@@ -208,9 +208,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		const task_tags_list = document.createElement("ul");
 		task_tags_list.className = "tag_list";
-		for (const tag_id of task.tags) {
-			let task_tag = task_tags[tag_id];
-			task_tags_list.appendChild(task_tag_dom(task_tag));
+		for (const [tag_id, tag] of Object.entries(task_tags)) {
+			if (task.tags.includes(Number(tag_id))) {
+				task_tags_list.appendChild(task_tag_dom(tag));
+			}
 		}
 		task_tags_and_name_div.appendChild(task_tags_list);
 
