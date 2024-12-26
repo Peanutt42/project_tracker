@@ -55,9 +55,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 				connected_web_clients_list.appendChild(address_div);
 			}
 
+			const scrollToBottom = latest_logs_text.scrollTop === 0 ||
+				latest_logs_text.scrollTop === latest_logs_text.scrollHeight;
+
 			latest_logs_text.textContent = admin_infos.latest_logs_of_the_day;
-			// scrolls to the end/bottom
-			if (latest_logs_text.scrollTop === 0) {
+
+			if (scrollToBottom) {
 				latest_logs_text.scrollTop = latest_logs_text.scrollHeight;
 			}
 		} else {
