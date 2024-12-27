@@ -38,59 +38,39 @@ impl From<ConfirmModalMessage> for Message {
 	}
 }
 
-pub enum ConfirmModal {
-	Opened {
-		title: String,
-		on_confirmed: Message,
-		custom_ok_label: Option<&'static str>,
-		custom_cancel_label: Option<&'static str>,
-	},
-	Closed,
+pub struct ConfirmModal {
+	title: String,
+	pub on_confirmed: Message,
+	custom_ok_label: Option<&'static str>,
+	custom_cancel_label: Option<&'static str>,
 }
 
 impl ConfirmModal {
-	pub fn update(&mut self, message: ConfirmModalMessage) {
-		match message {
-			ConfirmModalMessage::Open {
-				title,
-				on_confirmed,
-				custom_ok_label,
-				custom_cancel_label,
-			} => {
-				*self = ConfirmModal::Opened {
-					title,
-					on_confirmed: *on_confirmed,
-					custom_ok_label,
-					custom_cancel_label,
-				};
-			}
-			ConfirmModalMessage::Close => {
-				*self = ConfirmModal::Closed;
-			}
+	pub fn new(
+		title: String,
+		on_confirmed: Message,
+		custom_ok_label: Option<&'static str>,
+		custom_cancel_label: Option<&'static str>
+	) -> Self {
+		Self {
+			title,
+			on_confirmed,
+			custom_ok_label,
+			custom_cancel_label,
 		}
 	}
 
-	pub fn view(&self) -> Option<Element<Message>> {
-		match self {
-			ConfirmModal::Closed => None,
-			ConfirmModal::Opened {
-				title,
-				on_confirmed,
-				custom_ok_label,
-				custom_cancel_label,
-			} => Some(
-				card(
-					text(title),
-					row![
-						confirm_ok_button(on_confirmed, *custom_ok_label),
-						confirm_cancel_button(*custom_cancel_label)
-					]
-					.spacing(SPACING_AMOUNT),
-				)
-				.max_width(300.0)
-				.style(card_style)
-				.into(),
-			),
-		}
+	pub fn view(&self) -> Element<Message> {
+		card(
+			text(&self.title),
+			row![
+				confirm_ok_button(&self.on_confirmed, self.custom_ok_label),
+				confirm_cancel_button(self.custom_cancel_label)
+			]
+			.spacing(SPACING_AMOUNT),
+		)
+		.max_width(300.0)
+		.style(card_style)
+		.into()
 	}
 }

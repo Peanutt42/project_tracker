@@ -1,5 +1,5 @@
 use crate::{
-	components::{days_left_widget, duration_str, duration_widget, in_between_dropzone, round_duration_to_seconds}, core::{View, TASK_TAG_QUAD_HEIGHT}, icons::{icon_to_text, Bootstrap}, modals::TaskModalMessage, pages::SidebarPageMessage, project_tracker::Message, styles::{checkbox_style, default_text_style, grey_text_style, rounded_container_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT}
+	components::{days_left_widget, duration_str, duration_widget, in_between_dropzone, round_duration_to_seconds}, core::{View, TASK_TAG_QUAD_HEIGHT}, icons::{icon_to_text, Bootstrap}, pages::SidebarPageMessage, project_tracker::Message, styles::{checkbox_style, default_text_style, grey_text_style, rounded_container_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT}
 };
 use project_tracker_core::{DatabaseMessage, Project, ProjectId, SortMode, Task, TaskId, TaskType};
 use iced::widget::{hover, markdown, Space};
@@ -250,7 +250,7 @@ pub fn task_widget<'a>(
 			button(
 				inner(false)
 			)
-			.on_press(TaskModalMessage::Open{ project_id, task_id }.into())
+			.on_press(Message::OpenTaskModal{ project_id, task_id })
 			.style(|t, s| task_button_style(t, s, false))
 			.padding(Padding::ZERO)
 			.into()

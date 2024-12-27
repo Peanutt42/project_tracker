@@ -33,13 +33,13 @@ pub struct ProjectTrackerApp {
 	pub last_sync_finish_time: Option<Instant>,
 	pub server_ws_message_sender: Option<ServerWsMessageSender>,
 	pub preferences: Option<Preferences>,
-	pub confirm_modal: ConfirmModal,
+	pub confirm_modal: Option<ConfirmModal>,
 	pub error_msg_modal: ErrorMsgModal,
 	pub wait_closing_modal: WaitClosingModal,
 	pub settings_modal: SettingsModal,
-	pub manage_tags_modal: ManageTaskTagsModal,
-	pub create_task_modal: CreateTaskModal,
-	pub task_modal: TaskModal,
+	pub manage_tags_modal: Option<ManageTaskTagsModal>,
+	pub create_task_modal: Option<CreateTaskModal>,
+	pub task_modal: Option<TaskModal>,
 	pub pressed_task: Option<(ProjectId, TaskId)>,
 	pub dragged_task: Option<TaskId>,
 	pub start_dragging_point: Option<Point>,
@@ -118,10 +118,19 @@ pub enum Message {
 	ToggleSidebar,
 	AnimateSidebar,
 	SettingsModalMessage(SettingsModalMessage),
-	OpenCreateTaskModal,
+	OpenCreateTaskModal(ProjectId),
+	OpenCreateTaskModalCurrent,
+	CloseCreateTaskModal,
 	CreateTaskModalMessage(CreateTaskModalMessage),
+	OpenTaskModal {
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
 	TaskModalMessage(TaskModalMessage),
+	CloseTaskModal,
 	ManageTaskTagsModalMessage(ManageTaskTagsModalMessage),
+	OpenManageTaskTagsModal(ProjectId),
+	CloseManageTaskTagsModal,
 }
 
 impl ProjectTrackerApp {
@@ -185,13 +194,13 @@ impl ProjectTrackerApp {
 				last_sync_finish_time: None,
 				server_ws_message_sender: None,
 				preferences: None,
-				confirm_modal: ConfirmModal::Closed,
+				confirm_modal: None,
 				error_msg_modal: ErrorMsgModal::Closed,
 				wait_closing_modal: WaitClosingModal::Closed,
 				settings_modal: SettingsModal::Closed,
-				manage_tags_modal: ManageTaskTagsModal::Closed,
-				create_task_modal: CreateTaskModal::Closed,
-				task_modal: TaskModal::Closed,
+				manage_tags_modal: None,
+				create_task_modal: None,
+				task_modal: None,
 				pressed_task: None,
 				dragged_task: None,
 				start_dragging_point: None,
@@ -302,7 +311,9 @@ impl ProjectTrackerApp {
 			self.settings_modal
 				.subscription()
 				.map(Message::SettingsModalMessage),
-			self.create_task_modal.subscription(),
+			self.create_task_modal.as_ref()
+				.map(CreateTaskModal::subscription)
+				.unwrap_or(Subscription::none()),
 			time::every(Duration::from_secs(1)).map(|_| Message::SaveChangedFiles),
 			time::every(Duration::from_secs(1)).map(|_| Message::SyncIfChanged),
 			Subscription::run_with_id(server_config_hash, connect_ws()).map(Message::ServerWsEvent),
@@ -341,20 +352,20 @@ impl ProjectTrackerApp {
 				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
 					return self.update(ErrorMsgModalMessage::Close.into());
 				}
-				if matches!(self.confirm_modal, ConfirmModal::Opened { .. }) {
+				if self.confirm_modal.is_some() {
 					return self.update(ConfirmModalMessage::Close.into());
 				}
 				if matches!(self.settings_modal, SettingsModal::Opened { .. }) {
 					return self.update(SettingsModalMessage::Close.into());
 				}
-				if matches!(self.manage_tags_modal, ManageTaskTagsModal::Opened { .. }) {
-					return self.update(ManageTaskTagsModalMessage::Close.into());
+				if self.manage_tags_modal.is_some() {
+					return self.update(Message::CloseManageTaskTagsModal);
 				}
-				if matches!(self.create_task_modal, CreateTaskModal::Opened { .. }) {
-					return self.update(CreateTaskModalMessage::Close.into());
+				if self.create_task_modal.is_some() {
+					return self.update(Message::CloseCreateTaskModal);
 				}
-				if matches!(self.task_modal, TaskModal::Opened { .. }) {
-					return self.update(TaskModalMessage::Close.into());
+				if self.task_modal.is_some() {
+					return self.update(Message::CloseTaskModal);
 				}
 				if self.content_page.is_project_page_opened() {
 					self.update(ProjectPageMessage::HideColorPicker.into())
@@ -368,10 +379,10 @@ impl ProjectTrackerApp {
 					Task::none()
 				} else {
 					match &self.confirm_modal {
-						ConfirmModal::Opened { on_confirmed, .. } => self.update(
-							Message::ConfirmModalConfirmed(Box::new(on_confirmed.clone())),
+						Some(confirm_modal) => self.update(
+							Message::ConfirmModalConfirmed(Box::new(confirm_modal.on_confirmed.clone())),
 						),
-						ConfirmModal::Closed => Task::none(),
+						None => Task::none(),
 					}
 				}
 			}
@@ -398,7 +409,7 @@ impl ProjectTrackerApp {
 			Message::SyncIfChanged => {
 				if self.has_unsynced_changes() &&
 					matches!(self.error_msg_modal, ErrorMsgModal::Closed) && // dont auto sync when an error happened
-					matches!(self.confirm_modal, ConfirmModal::Closed) && // dont auto sync while user needs to confirm something
+					self.confirm_modal.is_none() && // dont auto sync while user needs to confirm something
 					matches!(self.settings_modal, SettingsModal::Closed) // or user is configuring the sync options
 				{
 					self.update(Message::SyncDatabase)
@@ -420,7 +431,20 @@ impl ProjectTrackerApp {
 				self.update(ConfirmModalMessage::Close.into()),
 			]),
 			Message::ConfirmModalMessage(message) => {
-				self.confirm_modal.update(message);
+				match message {
+					ConfirmModalMessage::Open {
+						title,
+						on_confirmed,
+						custom_ok_label,
+						custom_cancel_label,
+					} => self.confirm_modal = Some(ConfirmModal::new(
+						title,
+						*on_confirmed,
+						custom_ok_label,
+						custom_cancel_label,
+					)),
+					ConfirmModalMessage::Close => self.confirm_modal = None,
+				}
 				Task::none()
 			}
 			Message::ErrorMsgModalMessage(message) => {
@@ -964,10 +988,9 @@ impl ProjectTrackerApp {
 			Message::LeftClickReleased => {
 				let task = if self.just_minimal_dragging {
 					if let Some((project_id, task_id)) = &self.pressed_task {
-						self.update(TaskModalMessage::Open {
-							project_id: *project_id,
-							task_id: *task_id
-						}.into())
+						let (task_modal, task) = TaskModal::new(*project_id, *task_id);
+						self.task_modal = Some(task_modal);
+						task
 					} else {
 						Task::none()
 					}
@@ -1012,7 +1035,7 @@ impl ProjectTrackerApp {
 				let action = self.settings_modal.update(message, &mut self.preferences);
 				self.perform_preference_action(action)
 			},
-			Message::ManageTaskTagsModalMessage(message) => {
+			Message::ManageTaskTagsModalMessage(message) => if let Some(manage_tags_modal) = &mut self.manage_tags_modal {
 				let deleted_task_tag_id =
 					if let ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) = &message {
 						Some(*task_tag_id)
@@ -1020,7 +1043,7 @@ impl ProjectTrackerApp {
 						None
 					};
 
-				let manage_task_tag_modal_action = self.manage_tags_modal.update(message, &self.database);
+				let manage_task_tag_modal_action = manage_tags_modal.update(message, &self.database);
 
 				Task::batch([
 					self.perform_manage_task_tags_modal_action(manage_task_tag_modal_action),
@@ -1038,10 +1061,19 @@ impl ProjectTrackerApp {
 						})
 						.unwrap_or(Task::none()),
 				])
+			} else {
+				Task::none()
 			},
-			Message::CreateTaskModalMessage(message) => {
-				let action = self.create_task_modal.update(message, &self.preferences);
-				match action {
+			Message::OpenManageTaskTagsModal(project_id) => {
+				self.manage_tags_modal = Some(ManageTaskTagsModal::new(project_id));
+				Task::none()
+			},
+			Message::CloseManageTaskTagsModal => {
+				self.manage_tags_modal = None;
+				Task::none()
+			},
+			Message::CreateTaskModalMessage(message) => if let Some(create_task_modal) = &mut self.create_task_modal {
+				match create_task_modal.update(message, &self.preferences) {
 					CreateTaskModalAction::None => Task::none(),
 					CreateTaskModalAction::Task(task) => task.map(Message::CreateTaskModalMessage),
 					CreateTaskModalAction::DatabaseMessage(message) => Task::batch([
@@ -1050,20 +1082,39 @@ impl ProjectTrackerApp {
 						self.update(OverviewPageMessage::RefreshCachedTaskList.into()),
 					]),
 				}
+			} else {
+				Task::none()
 			},
-			Message::OpenCreateTaskModal => if let Some(project_id) =
+			Message::OpenCreateTaskModalCurrent => if let Some(project_id) =
 				self.content_page.project_page.as_ref().map(|project_page| project_page.project_id)
 			{
-				self.update(CreateTaskModalMessage::Open(project_id).into())
+				self.update(Message::OpenCreateTaskModal(project_id))
 			}
 			else {
 				Task::none()
 			},
-			Message::TaskModalMessage(message) => match self.task_modal.update(message, &self.database) {
-				TaskModalAction::None => Task::none(),
-				TaskModalAction::Task(task) => task.map(Message::TaskModalMessage),
-				TaskModalAction::DatabaseMessage(message) => self.update(message.into()),
+			Message::OpenCreateTaskModal(project_id) => {
+				self.create_task_modal = Some(CreateTaskModal::new(project_id));
+				Task::none()
 			},
+			Message::CloseCreateTaskModal => {
+				self.create_task_modal = None;
+				Task::none()
+			},
+			Message::TaskModalMessage(message) => match &mut self.task_modal {
+				Some(task_modal) => match task_modal.update(message, &self.database) {
+					TaskModalAction::None => Task::none(),
+					TaskModalAction::Task(task) => task.map(Message::TaskModalMessage),
+					TaskModalAction::DatabaseMessage(message) => self.update(message.into()),
+				},
+				None => Task::none(),
+			},
+			Message::OpenTaskModal { project_id, task_id } => {
+				let (task_modal, task) = TaskModal::new(project_id, task_id);
+				self.task_modal = Some(task_modal);
+				task
+			},
+			Message::CloseTaskModal => { self.task_modal = None; Task::none() },
 		};
 
 		if matches!(self.wait_closing_modal, WaitClosingModal::Opened { .. }) &&
@@ -1092,19 +1143,36 @@ impl ProjectTrackerApp {
 				actions.into_iter().map(|action| self.perform_content_page_action(action))
 			),
 			ContentPageAction::Task(task) => task,
-			ContentPageAction::DatabaseMessage(message) => self.update(message.into()),
+			ContentPageAction::DatabaseMessage(message) => {
+				match &message {
+					DatabaseMessage::DeleteTask { project_id, task_id } =>
+						if let Some(task_modal) = &mut self.task_modal {
+							if *project_id == task_modal.project_id &&
+								*task_id == task_modal.task_id
+							{
+								self.task_modal = None;
+							}
+						},
+					DatabaseMessage::CreateTask { .. } => {
+						self.create_task_modal = None;
+					},
+					_ => {},
+				}
+
+				self.update(message.into())
+			},
 			ContentPageAction::OpenManageTaskTagsModal(project_id) => self.update(
-				ManageTaskTagsModalMessage::Open { project_id }.into()
+				Message::OpenManageTaskTagsModal(project_id)
 			),
 			ContentPageAction::ConfirmDeleteProject { project_id, project_name } => self.update(ConfirmModalMessage::open(
 				format!("Delete Project '{project_name}'?"),
 				DatabaseMessage::DeleteProject(project_id),
 			)),
-			ContentPageAction::OpenTaskModal { project_id, task_id } => self.update(TaskModalMessage::Open {
-				project_id,
-				task_id
-			}.into()),
-			ContentPageAction::CloseTaskModal => self.update(TaskModalMessage::Close.into()),
+			ContentPageAction::OpenTaskModal { project_id, task_id } => self.update(Message::OpenTaskModal { project_id, task_id }),
+			ContentPageAction::CloseTaskModal => {
+				self.task_modal = None;
+				Task::none()
+			},
 			ContentPageAction::OpenStopwatch => self.update(ContentPageMessage::OpenStopwatch.into()),
 		}
 	}
@@ -1326,24 +1394,24 @@ impl ProjectTrackerApp {
 		Stack::new()
 			.push(underlay)
 			.push_maybe(Self::modal(
-				self.create_task_modal.view(&self.database, &self.preferences),
-				CreateTaskModalMessage::Close,
-			)
-			.map(|element| element.map(Message::CreateTaskModalMessage)))
-			.push_maybe(Self::modal(
-				self.task_modal.view(self),
-				TaskModalMessage::Close.into(),
+				self.create_task_modal.as_ref()
+					.map(|create_task_modal| create_task_modal.view(&self.database, &self.preferences)),
+				Message::CloseCreateTaskModal,
 			))
 			.push_maybe(Self::modal(
-				self.manage_tags_modal.view(self),
-				ManageTaskTagsModalMessage::Close.into(),
+				self.task_modal.as_ref().map(|task_modal| task_modal.view(self)),
+				Message::CloseTaskModal,
+			))
+			.push_maybe(Self::modal(
+				self.manage_tags_modal.as_ref().map(|task_modal| task_modal.view(self)),
+				Message::CloseManageTaskTagsModal,
 			))
 			.push_maybe(Self::modal(
 				self.settings_modal.view(self),
 				SettingsModalMessage::Close.into(),
 			))
 			.push_maybe(Self::modal(
-				self.confirm_modal.view(),
+				self.confirm_modal.as_ref().map(ConfirmModal::view),
 				ConfirmModalMessage::Close.into(),
 			))
 			.push_maybe(Self::modal(

@@ -59,19 +59,19 @@ pub fn create_new_project_button(enabled: bool) -> Button<'static, Message> {
 
 pub fn open_create_task_modal_button() -> Button<'static, Message> {
 	large_icon_button(Bootstrap::PlusLg)
-		.on_press(Message::OpenCreateTaskModal)
+		.on_press(Message::OpenCreateTaskModalCurrent)
 		.style(circle_button_style)
 }
 
-pub fn create_new_task_modal_button() -> Button<'static, CreateTaskModalMessage> {
+pub fn create_new_task_modal_button() -> Button<'static, Message> {
 	button(text("Create").align_x(Horizontal::Center))
-		.on_press(CreateTaskModalMessage::CreateTask)
+		.on_press(CreateTaskModalMessage::CreateTask.into())
 		.style(primary_button_style)
 }
 
-pub fn close_create_new_task_modal_button() -> Button<'static, CreateTaskModalMessage> {
+pub fn close_create_new_task_modal_button() -> Button<'static, Message> {
 	button(text("Cancel").align_x(Horizontal::Center))
-		.on_press(CreateTaskModalMessage::Close)
+		.on_press(Message::CloseCreateTaskModal)
 		.style(secondary_button_style_default)
 }
 

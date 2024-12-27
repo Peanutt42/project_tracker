@@ -8,7 +8,7 @@ use crate::{
 };
 use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, SerializableColor, TaskTag, TaskTagId};
 use iced::{
-	widget::{column, row, text, text_input, Column},
+	widget::{column, row, text, text_input, Column, Space},
 	Alignment, Color, Element,
 	Length::Fill,
 	Task,
@@ -21,7 +21,6 @@ static CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID: LazyLock<text_input::Id> =
 
 #[derive(Debug, Clone)]
 pub enum ManageTaskTagsModalMessage {
-	Open { project_id: ProjectId },
 	OpenCreateNewTaskTag,
 	CloseCreateNewTaskTag,
 	ChangeCreateNewTaskTagName(String),
@@ -34,7 +33,6 @@ pub enum ManageTaskTagsModalMessage {
 	StopEditTaskTagName,
 	CreateNewTaskTag,
 	DeleteTaskTag(TaskTagId),
-	Close,
 }
 
 impl From<ManageTaskTagsModalMessage> for Message {
@@ -59,17 +57,23 @@ impl From<DatabaseMessage> for ManageTaskTagsModalAction {
 	}
 }
 
-pub enum ManageTaskTagsModal {
-	Opened {
-		project_id: ProjectId,
-		create_new_task_tag: Option<String>,
-		edit_task_tag_color_id: Option<TaskTagId>,
-		edit_task_tag_name_id: Option<(TaskTagId, String)>,
-	},
-	Closed,
+pub struct ManageTaskTagsModal {
+	project_id: ProjectId,
+	create_new_task_tag: Option<String>,
+	edit_task_tag_color_id: Option<TaskTagId>,
+	edit_task_tag_name_id: Option<(TaskTagId, String)>,
 }
 
 impl ManageTaskTagsModal {
+	pub fn new(project_id: ProjectId) -> Self {
+		Self {
+			project_id,
+			create_new_task_tag: None,
+			edit_task_tag_color_id: None,
+			edit_task_tag_name_id: None,
+		}
+	}
+
 	#[must_use]
 	pub fn update(
 		&mut self,
@@ -77,27 +81,10 @@ impl ManageTaskTagsModal {
 		database: &Option<Database>,
 	) -> ManageTaskTagsModalAction {
 		match message {
-			ManageTaskTagsModalMessage::Open { project_id } => {
-				*self = ManageTaskTagsModal::Opened {
-					project_id,
-					create_new_task_tag: None,
-					edit_task_tag_color_id: None,
-					edit_task_tag_name_id: None,
-				};
-				ManageTaskTagsModalAction::None
-			}
 			ManageTaskTagsModalMessage::OpenCreateNewTaskTag => {
-				if let ManageTaskTagsModal::Opened {
-					create_new_task_tag,
-					edit_task_tag_name_id,
-					edit_task_tag_color_id,
-					..
-				} = self
-				{
-					*create_new_task_tag = Some(String::new());
-					*edit_task_tag_name_id = None;
-					*edit_task_tag_color_id = None
-				}
+				self.create_new_task_tag = Some(String::new());
+				self.edit_task_tag_name_id = None;
+				self.edit_task_tag_color_id = None;
 				text_input::focus(CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID.clone()).into()
 			}
 			ManageTaskTagsModalMessage::CloseCreateNewTaskTag => {
@@ -105,56 +92,32 @@ impl ManageTaskTagsModal {
 				ManageTaskTagsModalAction::None
 			}
 			ManageTaskTagsModalMessage::ChangeCreateNewTaskTagName(new_name) => {
-				if let ManageTaskTagsModal::Opened {
-					create_new_task_tag,
-					..
-				} = self
-				{
-					*create_new_task_tag = Some(new_name);
-				}
+				self.create_new_task_tag = Some(new_name);
 				ManageTaskTagsModalAction::None
 			}
 			ManageTaskTagsModalMessage::EditTaskTagColor(task_tag_id) => {
-				if let ManageTaskTagsModal::Opened {
-					edit_task_tag_color_id,
-					..
-				} = self
-				{
-					*edit_task_tag_color_id = Some(task_tag_id);
-				}
+				self.edit_task_tag_color_id = Some(task_tag_id);
 				self.update(ManageTaskTagsModalMessage::StopEditTaskTagName, database)
 			}
 			ManageTaskTagsModalMessage::EditTaskTagName(task_tag_id) => {
-				if let ManageTaskTagsModal::Opened {
-					edit_task_tag_name_id,
-					project_id,
-					..
-				} = self
-				{
-					let task_tag_name = database
-						.as_ref()
-						.and_then(|database| {
-							database.get_project(project_id).and_then(|project| {
-								project
-									.task_tags
-									.get(&task_tag_id)
-									.map(|task_tag| task_tag.name.clone())
-							})
+				let task_tag_name = database
+					.as_ref()
+					.and_then(|database| {
+						database.get_project(&self.project_id).and_then(|project| {
+							project
+								.task_tags
+								.get(&task_tag_id)
+								.map(|task_tag| task_tag.name.clone())
 						})
-						.unwrap_or_default();
-					*edit_task_tag_name_id = Some((task_tag_id, task_tag_name));
-				}
+					})
+					.unwrap_or_default();
+				self.edit_task_tag_name_id = Some((task_tag_id, task_tag_name));
 				self.update(ManageTaskTagsModalMessage::StopEditTaskTagColor, database)
 			}
 			ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color) => {
-				let action = if let ManageTaskTagsModal::Opened {
-					project_id,
-					edit_task_tag_color_id: Some(edit_task_tag_id),
-					..
-				} = self
-				{
+				let action = if let Some(edit_task_tag_id) = &self.edit_task_tag_color_id {
 					DatabaseMessage::ChangeTaskTagColor {
-						project_id: *project_id,
+						project_id: self.project_id,
 						task_tag_id: *edit_task_tag_id,
 						new_color: SerializableColor::from_iced_color(new_color),
 					}
@@ -167,24 +130,15 @@ impl ManageTaskTagsModal {
 				action
 			}
 			ManageTaskTagsModalMessage::ChangeEditTaskTagName(new_name) => {
-				if let ManageTaskTagsModal::Opened {
-					edit_task_tag_name_id: Some((_edit_task_tag_id, edit_task_tag_name)),
-					..
-				} = self
-				{
+				if let Some((_edit_task_tag_id, edit_task_tag_name)) = &mut self.edit_task_tag_name_id {
 					*edit_task_tag_name = new_name;
 				}
 				ManageTaskTagsModalAction::None
 			}
 			ManageTaskTagsModalMessage::ChangeTaskTagName => {
-				let action = if let ManageTaskTagsModal::Opened {
-					project_id,
-					edit_task_tag_name_id: Some((edit_task_tag_id, new_name)),
-					..
-				} = self
-				{
+				let action = if let Some((edit_task_tag_id, new_name)) = &mut self.edit_task_tag_name_id {
 					DatabaseMessage::ChangeTaskTagName {
-						project_id: *project_id,
+						project_id: self.project_id,
 						task_tag_id: *edit_task_tag_id,
 						new_name: std::mem::take(new_name),
 					}
@@ -201,24 +155,13 @@ impl ManageTaskTagsModal {
 				ManageTaskTagsModalAction::None
 			}
 			ManageTaskTagsModalMessage::StopEditTaskTagName => {
-				if let ManageTaskTagsModal::Opened {
-					edit_task_tag_name_id,
-					..
-				} = self
-				{
-					*edit_task_tag_name_id = None;
-				}
+				self.edit_task_tag_name_id = None;
 				ManageTaskTagsModalAction::None
 			}
 			ManageTaskTagsModalMessage::CreateNewTaskTag => {
-				let action = if let ManageTaskTagsModal::Opened {
-					project_id,
-					create_new_task_tag: Some(new_task_tag_name),
-					..
-				} = self
-				{
+				let action = if let Some(new_task_tag_name) = &mut self.create_new_task_tag {
 					DatabaseMessage::CreateTaskTag {
-						project_id: *project_id,
+						project_id: self.project_id,
 						task_tag_id: TaskTagId::generate(),
 						task_tag: TaskTag::new(
 							std::mem::take(new_task_tag_name),
@@ -234,76 +177,51 @@ impl ManageTaskTagsModal {
 				action
 			}
 			ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) => {
-				if let ManageTaskTagsModal::Opened { project_id, .. } = self {
-					DatabaseMessage::DeleteTaskTag {
-						project_id: *project_id,
-						task_tag_id,
-					}
-					.into()
+				DatabaseMessage::DeleteTaskTag {
+					project_id: self.project_id,
+					task_tag_id,
 				}
-				else {
-					ManageTaskTagsModalAction::None
-				}
-			}
-			ManageTaskTagsModalMessage::Close => {
-				*self = ManageTaskTagsModal::Closed;
-				ManageTaskTagsModalAction::None
+				.into()
 			}
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<Message>> {
-		match self {
-			ManageTaskTagsModal::Opened {
-				project_id,
-				create_new_task_tag,
-				edit_task_tag_color_id,
-				edit_task_tag_name_id,
-			} => app
-				.database
-				.as_ref()
-				.and_then(|db| db.get_project(project_id))
-				.map(|project| {
-					card(
-						text(format!("Manage project '{}' task tags", project.name))
-							.size(LARGE_TEXT_SIZE),
-						self.tags_list_view(
-							project,
-							create_new_task_tag,
-							edit_task_tag_color_id,
-							edit_task_tag_name_id,
-						),
-					)
-					.style(card_style)
-					.max_width(500.0)
-					.close_size(LARGE_TEXT_SIZE)
-					.on_close(ManageTaskTagsModalMessage::Close.into())
-					.into()
-				}),
-			ManageTaskTagsModal::Closed => None,
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<Message> {
+		if let Some(project) = app
+			.database
+			.as_ref()
+			.and_then(|db| db.get_project(&self.project_id))
+		{
+			card(
+				text(format!("Manage project '{}' task tags", project.name))
+					.size(LARGE_TEXT_SIZE),
+				self.tags_list_view(
+					project,
+					&self.create_new_task_tag,
+					&self.edit_task_tag_color_id,
+					&self.edit_task_tag_name_id,
+				),
+			)
+			.style(card_style)
+			.max_width(500.0)
+			.close_size(LARGE_TEXT_SIZE)
+			.on_close(Message::CloseManageTaskTagsModal)
+			.into()
+		} else {
+			Space::new(0.0, 0.0).into()
 		}
 	}
 
 	fn stop_editing_task_tag_color(&mut self) {
-		if let ManageTaskTagsModal::Opened { edit_task_tag_color_id, ..	} = self {
-			*edit_task_tag_color_id = None;
-		}
+		self.edit_task_tag_color_id = None;
 	}
 
 	fn stop_editing_task_tag_name(&mut self) {
-		if let ManageTaskTagsModal::Opened { edit_task_tag_name_id, ..	} = self {
-			*edit_task_tag_name_id = None;
-		}
+		self.edit_task_tag_name_id = None;
 	}
 
 	fn close_create_new_task_tag(&mut self) {
-		if let ManageTaskTagsModal::Opened {
-			create_new_task_tag,
-			..
-		} = self
-		{
-			*create_new_task_tag = None;
-		}
+		self.create_new_task_tag = None;
 	}
 
 	fn tags_list_view<'a>(
