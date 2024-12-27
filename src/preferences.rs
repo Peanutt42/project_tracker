@@ -179,12 +179,12 @@ impl From<Task<Message>> for PreferenceAction {
 pub enum LoadPreferencesError {
 	#[error("failed to find preferences filepath")]
 	FailedToFindPreferencesFilepath,
-	#[error("failed to open preferences file: {filepath}, error: {error}")]
+	#[error("failed to open preferences file: {filepath}\n{error}")]
 	FailedToOpenFile {
 		filepath: PathBuf,
 		error: std::io::Error,
 	},
-	#[error("failed to parse preferences from: {filepath}, error: {error}")]
+	#[error("parsing error:\nfailed to load preferences in '{filepath}'")]
 	FailedToParse {
 		filepath: PathBuf,
 		error: serde_json::Error,

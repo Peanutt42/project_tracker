@@ -18,14 +18,10 @@ pub const DEFAULT_PASSWORD: &str = "1234";
 pub enum ServerError {
 	#[error("connection failed with server: {0}")]
 	ConnectionError(#[from] std::io::Error),
-	#[error("failed to parse server response: {0}")]
-	ParseError(#[from] bincode::Error),
 	#[error("invalid response from server")]
 	InvalidResponse,
-	#[error("invalid password")]
-	InvalidPassword,
-	#[error("invalid database binary format")]
-	InvalidDatabaseBinaryFormat,
+	#[error("{0}")]
+	ResponseError(#[from] ResponseError),
 }
 
 pub type ServerResult<T> = Result<T, ServerError>;
@@ -42,19 +38,27 @@ pub enum Request {
 
 impl Request {
 	pub fn decrypt(binary: Vec<u8>, password: &str) -> ServerResult<Self> {
-		let encrypted_message: EncryptedMessage = bincode::deserialize(&binary)?;
+		let encrypted_message: EncryptedMessage = bincode::deserialize(&binary)
+			.map_err(|_| ResponseError::ParseError)?;
 		let request_binary = encrypted_message.decrypt(password)?;
-		Ok(bincode::deserialize(&request_binary)?)
+		Ok(
+			bincode::deserialize(&request_binary)
+				.map_err(|_| ResponseError::ParseError)?
+		)
 	}
 
 	pub fn encrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
-		let request_binary = bincode::serialize(self)?;
+		let request_binary = bincode::serialize(self)
+			.map_err(|_| ResponseError::ParseError)?;
 
 		Ok(
-			bincode::serialize(&EncryptedMessage::new(
-				&request_binary,
-				password
-			)?)?
+			bincode::serialize(
+				&EncryptedMessage::new(
+					&request_binary,
+					password
+				)?
+			)
+			.map_err(|_| ResponseError::ParseError)?
 		)
 	}
 }
@@ -71,11 +75,15 @@ pub enum EncryptedResponse {
 impl EncryptedResponse {
 	pub fn decrypt(encrypted: EncryptedMessage, password: &str) -> ServerResult<Self> {
 		let response_binary = encrypted.decrypt(password)?;
-		Ok(bincode::deserialize(&response_binary)?)
+		Ok(
+			bincode::deserialize(&response_binary)
+				.map_err(|_| ResponseError::ParseError)?
+		)
 	}
 
 	pub fn encrypt(&self, password: &str) -> ServerResult<EncryptedMessage> {
-		let response_binary = bincode::serialize(self)?;
+		let response_binary = bincode::serialize(self)
+			.map_err(|_| ResponseError::ParseError)?;
 
 		EncryptedMessage::new(
 			&response_binary,
@@ -84,20 +92,31 @@ impl EncryptedResponse {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Response {
-	Encrypted(EncryptedMessage),
+#[derive(Debug, Clone, Serialize, Deserialize, Error)]
+pub enum ResponseError {
+	#[error("invalid password")]
 	InvalidPassword,
+	#[error("invalid database binary format")]
 	InvalidDatabaseBinary,
+	#[error("failed to parse request")]
 	ParseError,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Response(pub Result<EncryptedMessage, ResponseError>);
+
 impl Response {
 	pub fn serialize(&self) -> ServerResult<Vec<u8>> {
-		Ok(bincode::serialize(self)?)
+		Ok(
+			bincode::serialize(&self.0)
+				.map_err(|_| ResponseError::ParseError)?
+		)
 	}
 
 	pub fn deserialize(binary: Vec<u8>) -> ServerResult<Self> {
-		Ok(bincode::deserialize(&binary)?)
+		let result = bincode::deserialize(&binary)
+			.map_err(|_| ResponseError::ParseError)?;
+		Ok(Self(result))
 	}
 }
 
@@ -111,7 +130,7 @@ pub struct EncryptedMessage {
 impl EncryptedMessage {
 	pub fn new(plaintext_message: &[u8], password: &str) -> ServerResult<Self> {
 		let (encrypted_message, salt, nonce) = encrypt(plaintext_message, password)
-			.map_err(|_| ServerError::InvalidPassword)?;
+			.map_err(|_| ResponseError::InvalidPassword)?;
 
 		Ok(Self {
 			encrypted_message,
@@ -121,8 +140,9 @@ impl EncryptedMessage {
 	}
 
 	pub fn decrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
-		decrypt(&self.encrypted_message, password, &self.salt, &self.nonce)
-			.map_err(|_| ServerError::InvalidPassword)
+		let bytes = decrypt(&self.encrypted_message, password, &self.salt, &self.nonce)
+			.map_err(|_| ResponseError::InvalidPassword)?;
+		Ok(bytes)
 	}
 }
 

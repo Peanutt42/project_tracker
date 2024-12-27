@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock};
 use async_tungstenite::{tungstenite::{self, Message}, tokio::accept_async};
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
-use crate::{ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ServerError, SharedServerData};
+use crate::{ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ResponseError, ServerError, SharedServerData};
 
 pub async fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<ModifiedEvent>, shared_data: Arc<RwLock<SharedServerData>>) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await
@@ -98,40 +98,27 @@ async fn listen_client_thread(
 	loop {
 		match read.next().await {
 			Some(Ok(tungstenite::Message::Binary(request_binary))) => match Request::decrypt(request_binary, &password) {
-				Ok(request) => {
-					respond_to_client_request(request, client_addr, &shared_data, &modified_sender, &write_ws_sender, &database_filepath, &password).await
-				},
-				Err(e) => {
-					match e {
-						ServerError::InvalidPassword => {
-							eprintln!("[Native WS] invalid password provided");
-							let _ = write_ws_sender.send(Message::binary(
-								Response::InvalidPassword
-									.serialize()
-									.unwrap()
-							))
-							.await;
-						},
-						ServerError::InvalidDatabaseBinaryFormat => {
-							eprintln!("[Native WS] invalid database binary format");
-							let _ = write_ws_sender.send(Message::binary(
-								Response::InvalidDatabaseBinary
-									.serialize()
-										.unwrap()
-							))
-							.await;
-						},
-						ServerError::ParseError(e) => {
-							eprintln!("[Native WS] failed to parse request: {e}");
-							let _ = write_ws_sender.send(Message::binary(
-								Response::ParseError
-									.serialize()
-										.unwrap()
-							))
-							.await;
-						},
-						_ => eprintln!("[Native WS] failed to parse request: {e}"),
+				Ok(request) => respond_to_client_request(
+					request,
+					client_addr,
+					&shared_data,
+					&modified_sender,
+					&write_ws_sender,
+					&database_filepath,
+					&password
+				)
+				.await,
+				Err(e) => match e {
+					ServerError::ResponseError(e) => {
+						eprintln!("[Native WS] {e}");
+						let _ = write_ws_sender.send(Message::binary(
+							Response(Err(e))
+								.serialize()
+								.unwrap()
+						))
+						.await;
 					}
+					_ => eprintln!("[Native WS] failed to parse request: {e}"),
 				},
 			},
 			Some(Err(ref e)) if matches!(
@@ -157,11 +144,11 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 	match request {
 		Request::GetModifiedDate => {
 			println!("[Native WS] sending last modified date");
-			let response = Response::Encrypted(
+			let response = Response(Ok(
 				EncryptedResponse::ModifiedDate(*shared_data.read().unwrap().database.last_changed_time())
 					.encrypt(password)
 					.unwrap()
-			)
+			))
 			.serialize()
 			.unwrap();
 
@@ -183,11 +170,11 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 					}
 
 					let _ = write_ws_sender.send(Message::binary(
-						Response::Encrypted(
+						Response(Ok(
 							EncryptedResponse::DatabaseUpdated
 								.encrypt(password)
 								.unwrap()
-						)
+						))
 						.serialize()
 						.unwrap()
 					))
@@ -201,7 +188,7 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 					eprintln!("[Native WS] failed to parse database binary of client: {e}");
 
 					let _ = write_ws_sender.send(Message::binary(
-						Response::InvalidDatabaseBinary
+						Response(Err(ResponseError::InvalidDatabaseBinary))
 							.serialize()
 							.unwrap()
 					))
@@ -212,14 +199,14 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 		Request::DownloadDatabase => {
 			let shared_data_clone = shared_data.read().unwrap().clone();
 			let last_modified_time = *shared_data_clone.database.last_changed_time();
-			let response = Response::Encrypted(
+			let response = Response(Ok(
 				EncryptedResponse::Database{
 					database: shared_data_clone.database.to_serialized(),
 					last_modified_time,
 				}
 				.encrypt(password)
 				.unwrap()
-			);
+			));
 			match write_ws_sender.send(
 				Message::binary(response.serialize().unwrap())
 			)
@@ -239,14 +226,14 @@ fn modified_event_ws_sender_thread(client_addr: SocketAddr, password: String, mu
 			if modified_event.modified_sender_address != client_addr {
 				let last_modified_time = *modified_event.modified_database.last_changed_time();
 				let failed_to_send_msg = write_ws_sender.send(Message::binary(
-					Response::Encrypted(
+					Response(Ok(
 						EncryptedResponse::Database{
 							database: modified_event.modified_database.to_serialized(),
 							last_modified_time,
 						}
 						.encrypt(&password)
 						.unwrap()
-					)
+					))
 					.serialize()
 					.unwrap()
 				))

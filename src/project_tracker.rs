@@ -668,7 +668,7 @@ impl ProjectTrackerApp {
 						self.perform_content_page_action(action)
 					},
 					Err(error) => match error.as_ref() {
-						LoadDatabaseError::FailedToFindDatbaseFilepath => self.show_error_msg(format!("{error}")),
+						LoadDatabaseError::FailedToFindDatbaseFilepath => self.show_error(error),
 						LoadDatabaseError::FailedToOpenFile { .. } => {
 							if self.database.is_some() {
 								self.show_error(error)
@@ -738,7 +738,7 @@ impl ProjectTrackerApp {
 							}
 							Task::batch([
 								self.update(PreferenceMessage::Save.into()),
-								self.show_error_msg(format!("Parsing Error:\nFailed to load preferences in\n\"{}\"", filepath.display()))
+								self.show_error(error)
 							])
 						},
 					},
@@ -1216,26 +1216,20 @@ impl ProjectTrackerApp {
 	}
 
 	fn handle_server_response(&mut self, response: Response, password: String) -> Task<Message> {
-		match response {
-			Response::Encrypted(encrypted_response) => match EncryptedResponse::decrypt(encrypted_response, &password) {
+		match response.0 {
+			Ok(encrypted_response) => match EncryptedResponse::decrypt(encrypted_response, &password) {
 				Ok(encrypted_response) => self.handle_encrypted_server_response(encrypted_response),
 				Err(e) => {
 					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(format!("{e}")));
 					Task::none()
 				}
 			},
-			Response::InvalidDatabaseBinary => {
-				self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("server failed to parse our database binary format!".to_string()));
+			Err(e) => {
+				self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(
+					format!("Server error:\n{e}")
+				));
 				Task::none()
-			},
-			Response::InvalidPassword => {
-				self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("invalid password!".to_string()));
-				Task::none()
-			},
-			Response::ParseError => {
-				self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error("server failed to parse request!".to_string()));
-				Task::none()
-			},
+			}
 		}
 	}
 
