@@ -210,16 +210,16 @@ pub fn task_widget<'a>(
 		.into()
 	};
 
-	column![
-		in_between_dropzone(
-			if matches!(task_type, TaskType::Todo) {
-				task_dropzone_id.clone()
-			} else {
-				Id::unique()
-			},
-			highlight_dropzone
-		),
-		if draggable {
+	if draggable {
+		column![
+			in_between_dropzone(
+				if matches!(task_type, TaskType::Todo) {
+					task_dropzone_id.clone()
+				} else {
+					Id::unique()
+				},
+				highlight_dropzone
+			),
 			hover(
 				droppable(
 					inner(false)
@@ -246,15 +246,15 @@ pub fn task_widget<'a>(
 
 				on_hover_view
 			)
-		} else {
-			button(
-				inner(false)
-			)
-			.on_press(Message::OpenTaskModal{ project_id, task_id })
-			.style(|t, s| task_button_style(t, s, false))
-			.padding(Padding::ZERO)
-			.into()
-		}
-	]
-	.into()
+		]
+		.into()
+	} else {
+		button(
+			inner(false)
+		)
+		.on_press(Message::OpenTaskModal{ project_id, task_id })
+		.style(|t, s| task_button_style(t, s, false))
+		.padding(Padding::ZERO)
+		.into()
+	}
 }

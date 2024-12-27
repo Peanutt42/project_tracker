@@ -1,8 +1,8 @@
 use std::{collections::{BTreeMap, HashMap}, time::SystemTime};
 use chrono::{DateTime, Days, NaiveDate, Utc};
-use iced::{widget::{column, container, container::Id, text, Column}, Element, Length::Fill, Padding};
+use iced::{widget::{column, row, container, container::Id, text, Column}, Element, Length::Fill, Padding};
 use iced_aw::date_picker::Date;
-use crate::{components::{days_left_widget, open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{IcedColorConversion, SerializableDateConversion}, pages::ContentPageMessage, project_tracker::Message, styles::{PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, Preferences, ProjectTrackerApp};
+use crate::{components::{days_left_widget, open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{IcedColorConversion, SerializableDateConversion, TASK_TAG_QUAD_HEIGHT}, pages::ContentPageMessage, project_tracker::Message, styles::{PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}, OptionalPreference, Preferences, ProjectTrackerApp};
 use crate::core::SortModeUI;
 use project_tracker_core::{Database, ProjectId, SerializableDate, SortMode, Task, TaskId};
 
@@ -11,10 +11,12 @@ pub struct OverviewPage {
 	overdue_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>, // sorted by due date, then by project
 	today_tasks: HashMap<ProjectId, Vec<TaskId>>, // sorted by est. needed time
 	tomorrow_tasks: HashMap<ProjectId, Vec<TaskId>>, // sorted by est. needed time
-	cache_time: SystemTime,
+	future_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>, // sorted by due date, then by project
 	show_overdue_tasks: bool,
 	show_today_tasks: bool,
 	show_tomorrow_tasks: bool,
+	show_future_tasks: bool,
+	cache_time: SystemTime,
 }
 
 #[derive(Debug, Clone)]
@@ -23,6 +25,7 @@ pub enum OverviewPageMessage {
 	ToggleShowOverdueTasks,
 	ToggleShowTodayTasks,
 	ToggleShowTomorrowTasks,
+	ToggleShowFutureTasks,
 }
 
 impl From<OverviewPageMessage> for Message {
@@ -36,6 +39,7 @@ impl OverviewPage {
 		let mut overdue_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>> = BTreeMap::new();
 		let mut today_tasks: HashMap<ProjectId, Vec<TaskId>> = HashMap::new();
 		let mut tomorrow_tasks: HashMap<ProjectId, Vec<TaskId>> = HashMap::new();
+		let mut future_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>> = BTreeMap::new();
 
 		if let Some(database) = database {
 			let today: NaiveDate = Date::today().into();
@@ -76,16 +80,31 @@ impl OverviewPage {
 						}
 					}
 				};
+				let mut cache_future_tasks = |task_id: TaskId, task: &Task| {
+					if let Some(tomorrow_date) = tomorrow_date {
+						if let Some(due_date) = &task.due_date {
+							if *due_date > SerializableDate::from_iced_date(tomorrow_date) {
+								future_tasks.entry(*due_date)
+									.or_default()
+									.entry(project_id)
+									.or_default()
+									.push(task_id);
+							}
+						}
+					}
+				};
 
 				for (task_id, task) in project.todo_tasks.iter() {
 					cache_overdue_tasks(task_id, task);
 					cache_today_tasks(task_id, task);
 					cache_tomorrow_tasks(task_id, task);
+					cache_future_tasks(task_id, task);
 				}
 				for (task_id, task) in project.source_code_todos.iter() {
 					cache_overdue_tasks(*task_id, task);
 					cache_today_tasks(*task_id, task);
 					cache_tomorrow_tasks(*task_id, task);
+					cache_future_tasks(*task_id, task);
 				}
 			}
 
@@ -106,10 +125,12 @@ impl OverviewPage {
 			overdue_tasks,
 			today_tasks,
 			tomorrow_tasks,
-			cache_time: SystemTime::now(),
+			future_tasks,
 			show_overdue_tasks: true,
 			show_today_tasks: true,
 			show_tomorrow_tasks: true,
+			show_future_tasks: true,
+			cache_time: SystemTime::now(),
 		}
 	}
 
@@ -126,6 +147,7 @@ impl OverviewPage {
 			OverviewPageMessage::ToggleShowOverdueTasks => self.show_overdue_tasks = !self.show_overdue_tasks,
 			OverviewPageMessage::ToggleShowTodayTasks => self.show_today_tasks = !self.show_today_tasks,
 			OverviewPageMessage::ToggleShowTomorrowTasks => self.show_tomorrow_tasks = !self.show_tomorrow_tasks,
+			OverviewPageMessage::ToggleShowFutureTasks => self.show_future_tasks = !self.show_future_tasks,
 		}
 	}
 
@@ -143,15 +165,25 @@ impl OverviewPage {
 			.sum();
 
 		let tomorrow_tasks_len: usize = self.tomorrow_tasks.values()
+			.map(|tasks| tasks.len())
+			.sum();
+
+		let future_tasks_len: usize = self.future_tasks.values()
+			.map(|tasks|
+				tasks.values()
 					.map(|tasks| tasks.len())
-					.sum();
+					.sum::<usize>()
+			)
+			.sum();
 
 		container(
 			vertical_scrollable(
 				column![
-					Self::view_overdue_tasks(
-						self.show_overdue_tasks,
+					Self::view_tasks_for_days(
+						"Overdue",
 						&self.overdue_tasks,
+						!self.show_overdue_tasks,
+						OverviewPageMessage::ToggleShowOverdueTasks.into(),
 						overdue_tasks_len,
 						app
 					),
@@ -173,6 +205,15 @@ impl OverviewPage {
 						&self.tomorrow_tasks,
 						app
 					),
+
+					Self::view_tasks_for_days(
+						"Future",
+						&self.future_tasks,
+						!self.show_future_tasks,
+						OverviewPageMessage::ToggleShowFutureTasks.into(),
+						future_tasks_len,
+						app
+					),
 				]
 				.width(Fill)
 				.spacing(SPACING_AMOUNT)
@@ -184,19 +225,27 @@ impl OverviewPage {
 		.into()
 	}
 
-	fn view_overdue_tasks<'a>(show_overdue_tasks: bool, overdue_tasks: &'a BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>, overdue_tasks_len: usize, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
+	fn view_tasks_for_days<'a>(
+		label: &'static str,
+		tasks: &'a BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>,
+		collapsed: bool,
+		on_toggle_collabsed: Message,
+		tasks_len: usize,
+		app: &'a ProjectTrackerApp
+	) -> Element<'a, Message>
+	{
 		Column::new()
 			.push(overview_time_section_button(
-				"Overdue",
-				overdue_tasks_len,
-				!show_overdue_tasks,
-				OverviewPageMessage::ToggleShowOverdueTasks.into()
+				label,
+				tasks_len,
+				collapsed,
+				on_toggle_collabsed
 			))
-			.push_maybe(if overdue_tasks.is_empty() || !show_overdue_tasks {
+			.push_maybe(if tasks.is_empty() || collapsed {
 				None
 			} else {
 				Some(
-					Column::with_children(overdue_tasks.iter()
+					Column::with_children(tasks.iter()
 						.map(|(date, tasks)| {
 							column![
 								days_left_widget(*date, false),
@@ -209,11 +258,18 @@ impl OverviewPage {
 						.spacing(SPACING_AMOUNT)
 				)
 			})
+			.spacing(SPACING_AMOUNT)
 			.into()
 	}
 
-	fn view_tasks_for_day<'a>(time_label: &'static str, task_count: usize, collapsed: bool, on_toggle_collabsed: Message, tasks: &'a HashMap<ProjectId, Vec<TaskId>>, app: &'a ProjectTrackerApp)
-		-> Element<'a, Message>
+	fn view_tasks_for_day<'a>(
+		time_label: &'static str,
+		task_count: usize,
+		collapsed: bool,
+		on_toggle_collabsed: Message,
+		tasks: &'a HashMap<ProjectId, Vec<TaskId>>,
+		app: &'a ProjectTrackerApp
+	) -> Element<'a, Message>
 	{
 		Column::new()
 			.push(overview_time_section_button(time_label, task_count, collapsed, on_toggle_collabsed))
@@ -254,10 +310,29 @@ impl OverviewPage {
 										text("<invalid task id>").into()
 									}
 								})
-						);
+						)
+						.spacing(SMALL_SPACING_AMOUNT);
 
-						column![
-							open_project_button(*project_id, &project.name, project.color.to_iced_color()),
+						let first_task_has_tags = tasks.first()
+							.and_then(|task_id|
+								project.get_task(task_id)
+									.map(|task| !task.tags.is_empty())
+							)
+							.unwrap_or(false);
+
+						row![
+							container(
+								open_project_button(*project_id, &project.name, project.color.to_iced_color())
+							)
+							.width(120.0)
+							.padding(Padding::default().top(
+								if first_task_has_tags {
+									TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT
+								} else {
+									0.0
+								}
+							)),
+
 							list.padding(Padding::default().left(PADDING_AMOUNT)),
 						]
 						.into()
