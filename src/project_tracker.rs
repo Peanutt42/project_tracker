@@ -288,6 +288,9 @@ impl ProjectTrackerApp {
 						Message::SwitchToLowerProject
 					}
 				),
+				keyboard::Key::Character("n") if modifiers.command() && !modifiers.shift() => {
+					Some(Message::OpenCreateTaskModalCurrent)
+				},
 				_ => None,
 			}),
 			iced::event::listen_with(move |event, status, _id| match event {
@@ -311,9 +314,6 @@ impl ProjectTrackerApp {
 			self.settings_modal
 				.subscription()
 				.map(Message::SettingsModalMessage),
-			self.create_task_modal.as_ref()
-				.map(CreateTaskModal::subscription)
-				.unwrap_or(Subscription::none()),
 			time::every(Duration::from_secs(1)).map(|_| Message::SaveChangedFiles),
 			time::every(Duration::from_secs(1)).map(|_| Message::SyncIfChanged),
 			Subscription::run_with_id(server_config_hash, connect_ws()).map(Message::ServerWsEvent),
@@ -1076,11 +1076,34 @@ impl ProjectTrackerApp {
 				match create_task_modal.update(message, &self.preferences) {
 					CreateTaskModalAction::None => Task::none(),
 					CreateTaskModalAction::Task(task) => task.map(Message::CreateTaskModalMessage),
-					CreateTaskModalAction::DatabaseMessage(message) => Task::batch([
-						self.update(message.into()),
-						self.update(ProjectPageMessage::RefreshCachedTaskList.into()),
-						self.update(OverviewPageMessage::RefreshCachedTaskList.into()),
-					]),
+					CreateTaskModalAction::CreateTask {
+						project_id,
+						task_id,
+						task_name,
+						task_description,
+						task_tags,
+						due_date,
+						needed_time_minutes,
+						time_spend,
+						create_at_top
+					} => {
+						self.create_task_modal = None;
+						Task::batch([
+							self.update(DatabaseMessage::CreateTask {
+								project_id,
+								task_id,
+								task_name,
+								task_description,
+								task_tags,
+								due_date,
+								needed_time_minutes,
+								time_spend,
+								create_at_top
+							}.into()),
+							self.update(ProjectPageMessage::RefreshCachedTaskList.into()),
+							self.update(OverviewPageMessage::RefreshCachedTaskList.into()),
+						])
+					},
 				}
 			} else {
 				Task::none()
@@ -1105,7 +1128,12 @@ impl ProjectTrackerApp {
 				Some(task_modal) => match task_modal.update(message, &self.database) {
 					TaskModalAction::None => Task::none(),
 					TaskModalAction::Task(task) => task.map(Message::TaskModalMessage),
-					TaskModalAction::DatabaseMessage(message) => self.update(message.into()),
+					TaskModalAction::DatabaseMessage(message) => {
+						if let DatabaseMessage::DeleteTask { .. } = &message {
+							self.task_modal = None;
+						}
+						self.update(message.into())
+					},
 				},
 				None => Task::none(),
 			},
@@ -1144,19 +1172,14 @@ impl ProjectTrackerApp {
 			),
 			ContentPageAction::Task(task) => task,
 			ContentPageAction::DatabaseMessage(message) => {
-				match &message {
-					DatabaseMessage::DeleteTask { project_id, task_id } =>
-						if let Some(task_modal) = &mut self.task_modal {
-							if *project_id == task_modal.project_id &&
-								*task_id == task_modal.task_id
-							{
-								self.task_modal = None;
-							}
-						},
-					DatabaseMessage::CreateTask { .. } => {
-						self.create_task_modal = None;
-					},
-					_ => {},
+				if let DatabaseMessage::DeleteTask { project_id, task_id } = &message {
+					if let Some(task_modal) = &mut self.task_modal {
+						if *project_id == task_modal.project_id &&
+							*task_id == task_modal.task_id
+						{
+							self.task_modal = None;
+						}
+					}
 				}
 
 				self.update(message.into())

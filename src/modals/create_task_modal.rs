@@ -3,9 +3,9 @@ use std::sync::LazyLock;
 use crate::{
 	components::{close_create_new_task_modal_button, create_new_task_modal_button, due_date_button, duration_to_minutes, edit_needed_time_button, horizontal_scrollable, parse_duration_from_str, task_tag_button, vertical_scrollable, SCROLLBAR_WIDTH}, core::SerializableDateConversion, project_tracker::Message, styles::{card_style, description_text_editor_style, text_editor_keybindings, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT}, OptionalPreference, Preferences
 };
-use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, TaskId, TaskTagId};
+use project_tracker_core::{Database, ProjectId, SerializableDate, TaskId, TaskTagId, TimeSpend};
 use iced::{
-	font, keyboard, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::Fill, Padding, Subscription
+	font, widget::{column, container, row, text, text_editor, text_input, Row, Space}, Element, Font, Length::Fill, Padding
 };
 use iced_aw::card;
 
@@ -38,18 +38,22 @@ impl From<CreateTaskModalMessage> for Message {
 pub enum CreateTaskModalAction {
 	None,
 	Task(iced::Task<CreateTaskModalMessage>),
-	DatabaseMessage(DatabaseMessage),
+	CreateTask {
+		project_id: ProjectId,
+		task_id: TaskId,
+		task_name: String,
+		task_description: String,
+		task_tags: HashSet<TaskTagId>,
+		due_date: Option<SerializableDate>,
+		needed_time_minutes: Option<usize>,
+		time_spend: Option<TimeSpend>,
+		create_at_top: bool,
+	},
 }
 
 impl From<iced::Task<CreateTaskModalMessage>> for CreateTaskModalAction {
 	fn from(value: iced::Task<CreateTaskModalMessage>) -> Self {
 		Self::Task(value)
-	}
-}
-
-impl From<DatabaseMessage> for CreateTaskModalAction {
-	fn from(value: DatabaseMessage) -> Self {
-		Self::DatabaseMessage(value)
 	}
 }
 
@@ -76,19 +80,10 @@ impl CreateTaskModal {
 		}
 	}
 
-	pub fn subscription(&self) -> Subscription<Message> {
-		keyboard::on_key_press(move |key, modifiers| match key.as_ref() {
-			keyboard::Key::Character("n") if modifiers.command() && !modifiers.shift() => {
-				Some(Message::OpenCreateTaskModalCurrent)
-			},
-			_ => None,
-		})
-	}
-
 	#[must_use]
 	pub fn update(&mut self, message: CreateTaskModalMessage, preferences: &Option<Preferences>) -> CreateTaskModalAction {
 		match message {
-			CreateTaskModalMessage::CreateTask => DatabaseMessage::CreateTask{
+			CreateTaskModalMessage::CreateTask => CreateTaskModalAction::CreateTask{
 				project_id: self.project_id,
 				task_id: TaskId::generate(),
 				task_name: self.task_name.clone(),
@@ -101,8 +96,7 @@ impl CreateTaskModal {
 				),
 				time_spend: None,
 				create_at_top: preferences.create_new_tasks_at_top(),
-			}
-			.into(),
+			},
 			CreateTaskModalMessage::ChangeTaskName(new_task_name) => {
 				self.task_name = new_task_name;
 				CreateTaskModalAction::None
