@@ -76,12 +76,12 @@ cd scripts
 ### Installation using docker
 Build docker image:
 ```bash
-sudo docker build -t project_tracker .
+sudo docker build -t project_tracker_server .
 ```
 Run docker image:
-Replace '/path/to/server/' with a actual directory to store persistent data like '/srv/project_tracker_server'
+Replace '/path/to/server/' with a actual directory to store persistent data like '/srv/project_tracker_server/'
 ```bash
-sudo docker run -d -p 443:443 -p 8080:8080 -v /path/to/server/:/data project_tracker
+sudo docker run -d -p 443:443 -p 8080:8080 -v /path/to/server/:/data project_tracker_server
 ```
 
 ### Installation - Other platforms
