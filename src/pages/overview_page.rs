@@ -2,7 +2,7 @@ use std::{collections::{BTreeMap, HashMap}, time::SystemTime};
 use chrono::{DateTime, Days, NaiveDate, Utc};
 use iced::{widget::{column, row, container, container::Id, text, Column}, Element, Length::Fill, Padding};
 use iced_aw::date_picker::Date;
-use crate::{components::{days_left_widget, open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{IcedColorConversion, SerializableDateConversion, TASK_TAG_QUAD_HEIGHT}, pages::ContentPageMessage, project_tracker::Message, styles::{PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}, OptionalPreference, Preferences, ProjectTrackerApp};
+use crate::{components::{open_project_button, overview_time_section_button, task_widget, vertical_scrollable}, core::{IcedColorConversion, SerializableDateConversion, TASK_TAG_QUAD_HEIGHT}, pages::ContentPageMessage, project_tracker::Message, styles::{PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT}, OptionalPreference, Preferences, ProjectTrackerApp};
 use crate::core::SortModeUI;
 use project_tracker_core::{Database, ProjectId, SerializableDate, SortMode, Task, TaskId};
 
@@ -246,14 +246,8 @@ impl OverviewPage {
 			} else {
 				Some(
 					Column::with_children(tasks.iter()
-						.map(|(date, tasks)| {
-							column![
-								days_left_widget(*date, false),
-								Self::view_tasks(tasks, app),
-							]
-							.spacing(SPACING_AMOUNT)
-							.padding(Padding::default().left(PADDING_AMOUNT))
-							.into()
+						.map(|(_date, tasks)| {
+							Self::view_tasks(tasks, app, true)
 						}))
 						.spacing(SPACING_AMOUNT)
 				)
@@ -276,13 +270,13 @@ impl OverviewPage {
 			.push_maybe(if tasks.is_empty() || collapsed {
 				None
 			} else {
-				Some(Self::view_tasks(tasks, app))
+				Some(Self::view_tasks(tasks, app, false))
 			})
 			.spacing(SPACING_AMOUNT)
 			.into()
 	}
 
-	fn view_tasks<'a>(tasks: &'a HashMap<ProjectId, Vec<TaskId>>, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
+	fn view_tasks<'a>(tasks: &'a HashMap<ProjectId, Vec<TaskId>>, app: &'a ProjectTrackerApp, show_due_date: bool) -> Element<'a, Message> {
 		Column::with_children(
 			tasks.iter()
 				.map(|(project_id, tasks)| {
@@ -303,7 +297,7 @@ impl OverviewPage {
 											true,
 											false,
 											false,
-											false
+											show_due_date
 										)
 									}
 									else {
