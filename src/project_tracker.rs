@@ -710,7 +710,11 @@ impl ProjectTrackerApp {
 								let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
 							}
 						}
-						self.update(PreferenceMessage::Save.into())
+						let content_page_action = self.content_page.restore_from_serialized(self.database.as_ref(), &mut self.preferences);
+						Task::batch([
+							self.update(PreferenceMessage::Save.into()),
+							self.perform_content_page_action(content_page_action),
+						])
 					},
 					Err(error) => match error.as_ref() {
 						LoadPreferencesError::FailedToFindPreferencesFilepath => self.show_error(error),
