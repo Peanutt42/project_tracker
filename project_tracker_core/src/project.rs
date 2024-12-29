@@ -1,7 +1,6 @@
 use std::collections::HashSet;
-
-use crate::{OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType, TimeSpend};
-use indexmap::IndexMap;
+use crate::{ordered_hash_map::OrderedHashMapIter, OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType, TimeSpend};
+use indexmap::{map::{Iter, ValuesMut}, IndexMap};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
@@ -30,6 +29,7 @@ pub struct Project {
 	pub todo_tasks: OrderedHashMap<TaskId, Task>,
 	#[serde(with = "indexmap::map::serde_seq")]
 	pub done_tasks: IndexMap<TaskId, Task>,
+	#[serde(with = "indexmap::map::serde_seq")]
 	pub source_code_todos: IndexMap<TaskId, Task>,
 }
 
@@ -206,6 +206,60 @@ impl Project {
 			0 => 0.0,
 			_ => tasks_done as f32 / self.total_tasks() as f32,
 		}
+	}
+
+	pub fn iter(&self) -> TaskIter {
+		TaskIter {
+			todo_tasks_iter: self.todo_tasks.iter(),
+			done_tasks_iter: self.done_tasks.iter(),
+			source_code_tasks_iter: self.source_code_todos.iter(),
+		}
+	}
+
+	pub fn values_mut(&mut self) -> TaskValueIterMut {
+		TaskValueIterMut {
+			todo_tasks_valuse: self.todo_tasks.values_mut(),
+			done_tasks_values: self.done_tasks.values_mut(),
+			source_code_tasks_values: self.source_code_todos.values_mut()
+		}
+	}
+}
+
+pub struct TaskIter<'a> {
+	todo_tasks_iter: OrderedHashMapIter<'a, TaskId, Task>,
+	done_tasks_iter: Iter<'a, TaskId, Task>,
+	source_code_tasks_iter: Iter<'a, TaskId, Task>,
+}
+
+impl<'a> Iterator for TaskIter<'a> {
+	type Item = (TaskId, &'a Task, TaskType);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if let Some((task_id, task)) = self.todo_tasks_iter.next() {
+			Some((task_id, task, TaskType::Todo))
+		} else if let Some((task_id, task)) = self.done_tasks_iter.next() {
+			Some((*task_id, task, TaskType::Done))
+		} else if let Some((task_id, task)) = self.source_code_tasks_iter.next() {
+			Some((*task_id, task, TaskType::SourceCodeTodo))
+		} else {
+			None
+		}
+	}
+}
+
+pub struct TaskValueIterMut<'a> {
+	todo_tasks_valuse: std::collections::hash_map::ValuesMut<'a, TaskId, Task>,
+	done_tasks_values: ValuesMut<'a, TaskId, Task>,
+	source_code_tasks_values: ValuesMut<'a, TaskId, Task>,
+}
+
+impl<'a> Iterator for TaskValueIterMut<'a> {
+	type Item = &'a mut Task;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.todo_tasks_valuse.next()
+			.or(self.done_tasks_values.next())
+			.or(self.source_code_tasks_values.next())
 	}
 }
 

@@ -1,23 +1,33 @@
 use std::{collections::HashSet, fs::File, io::{self, BufRead}, path::{Path, PathBuf}};
+use indexmap::IndexMap;
+use project_tracker_core::TaskId;
 use walkdir::{WalkDir, DirEntry};
+use rayon::prelude::*;
 use crate::Task;
 
-pub fn import_source_code_todos(folders: Vec<PathBuf>) -> Vec<Task> {
-	let mut todos = Vec::new();
-
-	for folder_path in folders {
-		if !should_import_source_code_todos_from_folder(&folder_path) {
-			continue;
-		}
-
-		for entry in WalkDir::new(&folder_path).into_iter().filter_map(|e| e.ok()) {
+pub fn import_source_code_todos(root_directory: PathBuf) -> IndexMap<TaskId, Task> {
+	let todos: Vec<IndexMap<TaskId, Task>> = WalkDir::new(&root_directory)
+		.into_iter()
+		.par_bridge()
+		.filter_map(|e| e.ok())
+		.map(|entry| {
 			if should_import_source_code_todos_from_file(entry.path()) {
-				import_source_code_todos_from_file(entry, &mut todos);
+				import_source_code_todos_from_file(entry)
+			} else {
+				IndexMap::new()
 			}
-		}
-	}
+		})
+		.collect();
 
-	todos
+	let mut capacity = 0;
+	for todos in todos.iter() {
+		capacity += todos.len();
+	}
+	let mut source_code_todos = IndexMap::with_capacity(capacity);
+	for mut todos in todos {
+		source_code_todos.append(&mut todos);
+	}
+	source_code_todos
 }
 
 fn should_import_source_code_todos_from_folder(folder_path: &Path) -> bool {
@@ -31,7 +41,10 @@ fn should_import_source_code_todos_from_folder(folder_path: &Path) -> bool {
 		}
 
 		if let Some(folder_name) = ancestor.file_name() {
-			if folder_name.to_string_lossy().starts_with(".") {
+			let folder_name_str = folder_name.to_string_lossy();
+			if folder_name_str.starts_with(".") ||
+				folder_name_str == "target"
+			{
 				return false;
 			}
 		}
@@ -53,9 +66,11 @@ fn should_import_source_code_todos_from_file(filepath: &Path) -> bool {
 	}
 }
 
-fn import_source_code_todos_from_file(entry: DirEntry, todos: &mut Vec<Task>) {
+fn import_source_code_todos_from_file(entry: DirEntry) -> IndexMap<TaskId, Task> {
 	if let Ok(file) = File::open(entry.path()) {
-		for (i, line) in io::BufReader::new(file)
+		let mut todos = IndexMap::new();
+
+		for (line_index, line) in io::BufReader::new(file)
 			.lines()
 			.map_while(Result::ok)
 			.enumerate()
@@ -76,15 +91,19 @@ fn import_source_code_todos_from_file(entry: DirEntry, todos: &mut Vec<Task>) {
 						let line = line.strip_prefix(':').unwrap_or(&line);
 						let line = line.strip_prefix(' ').unwrap_or(line);
 						let source = entry.path().display();
-						let line_number = i + 1;
-						todos.push(Task::new(
-							line.to_string(),
-							format!("{source} on line {line_number}"),
-							None,
-							None,
-							None,
-							HashSet::new()
-						));
+						let line_number = line_index + 1;
+						let column_number = index + 1;
+						todos.insert(
+							TaskId::generate(),
+							Task::new(
+								line.to_string(),
+								format!("{source}:{line_number}:{column_number}"),
+								None,
+								None,
+								None,
+								HashSet::new()
+							)
+						);
 					}
 				}
 			};
@@ -95,5 +114,9 @@ fn import_source_code_todos_from_file(entry: DirEntry, todos: &mut Vec<Task>) {
 			search_todo("# todo");
 			search_todo("#todo");
 		}
+
+		todos
+	} else {
+		IndexMap::new()
 	}
 }

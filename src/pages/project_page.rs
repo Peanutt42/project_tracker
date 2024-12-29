@@ -6,7 +6,8 @@ use crate::{
 	}, OptionalPreference, Preferences
 };
 use chrono::{DateTime, Utc};
-use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, SerializableColor, SortMode, Task, TaskId, TaskTagId};
+use indexmap::IndexMap;
+use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, SerializableColor, SortMode, Task, TaskId, TaskTagId, TaskType};
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use iced::{
 	alignment::{Alignment, Horizontal},
@@ -46,7 +47,7 @@ pub enum ProjectPageMessage {
 	ChangeSearchTasksFilter(String),
 
 	ImportSourceCodeTodosDialog,
-	ImportSourceCodeTodos(Vec<Task>),
+	ImportSourceCodeTodos(IndexMap<TaskId, Task>),
 	ImportSourceCodeTodosDialogCanceled,
 
 	ShowSourceCodeTodos(bool),
@@ -110,24 +111,17 @@ impl CachedTaskList {
 		};
 
 		let mut todo_list = Vec::new();
-		for (task_id, task) in project.todo_tasks.iter() {
-			if matches(task) {
-				todo_list.push(task_id);
-			}
-		}
 		let mut done_list = Vec::new();
-		for (task_id, task) in project.done_tasks.iter() {
-			if matches(task) {
-				done_list.push(*task_id);
-			}
-		}
 		let mut source_code_todo_list = Vec::new();
-		for (task_id, task) in project.source_code_todos.iter() {
+		for (task_id, task, task_type) in project.iter() {
 			if matches(task) {
-				source_code_todo_list.push(*task_id);
+				match task_type {
+					TaskType::Todo => todo_list.push(task_id),
+					TaskType::Done => done_list.push(task_id),
+					TaskType::SourceCodeTodo => source_code_todo_list.push(task_id),
+				}
 			}
 		}
-
 		project.sort_mode.sort(project, &mut todo_list, sort_unspecified_tasks_at_bottom);
 		project.sort_mode.sort(project, &mut done_list, sort_unspecified_tasks_at_bottom);
 		project.sort_mode.sort(project, &mut source_code_todo_list, sort_unspecified_tasks_at_bottom);
@@ -220,9 +214,9 @@ impl ProjectPage {
 			ProjectPageMessage::ImportSourceCodeTodosDialog => {
 				self.show_context_menu = false;
 				self.importing_source_code_todos = true;
-				iced::Task::perform(Self::pick_todo_source_folders_dialog(), |folders| {
-					if let Some(folders) = folders {
-						ProjectPageMessage::ImportSourceCodeTodos(folders).into()
+				iced::Task::perform(Self::pick_todo_source_folders_dialog(), |source_code_todos| {
+					if let Some(source_code_todos) = source_code_todos {
+						ProjectPageMessage::ImportSourceCodeTodos(source_code_todos).into()
 					} else {
 						ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into()
 					}
@@ -520,17 +514,14 @@ impl ProjectPage {
 		}
 	}
 
-	async fn pick_todo_source_folders_dialog() -> Option<Vec<Task>> {
+	async fn pick_todo_source_folders_dialog() -> Option<IndexMap<TaskId, Task>> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Import Todos from source files")
-			.pick_folders()
+			.pick_folder()
 			.await;
 
-		file_dialog_result.map(|folder_handles| {
-			let folder_paths = folder_handles.iter()
-				.map(|folder_handle| folder_handle.path().to_path_buf())
-				.collect();
-			import_source_code_todos(folder_paths)
+		file_dialog_result.map(|folder_handle| {
+			import_source_code_todos(folder_handle.path().to_path_buf())
 		})
 	}
 }

@@ -3644,6 +3644,7 @@ dependencies = [
  "project_tracker_core",
  "project_tracker_server",
  "rand",
+ "rayon",
  "rfd",
  "rodio",
  "serde",

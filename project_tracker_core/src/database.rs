@@ -3,6 +3,7 @@ use crate::{
 	TaskTagId, TaskType, TimeSpend
 };
 use chrono::{DateTime, Utc};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use std::collections::{HashMap, HashSet};
@@ -29,7 +30,7 @@ pub enum DatabaseMessage {
 
 	ImportSourceCodeTodos{
 		project_id: ProjectId,
-		source_code_todo_tasks: Vec<Task>,
+		source_code_todo_tasks: IndexMap<TaskId, Task>,
 	},
 
 	CreateProject {
@@ -272,10 +273,7 @@ impl Database {
 
 			DatabaseMessage::ImportSourceCodeTodos{ project_id, source_code_todo_tasks } => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
-					project.source_code_todos.clear();
-					for task in source_code_todo_tasks {
-						project.source_code_todos.insert(TaskId::generate(), task);
-					}
+					project.source_code_todos = source_code_todo_tasks;
 				}
 			}),
 
@@ -531,10 +529,7 @@ impl Database {
 			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.task_tags.remove(&task_tag_id);
-					for task in project.todo_tasks.values_mut() {
-						task.tags.remove(&task_tag_id);
-					}
-					for task in project.done_tasks.values_mut() {
+					for task in project.values_mut() {
 						task.tags.remove(&task_tag_id);
 					}
 				}

@@ -643,22 +643,10 @@ impl ProjectTrackerApp {
 				match load_database_result {
 					Ok(database) => {
 						// generate task description markdown parsed items
-						for (_project_id, project) in database.projects().iter() {
-							for (task_id, task) in project.todo_tasks.iter() {
+						for project in database.projects().values() {
+							for (task_id, task, _task_type) in project.iter() {
 								self.task_description_markdown_items.insert(
 									task_id,
-									generate_task_description_markdown(task.description())
-								);
-							}
-							for (task_id, task) in project.source_code_todos.iter() {
-								self.task_description_markdown_items.insert(
-									*task_id,
-									generate_task_description_markdown(task.description())
-								);
-							}
-							for (task_id, task) in project.done_tasks.iter() {
-								self.task_description_markdown_items.insert(
-									*task_id,
 									generate_task_description_markdown(task.description())
 								);
 							}
@@ -798,11 +786,38 @@ impl ProjectTrackerApp {
 			}
 			Message::DatabaseMessage(database_message) => {
 				if let Some(database) = &mut self.database {
-					if let DatabaseMessage::ChangeTaskDescription { task_id, new_task_description, .. } = &database_message {
-						self.task_description_markdown_items.insert(
-							*task_id,
-							generate_task_description_markdown(new_task_description)
-						);
+					match &database_message {
+						DatabaseMessage::CreateTask { task_id, task_description, .. } => {
+							self.task_description_markdown_items.insert(
+								*task_id,
+								generate_task_description_markdown(task_description)
+							);
+						},
+						DatabaseMessage::ChangeTaskDescription { task_id, new_task_description, .. } => {
+							self.task_description_markdown_items.insert(
+								*task_id,
+								generate_task_description_markdown(new_task_description)
+							);
+						},
+						DatabaseMessage::ImportProjects(projects) => {
+							for project in projects.iter() {
+								for (task_id, task, _task_type) in project.iter() {
+									self.task_description_markdown_items.insert(
+										task_id,
+										generate_task_description_markdown(task.description())
+									);
+								}
+							}
+						},
+						DatabaseMessage::ImportSourceCodeTodos { source_code_todo_tasks, .. } => {
+							for (task_id, task) in source_code_todo_tasks.iter() {
+								self.task_description_markdown_items.insert(
+									*task_id,
+									generate_task_description_markdown(task.description())
+								);
+							}
+						},
+						_ => {},
 					}
 					database.update(database_message);
 					if let Some(overview_page) = &mut self.content_page.overview_page {
