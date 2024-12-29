@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, path::PathBuf};
 use crate::{ordered_hash_map::OrderedHashMapIter, OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType, TimeSpend};
 use indexmap::{map::{Iter, ValuesMut}, IndexMap};
 use serde::{Deserialize, Serialize};
@@ -31,6 +31,8 @@ pub struct Project {
 	pub done_tasks: IndexMap<TaskId, Task>,
 	#[serde(with = "indexmap::map::serde_seq")]
 	pub source_code_todos: IndexMap<TaskId, Task>,
+	#[serde(default)]
+	pub source_code_directory: Option<PathBuf>,
 }
 
 impl Project {
@@ -43,6 +45,7 @@ impl Project {
 			todo_tasks: OrderedHashMap::new(),
 			done_tasks: IndexMap::new(),
 			source_code_todos: IndexMap::new(),
+			source_code_directory: None,
 		}
 	}
 

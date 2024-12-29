@@ -30,6 +30,7 @@ pub enum DatabaseMessage {
 
 	ImportSourceCodeTodos{
 		project_id: ProjectId,
+		source_code_directory: PathBuf,
 		source_code_todo_tasks: IndexMap<TaskId, Task>,
 	},
 
@@ -271,9 +272,10 @@ impl Database {
 				}
 			}),
 
-			DatabaseMessage::ImportSourceCodeTodos{ project_id, source_code_todo_tasks } => self.modify(|projects| {
+			DatabaseMessage::ImportSourceCodeTodos{ project_id, source_code_todo_tasks, source_code_directory } => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.source_code_todos = source_code_todo_tasks;
+					project.source_code_directory = Some(source_code_directory);
 				}
 			}),
 

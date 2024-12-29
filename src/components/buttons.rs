@@ -647,7 +647,7 @@ fn import_source_code_todos_button() -> Button<'static, Message> {
 		.style(secondary_button_style_no_rounding)
 }
 
-pub fn reimport_source_code_todos_button(importing: bool) -> Button<'static, Message> {
+pub fn reimport_source_code_todos_button(importing: bool, reimport_possible: bool) -> Button<'static, Message> {
 	button(
 		row![
 			if importing {
@@ -662,12 +662,22 @@ pub fn reimport_source_code_todos_button(importing: bool) -> Button<'static, Mes
 					.align_y(Vertical::Center)
 					.into()
 			},
-			text("Reimport TODO's")
+			text(
+				if reimport_possible {
+					"Reimport TODO's"
+				} else {
+					"Import TODO's"
+				}
+			)
 		]
 		.spacing(SMALL_SPACING_AMOUNT)
 		.align_y(Alignment::Center),
 	)
-	.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
+	.on_press(if reimport_possible {
+		ProjectPageMessage::ReimportSourceCodeTodos.into()
+	} else {
+		ProjectPageMessage::ImportSourceCodeTodosDialog.into()
+	})
 	.style(secondary_button_style_default)
 }
 

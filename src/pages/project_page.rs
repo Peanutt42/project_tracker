@@ -22,9 +22,7 @@ use iced::{
 };
 use iced_aw::{drop_down, DropDown};
 use std::{
-	collections::HashSet,
-	time::SystemTime,
-	sync::LazyLock,
+	collections::HashSet, path::PathBuf, sync::LazyLock, time::SystemTime
 };
 
 static PROJECT_NAME_TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
@@ -47,7 +45,11 @@ pub enum ProjectPageMessage {
 	ChangeSearchTasksFilter(String),
 
 	ImportSourceCodeTodosDialog,
-	ImportSourceCodeTodos(IndexMap<TaskId, Task>),
+	ImportSourceCodeTodos {
+		source_code_directory: PathBuf,
+		source_code_todos: IndexMap<TaskId, Task>,
+	},
+	ReimportSourceCodeTodos,
 	ImportSourceCodeTodosDialogCanceled,
 
 	ShowSourceCodeTodos(bool),
@@ -214,9 +216,12 @@ impl ProjectPage {
 			ProjectPageMessage::ImportSourceCodeTodosDialog => {
 				self.show_context_menu = false;
 				self.importing_source_code_todos = true;
-				iced::Task::perform(Self::pick_todo_source_folders_dialog(), |source_code_todos| {
-					if let Some(source_code_todos) = source_code_todos {
-						ProjectPageMessage::ImportSourceCodeTodos(source_code_todos).into()
+				iced::Task::perform(Self::pick_todo_source_code_folder_dialog(), |source_code_todos| {
+					if let Some((source_code_directory, source_code_todos)) = source_code_todos {
+						ProjectPageMessage::ImportSourceCodeTodos{
+							source_code_directory,
+							source_code_todos
+						}.into()
 					} else {
 						ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into()
 					}
@@ -227,14 +232,37 @@ impl ProjectPage {
 				self.importing_source_code_todos = false;
 				ContentPageAction::None
 			},
-			ProjectPageMessage::ImportSourceCodeTodos(todos) => {
+			ProjectPageMessage::ImportSourceCodeTodos{ source_code_directory, source_code_todos } => {
 				self.importing_source_code_todos = false;
 				DatabaseMessage::ImportSourceCodeTodos{
 					project_id: self.project_id,
-					source_code_todo_tasks: todos
+					source_code_directory,
+					source_code_todo_tasks: source_code_todos
 				}
 				.into()
-			}
+			},
+			ProjectPageMessage::ReimportSourceCodeTodos =>
+			if let Some(source_code_directory) = database
+				.and_then(|db| db.get_project(&self.project_id))
+				.and_then(|project| project.source_code_directory.clone())
+			{
+				self.importing_source_code_todos = true;
+				let source_code_directory_clone = source_code_directory.clone();
+
+				iced::Task::perform(async move {
+					import_source_code_todos(source_code_directory_clone)
+				},
+				move |source_code_todos| {
+					ProjectPageMessage::ImportSourceCodeTodos {
+						source_code_directory: source_code_directory.clone(),
+						source_code_todos
+					}
+					.into()
+				})
+				.into()
+			} else {
+				self.update(ProjectPageMessage::ImportSourceCodeTodosDialog, database, preferences)
+			},
 
 			ProjectPageMessage::ShowSourceCodeTodos(show) => {
 				self.show_source_code_todos = show;
@@ -514,14 +542,18 @@ impl ProjectPage {
 		}
 	}
 
-	async fn pick_todo_source_folders_dialog() -> Option<IndexMap<TaskId, Task>> {
+	async fn pick_todo_source_code_folder_dialog() -> Option<(PathBuf, IndexMap<TaskId, Task>)> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
-			.set_title("Import Todos from source files")
+			.set_title("Import Todos from source code folder")
 			.pick_folder()
 			.await;
 
 		file_dialog_result.map(|folder_handle| {
-			import_source_code_todos(folder_handle.path().to_path_buf())
+			let pathbuf = folder_handle.path().to_path_buf();
+			(
+				pathbuf.clone(),
+				import_source_code_todos(pathbuf)
+			)
 		})
 	}
 }

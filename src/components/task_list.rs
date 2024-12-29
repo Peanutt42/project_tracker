@@ -108,9 +108,14 @@ pub fn task_list<'a>(
 						show_source_code_todos,
 						cached_task_list.source_code_todo.len()
 					),
-					container(reimport_source_code_todos_button(importing_source_code_todos))
-						.width(Fill)
-						.align_x(Horizontal::Right)
+					container(
+						reimport_source_code_todos_button(
+							importing_source_code_todos,
+							project.source_code_directory.is_some()
+						)
+					)
+					.width(Fill)
+					.align_x(Horizontal::Right)
 				]
 			)
 			.padding(Padding {
