@@ -55,6 +55,7 @@ pub enum Message {
 	EnterPressed,
 	CopyToClipboard(String),
 	OpenUrl(String),
+	OpenInCodeEditor(String), // file_location
 	SaveChangedFiles,
 	SyncIfChanged,
 	OpenFolderLocation(PathBuf),
@@ -390,7 +391,15 @@ impl ProjectTrackerApp {
 			Message::OpenUrl(url) => {
 				let _ = open::that_detached(url.as_str());
 				Task::none()
-			}
+			},
+			Message::OpenInCodeEditor(file_location) => {
+				if let Some(code_editor) = self.preferences.code_editor() {
+					if let Err(e) = code_editor.generate_command(&file_location).spawn() {
+						eprintln!("failed to open source code todo in code editor\n{e}\ncode editor: {code_editor:?}, file_location: {file_location}");
+					}
+				}
+				Task::none()
+			},
 			Message::SaveChangedFiles => {
 				let mut commands = Vec::new();
 				if let Some(database) = &mut self.database {

@@ -5,13 +5,9 @@ use crate::{
 		delete_all_done_tasks_button, in_between_dropzone,
 		reimport_source_code_todos_button, show_done_tasks_button, show_source_code_todos_button,
 		task_widget, vertical_scrollable,
-	},
-	pages::{
+	}, core::TaskUiIdMap, integrations::CodeEditor, pages::{
 		CachedTaskList, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
-	},
-	project_tracker::Message,
-	styles::PADDING_AMOUNT,
-	core::TaskUiIdMap
+	}, project_tracker::Message, styles::PADDING_AMOUNT
 };
 use project_tracker_core::{Project, ProjectId, Task, TaskId, TaskType};
 use iced::widget::{container::Id, markdown, Space};
@@ -32,6 +28,7 @@ pub fn task_list<'a>(
 	cached_task_list: &'a CachedTaskList,
 	task_ui_id_map: &'a TaskUiIdMap,
 	task_description_markdown_items: &'a HashMap<TaskId, Vec<markdown::Item>>,
+	code_editor: Option<&'a CodeEditor>,
 	dragged_task: Option<TaskId>,
 	just_minimal_dragging: bool,
 	hovered_task_dropzone: Option<TaskDropzone>,
@@ -62,6 +59,7 @@ pub fn task_list<'a>(
 			task_description_markdown_items,
 			project_id,
 			project,
+			code_editor,
 			dragging,
 			just_minimal_dragging,
 			true,

@@ -293,6 +293,7 @@ impl OverviewPage {
 											app.task_description_markdown_items.get(task_id),
 											*project_id,
 											project,
+											app.preferences.code_editor(),
 											false,
 											true,
 											false,

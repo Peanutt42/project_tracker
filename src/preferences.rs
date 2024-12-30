@@ -1,5 +1,5 @@
 use crate::icons::Bootstrap;
-use crate::integrations::ServerConfig;
+use crate::integrations::{CodeEditor, ServerConfig};
 use crate::{
 	components::{
 		dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded,
@@ -76,6 +76,8 @@ pub struct Preferences {
 
 	synchronization: Option<SynchronizationSetting>,
 
+	code_editor: Option<CodeEditor>,
+
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
 
@@ -95,6 +97,7 @@ impl Default for Preferences {
 			selected_content_page: SerializedContentPage::default(),
 			stopwatch_progress: None,
 			synchronization: None,
+			code_editor: None,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
@@ -237,6 +240,12 @@ impl Preferences {
 	}
 	pub fn sort_unspecified_tasks_at_bottom(&self) -> bool {
 		self.sort_unspecified_tasks_at_bottom
+	}
+	pub fn code_editor(&self) -> &Option<CodeEditor> {
+		&self.code_editor
+	}
+	pub fn set_code_editor(&mut self, code_editor: Option<CodeEditor>) {
+		self.code_editor = code_editor;
 	}
 
 	fn modify(&mut self, f: impl FnOnce(&mut Preferences)) {
@@ -554,6 +563,7 @@ pub trait OptionalPreference {
 	fn sort_unspecified_tasks_at_bottom(&self) -> bool;
 	fn synchronization(&self) -> Option<&SynchronizationSetting>;
 	fn play_timer_notification_sound(&self) -> bool;
+	fn code_editor(&self) -> Option<&CodeEditor>;
 }
 
 impl OptionalPreference for Option<Preferences> {
@@ -599,5 +609,8 @@ impl OptionalPreference for Option<Preferences> {
 		else {
 			default_play_timer_notification_sound()
 		}
+	}
+	fn code_editor(&self) -> Option<&CodeEditor> {
+		self.as_ref().and_then(|prefs| prefs.code_editor.as_ref())
 	}
 }

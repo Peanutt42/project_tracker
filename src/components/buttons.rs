@@ -1,5 +1,5 @@
 use crate::{
-	components::{date_text, duration_text, unfocusable}, core::{IcedColorConversion, SerializableDateConversion, SortModeUI}, icons::{icon_to_text, Bootstrap}, modals::{
+	components::{date_text, duration_text, unfocusable}, core::{IcedColorConversion, SerializableDateConversion, SortModeUI}, icons::{icon_to_text, Bootstrap}, integrations::CodeEditor, modals::{
 		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage, WaitClosingModalMessage
 	}, pages::{
 		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID
@@ -9,8 +9,8 @@ use crate::{
 };
 use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId};
 use iced::{
-	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, rich_text, row, text, text::Span, text_input, tooltip, Button, Column}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
-use iced_aw::{date_picker, date_picker::Date, drop_down::{self, Offset}, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
+	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, rich_text, row, text, text::Span, text_input, tooltip, Button, Column, Space}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
+use iced_aw::{date_picker, date_picker::Date, drop_down, drop_down::Offset, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
 use std::{path::PathBuf, time::Duration};
 
 pub const ICON_FONT_SIZE: f32 = 16.0;
@@ -634,7 +634,7 @@ pub fn settings_tab_button(
 	tab: SettingTab,
 	selected_tab: SettingTab,
 ) -> Button<'static, Message> {
-	icon_label_button(format!("{tab:?}"), tab.icon())
+	icon_label_button(tab.label(), tab.icon())
 		.width(Fill)
 		.style(move |t, s| settings_tab_button_style(t, s, tab == selected_tab))
 		.on_press(SettingsModalMessage::SwitchSettingsTab(tab).into())
@@ -1078,4 +1078,111 @@ pub fn due_date_button<Message: 'static + Clone>(edit_due_date: bool, due_date: 
 	else {
 		add_due_date_button.into()
 	}
+}
+
+pub fn open_in_code_editor_button(file_location: String, code_editor: &CodeEditor) -> Button<'static, Message> {
+	button(
+		row![
+			code_editor.icon(),
+			text(format!("Open in {}", code_editor.name()))
+		]
+		.align_y(Alignment::Center)
+		.spacing(SMALL_SPACING_AMOUNT),
+	)
+	.on_press(Message::OpenInCodeEditor(file_location))
+	.style(secondary_button_style_default)
+}
+
+pub fn code_editor_dropdown_button(selected_code_editor: Option<&CodeEditor>, dropdown_expanded: bool) -> Element<Message> {
+	let default_custom_code_editor = CodeEditor::Custom {
+		name: "Custom editor name".to_string(),
+		command: "custom_editor --open".to_string()
+	};
+
+	DropDown::new(
+		button(
+			row![
+				icon_to_text(if dropdown_expanded {
+					Bootstrap::CaretDownFill
+				} else {
+					Bootstrap::CaretRightFill
+				})
+				.size(ICON_FONT_SIZE),
+
+				row![
+					code_editor_icon(selected_code_editor.cloned()),
+
+					text(
+						code_editor_label(selected_code_editor.cloned())
+					)
+				]
+				.spacing(SMALL_SPACING_AMOUNT)
+				.align_y(Vertical::Center)
+			]
+			.spacing(SPACING_AMOUNT)
+			.align_y(Vertical::Center)
+		)
+		.width(Length::Fixed(130.0))
+		.on_press(SettingsModalMessage::ToggleCodeEditorDropdownExpanded.into())
+		.style(secondary_button_style_default),
+
+		container(
+			column![
+				code_editor_button(None, selected_code_editor, true, false),
+				code_editor_button(Some(CodeEditor::VSCode), selected_code_editor, false, false),
+				code_editor_button(Some(CodeEditor::Zed), selected_code_editor, false, false),
+				code_editor_button(Some(default_custom_code_editor), selected_code_editor, false, true),
+			]
+			.width(Fill)
+		)
+		.style(dropdown_container_style),
+
+		dropdown_expanded
+	)
+	.width(Fixed(130.0))
+	.alignment(drop_down::Alignment::Bottom)
+	.offset(0.0)
+	.on_dismiss(SettingsModalMessage::CollapseCodeEditorDropdown.into())
+	.into()
+}
+
+fn code_editor_icon(code_editor: Option<CodeEditor>) -> Element<'static, Message> {
+	match code_editor {
+		Some(code_editor) => code_editor.icon(),
+		None => Space::new(ICON_FONT_SIZE, ICON_FONT_SIZE).into(),
+	}
+}
+
+fn code_editor_label(code_editor: Option<CodeEditor>) -> String {
+	match code_editor {
+		Some(code_editor) => code_editor.label().to_string(),
+		None => "None".to_string(),
+	}
+}
+
+fn code_editor_button(code_editor: Option<CodeEditor>, selected_code_editor: Option<&CodeEditor>, round_top: bool, round_bottom: bool) -> Button<Message> {
+	let selected = match selected_code_editor {
+		Some(CodeEditor::Custom { .. }) => matches!(code_editor, Some(CodeEditor::Custom { .. })),
+		_ => selected_code_editor == code_editor.as_ref(),
+	};
+
+	button(
+		row![
+			code_editor_icon(code_editor.clone()),
+			text(code_editor_label(code_editor.clone())),
+		]
+		.spacing(SPACING_AMOUNT)
+		.align_y(Vertical::Center)
+	)
+	.on_press(SettingsModalMessage::SetCodeEditor(code_editor).into())
+	.width(Fill)
+	.style(move |t, s| selection_list_button_style(
+		t,
+		s,
+		selected,
+		round_top,
+		round_top,
+		round_bottom,
+		round_bottom
+	))
 }

@@ -1,8 +1,8 @@
 use std::str::FromStr;
-use crate::components::{export_as_json_database_button, hide_password_button, import_json_database_button, show_password_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
+use crate::components::{code_editor_dropdown_button, export_as_json_database_button, hide_password_button, horizontal_seperator_padded, import_json_database_button, show_password_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
 use crate::core::export_database_file_dialog;
 use crate::icons::{icon_to_text, Bootstrap};
-use crate::integrations::ServerConfig;
+use crate::integrations::{CodeEditor, ServerConfig};
 use crate::project_tracker::{ProjectTrackerApp, Message};
 use crate::styles::{
 	grey_text_style, link_color, rounded_container_style, text_input_style_default, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
@@ -10,7 +10,7 @@ use crate::styles::{
 use crate::{
 	components::{
 		dangerous_button, export_database_button,
-		file_location, filepath_widget, horizontal_seperator_padded, import_database_button,
+		file_location, filepath_widget, import_database_button,
 		import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button,
 		vertical_seperator,
 		HORIZONTAL_SCROLLABLE_PADDING, ICON_FONT_SIZE,
@@ -20,6 +20,7 @@ use crate::{
 	styles::{card_style, PADDING_AMOUNT},
 	DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting,
 };
+use iced::Length;
 use project_tracker_core::{Database, DatabaseMessage};
 use project_tracker_server::DEFAULT_PASSWORD;
 use iced::alignment::Vertical;
@@ -44,6 +45,10 @@ pub enum SettingsModalMessage {
 
 	ShowPassword,
 	HidePassword,
+
+	ToggleCodeEditorDropdownExpanded,
+	CollapseCodeEditorDropdown,
+	SetCodeEditor(Option<CodeEditor>),
 
 	SetDateFormatting(DateFormatting),
 
@@ -73,14 +78,16 @@ pub enum SettingTab {
 	General,
 	Database,
 	Shortcuts,
+	CodeEditor,
 	About,
 }
 
 impl SettingTab {
-	const ALL: [SettingTab; 4] = [
+	const ALL: [SettingTab; 5] = [
 		SettingTab::General,
 		SettingTab::Database,
 		SettingTab::Shortcuts,
+		SettingTab::CodeEditor,
 		SettingTab::About,
 	];
 
@@ -89,7 +96,18 @@ impl SettingTab {
 			Self::General => Bootstrap::GearFill,
 			Self::Database => Bootstrap::DatabaseFillGear,
 			Self::Shortcuts => Bootstrap::Command,
+			Self::CodeEditor => Bootstrap::CodeSlash,
 			Self::About => Bootstrap::InfoSquare,
+		}
+	}
+
+	pub fn label(&self) -> &'static str {
+		match self {
+			Self::General => "General",
+			Self::Database => "Database",
+			Self::Shortcuts => "Shortcuts",
+			Self::CodeEditor => "Code Editor",
+			Self::About => "About",
 		}
 	}
 
@@ -98,11 +116,13 @@ impl SettingTab {
 		app: &'a ProjectTrackerApp,
 		preferences: &'a Preferences,
 		show_password: bool,
+		code_editor_dropdown_expanded: bool
 	) -> Element<'a, Message> {
 		match self {
 			SettingTab::General => preferences.view(),
 			SettingTab::Database => database_settings_tab_view(app, preferences, show_password),
 			SettingTab::Shortcuts => shortcuts_settings_tab_view(),
+			SettingTab::CodeEditor => code_editor_settings_tab_view(preferences, code_editor_dropdown_expanded),
 			SettingTab::About => about_settings_tab_view(app),
 		}
 	}
@@ -113,6 +133,7 @@ pub enum SettingsModal {
 	Opened {
 		selected_tab: SettingTab,
 		show_password: bool,
+		code_editor_dropdown_expanded: bool,
 	},
 	#[default]
 	Closed,
@@ -142,6 +163,7 @@ impl SettingsModal {
 				*self = SettingsModal::Opened {
 					selected_tab: SettingTab::default(),
 					show_password: false,
+					code_editor_dropdown_expanded: false,
 				};
 				PreferenceAction::None
 			}
@@ -152,7 +174,8 @@ impl SettingsModal {
 			SettingsModalMessage::OpenTab(tab) => {
 				*self = SettingsModal::Opened {
 					selected_tab: tab,
-					show_password: false
+					show_password: false,
+					code_editor_dropdown_expanded: false,
 				};
 				PreferenceAction::None
 			}
@@ -166,6 +189,28 @@ impl SettingsModal {
 			SettingsModalMessage::HidePassword => {
 				if let SettingsModal::Opened { show_password, .. } = self {
 					*show_password = false;
+				}
+				PreferenceAction::None
+			}
+
+			SettingsModalMessage::ToggleCodeEditorDropdownExpanded => {
+				if let SettingsModal::Opened { code_editor_dropdown_expanded, .. } = self {
+					*code_editor_dropdown_expanded = !*code_editor_dropdown_expanded;
+				}
+				PreferenceAction::None
+			},
+			SettingsModalMessage::CollapseCodeEditorDropdown => {
+				if let SettingsModal::Opened { code_editor_dropdown_expanded, .. } = self {
+					*code_editor_dropdown_expanded = false;
+				}
+				PreferenceAction::None
+			},
+			SettingsModalMessage::SetCodeEditor(code_editor) => {
+				if let Some(preferences) = preferences {
+					preferences.set_code_editor(code_editor);
+				}
+				if let SettingsModal::Opened { code_editor_dropdown_expanded, .. } = self {
+					*code_editor_dropdown_expanded = false;
 				}
 				PreferenceAction::None
 			}
@@ -204,9 +249,10 @@ impl SettingsModal {
 			}
 
 			SettingsModalMessage::SwitchSettingsTab(new_tab) => {
-				if let SettingsModal::Opened { selected_tab, show_password } = self {
+				if let SettingsModal::Opened { selected_tab, show_password, code_editor_dropdown_expanded } = self {
 					*selected_tab = new_tab;
 					*show_password = false;
+					*code_editor_dropdown_expanded = false;
 				}
 				PreferenceAction::None
 			},
@@ -259,7 +305,7 @@ impl SettingsModal {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<Message>> {
 		match self {
 			SettingsModal::Closed => None,
-			SettingsModal::Opened { selected_tab, show_password } => app.preferences.as_ref().map(|preferences| {
+			SettingsModal::Opened { selected_tab, show_password, code_editor_dropdown_expanded } => app.preferences.as_ref().map(|preferences| {
 				let tabs: Vec<Element<Message>> = SettingTab::ALL
 					.iter()
 					.map(|tab| settings_tab_button(*tab, *selected_tab).into())
@@ -275,7 +321,7 @@ impl SettingsModal {
 						),
 						vertical_seperator(),
 						vertical_scrollable(
-							selected_tab.view(app, preferences, *show_password)
+							selected_tab.view(app, preferences, *show_password, *code_editor_dropdown_expanded)
 						)
 					]
 					.spacing(SPACING_AMOUNT),
@@ -551,23 +597,57 @@ fn shortcuts_settings_tab_view() -> Element<'static, Message> {
 	.into()
 }
 
-fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
-	let item = |label: &'static str, content: Element<'static, Message>| {
-		row![
-			label,
-			Space::new(Fill, 0.0),
-			content,
-		]
-		.spacing(SMALL_SPACING_AMOUNT)
-		.align_y(Vertical::Center)
-	};
+fn code_editor_settings_tab_view(preferences: &Preferences, dropdown_expanded: bool) -> Element<Message> {
+	column![
+		item(
+			"Code Editor:",
+			code_editor_dropdown_button(preferences.code_editor().as_ref(), dropdown_expanded),
+		)
+	]
+	.push_maybe(if let Some(CodeEditor::Custom { name, command }) = preferences.code_editor().as_ref() {
+		Some(
+			column![
+				horizontal_seperator_padded(),
+				item(
+					"Custom Editor Name:",
+					text_input("Custom Editor name", name.as_str())
+						.width(Length::Fixed(350.0))
+						.on_input(|new_name| SettingsModalMessage::SetCodeEditor(Some(CodeEditor::Custom {
+							name: new_name,
+							command: command.clone(),
+						}))
+						.into())
+						.style(text_input_style_default)
+				),
+				item(
+					"Custom Editor Command:",
+					text_input("custom_editor --open-file-location", command.as_str())
+						.width(Length::Fixed(350.0))
+						.on_input(|new_command| SettingsModalMessage::SetCodeEditor(Some(CodeEditor::Custom {
+							name: name.clone(),
+							command: new_command,
+						}))
+						.into())
+						.style(text_input_style_default)
+				),
+			]
+			.spacing(SPACING_AMOUNT)
+		)
+	} else {
+		None
+	})
+	.width(Fill)
+	.spacing(SPACING_AMOUNT)
+	.into()
+}
 
+fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
 	let repository = env!("CARGO_PKG_REPOSITORY");
 
 	let author_link = "https://github.com/Peanutt42";
 
 	column![
-		item("Project Tracker:", text("Project Todo Tracker for personal programming projects").into()),
+		item("Project Tracker:", text("Project Todo Tracker for personal programming projects")),
 
 		item(
 			"Author:",
@@ -576,10 +656,9 @@ fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
 					.color(link_color(app.is_theme_dark()))
 					.link(Message::OpenUrl(author_link.to_string()))
 			]
-			.into()
 		),
 
-		item("Version:", text(env!("CARGO_PKG_VERSION")).into()),
+		item("Version:", text(env!("CARGO_PKG_VERSION"))),
 
 		item(
 			"Repository:",
@@ -588,10 +667,20 @@ fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
 					.color(link_color(app.is_theme_dark()))
 					.link(Message::OpenUrl(repository.to_string()))
 			]
-			.into()
 		),
 	]
 	.spacing(SPACING_AMOUNT)
 	.width(Fill)
+	.into()
+}
+
+fn item<'a>(label: &'a str, content: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
+	row![
+		label,
+		Space::new(Fill, 0.0),
+		content.into(),
+	]
+	.spacing(SMALL_SPACING_AMOUNT)
+	.align_y(Vertical::Center)
 	.into()
 }

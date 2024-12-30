@@ -1,5 +1,5 @@
 use crate::{
-	components::{days_left_widget, duration_str, duration_widget, in_between_dropzone, round_duration_to_seconds}, core::{View, TASK_TAG_QUAD_HEIGHT}, icons::{icon_to_text, Bootstrap}, pages::SidebarPageMessage, project_tracker::Message, styles::{checkbox_style, default_text_style, grey_text_style, rounded_container_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT}
+	components::{open_in_code_editor_button, days_left_widget, duration_str, duration_widget, in_between_dropzone, round_duration_to_seconds}, core::{View, TASK_TAG_QUAD_HEIGHT}, icons::{icon_to_text, Bootstrap}, integrations::CodeEditor, pages::SidebarPageMessage, project_tracker::Message, styles::{checkbox_style, default_text_style, grey_text_style, rounded_container_style, task_background_container_style, task_button_style, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT}
 };
 use project_tracker_core::{DatabaseMessage, Project, ProjectId, SortMode, Task, TaskId, TaskType};
 use iced::widget::{hover, markdown, Space};
@@ -25,6 +25,7 @@ pub fn task_widget<'a>(
 	task_description_markdown_items: Option<&'a Vec<markdown::Item>>,
 	project_id: ProjectId,
 	project: &'a Project,
+	code_editor: Option<&'a CodeEditor>,
 	dragging: bool,
 	just_minimal_dragging: bool,
 	draggable: bool,
@@ -41,17 +42,38 @@ pub fn task_widget<'a>(
 	let show_drag_grip = draggable && !dragging && matches!(project.sort_mode, SortMode::Manual);
 
 	let on_hover_view: Element<'a, Message> = if show_drag_grip {
-		container(icon_to_text(Bootstrap::GripVertical))
-			.padding(Padding {
-				top: if task.tags.is_empty() {
-					0.0
+		let normal_grip_view = Element::new(
+			icon_to_text(Bootstrap::GripVertical)
+		);
+
+		container(
+			if let Some(code_editor) = code_editor {
+				if matches!(task_type, TaskType::SourceCodeTodo) {
+					row![
+						icon_to_text(Bootstrap::GripVertical),
+						Space::new(Fill, 0.0),
+						open_in_code_editor_button(task.description().clone(), code_editor),
+					]
+					.align_y(Vertical::Center)
+					.padding(Padding::default().right(SMALL_PADDING_AMOUNT))
+					.into()
 				} else {
-					TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT * 1.5
-				},
-				..Padding::ZERO
-			})
-			.center_y(Fill)
-			.into()
+					normal_grip_view
+				}
+			} else {
+				normal_grip_view
+			}
+		)
+		.padding(Padding {
+			top: if task.tags.is_empty() {
+				0.0
+			} else {
+				TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT * 1.5
+			},
+			..Padding::ZERO
+		})
+		.center_y(Fill)
+		.into()
 	}
 	else {
 		Space::new(0.0, 0.0).into()
