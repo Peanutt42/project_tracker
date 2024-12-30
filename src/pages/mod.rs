@@ -197,8 +197,12 @@ impl ContentPage {
 			if let Some(preferences) = preferences {
 				preferences.set_selected_content_page(SerializedContentPage::Project(project_id));
 			}
-		} else {
+		} else if database.is_some() {
 			self.open_stopwatch(preferences);
+		} else {
+			// database is not loaded yet -> dont override saved selected content page yet
+			self.overview_page = None;
+			self.project_page = None;
 		}
 	}
 
