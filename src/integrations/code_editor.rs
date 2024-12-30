@@ -1,4 +1,4 @@
-use std::{process::Command, sync::LazyLock};
+use std::{path::Path, process::Command, sync::LazyLock};
 use iced::{Element, widget::{image, image::Handle}, advanced::image::Bytes};
 use serde::{Deserialize, Serialize};
 
@@ -55,8 +55,8 @@ impl CodeEditor {
 				let mut args = Vec::new();
 				// if vscode is installed natively -> run code
 				// if installed with flatpak -> run flatpak
-				if which::which("code").is_ok() {
-					command = Command::new("code");
+				if let Ok(code_filepath) = which::which("code") {
+					command = Command::new(code_filepath);
 				} else {
 					command = Command::new("flatpak");
 					args.push("run");
@@ -68,8 +68,33 @@ impl CodeEditor {
 				command
 			},
 			Self::Zed => {
-				let mut command = Command::new("zed");
-				command.args([file_location]);
+				// checks if zed is included in $PATH, installed locally or installed with flatpak
+
+				let mut command;
+				let mut args = Vec::new();
+				let local_zed_filepath = std::env::var("HOME")
+					.map(|home_filepath| Path::new(&home_filepath)
+						.join(".local")
+						.join("bin")
+						.join("zed")
+					)
+					.ok()
+					.and_then(|path| if path.exists() {
+						Some(path)
+					} else {
+						None
+					});
+				if let Ok(zed_filepath) = which::which("zed") {
+					command = Command::new(zed_filepath);
+				} else if let Some(local_zed_filepath) = local_zed_filepath {
+					command = Command::new(local_zed_filepath);
+				} else {
+					command = Command::new("flatpak");
+					args.push("run");
+					args.push("dev.zed.Zed");
+				}
+				args.push(file_location);
+				command.args(args);
 				command
 			},
 			Self::Custom { command, .. } => {

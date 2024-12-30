@@ -23,9 +23,13 @@ install alsa development files, to play the notification sound:
 	```bash
 	sudo dnf install alsa-lib-devel
 	```
-to install locally:
+to install for only the current user:
 ```bash
 ./scripts/install_linux.sh
+```
+to install system wide for all users:
+```bash
+./scripts/install_linux.sh --system-wide
 ```
 
 ### Windows

@@ -74,12 +74,12 @@ winresource = "0.1.17"
 assets = [
 	{ source = "target/release/project_tracker", dest = "/usr/bin/project_tracker", mode = "755" },
 	{ source = "assets/icon.png", dest = "/usr/share/icons/hicolor/512x512/apps/project_tracker.png", mode = "644" },
-	{ source = "assets/project_tracker.desktop", dest = "/usr/share/applications/project_tracker.desktop", mode = "644" },
+	{ source = "scripts/project_tracker_system_wide.desktop", dest = "/usr/share/applications/project_tracker.desktop", mode = "644" },
 ]
 
 [package.metadata.generate-rpm]
 assets = [
 	{ source = "target/release/project_tracker", dest = "/usr/bin/project_tracker", mode = "755" },
 	{ source = "assets/icon.png", dest = "/usr/share/icons/hicolor/512x512/apps/project_tracker.png", mode = "644" },
-	{ source = "assets/project_tracker.desktop", dest = "/usr/share/applications/project_tracker.desktop", mode = "644" },
+	{ source = "scripts/project_tracker_system_wide.desktop", dest = "/usr/share/applications/project_tracker.desktop", mode = "644" },
 ]
