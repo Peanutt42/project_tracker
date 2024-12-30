@@ -98,35 +98,79 @@ impl CachedTaskList {
 		search_filter: &Option<String>,
 		sort_unspecified_tasks_at_bottom: bool
 	) -> Self {
-		let matches = |task: &Task| {
-			task.matches_filter(task_tag_filter)
-				&& search_filter
-					.as_ref()
-					.map(|search_filter| {
-						SkimMatcherV2::default()
-							.fuzzy_match(task.name(), search_filter)
-							.or(SkimMatcherV2::default()
-								.fuzzy_match(task.description(), search_filter))
-							.is_some()
-					})
-					.unwrap_or(true)
-		};
-
 		let mut todo_list = Vec::new();
 		let mut done_list = Vec::new();
 		let mut source_code_todo_list = Vec::new();
-		for (task_id, task, task_type) in project.iter() {
-			if matches(task) {
-				match task_type {
-					TaskType::Todo => todo_list.push(task_id),
-					TaskType::Done => done_list.push(task_id),
-					TaskType::SourceCodeTodo => source_code_todo_list.push(task_id),
+
+		if let Some(search_filter) = search_filter.as_ref()
+			.and_then(|search_filter| if search_filter.is_empty() {
+				None // pretend that no filter is enabled when fitler is empty
+			} else {
+				Some(search_filter)
+			})
+		{
+			let mut todo_score_map = Vec::new();
+			let mut done_score_map = Vec::new();
+			let mut source_code_todo_score_map = Vec::new();
+			for (task_id, task, task_type) in project.iter() {
+				if task.matches_filter(task_tag_filter) {
+					let task_name_match = SkimMatcherV2::default()
+						.fuzzy_match(task.name(), search_filter)
+						.map(|score| 2 * score); // task name matches are double as important than task description matches
+					let task_description_match = SkimMatcherV2::default()
+						.fuzzy_match(task.description(), search_filter);
+
+
+					let task_match = match (task_name_match, task_description_match) {
+						(Some(task_name_match), Some(task_description_match)) => Some(task_name_match + task_description_match),
+						_ => task_name_match.or(task_description_match),
+					};
+
+					if let Some(task_match) = task_match {
+						match task_type {
+							TaskType::Todo => todo_score_map.push((task_id, task_match)),
+							TaskType::Done => done_score_map.push((task_id, task_match)),
+							TaskType::SourceCodeTodo => source_code_todo_score_map.push((task_id, task_match)),
+						}
+					}
 				}
 			}
+
+			let sort_compare = |a: &(TaskId, i64), b: &(TaskId, i64)| {
+				let (_task_id_a, score_a) = a;
+				let (_task_id_b, score_b) = b;
+				score_b.cmp(score_a)
+			};
+
+			todo_score_map.sort_unstable_by(sort_compare);
+			done_score_map.sort_unstable_by(sort_compare);
+			source_code_todo_score_map.sort_unstable_by(sort_compare);
+
+			todo_list = todo_score_map.into_iter()
+				.map(|(task_id, _match)| task_id)
+				.collect();
+			done_list = done_score_map.into_iter()
+				.map(|(task_id, _match)| task_id)
+				.collect();
+			source_code_todo_list = source_code_todo_score_map.into_iter()
+				.map(|(task_id, _match)| task_id)
+				.collect();
+		} else {
+			for (task_id, task, task_type) in project.iter() {
+				if task.matches_filter(task_tag_filter) {
+					match task_type {
+						TaskType::Todo => todo_list.push(task_id),
+						TaskType::Done => done_list.push(task_id),
+						TaskType::SourceCodeTodo => source_code_todo_list.push(task_id),
+					}
+				}
+			}
+
+			project.sort_mode.sort(project, &mut todo_list, sort_unspecified_tasks_at_bottom);
+			project.sort_mode.sort(project, &mut done_list, sort_unspecified_tasks_at_bottom);
+			project.sort_mode.sort(project, &mut source_code_todo_list, sort_unspecified_tasks_at_bottom);
 		}
-		project.sort_mode.sort(project, &mut todo_list, sort_unspecified_tasks_at_bottom);
-		project.sort_mode.sort(project, &mut done_list, sort_unspecified_tasks_at_bottom);
-		project.sort_mode.sort(project, &mut source_code_todo_list, sort_unspecified_tasks_at_bottom);
+
 		Self::new(todo_list, done_list, source_code_todo_list)
 	}
 }
