@@ -2,8 +2,8 @@ use crate::styles::{
 	background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS,
 	LARGE_BORDER_RADIUS,
 };
+use crate::styles::{link_color, GREY, LARGE_BLUR_RADIUS};
 use iced::{border::rounded, widget::container::Style, Border, Color, Shadow, Theme, Vector};
-use crate::styles::{link_color, LARGE_BLUR_RADIUS, GREY};
 
 pub fn rounded_container_style(theme: &Theme) -> Style {
 	Style {
@@ -134,12 +134,11 @@ pub fn task_background_container_style(theme: &Theme, dragging: bool, drag_overl
 						theme.extended_palette().background.weak.color,
 						theme.extended_palette().background.base.color,
 					)
-				}
-				else {
+				} else {
 					mix_color(
 						theme.extended_palette().background.weak.color,
 						theme.extended_palette().background.base.color,
-						0.85
+						0.85,
 					)
 				}
 				.into(),
@@ -148,19 +147,15 @@ pub fn task_background_container_style(theme: &Theme, dragging: bool, drag_overl
 			None
 		},
 		text_color: if dragging || drag_overlay {
-			Some(
-				if drag_overlay {
-					color_average(
-						theme.extended_palette().background.weak.text,
-						theme.extended_palette().background.base.text
-					)
-				}
-				else {
-					GREY
-				}
-			)
-		}
-		else {
+			Some(if drag_overlay {
+				color_average(
+					theme.extended_palette().background.weak.text,
+					theme.extended_palette().background.base.text,
+				)
+			} else {
+				GREY
+			})
+		} else {
 			None
 		},
 		border: rounded(BORDER_RADIUS),
@@ -172,13 +167,20 @@ pub fn task_background_container_style(theme: &Theme, dragging: bool, drag_overl
 			}
 		} else {
 			Shadow::default()
-		}
+		},
 	}
 }
 
 pub fn markdown_background_container_style(theme: &Theme) -> Style {
 	Style {
-		background: Some(mix_color(theme.extended_palette().background.base.color, theme.extended_palette().background.strong.color, 0.25).into()),
+		background: Some(
+			mix_color(
+				theme.extended_palette().background.base.color,
+				theme.extended_palette().background.strong.color,
+				0.25,
+			)
+			.into(),
+		),
 		border: rounded(BORDER_RADIUS),
 		..Default::default()
 	}
@@ -198,18 +200,25 @@ pub fn task_tag_container_style(_theme: &Theme, color: Color) -> Style {
 }
 
 pub fn sidebar_background_container_style(theme: &Theme) -> Style {
-	let mix_factor = if theme.extended_palette().is_dark { 0.9 } else { 0.75 };
+	let mix_factor = if theme.extended_palette().is_dark {
+		0.9
+	} else {
+		0.75
+	};
 
 	Style {
-		background: Some(mix_color(
-			theme.extended_palette().background.weak.color,
-			theme.extended_palette().background.base.color,
-			mix_factor
-		).into()),
+		background: Some(
+			mix_color(
+				theme.extended_palette().background.weak.color,
+				theme.extended_palette().background.base.color,
+				mix_factor,
+			)
+			.into(),
+		),
 		text_color: Some(mix_color(
 			theme.extended_palette().background.weak.text,
 			theme.extended_palette().background.base.text,
-			mix_factor
+			mix_factor,
 		)),
 		..Default::default()
 	}

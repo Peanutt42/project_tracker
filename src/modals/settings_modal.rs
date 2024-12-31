@@ -1,31 +1,32 @@
-use std::str::FromStr;
-use crate::components::{code_editor_dropdown_button, export_as_json_database_button, hide_password_button, horizontal_seperator_padded, import_json_database_button, show_password_button, synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding};
+use crate::components::{
+	code_editor_dropdown_button, export_as_json_database_button, hide_password_button,
+	horizontal_seperator_padded, import_json_database_button, show_password_button,
+	synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding,
+};
 use crate::core::export_database_file_dialog;
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::{CodeEditor, ServerConfig};
-use crate::project_tracker::{ProjectTrackerApp, Message};
+use crate::project_tracker::{Message, ProjectTrackerApp};
 use crate::styles::{
-	grey_text_style, link_color, rounded_container_style, text_input_style_default, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
+	grey_text_style, link_color, rounded_container_style, text_input_style_default,
+	tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING,
+	SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT,
 };
 use crate::{
 	components::{
-		dangerous_button, export_database_button,
-		file_location, filepath_widget, import_database_button,
-		import_google_tasks_button, select_synchronization_filepath_button, settings_tab_button,
-		vertical_seperator,
-		HORIZONTAL_SCROLLABLE_PADDING, ICON_FONT_SIZE,
+		dangerous_button, export_database_button, file_location, filepath_widget,
+		import_database_button, import_google_tasks_button, select_synchronization_filepath_button,
+		settings_tab_button, vertical_seperator, HORIZONTAL_SCROLLABLE_PADDING, ICON_FONT_SIZE,
 	},
-	modals::ErrorMsgModalMessage,
 	integrations::import_google_tasks_dialog,
+	modals::ErrorMsgModalMessage,
 	styles::{card_style, PADDING_AMOUNT},
 	DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting,
 };
-use iced::Length;
-use project_tracker_core::{Database, DatabaseMessage};
-use project_tracker_server::DEFAULT_PASSWORD;
 use iced::alignment::Vertical;
 use iced::widget::text::Span;
 use iced::widget::{rich_text, text_input, toggler, tooltip};
+use iced::Length;
 use iced::{
 	alignment::Horizontal,
 	keyboard,
@@ -35,6 +36,9 @@ use iced::{
 	Padding, Subscription, Task,
 };
 use iced_aw::card;
+use project_tracker_core::{Database, DatabaseMessage};
+use project_tracker_server::DEFAULT_PASSWORD;
+use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {
@@ -116,13 +120,15 @@ impl SettingTab {
 		app: &'a ProjectTrackerApp,
 		preferences: &'a Preferences,
 		show_password: bool,
-		code_editor_dropdown_expanded: bool
+		code_editor_dropdown_expanded: bool,
 	) -> Element<'a, Message> {
 		match self {
 			SettingTab::General => preferences.view(),
 			SettingTab::Database => database_settings_tab_view(app, preferences, show_password),
 			SettingTab::Shortcuts => shortcuts_settings_tab_view(),
-			SettingTab::CodeEditor => code_editor_settings_tab_view(preferences, code_editor_dropdown_expanded),
+			SettingTab::CodeEditor => {
+				code_editor_settings_tab_view(preferences, code_editor_dropdown_expanded)
+			}
 			SettingTab::About => about_settings_tab_view(app),
 		}
 	}
@@ -194,22 +200,34 @@ impl SettingsModal {
 			}
 
 			SettingsModalMessage::ToggleCodeEditorDropdownExpanded => {
-				if let SettingsModal::Opened { code_editor_dropdown_expanded, .. } = self {
+				if let SettingsModal::Opened {
+					code_editor_dropdown_expanded,
+					..
+				} = self
+				{
 					*code_editor_dropdown_expanded = !*code_editor_dropdown_expanded;
 				}
 				PreferenceAction::None
-			},
+			}
 			SettingsModalMessage::CollapseCodeEditorDropdown => {
-				if let SettingsModal::Opened { code_editor_dropdown_expanded, .. } = self {
+				if let SettingsModal::Opened {
+					code_editor_dropdown_expanded,
+					..
+				} = self
+				{
 					*code_editor_dropdown_expanded = false;
 				}
 				PreferenceAction::None
-			},
+			}
 			SettingsModalMessage::SetCodeEditor(code_editor) => {
 				if let Some(preferences) = preferences {
 					preferences.set_code_editor(code_editor);
 				}
-				if let SettingsModal::Opened { code_editor_dropdown_expanded, .. } = self {
+				if let SettingsModal::Opened {
+					code_editor_dropdown_expanded,
+					..
+				} = self
+				{
 					*code_editor_dropdown_expanded = false;
 				}
 				PreferenceAction::None
@@ -217,9 +235,10 @@ impl SettingsModal {
 
 			SettingsModalMessage::BrowseSynchronizationFilepath => {
 				Task::perform(export_database_file_dialog(), |filepath| match filepath {
-					Some(filepath) => {
-						PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Filepath(Some(filepath)))).into()
-					}
+					Some(filepath) => PreferenceMessage::SetSynchronization(Some(
+						SynchronizationSetting::Filepath(Some(filepath)),
+					))
+					.into(),
 					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
 				})
 				.into()
@@ -227,14 +246,12 @@ impl SettingsModal {
 			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => PreferenceAction::None,
 
 			SettingsModalMessage::ImportGoogleTasksFileDialog => {
-				Task::perform(import_google_tasks_dialog(), move |result| {
-					match result {
-						Some(result) => match result {
-							Ok(projects) => DatabaseMessage::ImportProjects(projects).into(),
-							Err(import_error) => ErrorMsgModalMessage::open_error(import_error),
-						},
-						None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
-					}
+				Task::perform(import_google_tasks_dialog(), move |result| match result {
+					Some(result) => match result {
+						Ok(projects) => DatabaseMessage::ImportProjects(projects).into(),
+						Err(import_error) => ErrorMsgModalMessage::open_error(import_error),
+					},
+					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
 				})
 				.into()
 			}
@@ -249,55 +266,74 @@ impl SettingsModal {
 			}
 
 			SettingsModalMessage::SwitchSettingsTab(new_tab) => {
-				if let SettingsModal::Opened { selected_tab, show_password, code_editor_dropdown_expanded } = self {
+				if let SettingsModal::Opened {
+					selected_tab,
+					show_password,
+					code_editor_dropdown_expanded,
+				} = self
+				{
 					*selected_tab = new_tab;
 					*show_password = false;
 					*code_editor_dropdown_expanded = false;
 				}
 				PreferenceAction::None
-			},
+			}
 
-			SettingsModalMessage::EnableSynchronization => PreferenceMessage::SetSynchronization(
-				Some(SynchronizationSetting::Filepath(None))
-			)
-			.into(),
-			SettingsModalMessage::DisableSynchronization => PreferenceMessage::SetSynchronization(None).into(),
+			SettingsModalMessage::EnableSynchronization => {
+				PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Filepath(None)))
+					.into()
+			}
+			SettingsModalMessage::DisableSynchronization => {
+				PreferenceMessage::SetSynchronization(None).into()
+			}
 			SettingsModalMessage::SetServerHostname(new_hostname) => {
 				if let Some(preferences) = preferences {
-					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
-						return PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Server(ServerConfig {
-							hostname: new_hostname,
-							..config.clone()
-						})))
+					if let Some(SynchronizationSetting::Server(config)) =
+						preferences.synchronization()
+					{
+						return PreferenceMessage::SetSynchronization(Some(
+							SynchronizationSetting::Server(ServerConfig {
+								hostname: new_hostname,
+								..config.clone()
+							}),
+						))
 						.into();
 					}
 				}
 				PreferenceAction::None
-			},
+			}
 			SettingsModalMessage::SetServerPort(new_port) => {
 				if let Some(preferences) = preferences {
-					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
-						return PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Server(ServerConfig {
-							port: new_port,
-							..config.clone()
-						})))
+					if let Some(SynchronizationSetting::Server(config)) =
+						preferences.synchronization()
+					{
+						return PreferenceMessage::SetSynchronization(Some(
+							SynchronizationSetting::Server(ServerConfig {
+								port: new_port,
+								..config.clone()
+							}),
+						))
 						.into();
 					}
 				}
 				PreferenceAction::None
-			},
+			}
 			SettingsModalMessage::SetServerPassword(new_password) => {
 				if let Some(preferences) = preferences {
-					if let Some(SynchronizationSetting::Server(config)) = preferences.synchronization() {
-						return PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Server(ServerConfig {
-							password: new_password,
-							..config.clone()
-						})))
+					if let Some(SynchronizationSetting::Server(config)) =
+						preferences.synchronization()
+					{
+						return PreferenceMessage::SetSynchronization(Some(
+							SynchronizationSetting::Server(ServerConfig {
+								password: new_password,
+								..config.clone()
+							}),
+						))
 						.into();
 					}
 				}
 				PreferenceAction::None
-			},
+			}
 			SettingsModalMessage::InvalidPortInput => PreferenceAction::None,
 		}
 	}
@@ -305,7 +341,11 @@ impl SettingsModal {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<Message>> {
 		match self {
 			SettingsModal::Closed => None,
-			SettingsModal::Opened { selected_tab, show_password, code_editor_dropdown_expanded } => app.preferences.as_ref().map(|preferences| {
+			SettingsModal::Opened {
+				selected_tab,
+				show_password,
+				code_editor_dropdown_expanded,
+			} => app.preferences.as_ref().map(|preferences| {
 				let tabs: Vec<Element<Message>> = SettingTab::ALL
 					.iter()
 					.map(|tab| settings_tab_button(*tab, *selected_tab).into())
@@ -320,9 +360,12 @@ impl SettingsModal {
 								.spacing(SMALL_SPACING_AMOUNT)
 						),
 						vertical_seperator(),
-						vertical_scrollable(
-							selected_tab.view(app, preferences, *show_password, *code_editor_dropdown_expanded)
-						)
+						vertical_scrollable(selected_tab.view(
+							app,
+							preferences,
+							*show_password,
+							*code_editor_dropdown_expanded
+						))
 					]
 					.spacing(SPACING_AMOUNT),
 				)
@@ -337,8 +380,11 @@ impl SettingsModal {
 	}
 }
 
-
-fn database_settings_tab_view<'a>(app: &'a ProjectTrackerApp, preferences: &'a Preferences, show_password: bool) -> Element<'a, Message> {
+fn database_settings_tab_view<'a>(
+	app: &'a ProjectTrackerApp,
+	preferences: &'a Preferences,
+	show_password: bool,
+) -> Element<'a, Message> {
 	column![
 		row![
 			container("Database file location: ").padding(HORIZONTAL_SCROLLABLE_PADDING),
@@ -572,10 +618,8 @@ fn shortcuts_settings_tab_view() -> Element<'static, Message> {
 		row![
 			text(name),
 			Space::new(Fill, 0.0),
-			container(
-				container(shortcut).padding(SMALL_HORIZONTAL_PADDING)
-			)
-			.style(rounded_container_style)
+			container(container(shortcut).padding(SMALL_HORIZONTAL_PADDING))
+				.style(rounded_container_style)
 		]
 		.spacing(SMALL_SPACING_AMOUNT)
 	};
@@ -597,45 +641,52 @@ fn shortcuts_settings_tab_view() -> Element<'static, Message> {
 	.into()
 }
 
-fn code_editor_settings_tab_view(preferences: &Preferences, dropdown_expanded: bool) -> Element<Message> {
-	column![
-		item(
-			"Code Editor:",
-			code_editor_dropdown_button(preferences.code_editor().as_ref(), dropdown_expanded),
-		)
-	]
-	.push_maybe(if let Some(CodeEditor::Custom { name, command }) = preferences.code_editor().as_ref() {
-		Some(
-			column![
-				horizontal_seperator_padded(),
-				item(
-					"Custom Editor Name:",
-					text_input("Custom Editor name", name.as_str())
-						.width(Length::Fixed(350.0))
-						.on_input(|new_name| SettingsModalMessage::SetCodeEditor(Some(CodeEditor::Custom {
-							name: new_name,
-							command: command.clone(),
-						}))
-						.into())
-						.style(text_input_style_default)
-				),
-				item(
-					"Custom Editor Command:",
-					text_input("custom_editor --open-file-location", command.as_str())
-						.width(Length::Fixed(350.0))
-						.on_input(|new_command| SettingsModalMessage::SetCodeEditor(Some(CodeEditor::Custom {
-							name: name.clone(),
-							command: new_command,
-						}))
-						.into())
-						.style(text_input_style_default)
-				),
-			]
-			.spacing(SPACING_AMOUNT)
-		)
-	} else {
-		None
-	})
+fn code_editor_settings_tab_view(
+	preferences: &Preferences,
+	dropdown_expanded: bool,
+) -> Element<Message> {
+	column![item(
+		"Code Editor:",
+		code_editor_dropdown_button(preferences.code_editor().as_ref(), dropdown_expanded),
+	)]
+	.push_maybe(
+		if let Some(CodeEditor::Custom { name, command }) = preferences.code_editor().as_ref() {
+			Some(
+				column![
+					horizontal_seperator_padded(),
+					item(
+						"Custom Editor Name:",
+						text_input("Custom Editor name", name.as_str())
+							.width(Length::Fixed(350.0))
+							.on_input(|new_name| SettingsModalMessage::SetCodeEditor(Some(
+								CodeEditor::Custom {
+									name: new_name,
+									command: command.clone(),
+								}
+							))
+							.into())
+							.style(text_input_style_default)
+					),
+					item(
+						"Custom Editor Command:",
+						text_input("custom_editor --open-file-location", command.as_str())
+							.width(Length::Fixed(350.0))
+							.on_input(|new_command| SettingsModalMessage::SetCodeEditor(Some(
+								CodeEditor::Custom {
+									name: name.clone(),
+									command: new_command,
+								}
+							))
+							.into())
+							.style(text_input_style_default)
+					),
+				]
+				.spacing(SPACING_AMOUNT),
+			)
+		} else {
+			None
+		},
+	)
 	.width(Fill)
 	.spacing(SPACING_AMOUNT)
 	.into()
@@ -647,26 +698,22 @@ fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
 	let author_link = "https://github.com/Peanutt42";
 
 	column![
-		item("Project Tracker:", text("Project Todo Tracker for personal programming projects")),
-
+		item(
+			"Project Tracker:",
+			text("Project Todo Tracker for personal programming projects")
+		),
 		item(
 			"Author:",
-			rich_text![
-				Span::new(author_link)
-					.color(link_color(app.is_theme_dark()))
-					.link(Message::OpenUrl(author_link.to_string()))
-			]
+			rich_text![Span::new(author_link)
+				.color(link_color(app.is_theme_dark()))
+				.link(Message::OpenUrl(author_link.to_string()))]
 		),
-
 		item("Version:", text(env!("CARGO_PKG_VERSION"))),
-
 		item(
 			"Repository:",
-			rich_text![
-				Span::new(repository)
-					.color(link_color(app.is_theme_dark()))
-					.link(Message::OpenUrl(repository.to_string()))
-			]
+			rich_text![Span::new(repository)
+				.color(link_color(app.is_theme_dark()))
+				.link(Message::OpenUrl(repository.to_string()))]
 		),
 	]
 	.spacing(SPACING_AMOUNT)
@@ -675,12 +722,8 @@ fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
 }
 
 fn item<'a>(label: &'a str, content: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
-	row![
-		label,
-		Space::new(Fill, 0.0),
-		content.into(),
-	]
-	.spacing(SMALL_SPACING_AMOUNT)
-	.align_y(Vertical::Center)
-	.into()
+	row![label, Space::new(Fill, 0.0), content.into(),]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_y(Vertical::Center)
+		.into()
 }

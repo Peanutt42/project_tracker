@@ -1,10 +1,10 @@
-use std::f32::consts::PI;
+use crate::{pages::format_stopwatch_duration, project_tracker::Message, styles::FIRA_SANS_FONT};
 use iced::{
 	alignment::{Horizontal, Vertical},
 	widget::canvas::{path::Arc, stroke, Cache, Geometry, LineCap, Path, Program, Stroke, Text},
 	Color, Radians, Renderer, Theme, Vector,
 };
-use crate::{pages::format_stopwatch_duration, project_tracker::Message, styles::FIRA_SANS_FONT};
+use std::f32::consts::PI;
 
 #[derive(Debug)]
 pub struct StopwatchClock {
@@ -19,7 +19,9 @@ impl StopwatchClock {
 		Self {
 			percentage,
 			label: format_stopwatch_duration(seconds_left.round_ties_even() as i64),
-			sub_label: needed_seconds.map(|needed_seconds| format_stopwatch_duration(needed_seconds.round_ties_even() as i64)),
+			sub_label: needed_seconds.map(|needed_seconds| {
+				format_stopwatch_duration(needed_seconds.round_ties_even() as i64)
+			}),
 			cache: Cache::new(),
 		}
 	}
@@ -39,7 +41,9 @@ impl StopwatchClock {
 	}
 
 	pub fn set_needed_seconds(&mut self, needed_seconds: f32) {
-		self.sub_label = Some(format_stopwatch_duration(needed_seconds.round_ties_even() as i64));
+		self.sub_label = Some(format_stopwatch_duration(
+			needed_seconds.round_ties_even() as i64
+		));
 		self.cache.clear();
 	}
 }

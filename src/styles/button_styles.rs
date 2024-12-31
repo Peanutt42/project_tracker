@@ -1,6 +1,6 @@
 use crate::styles::{
 	background_shadow_color, color_average, mix_color, text_color, BLUR_RADIUS, BORDER_RADIUS,
-	LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS, GREY,
+	GREY, LARGE_BLUR_RADIUS, LARGE_BORDER_RADIUS,
 };
 use iced::{
 	border::{rounded, Radius},
@@ -55,11 +55,7 @@ pub fn project_preview_style(
 	}
 }
 
-pub fn overview_button_style(
-	theme: &Theme,
-	status: Status,
-	selected: bool
-) -> Style {
+pub fn overview_button_style(theme: &Theme, status: Status, selected: bool) -> Style {
 	let border = rounded(BORDER_RADIUS);
 
 	match status {
@@ -101,13 +97,18 @@ pub fn overview_button_style(
 	}
 }
 
-pub fn stopwatch_page_button_style(theme: &Theme, status: Status, selected: bool, timer_ticking: bool, dropzone_highlight: bool) -> Style {
+pub fn stopwatch_page_button_style(
+	theme: &Theme,
+	status: Status,
+	selected: bool,
+	timer_ticking: bool,
+	dropzone_highlight: bool,
+) -> Style {
 	let border = rounded(BORDER_RADIUS);
 
 	let stopwatch_color = if timer_ticking || dropzone_highlight {
 		theme.extended_palette().danger.base.color
-	}
-	else {
+	} else {
 		theme.extended_palette().primary.base.color
 	};
 
@@ -357,8 +358,16 @@ pub fn delete_button_style(
 			Radius::default()
 				.top_left(if round_top_left { BORDER_RADIUS } else { 0.0 })
 				.top_right(if round_top_right { BORDER_RADIUS } else { 0.0 })
-				.bottom_left(if round_bottom_left { BORDER_RADIUS } else { 0.0 })
-				.bottom_right(if round_bottom_right { BORDER_RADIUS } else { 0.0 }),
+				.bottom_left(if round_bottom_left {
+					BORDER_RADIUS
+				} else {
+					0.0
+				})
+				.bottom_right(if round_bottom_right {
+					BORDER_RADIUS
+				} else {
+					0.0
+				}),
 		),
 		..Default::default()
 	};
@@ -402,8 +411,16 @@ pub fn selection_list_button_style(
 			Radius::default()
 				.top_left(if round_left_top { BORDER_RADIUS } else { 0.0 })
 				.top_right(if round_right_top { BORDER_RADIUS } else { 0.0 })
-				.bottom_left(if round_left_bottom { BORDER_RADIUS } else { 0.0 })
-				.bottom_right(if round_right_bottom { BORDER_RADIUS } else { 0.0 }),
+				.bottom_left(if round_left_bottom {
+					BORDER_RADIUS
+				} else {
+					0.0
+				})
+				.bottom_right(if round_right_bottom {
+					BORDER_RADIUS
+				} else {
+					0.0
+				}),
 		),
 		text_color: if selected {
 			theme.extended_palette().primary.base.text
@@ -467,12 +484,7 @@ pub fn enum_dropdown_button_style(
 	}
 }
 
-pub fn task_tag_button_style(
-	theme: &Theme,
-	status: Status,
-	color: Color,
-	toggled: bool,
-) -> Style {
+pub fn task_tag_button_style(theme: &Theme, status: Status, color: Color, toggled: bool) -> Style {
 	let active_style = Style {
 		background: Some(if toggled {
 			color.into()
@@ -561,7 +573,7 @@ pub fn settings_tab_button_style(theme: &Theme, status: Status, selected: bool) 
 
 	match status {
 		Status::Active => active_style,
-		Status::Hovered | Status::Pressed  => Style {
+		Status::Hovered | Status::Pressed => Style {
 			background: if selected {
 				Some(theme.extended_palette().primary.strong.color.into())
 			} else {

@@ -1,8 +1,21 @@
 use iced::{
-	widget::{text, Text},
+	advanced::image::Bytes,
+	widget::{image::Handle, text, Text},
 	Font,
 };
 use std::fmt::{Display, Formatter, Result};
+use std::sync::LazyLock;
+
+pub static VSCODE_ICON_IMAGE_HANDLE: LazyLock<Handle> = LazyLock::new(|| {
+	Handle::from_bytes(Bytes::from_static(include_bytes!(
+		"../../assets/vscode_icon.ico"
+	)))
+});
+pub static ZED_ICON_IMAGE_HANDLE: LazyLock<Handle> = LazyLock::new(|| {
+	Handle::from_bytes(Bytes::from_static(include_bytes!(
+		"../../assets/zed_icon.png"
+	)))
+});
 
 pub const BOOTSTRAP_FONT_BYTES: &[u8] = include_bytes!("../../assets/bootstrap-icons.ttf");
 

@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-use std::sync::LazyLock;
 use crate::{
 	components::{
-		delete_all_done_tasks_button, in_between_dropzone,
-		reimport_source_code_todos_button, show_done_tasks_button, show_source_code_todos_button,
-		task_widget, vertical_scrollable,
-	}, core::TaskUiIdMap, integrations::CodeEditor, pages::{
-		CachedTaskList, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
-	}, project_tracker::Message, styles::PADDING_AMOUNT
+		delete_all_done_tasks_button, in_between_dropzone, reimport_source_code_todos_button,
+		show_done_tasks_button, show_source_code_todos_button, task_widget, vertical_scrollable,
+	},
+	core::TaskUiIdMap,
+	integrations::CodeEditor,
+	pages::{CachedTaskList, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID},
+	project_tracker::Message,
+	styles::PADDING_AMOUNT,
 };
-use project_tracker_core::{Project, ProjectId, Task, TaskId, TaskType};
 use iced::widget::{container::Id, markdown, Space};
 use iced::{
 	alignment::Horizontal,
@@ -18,6 +17,9 @@ use iced::{
 	Length::Fill,
 	Padding,
 };
+use project_tracker_core::{Project, ProjectId, Task, TaskId, TaskType};
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
 pub static TASK_LIST_ID: LazyLock<scrollable::Id> = LazyLock::new(scrollable::Id::unique);
 
@@ -34,7 +36,7 @@ pub fn task_list<'a>(
 	hovered_task_dropzone: Option<TaskDropzone>,
 	show_done_tasks: bool,
 	show_source_code_todos: bool,
-	importing_source_code_todos: bool
+	importing_source_code_todos: bool,
 ) -> Element<'a, Message> {
 	let mut todo_task_elements = Vec::new();
 	let mut done_task_elements = Vec::new(); // only gets populated when 'show_done_tasks'
@@ -49,7 +51,9 @@ pub fn task_list<'a>(
 			Some(TaskDropzone::Task(hovered_task_id)) => hovered_task_id == task_id,
 			_ => false,
 		};
-		let task_dropzone_id = task_ui_id_map.get_dropzone_id(task_id).unwrap_or(Id::unique());
+		let task_dropzone_id = task_ui_id_map
+			.get_dropzone_id(task_id)
+			.unwrap_or(Id::unique());
 		let task_description_markdown_items = task_description_markdown_items.get(&task_id);
 		task_widget(
 			task,
@@ -64,7 +68,7 @@ pub fn task_list<'a>(
 			just_minimal_dragging,
 			true,
 			highlight,
-			true
+			true,
 		)
 	};
 
@@ -100,22 +104,18 @@ pub fn task_list<'a>(
 		if cached_task_list.source_code_todo.is_empty() {
 			Space::new(0.0, 0.0).into()
 		} else {
-			container(
-				row![
-					show_source_code_todos_button(
-						show_source_code_todos,
-						cached_task_list.source_code_todo.len()
-					),
-					container(
-						reimport_source_code_todos_button(
-							importing_source_code_todos,
-							project.source_code_directory.is_some()
-						)
-					)
-					.width(Fill)
-					.align_x(Horizontal::Right)
-				]
-			)
+			container(row![
+				show_source_code_todos_button(
+					show_source_code_todos,
+					cached_task_list.source_code_todo.len()
+				),
+				container(reimport_source_code_todos_button(
+					importing_source_code_todos,
+					project.source_code_directory.is_some()
+				))
+				.width(Fill)
+				.align_x(Horizontal::Right)
+			])
 			.padding(Padding {
 				top: PADDING_AMOUNT,
 				bottom: if show_source_code_todos {

@@ -20,8 +20,5 @@ pub fn filepath_widget<'a>(filepath: PathBuf) -> Scrollable<'a, Message> {
 pub fn file_location<'a>(filepath: PathBuf) -> Element<'a, Message> {
 	let parent_filepath = filepath.parent().map(Path::to_path_buf);
 
-	horizontal_scrollable(
-		open_folder_location_button(filepath, parent_filepath)
-	)
-	.into()
+	horizontal_scrollable(open_folder_location_button(filepath, parent_filepath)).into()
 }

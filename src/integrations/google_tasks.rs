@@ -1,14 +1,13 @@
-use std::{
-	collections::HashSet,
-	path::PathBuf,
-};
+use std::{collections::HashSet, path::PathBuf};
 
 use chrono::{DateTime, Datelike, Local, TimeZone};
 use iced::Color;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use project_tracker_core::{OrderedHashMap, Project, SerializableColor, SerializableDate, SortMode, Task, TaskId};
+use project_tracker_core::{
+	OrderedHashMap, Project, SerializableColor, SerializableDate, SortMode, Task, TaskId,
+};
 
 use crate::core::IcedColorConversion;
 
@@ -20,9 +19,9 @@ pub enum ImportGoogleTasksError {
 		error: std::io::Error,
 	},
 	#[error("failed to parse google tasks: {filepath}, error: {error}")]
-	ParseError{
+	ParseError {
 		filepath: PathBuf,
-		error: serde_json::Error
+		error: serde_json::Error,
 	},
 }
 
@@ -58,16 +57,15 @@ struct GoogleTasksTask {
 pub async fn import_google_tasks(
 	filepath: PathBuf,
 ) -> Result<Vec<Project>, ImportGoogleTasksError> {
-	let json = tokio::fs::read_to_string(&filepath).await
+	let json = tokio::fs::read_to_string(&filepath)
+		.await
 		.map_err(|error| ImportGoogleTasksError::FailedToOpenFile {
 			filepath: filepath.clone(),
 			error,
 		})?;
 
-	import_google_tasks_json(&json).map_err(|error| ImportGoogleTasksError::ParseError {
-		filepath,
-		error,
-	})
+	import_google_tasks_json(&json)
+		.map_err(|error| ImportGoogleTasksError::ParseError { filepath, error })
 }
 
 pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::Error> {
@@ -77,7 +75,12 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 		.items
 		.into_iter()
 		.map(|google_tasks_list| {
-			let mut project = Project::new(google_tasks_list.title, SerializableColor::from_iced_color(Color::WHITE), OrderedHashMap::new(), SortMode::default());
+			let mut project = Project::new(
+				google_tasks_list.title,
+				SerializableColor::from_iced_color(Color::WHITE),
+				OrderedHashMap::new(),
+				SortMode::default(),
+			);
 
 			for google_tasks_task in google_tasks_list.items {
 				let is_todo = google_tasks_task
@@ -90,7 +93,8 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 				let task_due_date = google_tasks_task.due.and_then(|due_date_str| {
 					DateTime::parse_from_rfc3339(&due_date_str)
 						.map(|parsed_due_date| {
-							let local_due_date = Local.from_utc_datetime(&parsed_due_date.naive_utc());
+							let local_due_date =
+								Local.from_utc_datetime(&parsed_due_date.naive_utc());
 							SerializableDate {
 								year: local_due_date.year(),
 								month: local_due_date.month(),
@@ -100,7 +104,14 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 						.ok()
 				});
 
-				let task = Task::new(task_name, task_description, None, None, task_due_date, HashSet::new());
+				let task = Task::new(
+					task_name,
+					task_description,
+					None,
+					None,
+					task_due_date,
+					HashSet::new(),
+				);
 
 				let task_id = TaskId::generate();
 

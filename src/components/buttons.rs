@@ -1,16 +1,50 @@
 use crate::{
-	components::{date_text, duration_text, unfocusable}, core::{IcedColorConversion, SerializableDateConversion, SortModeUI}, icons::{icon_to_text, Bootstrap}, integrations::CodeEditor, modals::{
-		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage, ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage, WaitClosingModalMessage
-	}, pages::{
-		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage, StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID
-	}, project_tracker::Message, styles::{
-		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style, delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style, hidden_secondary_button_style, overview_button_style, primary_button_style, rounded_container_style, secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding, secondary_button_style_only_round_left, secondary_button_style_only_round_right, secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style, text_input_style, timer_button_style, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT
-	}, theme_mode::ThemeMode, DateFormatting, PreferenceMessage, SynchronizationSetting
+	components::{date_text, duration_text, unfocusable},
+	core::{IcedColorConversion, SerializableDateConversion, SortModeUI},
+	icons::{icon_to_text, Bootstrap},
+	integrations::CodeEditor,
+	modals::{
+		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage,
+		ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage,
+		WaitClosingModalMessage,
+	},
+	pages::{
+		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage,
+		StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
+	},
+	project_tracker::Message,
+	styles::{
+		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style,
+		delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style,
+		hidden_secondary_button_style, overview_button_style, primary_button_style,
+		rounded_container_style, secondary_button_style, secondary_button_style_default,
+		secondary_button_style_no_rounding, secondary_button_style_only_round_left,
+		secondary_button_style_only_round_right, secondary_button_style_only_round_top,
+		selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style,
+		task_tag_button_style, text_input_style, timer_button_style, tooltip_container_style, GAP,
+		HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
+		SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT,
+	},
+	theme_mode::ThemeMode,
+	DateFormatting, PreferenceMessage, SynchronizationSetting,
 };
-use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId};
 use iced::{
-	alignment::{Horizontal, Vertical}, border::rounded, widget::{button, column, container, rich_text, row, text, text::Span, text_input, tooltip, Button, Column, Space}, Alignment, Color, Element, Length::{self, Fill, Fixed}};
-use iced_aw::{date_picker, date_picker::Date, drop_down, drop_down::Offset, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
+	alignment::{Horizontal, Vertical},
+	border::rounded,
+	widget::{
+		button, column, container, rich_text, row, text, text::Span, text_input, tooltip, Button,
+		Column, Space,
+	},
+	Alignment, Color, Element,
+	Length::{self, Fill, Fixed},
+};
+use iced_aw::{
+	date_picker, date_picker::Date, drop_down, drop_down::Offset, quad::Quad, widgets::InnerBounds,
+	DropDown, Spinner,
+};
+use project_tracker_core::{
+	Database, DatabaseMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId,
+};
 use std::{path::PathBuf, time::Duration};
 
 pub const ICON_FONT_SIZE: f32 = 16.0;
@@ -93,23 +127,20 @@ pub fn project_context_menu_button(opened: bool) -> Element<'static, Message> {
 		icon_button(Bootstrap::ThreeDotsVertical)
 			.on_press(if opened {
 				ProjectPageMessage::HideContextMenu.into()
-			}
-			else {
+			} else {
 				ProjectPageMessage::ShowContextMenu.into()
 			})
 			.style(secondary_button_style_default),
-
 		container(
 			column![
 				manage_task_tags_button(),
 				import_source_code_todos_button(),
 				delete_project_button(),
 			]
-			.width(Length::Fixed(150.0))
+			.width(Length::Fixed(150.0)),
 		)
 		.style(dropdown_container_style),
-
-		opened
+		opened,
 	)
 	.width(Fill)
 	.alignment(drop_down::Alignment::BottomStart)
@@ -122,10 +153,10 @@ pub fn edit_task_description_button(editing: bool) -> Element<'static, Message> 
 	tooltip(
 		icon_button(Bootstrap::PencilSquare)
 			.on_press(TaskModalMessage::EditDescription.into())
-			.style(move |t, s| selection_list_button_style(t, s, editing, false, true, false, true)),
-
+			.style(move |t, s| {
+				selection_list_button_style(t, s, editing, false, true, false, true)
+			}),
 		text("Edit description").size(SMALL_TEXT_SIZE),
-
 		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
@@ -137,10 +168,10 @@ pub fn view_task_description_button(viewing: bool) -> Element<'static, Message> 
 	tooltip(
 		icon_button(Bootstrap::BodyText)
 			.on_press(TaskModalMessage::ViewDescription.into())
-			.style(move |t, s| selection_list_button_style(t, s, viewing, true, false, true, false)),
-
+			.style(move |t, s| {
+				selection_list_button_style(t, s, viewing, true, false, true, false)
+			}),
 		text("View description").size(SMALL_TEXT_SIZE),
-
 		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
@@ -230,7 +261,7 @@ pub fn overview_button(selected: bool) -> Button<'static, Message> {
 		]
 		.width(Fill)
 		.spacing(SPACING_AMOUNT)
-		.align_y(Alignment::Center)
+		.align_y(Alignment::Center),
 	)
 	.width(Fill)
 	.on_press(ContentPageMessage::OpenOverview.into())
@@ -241,21 +272,26 @@ pub fn stopwatch_button(
 	stopwatch_page: &StopwatchPage,
 	selected: bool,
 	dropzone_highlight: bool,
-	database: Option<&Database>
+	database: Option<&Database>,
 ) -> Element<'static, Message> {
 	let stopwatch_label = match stopwatch_page {
 		StopwatchPage::TakingBreak { clock, .. } => Some(clock.label().to_string()),
-		StopwatchPage::StopTaskTime { clock, project_id, task_id, .. } => Some(
-			match clock {
-				Some(clock) => clock.label().to_string(),
-				None => format_stopwatch_duration(
-					StopwatchPage::get_spend_seconds(*project_id, *task_id, database).unwrap_or(0.0).round_ties_even() as i64,
-				)
-			}
-		),
-		StopwatchPage::TrackTime { elapsed_time, .. } => Some(
-			format_stopwatch_duration(elapsed_time.as_secs_f64().round_ties_even() as i64)
-		),
+		StopwatchPage::StopTaskTime {
+			clock,
+			project_id,
+			task_id,
+			..
+		} => Some(match clock {
+			Some(clock) => clock.label().to_string(),
+			None => format_stopwatch_duration(
+				StopwatchPage::get_spend_seconds(*project_id, *task_id, database)
+					.unwrap_or(0.0)
+					.round_ties_even() as i64,
+			),
+		}),
+		StopwatchPage::TrackTime { elapsed_time, .. } => Some(format_stopwatch_duration(
+			elapsed_time.as_secs_f64().round_ties_even() as i64,
+		)),
 		StopwatchPage::Idle => None,
 	};
 
@@ -265,7 +301,7 @@ pub fn stopwatch_button(
 	let stopwatch_icon = match stopwatch_page {
 		StopwatchPage::TakingBreak { .. } => Bootstrap::CupHot,
 		StopwatchPage::StopTaskTime { .. } => Bootstrap::HourglassSplit,
-		_ => Bootstrap::Stopwatch
+		_ => Bootstrap::Stopwatch,
 	};
 
 	container(
@@ -286,14 +322,8 @@ pub fn stopwatch_button(
 		.width(Fill)
 		.on_press(ContentPageMessage::OpenStopwatch.into())
 		.style(move |t, s| {
-			stopwatch_page_button_style(
-				t,
-				s,
-				selected,
-				stopwatch_ticking,
-				dropzone_highlight
-			)
-		})
+			stopwatch_page_button_style(t, s, selected, stopwatch_ticking, dropzone_highlight)
+		}),
 	)
 	.id(STOPWATCH_TASK_DROPZONE_ID.clone())
 	.into()
@@ -320,7 +350,15 @@ pub fn date_formatting_button<'a>(
 		.width(120.0)
 		.on_press(SettingsModalMessage::SetDateFormatting(*format).into())
 		.style(move |t, s| {
-			selection_list_button_style(t, s, *selected_format == *format, is_left, !is_left, is_left, !is_left)
+			selection_list_button_style(
+				t,
+				s,
+				*selected_format == *format,
+				is_left,
+				!is_left,
+				is_left,
+				!is_left,
+			)
 		})
 }
 
@@ -360,12 +398,10 @@ pub fn toggle_sidebar_button(round_all_sides: bool) -> Element<'static, Message>
 }
 
 pub fn create_empty_database_button() -> Element<'static, Message> {
-	button(
-		text("Create new database")
-	)
-	.style(dangerous_button_style)
-	.on_press(Message::DatabaseImported(Ok(Database::default())))
-	.into()
+	button(text("Create new database"))
+		.style(dangerous_button_style)
+		.on_press(Message::DatabaseImported(Ok(Database::default())))
+		.into()
 }
 
 pub fn import_database_button(importing: bool) -> Element<'static, Message> {
@@ -484,13 +520,9 @@ pub fn export_as_json_database_button(exporting_json: bool) -> Element<'static, 
 	.into()
 }
 
-pub fn task_tag_button<Message>(
-	task_tag: &TaskTag,
-	toggled: bool,
-) -> Button<Message> {
-	let button = button(text(&task_tag.name)).style(move |t, s| {
-		task_tag_button_style(t, s, task_tag.color.to_iced_color(), toggled)
-	});
+pub fn task_tag_button<Message>(task_tag: &TaskTag, toggled: bool) -> Button<Message> {
+	let button = button(text(&task_tag.name))
+		.style(move |t, s| task_tag_button_style(t, s, task_tag.color.to_iced_color(), toggled));
 
 	button
 }
@@ -551,7 +583,7 @@ pub fn add_due_date_button<Message: 'static>(on_press: Message) -> Button<'stati
 pub fn edit_due_date_button<Message: 'static>(
 	due_date: &SerializableDate,
 	date_formatting: DateFormatting,
-	on_press: Message
+	on_press: Message,
 ) -> Button<'static, Message> {
 	button(
 		row![
@@ -598,11 +630,24 @@ pub fn color_palette_item_button(
 		..Default::default()
 	})
 	.on_press(on_press)
-	.style(move |t, s| selection_list_button_style(t, s, selected, round_left_top, round_right_top, round_left_bottom, round_right_bottom))
+	.style(move |t, s| {
+		selection_list_button_style(
+			t,
+			s,
+			selected,
+			round_left_top,
+			round_right_top,
+			round_left_bottom,
+			round_right_bottom,
+		)
+	})
 	.padding(SMALL_PADDING_AMOUNT)
 }
 
-pub fn confirm_ok_button(on_confirmed: &Message, custom_label: Option<&'static str>) -> Button<'static, Message> {
+pub fn confirm_ok_button(
+	on_confirmed: &Message,
+	custom_label: Option<&'static str>,
+) -> Button<'static, Message> {
 	button(text(custom_label.unwrap_or("Ok")).align_x(Horizontal::Center))
 		.width(Fill)
 		.style(dangerous_button_style)
@@ -630,10 +675,7 @@ pub fn cancel_search_tasks_button() -> Button<'static, Message> {
 		.on_press(ProjectPageMessage::CloseSearchTasks.into())
 }
 
-pub fn settings_tab_button(
-	tab: SettingTab,
-	selected_tab: SettingTab,
-) -> Button<'static, Message> {
+pub fn settings_tab_button(tab: SettingTab, selected_tab: SettingTab) -> Button<'static, Message> {
 	icon_label_button(tab.label(), tab.icon())
 		.width(Fill)
 		.style(move |t, s| settings_tab_button_style(t, s, tab == selected_tab))
@@ -647,7 +689,10 @@ fn import_source_code_todos_button() -> Button<'static, Message> {
 		.style(secondary_button_style_no_rounding)
 }
 
-pub fn reimport_source_code_todos_button(importing: bool, reimport_possible: bool) -> Button<'static, Message> {
+pub fn reimport_source_code_todos_button(
+	importing: bool,
+	reimport_possible: bool,
+) -> Button<'static, Message> {
 	button(
 		row![
 			if importing {
@@ -662,13 +707,11 @@ pub fn reimport_source_code_todos_button(importing: bool, reimport_possible: boo
 					.align_y(Vertical::Center)
 					.into()
 			},
-			text(
-				if reimport_possible {
-					"Reimport TODO's"
-				} else {
-					"Import TODO's"
-				}
-			)
+			text(if reimport_possible {
+				"Reimport TODO's"
+			} else {
+				"Import TODO's"
+			})
 		]
 		.spacing(SMALL_SPACING_AMOUNT)
 		.align_y(Alignment::Center),
@@ -765,10 +808,7 @@ pub fn complete_task_timer_button() -> Button<'static, Message> {
 	.style(move |t, s| timer_button_style(t, s, true))
 }
 
-pub fn start_task_timer_button<'a>(
-	project_id: ProjectId,
-	task_id: TaskId
-) -> Element<'a, Message> {
+pub fn start_task_timer_button<'a>(project_id: ProjectId, task_id: TaskId) -> Element<'a, Message> {
 	tooltip(
 		icon_button(Bootstrap::Stopwatch)
 			.on_press(
@@ -808,37 +848,33 @@ pub fn sort_dropdown_button(opened: bool, sort_mode: SortMode) -> Element<'stati
 				text(sort_mode.as_str()),
 			]
 			.spacing(SMALL_SPACING_AMOUNT)
-			.align_y(Vertical::Center)
+			.align_y(Vertical::Center),
 		)
 		.on_press(if opened {
 			ProjectPageMessage::CloseSortModeDropdown.into()
-		}
-		else {
+		} else {
 			ProjectPageMessage::OpenSortModeDropdown.into()
 		})
 		.style(secondary_button_style_default),
-
-		container(
-			Column::with_children(SortMode::ALL.iter().enumerate().map(|(i, mode)| {
-				icon_label_button(
-					mode.as_str(),
-					mode.icon()
-				)
-				.width(Fill)
-				.style(move |t, s| enum_dropdown_button_style(
-					t,
-					s,
-					sort_mode == *mode,
-					i == 0,
-					i == SortMode::ALL.len() - 1
-				))
-				.on_press(ProjectPageMessage::SetSortMode(*mode).into())
-				.into()
-			}))
-		)
+		container(Column::with_children(SortMode::ALL.iter().enumerate().map(
+			|(i, mode)| {
+				icon_label_button(mode.as_str(), mode.icon())
+					.width(Fill)
+					.style(move |t, s| {
+						enum_dropdown_button_style(
+							t,
+							s,
+							sort_mode == *mode,
+							i == 0,
+							i == SortMode::ALL.len() - 1,
+						)
+					})
+					.on_press(ProjectPageMessage::SetSortMode(*mode).into())
+					.into()
+			},
+		)))
 		.style(dropdown_container_style),
-
-		opened
+		opened,
 	)
 	.width(Fixed(140.0))
 	.alignment(drop_down::Alignment::Bottom)
@@ -847,7 +883,12 @@ pub fn sort_dropdown_button(opened: bool, sort_mode: SortMode) -> Element<'stati
 	.into()
 }
 
-pub fn synchronization_type_button(synchronization_setting: SynchronizationSetting, selected_setting: &SynchronizationSetting, round_left: bool, round_right: bool) -> Button<'static, Message> {
+pub fn synchronization_type_button(
+	synchronization_setting: SynchronizationSetting,
+	selected_setting: &SynchronizationSetting,
+	round_left: bool,
+	round_right: bool,
+) -> Button<'static, Message> {
 	let selected = synchronization_setting.is_same_type(selected_setting);
 	let name: &'static str = synchronization_setting.as_str();
 
@@ -872,10 +913,8 @@ pub fn show_password_button() -> Element<'static, Message> {
 		icon_button(Bootstrap::EyeFill)
 			.on_press(SettingsModalMessage::ShowPassword.into())
 			.style(secondary_button_style_default),
-
 		text("Show password").size(SMALL_TEXT_SIZE),
-
-		tooltip::Position::Bottom
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -887,10 +926,8 @@ pub fn hide_password_button() -> Element<'static, Message> {
 		icon_button(Bootstrap::EyeSlashFill)
 			.on_press(SettingsModalMessage::HidePassword.into())
 			.style(secondary_button_style_default),
-
 		text("Hide password").size(SMALL_TEXT_SIZE),
-
-		tooltip::Position::Bottom
+		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
 	.style(tooltip_container_style)
@@ -898,23 +935,21 @@ pub fn hide_password_button() -> Element<'static, Message> {
 }
 
 pub fn take_break_button(minutes: usize) -> Button<'static, Message> {
-	button(
-		text(format!("{minutes} min"))
-			.size(HEADING_TEXT_SIZE)
-	)
-	.on_press(StopwatchPageMessage::TakeBreak(minutes).into())
-	.style(move |t, s| timer_button_style(t, s, false))
+	button(text(format!("{minutes} min")).size(HEADING_TEXT_SIZE))
+		.on_press(StopwatchPageMessage::TakeBreak(minutes).into())
+		.style(move |t, s| timer_button_style(t, s, false))
 }
 
-pub fn open_folder_location_button(filepath: PathBuf, parent_filepath: Option<PathBuf>) -> Element<'static, Message> {
+pub fn open_folder_location_button(
+	filepath: PathBuf,
+	parent_filepath: Option<PathBuf>,
+) -> Element<'static, Message> {
 	tooltip(
 		button(text(filepath.to_string_lossy().to_string()))
 			.on_press_maybe(parent_filepath.map(Message::OpenFolderLocation))
 			.padding(SMALL_HORIZONTAL_PADDING)
 			.style(secondary_button_style_default),
-
 		text("Open folder location").size(SMALL_TEXT_SIZE),
-
 		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
@@ -923,14 +958,10 @@ pub fn open_folder_location_button(filepath: PathBuf, parent_filepath: Option<Pa
 }
 
 pub fn error_msg_ok_button() -> Button<'static, Message> {
-	button(
-		text("Ok")
-			.align_x(Horizontal::Center)
-			.width(Fill)
-	)
-	.width(Fill)
-	.style(dangerous_button_style)
-	.on_press(ErrorMsgModalMessage::Close.into())
+	button(text("Ok").align_x(Horizontal::Center).width(Fill))
+		.width(Fill)
+		.style(dangerous_button_style)
+		.on_press(ErrorMsgModalMessage::Close.into())
 }
 
 pub fn task_tag_name_button(task_tag_id: TaskTagId, task_tag_name: &str) -> Button<Message> {
@@ -940,27 +971,32 @@ pub fn task_tag_name_button(task_tag_id: TaskTagId, task_tag_name: &str) -> Butt
 }
 
 pub fn force_close_anyways_button() -> Button<'static, WaitClosingModalMessage> {
-	button(
-		text("Close anyways")
-	)
-	.on_press(WaitClosingModalMessage::ForceCloseAnyways)
-	.style(dangerous_button_style)
+	button(text("Close anyways"))
+		.on_press(WaitClosingModalMessage::ForceCloseAnyways)
+		.style(dangerous_button_style)
 }
 
-pub fn open_project_button(project_id: ProjectId, project_name: &str, project_color: Color) -> Button<Message> {
-	button(
-		rich_text![
-			Span::new(format!("{project_name}:"))
-				.link(Message::ContentPageMessage(ContentPageMessage::OpenProjectPage(project_id)))
-				.underline(true)
-				.color(project_color)
-		]
-	)
+pub fn open_project_button(
+	project_id: ProjectId,
+	project_name: &str,
+	project_color: Color,
+) -> Button<Message> {
+	button(rich_text![Span::new(format!("{project_name}:"))
+		.link(Message::ContentPageMessage(
+			ContentPageMessage::OpenProjectPage(project_id)
+		))
+		.underline(true)
+		.color(project_color)])
 	.style(hidden_secondary_button_style)
 	.on_press(ContentPageMessage::OpenProjectPage(project_id).into())
 }
 
-pub fn overview_time_section_button(label: &'static str, task_count: usize, mut collapsed: bool, on_toggle_collabsed: Message) -> Button<'static, Message> {
+pub fn overview_time_section_button(
+	label: &'static str,
+	task_count: usize,
+	mut collapsed: bool,
+	on_toggle_collabsed: Message,
+) -> Button<'static, Message> {
 	if task_count == 0 {
 		collapsed = true;
 	}
@@ -979,7 +1015,7 @@ pub fn overview_time_section_button(label: &'static str, task_count: usize, mut 
 				.style(rounded_container_style)
 		]
 		.spacing(SPACING_AMOUNT)
-		.align_y(Vertical::Center)
+		.align_y(Vertical::Center),
 	)
 	.on_press_maybe(if task_count == 0 {
 		None
@@ -1001,10 +1037,8 @@ pub fn show_error_popup_button(error_msg: String) -> Element<'static, Message> {
 		.width(ICON_BUTTON_WIDTH)
 		.on_press(ErrorMsgModalMessage::open(error_msg))
 		.style(secondary_button_style_default),
-
 		text("Show full error popup").size(SMALL_TEXT_SIZE),
-
-		tooltip::Position::Top
+		tooltip::Position::Top,
 	)
 	.into()
 }
@@ -1016,22 +1050,25 @@ pub fn retry_connecting_to_server_button() -> Button<'static, Message> {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn edit_needed_time_button<'a, Message: 'static + Clone>(task_needed_time_minutes: Option<usize>, new_needed_time_minutes: &'a Option<String>, on_edit: Message, on_input: impl Fn(String) -> Message + 'a, on_submit: Option<Message>, stop_editing: Message, clear_needed_time: Message, text_input_id: text_input::Id) -> Element<'a, Message> {
+pub fn edit_needed_time_button<'a, Message: 'static + Clone>(
+	task_needed_time_minutes: Option<usize>,
+	new_needed_time_minutes: &'a Option<String>,
+	on_edit: Message,
+	on_input: impl Fn(String) -> Message + 'a,
+	on_submit: Option<Message>,
+	stop_editing: Message,
+	clear_needed_time: Message,
+	text_input_id: text_input::Id,
+) -> Element<'a, Message> {
 	if let Some(new_needed_time_minutes) = new_needed_time_minutes {
 		let edit_needed_time_element = unfocusable(
-			text_input(
-				"ex: 30min",
-				new_needed_time_minutes,
-			)
-			.id(text_input_id)
-			.width(Fixed(80.0))
-			.on_input(on_input)
-			.on_submit_maybe(on_submit)
-			.style(move |t, s| {
-				text_input_style(t, s, true, false, false, true)
-			}),
-
-			stop_editing
+			text_input("ex: 30min", new_needed_time_minutes)
+				.id(text_input_id)
+				.width(Fixed(80.0))
+				.on_input(on_input)
+				.on_submit_maybe(on_submit)
+				.style(move |t, s| text_input_style(t, s, true, false, false, true)),
+			stop_editing,
 		);
 
 		row![
@@ -1039,14 +1076,13 @@ pub fn edit_needed_time_button<'a, Message: 'static + Clone>(task_needed_time_mi
 			clear_task_needed_time_button(clear_needed_time)
 		]
 		.into()
-	}
-	else {
+	} else {
 		button(
 			if let Some(needed_time_minutes) = task_needed_time_minutes {
 				duration_text(Duration::from_secs(needed_time_minutes as u64 * 60))
 			} else {
 				text("Add needed time")
-			}
+			},
 		)
 		.on_press(on_edit)
 		.style(secondary_button_style_default)
@@ -1054,33 +1090,43 @@ pub fn edit_needed_time_button<'a, Message: 'static + Clone>(task_needed_time_mi
 	}
 }
 
-pub fn due_date_button<Message: 'static + Clone>(edit_due_date: bool, due_date: &Option<SerializableDate>, date_formatting: DateFormatting, on_edit: Message, stop_editing: Message, on_submit: impl Fn(Date) -> Message + 'static, on_clear: Message) -> Element<Message> {
+pub fn due_date_button<Message: 'static + Clone>(
+	edit_due_date: bool,
+	due_date: &Option<SerializableDate>,
+	date_formatting: DateFormatting,
+	on_edit: Message,
+	stop_editing: Message,
+	on_submit: impl Fn(Date) -> Message + 'static,
+	on_clear: Message,
+) -> Element<Message> {
 	let add_due_date_button = add_due_date_button(on_edit.clone());
 
 	if edit_due_date {
 		date_picker(
 			true,
-			due_date.map(|due_date| due_date.to_iced_date())
+			due_date
+				.map(|due_date| due_date.to_iced_date())
 				.unwrap_or(date_picker::Date::today()),
 			add_due_date_button,
 			stop_editing,
-			on_submit
+			on_submit,
 		)
 		.into()
-	}
-	else if let Some(due_date) = due_date {
+	} else if let Some(due_date) = due_date {
 		row![
 			edit_due_date_button(due_date, date_formatting, on_edit),
 			clear_task_due_date_button(on_clear),
 		]
 		.into()
-	}
-	else {
+	} else {
 		add_due_date_button.into()
 	}
 }
 
-pub fn open_in_code_editor_button(file_location: String, code_editor: &CodeEditor) -> Button<'static, Message> {
+pub fn open_in_code_editor_button(
+	file_location: String,
+	code_editor: &CodeEditor,
+) -> Button<'static, Message> {
 	button(
 		row![
 			code_editor.icon(),
@@ -1093,10 +1139,13 @@ pub fn open_in_code_editor_button(file_location: String, code_editor: &CodeEdito
 	.style(secondary_button_style_default)
 }
 
-pub fn code_editor_dropdown_button(selected_code_editor: Option<&CodeEditor>, dropdown_expanded: bool) -> Element<Message> {
+pub fn code_editor_dropdown_button(
+	selected_code_editor: Option<&CodeEditor>,
+	dropdown_expanded: bool,
+) -> Element<Message> {
 	let default_custom_code_editor = CodeEditor::Custom {
 		name: "Custom editor name".to_string(),
-		command: "custom_editor --open".to_string()
+		command: "custom_editor --open".to_string(),
 	};
 
 	DropDown::new(
@@ -1108,36 +1157,35 @@ pub fn code_editor_dropdown_button(selected_code_editor: Option<&CodeEditor>, dr
 					Bootstrap::CaretRightFill
 				})
 				.size(ICON_FONT_SIZE),
-
 				row![
 					code_editor_icon(selected_code_editor.cloned()),
-
-					text(
-						code_editor_label(selected_code_editor.cloned())
-					)
+					text(code_editor_label(selected_code_editor.cloned()))
 				]
 				.spacing(SMALL_SPACING_AMOUNT)
 				.align_y(Vertical::Center)
 			]
 			.spacing(SPACING_AMOUNT)
-			.align_y(Vertical::Center)
+			.align_y(Vertical::Center),
 		)
 		.width(Length::Fixed(130.0))
 		.on_press(SettingsModalMessage::ToggleCodeEditorDropdownExpanded.into())
 		.style(secondary_button_style_default),
-
 		container(
 			column![
 				code_editor_button(None, selected_code_editor, true, false),
 				code_editor_button(Some(CodeEditor::VSCode), selected_code_editor, false, false),
 				code_editor_button(Some(CodeEditor::Zed), selected_code_editor, false, false),
-				code_editor_button(Some(default_custom_code_editor), selected_code_editor, false, true),
+				code_editor_button(
+					Some(default_custom_code_editor),
+					selected_code_editor,
+					false,
+					true
+				),
 			]
-			.width(Fill)
+			.width(Fill),
 		)
 		.style(dropdown_container_style),
-
-		dropdown_expanded
+		dropdown_expanded,
 	)
 	.width(Fixed(130.0))
 	.alignment(drop_down::Alignment::Bottom)
@@ -1160,7 +1208,12 @@ fn code_editor_label(code_editor: Option<CodeEditor>) -> String {
 	}
 }
 
-fn code_editor_button(code_editor: Option<CodeEditor>, selected_code_editor: Option<&CodeEditor>, round_top: bool, round_bottom: bool) -> Button<Message> {
+fn code_editor_button(
+	code_editor: Option<CodeEditor>,
+	selected_code_editor: Option<&CodeEditor>,
+	round_top: bool,
+	round_bottom: bool,
+) -> Button<Message> {
 	let selected = match selected_code_editor {
 		Some(CodeEditor::Custom { .. }) => matches!(code_editor, Some(CodeEditor::Custom { .. })),
 		_ => selected_code_editor == code_editor.as_ref(),
@@ -1172,17 +1225,19 @@ fn code_editor_button(code_editor: Option<CodeEditor>, selected_code_editor: Opt
 			text(code_editor_label(code_editor.clone())),
 		]
 		.spacing(SPACING_AMOUNT)
-		.align_y(Vertical::Center)
+		.align_y(Vertical::Center),
 	)
 	.on_press(SettingsModalMessage::SetCodeEditor(code_editor).into())
 	.width(Fill)
-	.style(move |t, s| selection_list_button_style(
-		t,
-		s,
-		selected,
-		round_top,
-		round_top,
-		round_bottom,
-		round_bottom
-	))
+	.style(move |t, s| {
+		selection_list_button_style(
+			t,
+			s,
+			selected,
+			round_top,
+			round_top,
+			round_bottom,
+			round_bottom,
+		)
+	})
 }

@@ -1,9 +1,14 @@
-use std::{collections::HashSet, fs::File, io::{self, BufRead}, path::{Path, PathBuf}};
+use crate::Task;
 use indexmap::IndexMap;
 use project_tracker_core::TaskId;
-use walkdir::{WalkDir, DirEntry};
 use rayon::prelude::*;
-use crate::Task;
+use std::{
+	collections::HashSet,
+	fs::File,
+	io::{self, BufRead},
+	path::{Path, PathBuf},
+};
+use walkdir::{DirEntry, WalkDir};
 
 pub fn import_source_code_todos(root_directory: PathBuf) -> IndexMap<TaskId, Task> {
 	let todos: Vec<IndexMap<TaskId, Task>> = WalkDir::new(&root_directory)
@@ -42,9 +47,7 @@ fn should_import_source_code_todos_from_folder(folder_path: &Path) -> bool {
 
 		if let Some(folder_name) = ancestor.file_name() {
 			let folder_name_str = folder_name.to_string_lossy();
-			if folder_name_str.starts_with(".") ||
-				folder_name_str == "target"
-			{
+			if folder_name_str.starts_with(".") || folder_name_str == "target" {
 				return false;
 			}
 		}
@@ -60,8 +63,7 @@ fn should_import_source_code_todos_from_file(filepath: &Path) -> bool {
 
 	if let Some(parent_path) = filepath.parent() {
 		should_import_source_code_todos_from_folder(parent_path)
-	}
-	else {
+	} else {
 		true
 	}
 }
@@ -76,9 +78,7 @@ fn import_source_code_todos_from_file(entry: DirEntry) -> IndexMap<TaskId, Task>
 			.enumerate()
 		{
 			let mut search_todo = |keyword: &'static str| {
-				if let Some(index) =
-					line.to_lowercase().find(&keyword.to_lowercase())
-				{
+				if let Some(index) = line.to_lowercase().find(&keyword.to_lowercase()) {
 					let mut string_quotes_counter = 0;
 					for c in line[0..index].chars() {
 						if c == '\"' || c == '\'' {
@@ -101,8 +101,8 @@ fn import_source_code_todos_from_file(entry: DirEntry) -> IndexMap<TaskId, Task>
 								None,
 								None,
 								None,
-								HashSet::new()
-							)
+								HashSet::new(),
+							),
 						);
 					}
 				}

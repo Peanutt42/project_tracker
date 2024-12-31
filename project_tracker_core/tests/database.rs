@@ -1,5 +1,6 @@
 use project_tracker_core::{
-	Database, LoadDatabaseError, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId
+	Database, LoadDatabaseError, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode,
+	TaskId,
 };
 use std::{collections::HashSet, path::PathBuf};
 
@@ -10,7 +11,12 @@ async fn test_database_serialization() {
 	let mut database = Database::default();
 
 	for i in 0..10 {
-		let mut project = Project::new(format!("Project Nr.{i}"), SerializableColor::default(), OrderedHashMap::new(), SortMode::default());
+		let mut project = Project::new(
+			format!("Project Nr.{i}"),
+			SerializableColor::default(),
+			OrderedHashMap::new(),
+			SortMode::default(),
+		);
 
 		for j in 0..100 {
 			project.add_task(
@@ -37,11 +43,15 @@ async fn test_database_serialization() {
 	match Database::load_from(output_filepath.clone()).await {
 		Ok(database) => assert_eq!(database.projects(), original.projects()),
 		Err(e) => match e {
-			LoadDatabaseError::FailedToFindDatbaseFilepath => panic!("Failed to find database filepath!"),
-			LoadDatabaseError::FailedToOpenFile{ .. } => panic!("Failed to find serialized file, maybe database.save_to failed?"),
-			LoadDatabaseError::FailedToParseBinary{ .. } |
-		 	LoadDatabaseError::FailedToParseJson { .. } => panic!("Failed to parse serialized file!"),
-		}
+			LoadDatabaseError::FailedToFindDatbaseFilepath => {
+				panic!("Failed to find database filepath!")
+			}
+			LoadDatabaseError::FailedToOpenFile { .. } => {
+				panic!("Failed to find serialized file, maybe database.save_to failed?")
+			}
+			LoadDatabaseError::FailedToParseBinary { .. }
+			| LoadDatabaseError::FailedToParseJson { .. } => panic!("Failed to parse serialized file!"),
+		},
 	};
 
 	tokio::fs::remove_file(&output_filepath)

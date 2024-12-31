@@ -1,4 +1,3 @@
-
 mod error_msg_modal;
 pub use error_msg_modal::{ErrorMsgModal, ErrorMsgModalMessage};
 
@@ -9,13 +8,15 @@ mod settings_modal;
 pub use settings_modal::{SettingTab, SettingsModal, SettingsModalMessage};
 
 mod manage_task_tags_modal;
-pub use manage_task_tags_modal::{ManageTaskTagsModal, ManageTaskTagsModalMessage, ManageTaskTagsModalAction};
+pub use manage_task_tags_modal::{
+	ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage,
+};
 
 mod task_modal;
-pub use task_modal::{TaskModal, TaskModalMessage, TaskModalAction};
+pub use task_modal::{TaskModal, TaskModalAction, TaskModalMessage};
 
 mod create_task_modal;
-pub use create_task_modal::{CreateTaskModal, CreateTaskModalMessage, CreateTaskModalAction};
+pub use create_task_modal::{CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage};
 
 mod wait_closing_modal;
 pub use wait_closing_modal::{WaitClosingModal, WaitClosingModalMessage};

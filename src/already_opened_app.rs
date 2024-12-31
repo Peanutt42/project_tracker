@@ -1,8 +1,19 @@
-use iced::{alignment::Horizontal, keyboard::{key, on_key_press, Key}, widget::{button, column, container, text, Space}, window::{self, icon}, Element, Error, Font, Length::Fill, Size, Subscription, Task, Theme};
+use crate::{
+	styles::{dangerous_button_style, ProjectTrackerTheme, PADDING_AMOUNT},
+	theme_mode::is_system_theme_dark,
+};
 #[cfg(target_os = "linux")]
 use iced::window::settings::PlatformSpecific;
+use iced::{
+	alignment::Horizontal,
+	keyboard::{key, on_key_press, Key},
+	widget::{button, column, container, text, Space},
+	window::{self, icon},
+	Element, Error, Font,
+	Length::Fill,
+	Size, Subscription, Task, Theme,
+};
 use iced_fonts::REQUIRED_FONT_BYTES;
-use crate::{styles::{dangerous_button_style, ProjectTrackerTheme, PADDING_AMOUNT}, theme_mode::is_system_theme_dark};
 
 #[derive(Debug, Clone)]
 enum Message {
@@ -22,26 +33,24 @@ impl AlreadyOpenedApp {
 
 	fn update(&mut self, message: Message) -> Task<Message> {
 		match message {
-			Message::OkPressed => window::get_latest()
-				.and_then(window::close),
+			Message::OkPressed => window::get_latest().and_then(window::close),
 		}
 	}
 
 	fn theme(&self) -> Theme {
 		if self.system_theme_dark {
 			ProjectTrackerTheme::Dark.get_theme().clone()
-		}
-		else {
+		} else {
 			ProjectTrackerTheme::Light.get_theme().clone()
 		}
 	}
 
 	fn subscription(&self) -> Subscription<Message> {
-		on_key_press(|key, _modifiers| {
-			match key {
-				Key::Named(key::Named::Enter) | Key::Named(key::Named::Escape) => Some(Message::OkPressed),
-				_ => None,
+		on_key_press(|key, _modifiers| match key {
+			Key::Named(key::Named::Enter) | Key::Named(key::Named::Escape) => {
+				Some(Message::OkPressed)
 			}
+			_ => None,
 		})
 	}
 
@@ -50,18 +59,12 @@ impl AlreadyOpenedApp {
 			text("Project Tracker is already opened!")
 				.width(Fill)
 				.align_x(Horizontal::Center),
-
 			Space::new(0.0, Fill),
-
 			container(
-				button(
-					text("Ok")
-						.align_x(Horizontal::Center)
-						.width(Fill)
-				)
-				.width(100)
-				.style(dangerous_button_style)
-				.on_press(Message::OkPressed)
+				button(text("Ok").align_x(Horizontal::Center).width(Fill))
+					.width(100)
+					.style(dangerous_button_style)
+					.on_press(Message::OkPressed)
 			)
 			.width(Fill)
 			.align_x(Horizontal::Right)
@@ -81,7 +84,7 @@ pub fn run_already_opened_application() -> Result<(), Error> {
 	iced::application(
 		"Project Tracker already opened",
 		AlreadyOpenedApp::update,
-		AlreadyOpenedApp::view
+		AlreadyOpenedApp::view,
 	)
 	.theme(AlreadyOpenedApp::theme)
 	.subscription(AlreadyOpenedApp::subscription)

@@ -1,14 +1,19 @@
-use std::{collections::HashSet, net::SocketAddr, path::PathBuf, sync::{Arc, RwLock}};
 use chrono::{DateTime, Utc};
 use project_tracker_core::{get_last_modification_date_time, Database, SerializedDatabase};
-use thiserror::Error;
 use serde::{Deserialize, Serialize};
+use std::{
+	collections::HashSet,
+	net::SocketAddr,
+	path::PathBuf,
+	sync::{Arc, RwLock},
+};
+use thiserror::Error;
 
 mod server;
 pub use server::run_server;
 
 mod encryption;
-pub use encryption::{encrypt, decrypt, SALT_LENGTH, NONCE_LENGTH};
+pub use encryption::{decrypt, encrypt, NONCE_LENGTH, SALT_LENGTH};
 
 pub const DEFAULT_HOSTNAME: &str = "127.0.0.1";
 pub const DEFAULT_PORT: usize = 8080;
@@ -33,32 +38,23 @@ pub enum Request {
 	UpdateDatabase {
 		database_binary: Vec<u8>,
 		last_modified_time: DateTime<Utc>,
-	}
+	},
 }
 
 impl Request {
 	pub fn decrypt(binary: Vec<u8>, password: &str) -> ServerResult<Self> {
-		let encrypted_message: EncryptedMessage = bincode::deserialize(&binary)
-			.map_err(|_| ResponseError::ParseError)?;
+		let encrypted_message: EncryptedMessage =
+			bincode::deserialize(&binary).map_err(|_| ResponseError::ParseError)?;
 		let request_binary = encrypted_message.decrypt(password)?;
-		Ok(
-			bincode::deserialize(&request_binary)
-				.map_err(|_| ResponseError::ParseError)?
-		)
+		Ok(bincode::deserialize(&request_binary).map_err(|_| ResponseError::ParseError)?)
 	}
 
 	pub fn encrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
-		let request_binary = bincode::serialize(self)
-			.map_err(|_| ResponseError::ParseError)?;
+		let request_binary = bincode::serialize(self).map_err(|_| ResponseError::ParseError)?;
 
 		Ok(
-			bincode::serialize(
-				&EncryptedMessage::new(
-					&request_binary,
-					password
-				)?
-			)
-			.map_err(|_| ResponseError::ParseError)?
+			bincode::serialize(&EncryptedMessage::new(&request_binary, password)?)
+				.map_err(|_| ResponseError::ParseError)?,
 		)
 	}
 }
@@ -75,20 +71,13 @@ pub enum EncryptedResponse {
 impl EncryptedResponse {
 	pub fn decrypt(encrypted: EncryptedMessage, password: &str) -> ServerResult<Self> {
 		let response_binary = encrypted.decrypt(password)?;
-		Ok(
-			bincode::deserialize(&response_binary)
-				.map_err(|_| ResponseError::ParseError)?
-		)
+		Ok(bincode::deserialize(&response_binary).map_err(|_| ResponseError::ParseError)?)
 	}
 
 	pub fn encrypt(&self, password: &str) -> ServerResult<EncryptedMessage> {
-		let response_binary = bincode::serialize(self)
-			.map_err(|_| ResponseError::ParseError)?;
+		let response_binary = bincode::serialize(self).map_err(|_| ResponseError::ParseError)?;
 
-		EncryptedMessage::new(
-			&response_binary,
-			password
-		)
+		EncryptedMessage::new(&response_binary, password)
 	}
 }
 
@@ -107,15 +96,11 @@ pub struct Response(pub Result<EncryptedMessage, ResponseError>);
 
 impl Response {
 	pub fn serialize(&self) -> ServerResult<Vec<u8>> {
-		Ok(
-			bincode::serialize(&self.0)
-				.map_err(|_| ResponseError::ParseError)?
-		)
+		Ok(bincode::serialize(&self.0).map_err(|_| ResponseError::ParseError)?)
 	}
 
 	pub fn deserialize(binary: Vec<u8>) -> ServerResult<Self> {
-		let result = bincode::deserialize(&binary)
-			.map_err(|_| ResponseError::ParseError)?;
+		let result = bincode::deserialize(&binary).map_err(|_| ResponseError::ParseError)?;
 		Ok(Self(result))
 	}
 }
@@ -129,8 +114,8 @@ pub struct EncryptedMessage {
 
 impl EncryptedMessage {
 	pub fn new(plaintext_message: &[u8], password: &str) -> ServerResult<Self> {
-		let (encrypted_message, salt, nonce) = encrypt(plaintext_message, password)
-			.map_err(|_| ResponseError::InvalidPassword)?;
+		let (encrypted_message, salt, nonce) =
+			encrypt(plaintext_message, password).map_err(|_| ResponseError::InvalidPassword)?;
 
 		Ok(Self {
 			encrypted_message,
@@ -161,7 +146,6 @@ impl ModifiedEvent {
 	}
 }
 
-
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum ConnectedClient {
 	NativeGUI(SocketAddr),
@@ -178,12 +162,14 @@ pub struct SharedServerData {
 impl SharedServerData {
 	pub fn new(filepath: PathBuf) -> Arc<RwLock<Self>> {
 		let last_modified_time = get_last_modification_date_time(
-			&filepath.metadata().expect("Failed to get the last modified metadata of database file")
+			&filepath
+				.metadata()
+				.expect("Failed to get the last modified metadata of database file"),
 		)
 		.expect("Failed to get the last modified metadata of database file");
 
-		let database_file_content = std::fs::read(&filepath)
-			.expect("Failed to read database file at startup!");
+		let database_file_content =
+			std::fs::read(&filepath).expect("Failed to read database file at startup!");
 
 		let database = Database::from_binary(&database_file_content, last_modified_time)
 			.expect("Failed to parse database file content at startup!");

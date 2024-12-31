@@ -10,8 +10,10 @@ use iced::{
 	Font, Size,
 };
 use iced_fonts::REQUIRED_FONT_BYTES;
+use project_tracker::{
+	icons::BOOTSTRAP_FONT_BYTES, run_already_opened_application, ProjectTrackerApp,
+};
 use single_instance::SingleInstance;
-use project_tracker::{icons::BOOTSTRAP_FONT_BYTES, ProjectTrackerApp, run_already_opened_application};
 
 fn main() -> Result<(), iced::Error> {
 	let instance = SingleInstance::new("ProjectTrackerInstance").unwrap();

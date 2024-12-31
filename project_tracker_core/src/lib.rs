@@ -4,7 +4,10 @@
 #![deny(unused_must_use)]
 
 mod database;
-pub use database::{Database, SerializedDatabase, DatabaseMessage, LoadDatabaseResult, LoadDatabaseError, SaveDatabaseError, SyncDatabaseResult, get_last_modification_date_time};
+pub use database::{
+	get_last_modification_date_time, Database, DatabaseMessage, LoadDatabaseError,
+	LoadDatabaseResult, SaveDatabaseError, SerializedDatabase, SyncDatabaseResult,
+};
 
 mod ordered_hash_map;
 pub use ordered_hash_map::OrderedHashMap;

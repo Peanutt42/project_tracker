@@ -1,7 +1,13 @@
-use std::{collections::HashSet, path::PathBuf};
-use crate::{ordered_hash_map::OrderedHashMapIter, OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType, TimeSpend};
-use indexmap::{map::{Iter, ValuesMut}, IndexMap};
+use crate::{
+	ordered_hash_map::OrderedHashMapIter, OrderedHashMap, SerializableDate, Task, TaskId, TaskTag,
+	TaskTagId, TaskType, TimeSpend,
+};
+use indexmap::{
+	map::{Iter, ValuesMut},
+	IndexMap,
+};
 use serde::{Deserialize, Serialize};
+use std::{collections::HashSet, path::PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
 pub struct ProjectId(pub usize);
@@ -36,7 +42,12 @@ pub struct Project {
 }
 
 impl Project {
-	pub fn new(name: String, color: SerializableColor, task_tags: OrderedHashMap<TaskTagId, TaskTag>, sort_mode: SortMode) -> Self {
+	pub fn new(
+		name: String,
+		color: SerializableColor,
+		task_tags: OrderedHashMap<TaskTagId, TaskTag>,
+		sort_mode: SortMode,
+	) -> Self {
 		Self {
 			name,
 			color,
@@ -58,16 +69,14 @@ impl Project {
 	}
 
 	pub fn get_task_and_type(&self, task_id: &TaskId) -> Option<(&Task, TaskType)> {
-		self.todo_tasks.get(task_id)
+		self.todo_tasks
+			.get(task_id)
 			.map(|t| (t, TaskType::Todo))
-			.or(
-				self.done_tasks.get(task_id)
-					.map(|t| (t, TaskType::Done))
-			)
-			.or(
-				self.source_code_todos.get(task_id)
-					.map(|t| (t, TaskType::SourceCodeTodo))
-			)
+			.or(self.done_tasks.get(task_id).map(|t| (t, TaskType::Done)))
+			.or(self
+				.source_code_todos
+				.get(task_id)
+				.map(|t| (t, TaskType::SourceCodeTodo)))
 	}
 
 	/// task can be todo or done or source code todos
@@ -90,7 +99,14 @@ impl Project {
 		time_spend: Option<TimeSpend>,
 		create_at_top: bool,
 	) {
-		let task = Task::new(name, description, needed_time_minutes, time_spend, due_date, tags);
+		let task = Task::new(
+			name,
+			description,
+			needed_time_minutes,
+			time_spend,
+			due_date,
+			tags,
+		);
 
 		if create_at_top {
 			self.todo_tasks.insert_at_top(task_id, task);
@@ -152,11 +168,7 @@ impl Project {
 		}
 	}
 
-	pub fn set_task_time_spend(
-		&mut self,
-		task_id: TaskId,
-		new_time_spend: Option<TimeSpend>,
-	) {
+	pub fn set_task_time_spend(&mut self, task_id: TaskId, new_time_spend: Option<TimeSpend>) {
 		if let Some(task) = self.get_task_mut(&task_id) {
 			task.time_spend = new_time_spend;
 		}
@@ -170,7 +182,7 @@ impl Project {
 					let mut time_spend = TimeSpend::new(0.0);
 					time_spend.start();
 					task.time_spend = Some(time_spend);
-				},
+				}
 			}
 		}
 	}
@@ -223,7 +235,7 @@ impl Project {
 		TaskValueIterMut {
 			todo_tasks_valuse: self.todo_tasks.values_mut(),
 			done_tasks_values: self.done_tasks.values_mut(),
-			source_code_tasks_values: self.source_code_todos.values_mut()
+			source_code_tasks_values: self.source_code_todos.values_mut(),
 		}
 	}
 }
@@ -260,7 +272,8 @@ impl<'a> Iterator for TaskValueIterMut<'a> {
 	type Item = &'a mut Task;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		self.todo_tasks_valuse.next()
+		self.todo_tasks_valuse
+			.next()
 			.or(self.done_tasks_values.next())
 			.or(self.source_code_tasks_values.next())
 	}

@@ -1,12 +1,13 @@
 use crate::{
+	core::IcedColorConversion,
+	core::View,
 	project_tracker::Message,
 	styles::{tooltip_container_style, SMALL_TEXT_SIZE},
-	core::View,
-	core::IcedColorConversion,
 };
 use iced::{
 	border::rounded,
-	widget::{text, tooltip, tooltip::Position}, Element, Length,
+	widget::{text, tooltip, tooltip::Position},
+	Element, Length,
 };
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use project_tracker_core::TaskTag;

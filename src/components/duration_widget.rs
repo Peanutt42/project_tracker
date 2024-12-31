@@ -2,11 +2,11 @@ use crate::{
 	project_tracker::Message,
 	styles::{rounded_container_style, SMALL_HORIZONTAL_PADDING},
 };
+use humantime::format_duration;
 use iced::{
 	widget::{container, text, Text},
 	Element,
 };
-use humantime::format_duration;
 use std::time::Duration;
 
 pub fn round_duration_to_seconds(duration: Duration) -> Duration {

@@ -50,7 +50,7 @@ impl ConfirmModal {
 		title: String,
 		on_confirmed: Message,
 		custom_ok_label: Option<&'static str>,
-		custom_cancel_label: Option<&'static str>
+		custom_cancel_label: Option<&'static str>,
 	) -> Self {
 		Self {
 			title,

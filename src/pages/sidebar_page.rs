@@ -1,5 +1,7 @@
 use crate::components::{
-	create_new_project_button, custom_project_preview, loading_screen, overview_button, project_preview, retry_connecting_to_server_button, settings_button, show_error_popup_button, stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE
+	create_new_project_button, custom_project_preview, loading_screen, overview_button,
+	project_preview, retry_connecting_to_server_button, settings_button, show_error_popup_button,
+	stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE,
 };
 use crate::core::{IcedColorConversion, ProjectUiIdMap, TaskUiIdMap};
 use crate::integrations::ServerConnectionStatus;
@@ -17,7 +19,6 @@ use crate::{
 	},
 };
 use iced::widget::{text, Space};
-use project_tracker_core::{Database, DatabaseMessage, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId};
 use iced::{
 	advanced::widget::Id,
 	alignment::Horizontal,
@@ -32,13 +33,19 @@ use iced::{
 	Padding, Point, Rectangle, Subscription, Task,
 };
 use iced_drop::{find_zones, zones_on_point};
+use project_tracker_core::{
+	Database, DatabaseMessage, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode,
+	TaskId,
+};
 use std::sync::LazyLock;
 
 static SCROLLABLE_ID: LazyLock<scrollable::Id> = LazyLock::new(scrollable::Id::unique);
 static TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 static BOTTOM_PROJECT_DROPZONE_ID: LazyLock<container::Id> = LazyLock::new(container::Id::unique);
-pub static BOTTOM_TODO_TASK_DROPZONE_ID: LazyLock<container::Id> = LazyLock::new(container::Id::unique);
-pub static STOPWATCH_TASK_DROPZONE_ID: LazyLock<container::Id> = LazyLock::new(container::Id::unique);
+pub static BOTTOM_TODO_TASK_DROPZONE_ID: LazyLock<container::Id> =
+	LazyLock::new(container::Id::unique);
+pub static STOPWATCH_TASK_DROPZONE_ID: LazyLock<container::Id> =
+	LazyLock::new(container::Id::unique);
 
 #[derive(Clone, Debug)]
 pub enum SidebarPageMessage {
@@ -161,11 +168,7 @@ impl SidebarPage {
 		}
 	}
 
-	pub fn snap_to_project(
-		&mut self,
-		project_order: usize,
-		database: &Database,
-	) -> Task<Message> {
+	pub fn snap_to_project(&mut self, project_order: usize, database: &Database) -> Task<Message> {
 		scrollable::snap_to(
 			SCROLLABLE_ID.clone(),
 			RelativeOffset {
@@ -246,13 +249,14 @@ impl SidebarPage {
 						DatabaseMessage::CreateProject {
 							project_id,
 							name: create_new_project_name,
-							color: SerializableColor::from_iced_color(get_new_project_color(is_theme_dark)),
+							color: SerializableColor::from_iced_color(get_new_project_color(
+								is_theme_dark,
+							)),
 						}
 						.into(),
-						SidebarPageAction::SelectProject(project_id)
+						SidebarPageAction::SelectProject(project_id),
 					])
-				}
-				else {
+				} else {
 					SidebarPageAction::None
 				}
 			}
@@ -272,16 +276,18 @@ impl SidebarPage {
 						}
 						.into(),
 
-						TaskDropzone::Task(hovered_task_id) => DatabaseMessage::MoveTaskBeforeOtherTask {
-							project_id,
-							task_id,
-							other_task_id: hovered_task_id,
+						TaskDropzone::Task(hovered_task_id) => {
+							DatabaseMessage::MoveTaskBeforeOtherTask {
+								project_id,
+								task_id,
+								other_task_id: hovered_task_id,
+							}
+							.into()
 						}
-						.into(),
 
 						TaskDropzone::EndOfTodoTaskList => DatabaseMessage::MoveTodoTaskToEnd {
 							project_id,
-							task_id
+							task_id,
 						}
 						.into(),
 
@@ -289,10 +295,9 @@ impl SidebarPage {
 							project_id,
 							task_id,
 						}
-						.into()
+						.into(),
 					}
-				}
-				else {
+				} else {
 					SidebarPageAction::None
 				}
 			}
@@ -305,7 +310,11 @@ impl SidebarPage {
 				if let Some(projects) = database.as_ref().map(|db| db.projects()) {
 					for (id, _bounds) in zones.iter() {
 						for dst_project_id in projects.keys() {
-							if *id == project_ui_ids.get_task_dropzone_id_mut(*dst_project_id).into() {
+							if *id
+								== project_ui_ids
+									.get_task_dropzone_id_mut(*dst_project_id)
+									.into()
+							{
 								self.task_dropzone_hovered =
 									Some(TaskDropzone::Project(*dst_project_id));
 								break;
@@ -360,7 +369,8 @@ impl SidebarPage {
 				rect,
 				point,
 			} => {
-				let project_options = Self::project_dropzones_for_tasks_options(database, project_id, project_ui_ids);
+				let project_options =
+					Self::project_dropzones_for_tasks_options(database, project_id, project_ui_ids);
 				let mut commands = vec![zones_on_point(
 					move |zones| {
 						SidebarPageMessage::HandleProjectZonesForTasks {
@@ -375,7 +385,8 @@ impl SidebarPage {
 					None,
 				)];
 				if task_is_todo && !filtering_tasks {
-					let task_options = Self::task_dropzone_options(database, project_id, task_id, task_ui_ids);
+					let task_options =
+						Self::task_dropzone_options(database, project_id, task_id, task_ui_ids);
 					commands.push(find_zones(
 						move |zones| {
 							SidebarPageMessage::HandleTaskZones {
@@ -399,13 +410,17 @@ impl SidebarPage {
 					if let Some(project_dropzone_hovered) = self.project_dropzone_hovered {
 						self.project_dropzone_hovered = None;
 						return match project_dropzone_hovered {
-							ProjectDropzone::Project(hovered_project_id) => DatabaseMessage::MoveProjectBeforeOtherProject {
-								project_id: dragged_project_id,
-								other_project_id: hovered_project_id,
+							ProjectDropzone::Project(hovered_project_id) => {
+								DatabaseMessage::MoveProjectBeforeOtherProject {
+									project_id: dragged_project_id,
+									other_project_id: hovered_project_id,
+								}
+								.into()
 							}
-							.into(),
 
-							ProjectDropzone::EndOfList => DatabaseMessage::MoveProjectToEnd(dragged_project_id).into(),
+							ProjectDropzone::EndOfList => {
+								DatabaseMessage::MoveProjectToEnd(dragged_project_id).into()
+							}
 						};
 					}
 				}
@@ -445,7 +460,9 @@ impl SidebarPage {
 							BOTTOM_PROJECT_DROPZONE_ID.clone().into();
 
 						for dst_project_id in projects.keys() {
-							let dst_project_widget_id = project_ui_ids.get_project_dropzone_id_mut(*dst_project_id).into();
+							let dst_project_widget_id = project_ui_ids
+								.get_project_dropzone_id_mut(*dst_project_id)
+								.into();
 							for (id, _bounds) in zones.iter() {
 								if *id == dst_project_widget_id {
 									self.project_dropzone_hovered =
@@ -511,7 +528,9 @@ impl SidebarPage {
 					Some(dragged_project_id) => dragged_project_id == project_id,
 					None => false,
 				};
-				let (project_dropzone_id, task_dropzone_id) = app.project_ui_id_map.get_project_task_dropzone_ids(project_id);
+				let (project_dropzone_id, task_dropzone_id) = app
+					.project_ui_id_map
+					.get_project_task_dropzone_ids(project_id);
 				project_preview(
 					project,
 					project_id,
@@ -589,12 +608,10 @@ impl SidebarPage {
 				]
 				.align_y(Alignment::Center)
 				.spacing(SMALL_SPACING_AMOUNT),
-
 				horizontal_seperator(),
 			]
 			.spacing(SPACING_AMOUNT)
 			.padding(PADDING_AMOUNT),
-
 			column![
 				stopwatch_button(
 					&app.content_page.stopwatch_page,
@@ -602,41 +619,36 @@ impl SidebarPage {
 					matches!(self.task_dropzone_hovered, Some(TaskDropzone::Stopwatch)),
 					app.database.as_ref(),
 				),
-
 				horizontal_seperator(),
 			]
 			.spacing(SPACING_AMOUNT)
-			.padding(Padding::default().left(PADDING_AMOUNT).right(PADDING_AMOUNT)),
-
+			.padding(
+				Padding::default()
+					.left(PADDING_AMOUNT)
+					.right(PADDING_AMOUNT)
+			),
 			list,
-
 			row![
 				settings_button(),
-				container(
-					match &self.server_connection_status {
-						Some(ServerConnectionStatus::Error(error_msg)) => row![
-							text("Server Error").style(danger_text_style),
-							show_error_popup_button(error_msg.clone()),
-							retry_connecting_to_server_button()
-						]
-						.spacing(SPACING_AMOUNT)
-						.align_y(Alignment::Center)
-						.into(),
-						Some(ServerConnectionStatus::Disconected) => row![
-							text("Disconnected"),
-							retry_connecting_to_server_button()
-						]
-						.spacing(SPACING_AMOUNT)
-						.align_y(Alignment::Center)
-						.into(),
-						Some(ServerConnectionStatus::Connecting) => text("Connecting...").into(),
-						_ => Element::new(Space::new(0.0, 0.0)),
-					}
-				)
+				container(match &self.server_connection_status {
+					Some(ServerConnectionStatus::Error(error_msg)) => row![
+						text("Server Error").style(danger_text_style),
+						show_error_popup_button(error_msg.clone()),
+						retry_connecting_to_server_button()
+					]
+					.spacing(SPACING_AMOUNT)
+					.align_y(Alignment::Center)
+					.into(),
+					Some(ServerConnectionStatus::Disconected) =>
+						row![text("Disconnected"), retry_connecting_to_server_button()]
+							.spacing(SPACING_AMOUNT)
+							.align_y(Alignment::Center)
+							.into(),
+					Some(ServerConnectionStatus::Connecting) => text("Connecting...").into(),
+					_ => Element::new(Space::new(0.0, 0.0)),
+				})
 				.center_x(Fill),
-				create_new_project_button(
-					self.create_new_project_name.is_none()
-				)
+				create_new_project_button(self.create_new_project_name.is_none())
 			]
 			.align_y(Alignment::Center)
 			.padding(Padding::new(PADDING_AMOUNT)),
@@ -650,7 +662,7 @@ impl SidebarPage {
 	fn project_dropzone_options(
 		database: &Option<Database>,
 		exception: ProjectId,
-		project_ui_ids: &mut ProjectUiIdMap
+		project_ui_ids: &mut ProjectUiIdMap,
 	) -> Option<Vec<Id>> {
 		// the dropzone of the project below the exception project does not make sense as a option,
 		// since the exception project is already before the project below it
@@ -672,10 +684,18 @@ impl SidebarPage {
 									skip_project_order = None;
 									None
 								} else {
-									Some(project_ui_ids.get_project_dropzone_id_mut(*project_id).into())
+									Some(
+										project_ui_ids
+											.get_project_dropzone_id_mut(*project_id)
+											.into(),
+									)
 								}
 							}
-							None => Some(project_ui_ids.get_project_dropzone_id_mut(*project_id).into()),
+							None => Some(
+								project_ui_ids
+									.get_project_dropzone_id_mut(*project_id)
+									.into(),
+							),
 						}
 					}
 				})
@@ -694,7 +714,11 @@ impl SidebarPage {
 		})
 	}
 
-	fn project_dropzones_for_tasks_options(database: &Option<Database>, exception: ProjectId, project_ui_ids: &mut ProjectUiIdMap) -> Option<Vec<Id>> {
+	fn project_dropzones_for_tasks_options(
+		database: &Option<Database>,
+		exception: ProjectId,
+		project_ui_ids: &mut ProjectUiIdMap,
+	) -> Option<Vec<Id>> {
 		database.as_ref().map(|database| {
 			let mut options: Vec<Id> = database
 				.projects()
@@ -718,7 +742,7 @@ impl SidebarPage {
 		database: &Option<Database>,
 		project_id: ProjectId,
 		task_exception: TaskId,
-		task_ui_ids: &mut TaskUiIdMap
+		task_ui_ids: &mut TaskUiIdMap,
 	) -> Option<Vec<Id>> {
 		if let Some(database) = database {
 			let mut options = Vec::new();

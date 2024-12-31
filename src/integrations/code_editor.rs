@@ -1,20 +1,17 @@
-use std::{path::Path, process::Command, sync::LazyLock};
-use iced::{Element, widget::{image, image::Handle}, advanced::image::Bytes};
+use crate::{
+	components::ICON_FONT_SIZE,
+	icons::{icon_to_text, Bootstrap, VSCODE_ICON_IMAGE_HANDLE, ZED_ICON_IMAGE_HANDLE},
+	project_tracker::Message,
+};
+use iced::{widget::image, Element};
 use serde::{Deserialize, Serialize};
-
-use crate::{components::ICON_FONT_SIZE, icons::{icon_to_text, Bootstrap}, project_tracker::Message};
-
-static VSCODE_ICON_IMAGE_HANDLE: LazyLock<Handle> = LazyLock::new(|| Handle::from_bytes(Bytes::from_static(include_bytes!("../../assets/vscode_icon.ico"))));
-static ZED_ICON_IMAGE_HANDLE: LazyLock<Handle> = LazyLock::new(|| Handle::from_bytes(Bytes::from_static(include_bytes!("../../assets/zed_icon.png"))));
+use std::{path::Path, process::Command};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CodeEditor {
 	VSCode,
 	Zed,
-	Custom {
-		name: String,
-		command: String,
-	}
+	Custom { name: String, command: String },
 }
 
 impl CodeEditor {
@@ -30,7 +27,7 @@ impl CodeEditor {
 		match self {
 			Self::VSCode => "VS Code",
 			Self::Zed => "Zed",
-			Self::Custom { name, .. } => name
+			Self::Custom { name, .. } => name,
 		}
 	}
 
@@ -66,24 +63,21 @@ impl CodeEditor {
 				args.push(file_location);
 				command.args(args);
 				command
-			},
+			}
 			Self::Zed => {
 				// checks if zed is included in $PATH, installed locally or installed with flatpak
 
 				let mut command;
 				let mut args = Vec::new();
 				let local_zed_filepath = std::env::var("HOME")
-					.map(|home_filepath| Path::new(&home_filepath)
-						.join(".local")
-						.join("bin")
-						.join("zed")
-					)
+					.map(|home_filepath| {
+						Path::new(&home_filepath)
+							.join(".local")
+							.join("bin")
+							.join("zed")
+					})
 					.ok()
-					.and_then(|path| if path.exists() {
-						Some(path)
-					} else {
-						None
-					});
+					.and_then(|path| if path.exists() { Some(path) } else { None });
 				if let Ok(zed_filepath) = which::which("zed") {
 					command = Command::new(zed_filepath);
 				} else if let Some(local_zed_filepath) = local_zed_filepath {
@@ -96,7 +90,7 @@ impl CodeEditor {
 				args.push(file_location);
 				command.args(args);
 				command
-			},
+			}
 			Self::Custom { command, .. } => {
 				let mut split_command = command.split(' ');
 				let program = split_command.next().unwrap_or("");
@@ -105,7 +99,7 @@ impl CodeEditor {
 				args.push(file_location);
 				command.args(args);
 				command
-			},
+			}
 		}
 	}
 }

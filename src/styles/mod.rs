@@ -1,20 +1,22 @@
 mod button_styles;
 pub use button_styles::{
 	circle_button_style, dangerous_button_style, delete_button_style,
-	delete_done_tasks_button_style, hidden_secondary_button_style, primary_button_style,
-	project_preview_style, stopwatch_page_button_style, secondary_button_style, secondary_button_style_default,
-	secondary_button_style_no_rounding, secondary_button_style_only_round_top, overview_button_style,
-	secondary_button_style_only_round_left, secondary_button_style_only_round_right, selection_list_button_style,
-	settings_tab_button_style, task_button_style, task_tag_button_style, timer_button_style,
-	enum_dropdown_button_style
+	delete_done_tasks_button_style, enum_dropdown_button_style, hidden_secondary_button_style,
+	overview_button_style, primary_button_style, project_preview_style, secondary_button_style,
+	secondary_button_style_default, secondary_button_style_no_rounding,
+	secondary_button_style_only_round_left, secondary_button_style_only_round_right,
+	secondary_button_style_only_round_top, selection_list_button_style, settings_tab_button_style,
+	stopwatch_page_button_style, task_button_style, task_tag_button_style, timer_button_style,
 };
 
 mod container_styles;
 pub use container_styles::{
-	dropzone_container_style, in_between_dropzone_container_style, palette_container_style,
-	project_preview_background_container_style, rounded_container_style, modal_background_container_style,
-	task_background_container_style, task_tag_container_style, tooltip_container_style, markdown_background_container_style,
-	dropdown_container_style, sidebar_background_container_style, default_background_container_style
+	default_background_container_style, dropdown_container_style, dropzone_container_style,
+	in_between_dropzone_container_style, markdown_background_container_style,
+	modal_background_container_style, palette_container_style,
+	project_preview_background_container_style, rounded_container_style,
+	sidebar_background_container_style, task_background_container_style, task_tag_container_style,
+	tooltip_container_style,
 };
 
 mod completion_bar_style;
@@ -29,8 +31,8 @@ pub use checkbox_style::checkbox_style;
 
 mod text_input;
 pub use text_input::{
-	text_input_style, text_input_style_default, text_input_style_only_round_left, text_input_style_borderless,
-	on_number_input
+	on_number_input, text_input_style, text_input_style_borderless, text_input_style_default,
+	text_input_style_only_round_left,
 };
 
 mod text_editor;
@@ -46,7 +48,9 @@ mod constants;
 pub use constants::{
 	blur_radius::{BLUR_RADIUS, LARGE_BLUR_RADIUS},
 	border_radius::{BORDER_RADIUS, LARGE_BORDER_RADIUS},
-	colors::{background_shadow_color, color_average, mix_color, selection_color, link_color, GREY},
+	colors::{
+		background_shadow_color, color_average, link_color, mix_color, selection_color, GREY,
+	},
 	padding::{
 		LARGE_PADDING_AMOUNT, PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
 	},
@@ -58,7 +62,9 @@ pub use constants::{
 };
 
 mod text;
-pub use text::{text_color, default_text_style, danger_text_style, grey_text_style, BOLD_FONT, FIRA_SANS_FONT};
+pub use text::{
+	danger_text_style, default_text_style, grey_text_style, text_color, BOLD_FONT, FIRA_SANS_FONT,
+};
 
 mod theme;
 pub use theme::ProjectTrackerTheme;

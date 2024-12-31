@@ -1,16 +1,20 @@
 use crate::{
-	components::{force_close_anyways_button, loading_screen, SMALL_LOADING_SPINNER_SIZE}, project_tracker::Message, styles::card_style
+	components::{force_close_anyways_button, loading_screen, SMALL_LOADING_SPINNER_SIZE},
+	project_tracker::Message,
+	styles::card_style,
 };
 use iced::{
-	alignment::Horizontal, widget::{container, row, text}, window, Element, Length::Fill, Task
+	alignment::Horizontal,
+	widget::{container, row, text},
+	window, Element,
+	Length::Fill,
+	Task,
 };
 use iced_aw::card;
 
 #[derive(Clone, Debug)]
 pub enum WaitClosingModalMessage {
-	Open {
-		waiting_reason: &'static str,
-	},
+	Open { waiting_reason: &'static str },
 	Close,
 	ForceCloseAnyways,
 }
@@ -22,9 +26,7 @@ impl From<WaitClosingModalMessage> for Message {
 }
 
 pub enum WaitClosingModal {
-	Opened {
-		waiting_reason: &'static str,
-	},
+	Opened { waiting_reason: &'static str },
 	Closed,
 }
 
@@ -53,7 +55,6 @@ impl WaitClosingModal {
 					text(format!("{waiting_reason}...")),
 					row![
 						loading_screen(SMALL_LOADING_SPINNER_SIZE),
-
 						container(force_close_anyways_button())
 							.width(Fill)
 							.align_x(Horizontal::Right),

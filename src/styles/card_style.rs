@@ -1,6 +1,6 @@
+use crate::styles::mix_color;
 use iced::{Color, Theme};
 use iced_aw::{card::Status, style::card::Style};
-use crate::styles::mix_color;
 
 pub fn card_style(theme: &Theme, _status: Status) -> Style {
 	let background_color = card_background_color(theme);
@@ -21,6 +21,6 @@ pub fn card_background_color(theme: &Theme) -> Color {
 	mix_color(
 		theme.extended_palette().background.base.color,
 		theme.extended_palette().background.weak.color,
-		0.15
+		0.15,
 	)
 }

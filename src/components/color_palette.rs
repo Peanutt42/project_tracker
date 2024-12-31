@@ -1,9 +1,10 @@
 use crate::{
-	components::color_palette_item_button, project_tracker::Message,
+	components::color_palette_item_button,
+	project_tracker::Message,
 	styles::{palette_container_style, GREY},
 };
 use iced::{
-	widget::{container, column, row},
+	widget::{column, container, row},
 	Color, Element,
 };
 
@@ -25,7 +26,11 @@ pub fn color_palette(
 	selected_color: Color,
 	on_submit: impl Fn(Color) -> Message,
 ) -> Element<'static, Message> {
-	let color_item = |color: Color, round_left_top: bool, round_right_top: bool, round_left_bottom: bool, round_right_bottom| {
+	let color_item = |color: Color,
+	                  round_left_top: bool,
+	                  round_right_top: bool,
+	                  round_left_bottom: bool,
+	                  round_right_bottom| {
 		color_palette_item_button(
 			color,
 			selected_color == color,
@@ -39,7 +44,7 @@ pub fn color_palette(
 
 	container(column![
 		row![
-			color_item(COLOR_PALETTE_BLACK, true, false, false, false),  // black
+			color_item(COLOR_PALETTE_BLACK, true, false, false, false), // black
 			color_item(COLOR_PALETTE_WHITE, false, false, false, false), // white
 			color_item(Color::from_rgb8(255, 54, 6), false, false, false, false), // red
 			color_item(Color::from_rgb8(245, 143, 41), false, false, false, false), // orange
@@ -49,7 +54,7 @@ pub fn color_palette(
 			color_item(Color::from_rgb8(255, 0, 144), false, true, false, false), // magenta
 		],
 		row![
-			color_item(GREY, false, false, true, false),  // grey
+			color_item(GREY, false, false, true, false), // grey
 			color_item(Color::from_rgb8(175, 175, 175), false, false, false, false), // light grey
 			color_item(Color::from_rgb8(167, 33, 0), false, false, false, false), // dark red
 			color_item(Color::from_rgb8(139, 49, 0), false, false, false, false), // brown

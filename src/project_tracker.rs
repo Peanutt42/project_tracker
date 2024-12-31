@@ -1,21 +1,64 @@
 use crate::{
 	components::{
-		create_empty_database_button, generate_task_description_markdown, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
-	}, core::{export_database_as_json_file_dialog, export_database_file_dialog, import_database_file_dialog, import_json_database_file_dialog, ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
-		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
-	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
+		create_empty_database_button, generate_task_description_markdown, import_database_button,
+		toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH,
+	},
+	core::{
+		export_database_as_json_file_dialog, export_database_file_dialog,
+		import_database_file_dialog, import_json_database_file_dialog, ProjectUiIdMap, TaskUiIdMap,
+	},
+	integrations::{
+		connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage,
+		ServerWsMessageSender,
+	},
+	modals::{
+		ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction,
+		CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal,
+		ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage,
+		TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage,
+	},
+	pages::{
+		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPage,
+		ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage,
+		StopwatchPageMessage,
+	},
+	styles::{
+		default_background_container_style, modal_background_container_style,
+		sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT,
+		MINIMAL_DRAG_DISTANCE,
+	},
+	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
-use crate::{LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
+use crate::{
+	LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences,
+	SynchronizationSetting,
+};
 use chrono::Utc;
-use project_tracker_core::{Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, SyncDatabaseResult, TaskId};
-use project_tracker_server::{EncryptedResponse, Request, Response};
 use iced::{
-	alignment::Horizontal, clipboard, event::Status, keyboard, mouse, time, widget::{
-		center, column, container, markdown, mouse_area, opaque, responsive, row, stack, text, Space, Stack
-	}, window, Element, Event, Length::Fill, Padding, Point, Rectangle, Subscription, Task, Theme
+	alignment::Horizontal,
+	clipboard,
+	event::Status,
+	keyboard, mouse, time,
+	widget::{
+		center, column, container, markdown, mouse_area, opaque, responsive, row, stack, text,
+		Space, Stack,
+	},
+	window, Element, Event,
+	Length::Fill,
+	Padding, Point, Rectangle, Subscription, Task, Theme,
 };
+use project_tracker_core::{
+	Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, SyncDatabaseResult,
+	TaskId,
+};
+use project_tracker_server::{EncryptedResponse, Request, Response};
 use std::{
-	collections::HashMap, hash::{DefaultHasher, Hash, Hasher}, path::PathBuf, rc::Rc, sync::Arc, time::{Duration, Instant, SystemTime}
+	collections::HashMap,
+	hash::{DefaultHasher, Hash, Hasher},
+	path::PathBuf,
+	rc::Rc,
+	sync::Arc,
+	time::{Duration, Instant, SystemTime},
 };
 
 pub struct ProjectTrackerApp {
@@ -103,7 +146,7 @@ pub enum Message {
 	DeleteSelectedProject,
 	PressTask {
 		project_id: ProjectId,
-		task_id: TaskId
+		task_id: TaskId,
 	},
 	DragTask {
 		project_id: ProjectId,
@@ -146,18 +189,17 @@ impl ProjectTrackerApp {
 	fn has_unsynced_changes(&self) -> bool {
 		if let Some(last_sync_time) = self.last_sync_start_time {
 			if let Some(database) = &self.database {
-				if let Ok(last_database_save_duration) = (Utc::now() - database.last_changed_time()).abs().to_std() {
+				if let Ok(last_database_save_duration) =
+					(Utc::now() - database.last_changed_time()).abs().to_std()
+				{
 					last_database_save_duration < last_sync_time.elapsed()
-				}
-				else {
+				} else {
 					false
 				}
-			}
-			else {
+			} else {
 				false
 			}
-		}
-		else {
+		} else {
 			true
 		}
 	}
@@ -209,8 +251,12 @@ impl ProjectTrackerApp {
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Task::batch([
-				Task::perform(Preferences::load(), |result| Message::LoadedPreferences(result.map_err(Arc::new))),
-				Task::perform(Database::load(), |result| Message::LoadedDatabase(result.map_err(Arc::new))),
+				Task::perform(Preferences::load(), |result| {
+					Message::LoadedPreferences(result.map_err(Arc::new))
+				}),
+				Task::perform(Database::load(), |result| {
+					Message::LoadedDatabase(result.map_err(Arc::new))
+				}),
 			]),
 		)
 	}
@@ -231,17 +277,18 @@ impl ProjectTrackerApp {
 		if let Some(last_finish_time) = &self.last_sync_finish_time {
 			if Instant::now().duration_since(*last_finish_time) <= Duration::from_millis(500) {
 				title += " - Synced";
-			}
-			else if let Some(last_start_time) = &self.last_sync_start_time {
+			} else if let Some(last_start_time) = &self.last_sync_start_time {
 				if *last_start_time > *last_finish_time {
 					title += " - Syncing...";
 				}
 			}
-		}
-		else if self.last_sync_start_time.is_some() {
+		} else if self.last_sync_start_time.is_some() {
 			title += " - Syncing...";
 		}
-		if self.content_page.project_page.as_ref()
+		if self
+			.content_page
+			.project_page
+			.as_ref()
 			.map(|project_page| project_page.importing_source_code_todos)
 			.unwrap_or(false)
 		{
@@ -257,8 +304,8 @@ impl ProjectTrackerApp {
 			_ => ServerConfig {
 				hostname: String::new(),
 				port: 0,
-				password: String::new()
-			}
+				password: String::new(),
+			},
 		};
 		// to identify websocket subscriptions with different server configs
 		let server_config_hash = {
@@ -275,23 +322,21 @@ impl ProjectTrackerApp {
 				keyboard::Key::Character("h") if modifiers.command() => {
 					Some(ContentPageMessage::OpenOverview.into())
 				}
-				keyboard::Key::Named(keyboard::key::Named::Escape) => {
-					Some(Message::EscapePressed)
-				}
+				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(Message::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(Message::EnterPressed),
 				keyboard::Key::Named(keyboard::key::Named::Delete) if modifiers.command() => {
 					Some(Message::DeleteSelectedProject)
-				},
-				keyboard::Key::Named(keyboard::key::Named::Tab) if modifiers.command() => Some(
-					if modifiers.shift() {
+				}
+				keyboard::Key::Named(keyboard::key::Named::Tab) if modifiers.command() => {
+					Some(if modifiers.shift() {
 						Message::SwitchToUpperProject
 					} else {
 						Message::SwitchToLowerProject
-					}
-				),
+					})
+				}
 				keyboard::Key::Character("n") if modifiers.command() && !modifiers.shift() => {
 					Some(Message::OpenCreateTaskModalCurrent)
-				},
+				}
 				_ => None,
 			}),
 			iced::event::listen_with(move |event, status, _id| match event {
@@ -299,10 +344,10 @@ impl ProjectTrackerApp {
 					if matches!(status, Status::Ignored) =>
 				{
 					Some(Message::TryClosing)
-				},
+				}
 				Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
 					Some(Message::LeftClickReleased)
-				},
+				}
 				_ => None,
 			}),
 			self.sidebar_page
@@ -311,7 +356,9 @@ impl ProjectTrackerApp {
 			self.sidebar_animation
 				.subscription()
 				.map(|_| Message::AnimateSidebar),
-			self.content_page.subscription().map(Message::ContentPageMessage),
+			self.content_page
+				.subscription()
+				.map(Message::ContentPageMessage),
 			self.settings_modal
 				.subscription()
 				.map(Message::SettingsModalMessage),
@@ -325,22 +372,17 @@ impl ProjectTrackerApp {
 	pub fn update(&mut self, message: Message) -> Task<Message> {
 		let mut task = match message {
 			Message::TryClosing => {
-				if self.exporting_database ||
-					self.importing_database
-				{
+				if self.exporting_database || self.importing_database {
 					let waiting_reason = if self.exporting_database {
 						"Exporting database"
-					}
-					else if self.importing_database {
+					} else if self.importing_database {
 						"Importing database"
-					}
-					else {
+					} else {
 						"UNREACHABLE"
 					};
-					self.wait_closing_modal = WaitClosingModal::Opened { waiting_reason	};
+					self.wait_closing_modal = WaitClosingModal::Opened { waiting_reason };
 					Task::none()
-				}
-				else {
+				} else {
 					Task::batch([
 						self.update(StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing.into()),
 						self.update(Message::SaveDatabase),
@@ -348,7 +390,7 @@ impl ProjectTrackerApp {
 						window::get_latest().and_then(window::close),
 					])
 				}
-			},
+			}
 			Message::EscapePressed => {
 				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
 					return self.update(ErrorMsgModalMessage::Close.into());
@@ -380,9 +422,9 @@ impl ProjectTrackerApp {
 					Task::none()
 				} else {
 					match &self.confirm_modal {
-						Some(confirm_modal) => self.update(
-							Message::ConfirmModalConfirmed(Box::new(confirm_modal.on_confirmed.clone())),
-						),
+						Some(confirm_modal) => self.update(Message::ConfirmModalConfirmed(
+							Box::new(confirm_modal.on_confirmed.clone()),
+						)),
 						None => Task::none(),
 					}
 				}
@@ -391,7 +433,7 @@ impl ProjectTrackerApp {
 			Message::OpenUrl(url) => {
 				let _ = open::that_detached(url.as_str());
 				Task::none()
-			},
+			}
 			Message::OpenInCodeEditor(file_location) => {
 				if let Some(code_editor) = self.preferences.code_editor() {
 					if let Err(e) = code_editor.generate_command(&file_location).spawn() {
@@ -399,7 +441,7 @@ impl ProjectTrackerApp {
 					}
 				}
 				Task::none()
-			},
+			}
 			Message::SaveChangedFiles => {
 				let mut commands = Vec::new();
 				if let Some(database) = &mut self.database {
@@ -419,11 +461,11 @@ impl ProjectTrackerApp {
 				if self.has_unsynced_changes() &&
 					matches!(self.error_msg_modal, ErrorMsgModal::Closed) && // dont auto sync when an error happened
 					self.confirm_modal.is_none() && // dont auto sync while user needs to confirm something
-					matches!(self.settings_modal, SettingsModal::Closed) // or user is configuring the sync options
+					matches!(self.settings_modal, SettingsModal::Closed)
+				// or user is configuring the sync options
 				{
 					self.update(Message::SyncDatabase)
-				}
-				else {
+				} else {
 					Task::none()
 				}
 			}
@@ -446,12 +488,14 @@ impl ProjectTrackerApp {
 						on_confirmed,
 						custom_ok_label,
 						custom_cancel_label,
-					} => self.confirm_modal = Some(ConfirmModal::new(
-						title,
-						*on_confirmed,
-						custom_ok_label,
-						custom_cancel_label,
-					)),
+					} => {
+						self.confirm_modal = Some(ConfirmModal::new(
+							title,
+							*on_confirmed,
+							custom_ok_label,
+							custom_cancel_label,
+						))
+					}
 					ConfirmModalMessage::Close => self.confirm_modal = None,
 				}
 				Task::none()
@@ -460,10 +504,10 @@ impl ProjectTrackerApp {
 				self.error_msg_modal.update(message);
 				Task::none()
 			}
-			Message::WaitClosingModalMessage(message) => {
-				self.wait_closing_modal.update(message)
-					.map(Message::WaitClosingModalMessage)
-			}
+			Message::WaitClosingModalMessage(message) => self
+				.wait_closing_modal
+				.update(message)
+				.map(Message::WaitClosingModalMessage),
 			Message::SaveDatabase => {
 				if let Some(database) = self.database.clone() {
 					if let Some(database_binary) = database.to_binary() {
@@ -471,12 +515,12 @@ impl ProjectTrackerApp {
 							Ok(begin_time) => Message::DatabaseSaved(begin_time),
 							Err(error) => ErrorMsgModalMessage::open_error(error),
 						})
+					} else {
+						self.show_error_msg(
+							"failed to serialize database to save to file!".to_string(),
+						)
 					}
-					else {
-						self.show_error_msg("failed to serialize database to save to file!".to_string())
-					}
-				}
-				else {
+				} else {
 					Task::none()
 				}
 			}
@@ -492,10 +536,14 @@ impl ProjectTrackerApp {
 						self.last_sync_start_time = Some(Instant::now());
 
 						return match synchronization_settings {
-							SynchronizationSetting::Server(_) => self.update(Message::SyncDatabaseFromServer),
+							SynchronizationSetting::Server(_) => {
+								self.update(Message::SyncDatabaseFromServer)
+							}
 							SynchronizationSetting::Filepath(filepath) => match filepath {
-								Some(filepath) => self.update(Message::SyncDatabaseFilepath(filepath.clone())),
-								None => Task::none()
+								Some(filepath) => {
+									self.update(Message::SyncDatabaseFilepath(filepath.clone()))
+								}
+								None => Task::none(),
 							},
 						};
 					}
@@ -508,12 +556,13 @@ impl ProjectTrackerApp {
 					None => Message::ExportDatabaseDialogCanceled,
 				})
 			}
-			Message::ExportDatabaseAsJsonDialog => {
-				Task::perform(export_database_as_json_file_dialog(), |filepath| match filepath {
+			Message::ExportDatabaseAsJsonDialog => Task::perform(
+				export_database_as_json_file_dialog(),
+				|filepath| match filepath {
 					Some(filepath) => Message::ExportDatabaseAsJson(filepath),
 					None => Message::ExportDatabaseDialogCanceled,
-				})
-			}
+				},
+			),
 			Message::ExportDatabaseDialogCanceled => {
 				self.exporting_database = false;
 				Task::none()
@@ -529,11 +578,12 @@ impl ProjectTrackerApp {
 									Err(e) => Message::ExportDatabaseFailed(Arc::new(e)),
 								}
 							})
-						},
-						None => self.show_error_msg("failed to serialize database to binary to export to file!".to_string()),
+						}
+						None => self.show_error_msg(
+							"failed to serialize database to binary to export to file!".to_string(),
+						),
 					}
-				}
-				else {
+				} else {
 					Task::none()
 				}
 			}
@@ -542,17 +592,19 @@ impl ProjectTrackerApp {
 					match database.to_json() {
 						Some(database_json) => {
 							self.exporting_database = true;
-							Task::perform(Database::export_as_json(filepath, database_json), |result| {
-								match result {
+							Task::perform(
+								Database::export_as_json(filepath, database_json),
+								|result| match result {
 									Ok(_) => Message::DatabaseExported,
 									Err(e) => Message::ExportDatabaseFailed(Arc::new(e)),
-								}
-							})
-						},
-						None => self.show_error_msg("failed to serialize database to json to export to file!".to_string()),
+								},
+							)
+						}
+						None => self.show_error_msg(
+							"failed to serialize database to json to export to file!".to_string(),
+						),
 					}
-				}
-				else {
+				} else {
 					Task::none()
 				}
 			}
@@ -588,13 +640,18 @@ impl ProjectTrackerApp {
 			}
 			Message::ImportDatabase(filepath) => {
 				self.importing_database = true;
-				Task::perform(Database::load_from(filepath), |result| Message::DatabaseImported(result.map_err(Arc::new)))
+				Task::perform(Database::load_from(filepath), |result| {
+					Message::DatabaseImported(result.map_err(Arc::new))
+				})
 			}
 			Message::ImportJsonDatabase(filepath) => {
 				self.importing_database = true;
-				Task::perform(Database::load_json(filepath), |result| Message::DatabaseImported(result.map_err(Arc::new)))
+				Task::perform(Database::load_json(filepath), |result| {
+					Message::DatabaseImported(result.map_err(Arc::new))
+				})
 			}
-			Message::DatabaseImported(result) => self.update(Message::LoadedDatabase(result))
+			Message::DatabaseImported(result) => self
+				.update(Message::LoadedDatabase(result))
 				.chain(self.update(Message::SaveDatabase)),
 			Message::SyncDatabaseFilepath(filepath) => {
 				if let Some(database) = &self.database {
@@ -610,11 +667,12 @@ impl ProjectTrackerApp {
 							SyncDatabaseResult::Upload => {
 								Message::SyncDatabaseFilepathUpload(filepath.clone())
 							}
-							SyncDatabaseResult::Download => Message::SyncDatabaseFilepathDownload(filepath.clone()),
+							SyncDatabaseResult::Download => {
+								Message::SyncDatabaseFilepathDownload(filepath.clone())
+							}
 						},
 					)
-				}
-				else {
+				} else {
 					Task::none()
 				}
 			}
@@ -635,13 +693,15 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::SyncDatabaseFilepathDownload(filepath) => {
-				Task::perform(Database::load_from(filepath), |result| Message::SyncDatabaseFilepathDownloaded(result.map_err(Arc::new)))
-			},
+				Task::perform(Database::load_from(filepath), |result| {
+					Message::SyncDatabaseFilepathDownloaded(result.map_err(Arc::new))
+				})
+			}
 			Message::SyncDatabaseFilepathDownloaded(result) => match result {
 				Ok(database) => {
 					self.last_sync_finish_time = Some(Instant::now());
 					self.update(Message::DatabaseImported(Ok(database)))
-				},
+				}
 				Err(e) => self.update(Message::DatabaseImported(Err(e))),
 			},
 			Message::SyncDatabaseFilepathFailed(error_msg) => self.show_error_msg(error_msg),
@@ -656,35 +716,41 @@ impl ProjectTrackerApp {
 							for (task_id, task, _task_type) in project.iter() {
 								self.task_description_markdown_items.insert(
 									task_id,
-									generate_task_description_markdown(task.description())
+									generate_task_description_markdown(task.description()),
 								);
 							}
 						}
 						self.database = Some(database);
-						let action = self.content_page.restore_from_serialized(self.database.as_ref(), &mut self.preferences);
+						let action = self
+							.content_page
+							.restore_from_serialized(self.database.as_ref(), &mut self.preferences);
 						self.perform_content_page_action(action)
-					},
+					}
 					Err(error) => match error.as_ref() {
 						LoadDatabaseError::FailedToFindDatbaseFilepath => self.show_error(error),
 						LoadDatabaseError::FailedToOpenFile { .. } => {
 							if self.database.is_some() {
 								self.show_error(error)
-							}
-							else {
+							} else {
 								Task::none()
 							}
-						},
-						LoadDatabaseError::FailedToParseBinary{ filepath, .. } |
-					 	LoadDatabaseError::FailedToParseJson{ filepath, .. }
-							=> {
+						}
+						LoadDatabaseError::FailedToParseBinary { filepath, .. }
+						| LoadDatabaseError::FailedToParseJson { filepath, .. } => {
 							// saves the corrupted database, just so we don't lose the progress and can correct it afterwards
 							if let Some(mut saved_corrupted_filepath) = Database::get_filepath() {
-								saved_corrupted_filepath.set_file_name("corrupted - database.project_tracker");
-								if let Err(e) = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone()) {
-									eprintln!("failed to copy corrupted database file to {}: {e}", saved_corrupted_filepath.display());
+								saved_corrupted_filepath
+									.set_file_name("corrupted - database.project_tracker");
+								if let Err(e) = std::fs::copy(
+									filepath.clone(),
+									saved_corrupted_filepath.clone(),
+								) {
+									eprintln!(
+										"failed to copy corrupted database file to {}: {e}",
+										saved_corrupted_filepath.display()
+									);
 								}
-							}
-							else {
+							} else {
 								eprintln!("failed to save a copy of the corrupted database!");
 							}
 							if self.database.is_none() {
@@ -692,9 +758,9 @@ impl ProjectTrackerApp {
 							}
 							Task::batch([
 								self.update(Message::SaveDatabase),
-								self.show_error(error)
+								self.show_error(error),
 							])
-						},
+						}
 					},
 				}
 			}
@@ -703,19 +769,26 @@ impl ProjectTrackerApp {
 					Ok(preferences) => {
 						self.preferences = Some(preferences);
 						if let Some(message_sender) = &mut self.server_ws_message_sender {
-							if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
-								let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+							if let Some(SynchronizationSetting::Server(server_config)) =
+								self.preferences.synchronization()
+							{
+								let _ = message_sender
+									.send(ServerWsMessage::Connect(server_config.clone()));
 							}
 						}
-						let content_page_action = self.content_page.restore_from_serialized(self.database.as_ref(), &mut self.preferences);
+						let content_page_action = self
+							.content_page
+							.restore_from_serialized(self.database.as_ref(), &mut self.preferences);
 						Task::batch([
 							self.update(PreferenceMessage::Save.into()),
 							self.perform_content_page_action(content_page_action),
 						])
-					},
+					}
 					Err(error) => match error.as_ref() {
-						LoadPreferencesError::FailedToFindPreferencesFilepath => self.show_error(error),
-						LoadPreferencesError::FailedToOpenFile{ .. } => {
+						LoadPreferencesError::FailedToFindPreferencesFilepath => {
+							self.show_error(error)
+						}
+						LoadPreferencesError::FailedToOpenFile { .. } => {
 							if self.preferences.is_none() {
 								self.preferences = Some(Preferences::default());
 								self.update(PreferenceMessage::Save.into())
@@ -723,15 +796,22 @@ impl ProjectTrackerApp {
 								self.show_error(error)
 							}
 						}
-						LoadPreferencesError::FailedToParse{ filepath, .. } => {
+						LoadPreferencesError::FailedToParse { filepath, .. } => {
 							// saves the corrupted preferences, just so we don't lose the progress and can correct it afterwards
-							if let Some(mut saved_corrupted_filepath) = Preferences::get_filepath() {
-								saved_corrupted_filepath.set_file_name("corrupted - preferences.json");
-								if let Err(e) = std::fs::copy(filepath.clone(), saved_corrupted_filepath.clone()) {
-									eprintln!("failed to copy corrupted preferences file to {}: {e}", saved_corrupted_filepath.display());
+							if let Some(mut saved_corrupted_filepath) = Preferences::get_filepath()
+							{
+								saved_corrupted_filepath
+									.set_file_name("corrupted - preferences.json");
+								if let Err(e) = std::fs::copy(
+									filepath.clone(),
+									saved_corrupted_filepath.clone(),
+								) {
+									eprintln!(
+										"failed to copy corrupted preferences file to {}: {e}",
+										saved_corrupted_filepath.display()
+									);
 								}
-							}
-							else {
+							} else {
 								eprintln!("failed to save copy of corrupted preferences!");
 							}
 							if self.preferences.is_none() {
@@ -739,56 +819,70 @@ impl ProjectTrackerApp {
 							}
 							Task::batch([
 								self.update(PreferenceMessage::Save.into()),
-								self.show_error(error)
+								self.show_error(error),
 							])
-						},
+						}
 					},
 				}
-			},
-			Message::SyncDatabaseFromServer => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
-				let _ = server_ws_message_sender.send(ServerWsMessage::Request(
-					Request::GetModifiedDate
-				));
-				Task::none()
 			}
-			else {
-				Task::none()
-			},
+			Message::SyncDatabaseFromServer => {
+				if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
+					let _ = server_ws_message_sender
+						.send(ServerWsMessage::Request(Request::GetModifiedDate));
+					Task::none()
+				} else {
+					Task::none()
+				}
+			}
 			Message::ServerWsEvent(event) => match event {
 				ServerWsEvent::MessageSender(mut message_sender) => {
-					if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
-						let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
-						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Connecting);
+					if let Some(SynchronizationSetting::Server(server_config)) =
+						self.preferences.synchronization()
+					{
+						let _ =
+							message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+						self.sidebar_page.server_connection_status =
+							Some(ServerConnectionStatus::Connecting);
 					}
 					self.server_ws_message_sender = Some(message_sender);
 					Task::none()
-				},
+				}
 				ServerWsEvent::Connected => {
 					println!("ws connected!");
 					if matches!(self.settings_modal, SettingsModal::Closed) {
 						if let Some(message_sender) = &mut self.server_ws_message_sender {
-							let _ = message_sender.send(ServerWsMessage::Request(Request::GetModifiedDate));
+							let _ = message_sender
+								.send(ServerWsMessage::Request(Request::GetModifiedDate));
 						}
 					}
-					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Connected);
+					self.sidebar_page.server_connection_status =
+						Some(ServerConnectionStatus::Connected);
 					Task::none()
-				},
+				}
 				ServerWsEvent::Disconnected => {
 					println!("ws disconnected");
-					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Disconected);
+					self.sidebar_page.server_connection_status =
+						Some(ServerConnectionStatus::Disconected);
 					Task::none()
-				},
+				}
 				ServerWsEvent::Error(error_msg) => {
-					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(error_msg));
+					self.sidebar_page.server_connection_status =
+						Some(ServerConnectionStatus::Error(error_msg));
 					Task::none()
-				},
-				ServerWsEvent::Response{ response, password } => self.handle_server_response(response, password),
+				}
+				ServerWsEvent::Response { response, password } => {
+					self.handle_server_response(response, password)
+				}
 			},
 			Message::ConnectToServer => {
-				if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
+				if let Some(SynchronizationSetting::Server(server_config)) =
+					self.preferences.synchronization()
+				{
 					if let Some(message_sender) = &mut self.server_ws_message_sender {
-						let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
-						self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Connecting);
+						let _ =
+							message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+						self.sidebar_page.server_connection_status =
+							Some(ServerConnectionStatus::Connecting);
 					}
 				}
 				Task::none()
@@ -796,59 +890,80 @@ impl ProjectTrackerApp {
 			Message::DatabaseMessage(database_message) => {
 				if let Some(database) = &mut self.database {
 					match &database_message {
-						DatabaseMessage::CreateTask { task_id, task_description, .. } => {
+						DatabaseMessage::CreateTask {
+							task_id,
+							task_description,
+							..
+						} => {
 							self.task_description_markdown_items.insert(
 								*task_id,
-								generate_task_description_markdown(task_description)
+								generate_task_description_markdown(task_description),
 							);
-						},
-						DatabaseMessage::ChangeTaskDescription { task_id, new_task_description, .. } => {
+						}
+						DatabaseMessage::ChangeTaskDescription {
+							task_id,
+							new_task_description,
+							..
+						} => {
 							self.task_description_markdown_items.insert(
 								*task_id,
-								generate_task_description_markdown(new_task_description)
+								generate_task_description_markdown(new_task_description),
 							);
-						},
+						}
 						DatabaseMessage::ImportProjects(projects) => {
 							for project in projects.iter() {
 								for (task_id, task, _task_type) in project.iter() {
 									self.task_description_markdown_items.insert(
 										task_id,
-										generate_task_description_markdown(task.description())
+										generate_task_description_markdown(task.description()),
 									);
 								}
 							}
-						},
-						DatabaseMessage::ImportSourceCodeTodos { source_code_todo_tasks, .. } => {
+						}
+						DatabaseMessage::ImportSourceCodeTodos {
+							source_code_todo_tasks,
+							..
+						} => {
 							for (task_id, task) in source_code_todo_tasks.iter() {
 								self.task_description_markdown_items.insert(
 									*task_id,
-									generate_task_description_markdown(task.description())
+									generate_task_description_markdown(task.description()),
 								);
 							}
-						},
-						_ => {},
+						}
+						_ => {}
 					}
 					database.update(database_message);
 					if let Some(overview_page) = &mut self.content_page.overview_page {
-						overview_page.update(OverviewPageMessage::RefreshCachedTaskList, Some(database), &self.preferences);
+						overview_page.update(
+							OverviewPageMessage::RefreshCachedTaskList,
+							Some(database),
+							&self.preferences,
+						);
 					}
 
-					let should_save = database.last_saved_time().elapsed()
+					let should_save = database
+						.last_saved_time()
+						.elapsed()
 						.map(|last_save_duration| last_save_duration >= Duration::from_secs(1))
 						.unwrap_or(false);
 					let should_sync = match self.last_sync_start_time {
-						Some(last_sync_time) => Instant::now().duration_since(last_sync_time) >= Duration::from_secs(1),
+						Some(last_sync_time) => {
+							Instant::now().duration_since(last_sync_time) >= Duration::from_secs(1)
+						}
 						None => true,
 					};
 
 					let project_page_task = match &mut self.content_page.project_page {
-						Some(project_page) if database.get_project(&project_page.project_id).is_none() => {
+						Some(project_page)
+							if database.get_project(&project_page.project_id).is_none() =>
+						{
 							self.update(ContentPageMessage::OpenOverview.into())
 						}
 						Some(project_page) => {
 							project_page.generate_cached_task_list(database, &self.preferences);
 							Task::none()
-						},
+						}
 						_ => Task::none(),
 					};
 
@@ -876,8 +991,11 @@ impl ProjectTrackerApp {
 				};
 				if server_config_changed {
 					if let Some(message_sender) = &mut self.server_ws_message_sender {
-						if let Some(SynchronizationSetting::Server(server_config)) = self.preferences.synchronization() {
-							let _ = message_sender.send(ServerWsMessage::Connect(server_config.clone()));
+						if let Some(SynchronizationSetting::Server(server_config)) =
+							self.preferences.synchronization()
+						{
+							let _ = message_sender
+								.send(ServerWsMessage::Connect(server_config.clone()));
 						}
 					}
 				}
@@ -951,10 +1069,13 @@ impl ProjectTrackerApp {
 				}
 				Task::none()
 			}
-			Message::PressTask{ project_id, task_id } => {
+			Message::PressTask {
+				project_id,
+				task_id,
+			} => {
 				self.pressed_task = Some((project_id, task_id));
 				Task::none()
-			},
+			}
 			Message::DragTask {
 				project_id,
 				task_id,
@@ -964,7 +1085,10 @@ impl ProjectTrackerApp {
 			} => {
 				let is_theme_dark = self.is_theme_dark();
 
-				let filtering_tasks = self.content_page.project_page.as_ref()
+				let filtering_tasks = self
+					.content_page
+					.project_page
+					.as_ref()
 					.map(ProjectPage::filtering_tasks)
 					.unwrap_or(false);
 
@@ -1012,7 +1136,7 @@ impl ProjectTrackerApp {
 				);
 
 				self.perform_sidebar_action(action)
-			},
+			}
 			Message::LeftClickReleased => {
 				let task = if self.just_minimal_dragging {
 					if let Some((project_id, task_id)) = &self.pressed_task {
@@ -1032,7 +1156,11 @@ impl ProjectTrackerApp {
 				task
 			}
 			Message::ContentPageMessage(message) => {
-				let action = self.content_page.update(message, self.database.as_ref(), &mut self.preferences);
+				let action = self.content_page.update(
+					message,
+					self.database.as_ref(),
+					&mut self.preferences,
+				);
 				self.perform_content_page_action(action)
 			}
 			Message::SidebarPageMessage(message) => {
@@ -1062,96 +1190,112 @@ impl ProjectTrackerApp {
 			Message::SettingsModalMessage(message) => {
 				let action = self.settings_modal.update(message, &mut self.preferences);
 				self.perform_preference_action(action)
-			},
-			Message::ManageTaskTagsModalMessage(message) => if let Some(manage_tags_modal) = &mut self.manage_tags_modal {
-				let deleted_task_tag_id =
-					if let ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) = &message {
-						Some(*task_tag_id)
-					} else {
-						None
-					};
+			}
+			Message::ManageTaskTagsModalMessage(message) => {
+				if let Some(manage_tags_modal) = &mut self.manage_tags_modal {
+					let deleted_task_tag_id =
+						if let ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) = &message {
+							Some(*task_tag_id)
+						} else {
+							None
+						};
 
-				let manage_task_tag_modal_action = manage_tags_modal.update(message, &self.database);
+					let manage_task_tag_modal_action =
+						manage_tags_modal.update(message, &self.database);
 
-				Task::batch([
-					self.perform_manage_task_tags_modal_action(manage_task_tag_modal_action),
-
-					deleted_task_tag_id
-						.and_then(|deleted_task_tag_id| {
-							let action = self.content_page.project_page.as_mut().map(|project_page| {
-								project_page.update(
-									ProjectPageMessage::UnsetFilterTaskTag(deleted_task_tag_id),
-									self.database.as_ref(),
-									&self.preferences
-								)
-							});
-							action.map(|action| self.perform_content_page_action(action))
-						})
-						.unwrap_or(Task::none()),
-				])
-			} else {
-				Task::none()
-			},
+					Task::batch([
+						self.perform_manage_task_tags_modal_action(manage_task_tag_modal_action),
+						deleted_task_tag_id
+							.and_then(|deleted_task_tag_id| {
+								let action =
+									self.content_page.project_page.as_mut().map(|project_page| {
+										project_page.update(
+											ProjectPageMessage::UnsetFilterTaskTag(
+												deleted_task_tag_id,
+											),
+											self.database.as_ref(),
+											&self.preferences,
+										)
+									});
+								action.map(|action| self.perform_content_page_action(action))
+							})
+							.unwrap_or(Task::none()),
+					])
+				} else {
+					Task::none()
+				}
+			}
 			Message::OpenManageTaskTagsModal(project_id) => {
 				self.manage_tags_modal = Some(ManageTaskTagsModal::new(project_id));
 				Task::none()
-			},
+			}
 			Message::CloseManageTaskTagsModal => {
 				self.manage_tags_modal = None;
 				Task::none()
-			},
-			Message::CreateTaskModalMessage(message) => if let Some(create_task_modal) = &mut self.create_task_modal {
-				match create_task_modal.update(message, &self.preferences) {
-					CreateTaskModalAction::None => Task::none(),
-					CreateTaskModalAction::Task(task) => task.map(Message::CreateTaskModalMessage),
-					CreateTaskModalAction::CreateTask {
-						project_id,
-						task_id,
-						task_name,
-						task_description,
-						task_tags,
-						due_date,
-						needed_time_minutes,
-						time_spend,
-						create_at_top
-					} => {
-						self.create_task_modal = None;
-						Task::batch([
-							self.update(DatabaseMessage::CreateTask {
-								project_id,
-								task_id,
-								task_name,
-								task_description,
-								task_tags,
-								due_date,
-								needed_time_minutes,
-								time_spend,
-								create_at_top
-							}.into()),
-							self.update(ProjectPageMessage::RefreshCachedTaskList.into()),
-							self.update(OverviewPageMessage::RefreshCachedTaskList.into()),
-						])
-					},
-				}
-			} else {
-				Task::none()
-			},
-			Message::OpenCreateTaskModalCurrent => if let Some(project_id) =
-				self.content_page.project_page.as_ref().map(|project_page| project_page.project_id)
-			{
-				self.update(Message::OpenCreateTaskModal(project_id))
 			}
-			else {
-				Task::none()
-			},
+			Message::CreateTaskModalMessage(message) => {
+				if let Some(create_task_modal) = &mut self.create_task_modal {
+					match create_task_modal.update(message, &self.preferences) {
+						CreateTaskModalAction::None => Task::none(),
+						CreateTaskModalAction::Task(task) => {
+							task.map(Message::CreateTaskModalMessage)
+						}
+						CreateTaskModalAction::CreateTask {
+							project_id,
+							task_id,
+							task_name,
+							task_description,
+							task_tags,
+							due_date,
+							needed_time_minutes,
+							time_spend,
+							create_at_top,
+						} => {
+							self.create_task_modal = None;
+							Task::batch([
+								self.update(
+									DatabaseMessage::CreateTask {
+										project_id,
+										task_id,
+										task_name,
+										task_description,
+										task_tags,
+										due_date,
+										needed_time_minutes,
+										time_spend,
+										create_at_top,
+									}
+									.into(),
+								),
+								self.update(ProjectPageMessage::RefreshCachedTaskList.into()),
+								self.update(OverviewPageMessage::RefreshCachedTaskList.into()),
+							])
+						}
+					}
+				} else {
+					Task::none()
+				}
+			}
+			Message::OpenCreateTaskModalCurrent => {
+				if let Some(project_id) = self
+					.content_page
+					.project_page
+					.as_ref()
+					.map(|project_page| project_page.project_id)
+				{
+					self.update(Message::OpenCreateTaskModal(project_id))
+				} else {
+					Task::none()
+				}
+			}
 			Message::OpenCreateTaskModal(project_id) => {
 				self.create_task_modal = Some(CreateTaskModal::new(project_id));
 				Task::none()
-			},
+			}
 			Message::CloseCreateTaskModal => {
 				self.create_task_modal = None;
 				Task::none()
-			},
+			}
 			Message::TaskModalMessage(message) => match &mut self.task_modal {
 				Some(task_modal) => match task_modal.update(message, &self.database) {
 					TaskModalAction::None => Task::none(),
@@ -1161,28 +1305,31 @@ impl ProjectTrackerApp {
 							self.task_modal = None;
 						}
 						self.update(message.into())
-					},
+					}
 				},
 				None => Task::none(),
 			},
-			Message::OpenTaskModal { project_id, task_id } => {
+			Message::OpenTaskModal {
+				project_id,
+				task_id,
+			} => {
 				let (task_modal, task) = TaskModal::new(project_id, task_id);
 				self.task_modal = Some(task_modal);
 				task
-			},
-			Message::CloseTaskModal => { self.task_modal = None; Task::none() },
+			}
+			Message::CloseTaskModal => {
+				self.task_modal = None;
+				Task::none()
+			}
 		};
 
-		if matches!(self.wait_closing_modal, WaitClosingModal::Opened { .. }) &&
-			matches!(self.error_msg_modal, ErrorMsgModal::Closed) &&
-			!self.exporting_database &&
-			!self.importing_database
+		if matches!(self.wait_closing_modal, WaitClosingModal::Opened { .. })
+			&& matches!(self.error_msg_modal, ErrorMsgModal::Closed)
+			&& !self.exporting_database
+			&& !self.importing_database
 		{
 			self.wait_closing_modal = WaitClosingModal::Closed;
-			task = Task::batch([
-				task,
-				self.update(Message::TryClosing)
-			]);
+			task = Task::batch([task, self.update(Message::TryClosing)]);
 		}
 
 		if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
@@ -1196,35 +1343,50 @@ impl ProjectTrackerApp {
 		match action {
 			ContentPageAction::None => Task::none(),
 			ContentPageAction::Actions(actions) => Task::batch(
-				actions.into_iter().map(|action| self.perform_content_page_action(action))
+				actions
+					.into_iter()
+					.map(|action| self.perform_content_page_action(action)),
 			),
 			ContentPageAction::Task(task) => task,
 			ContentPageAction::DatabaseMessage(message) => {
-				if let DatabaseMessage::DeleteTask { project_id, task_id } = &message {
+				if let DatabaseMessage::DeleteTask {
+					project_id,
+					task_id,
+				} = &message
+				{
 					if let Some(task_modal) = &mut self.task_modal {
-						if *project_id == task_modal.project_id &&
-							*task_id == task_modal.task_id
-						{
+						if *project_id == task_modal.project_id && *task_id == task_modal.task_id {
 							self.task_modal = None;
 						}
 					}
 				}
 
 				self.update(message.into())
-			},
-			ContentPageAction::OpenManageTaskTagsModal(project_id) => self.update(
-				Message::OpenManageTaskTagsModal(project_id)
-			),
-			ContentPageAction::ConfirmDeleteProject { project_id, project_name } => self.update(ConfirmModalMessage::open(
+			}
+			ContentPageAction::OpenManageTaskTagsModal(project_id) => {
+				self.update(Message::OpenManageTaskTagsModal(project_id))
+			}
+			ContentPageAction::ConfirmDeleteProject {
+				project_id,
+				project_name,
+			} => self.update(ConfirmModalMessage::open(
 				format!("Delete Project '{project_name}'?"),
 				DatabaseMessage::DeleteProject(project_id),
 			)),
-			ContentPageAction::OpenTaskModal { project_id, task_id } => self.update(Message::OpenTaskModal { project_id, task_id }),
+			ContentPageAction::OpenTaskModal {
+				project_id,
+				task_id,
+			} => self.update(Message::OpenTaskModal {
+				project_id,
+				task_id,
+			}),
 			ContentPageAction::CloseTaskModal => {
 				self.task_modal = None;
 				Task::none()
-			},
-			ContentPageAction::OpenStopwatch => self.update(ContentPageMessage::OpenStopwatch.into()),
+			}
+			ContentPageAction::OpenStopwatch => {
+				self.update(ContentPageMessage::OpenStopwatch.into())
+			}
 		}
 	}
 
@@ -1232,12 +1394,16 @@ impl ProjectTrackerApp {
 		match action {
 			SidebarPageAction::None => Task::none(),
 			SidebarPageAction::Actions(actions) => Task::batch(
-				actions.into_iter().map(|action| self.perform_sidebar_action(action))
+				actions
+					.into_iter()
+					.map(|action| self.perform_sidebar_action(action)),
 			),
 			SidebarPageAction::Task(task) => task,
 			SidebarPageAction::DatabaseMessage(message) => self.update(message.into()),
 			SidebarPageAction::StopwatchPageMessage(message) => self.update(message.into()),
-			SidebarPageAction::SelectProject(project_id) => self.update(ContentPageMessage::OpenProjectPage(project_id).into()),
+			SidebarPageAction::SelectProject(project_id) => {
+				self.update(ContentPageMessage::OpenProjectPage(project_id).into())
+			}
 		}
 	}
 
@@ -1254,11 +1420,14 @@ impl ProjectTrackerApp {
 					}
 				}
 				Task::none()
-			},
+			}
 		}
 	}
 
-	fn perform_manage_task_tags_modal_action(&mut self, action: ManageTaskTagsModalAction) -> Task<Message> {
+	fn perform_manage_task_tags_modal_action(
+		&mut self,
+		action: ManageTaskTagsModalAction,
+	) -> Task<Message> {
 		match action {
 			ManageTaskTagsModalAction::None => Task::none(),
 			ManageTaskTagsModalAction::Task(task) => task,
@@ -1268,73 +1437,87 @@ impl ProjectTrackerApp {
 
 	fn handle_server_response(&mut self, response: Response, password: String) -> Task<Message> {
 		match response.0 {
-			Ok(encrypted_response) => match EncryptedResponse::decrypt(encrypted_response, &password) {
-				Ok(encrypted_response) => self.handle_encrypted_server_response(encrypted_response),
-				Err(e) => {
-					self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(format!("{e}")));
-					Task::none()
+			Ok(encrypted_response) => {
+				match EncryptedResponse::decrypt(encrypted_response, &password) {
+					Ok(encrypted_response) => {
+						self.handle_encrypted_server_response(encrypted_response)
+					}
+					Err(e) => {
+						self.sidebar_page.server_connection_status =
+							Some(ServerConnectionStatus::Error(format!("{e}")));
+						Task::none()
+					}
 				}
-			},
+			}
 			Err(e) => {
-				self.sidebar_page.server_connection_status = Some(ServerConnectionStatus::Error(
-					format!("Server error:\n{e}")
-				));
+				self.sidebar_page.server_connection_status =
+					Some(ServerConnectionStatus::Error(format!("Server error:\n{e}")));
 				Task::none()
 			}
 		}
 	}
 
-	fn handle_encrypted_server_response(&mut self, encrypted_response: EncryptedResponse) -> Task<Message> {
+	fn handle_encrypted_server_response(
+		&mut self,
+		encrypted_response: EncryptedResponse,
+	) -> Task<Message> {
 		match encrypted_response {
-			EncryptedResponse::Database { database, last_modified_time } => {
-				let server_is_more_up_to_date = self.database.as_ref()
+			EncryptedResponse::Database {
+				database,
+				last_modified_time,
+			} => {
+				let server_is_more_up_to_date = self
+					.database
+					.as_ref()
 					.map(|db| last_modified_time > *db.last_changed_time())
 					.unwrap_or(true);
 
 				if server_is_more_up_to_date {
 					self.last_sync_finish_time = Some(Instant::now());
-					self.update(Message::LoadedDatabase(Ok(Database::from_serialized(database, last_modified_time))))
-				}
-				else {
-					Task::none()
-				}
-			},
-			EncryptedResponse::DatabaseUpdated => {
-				self.last_sync_finish_time = Some(Instant::now());
-				Task::none()
-			},
-			EncryptedResponse::ModifiedDate(server_modified_date) => if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
-				let server_is_more_up_to_date = self.database.as_ref()
-					.map(|db| server_modified_date > *db.last_changed_time())
-					.unwrap_or(true);
-
-				if server_is_more_up_to_date {
-					let _ = server_ws_message_sender.send(ServerWsMessage::Request(
-							Request::DownloadDatabase
-						));
-					Task::none()
-				}
-				else if let Some(database) = &self.database {
-					match database.clone().to_binary() {
-						Some(database_binary) => {
-							let _ = server_ws_message_sender.send(ServerWsMessage::Request(
-								Request::UpdateDatabase {
-									database_binary,
-									last_modified_time: *database.last_changed_time()
-								}
-							));
-							Task::none()
-						},
-						None => self.show_error_msg("failed to serialize database".to_string()),
-					}
-				}
-				else {
+					self.update(Message::LoadedDatabase(Ok(Database::from_serialized(
+						database,
+						last_modified_time,
+					))))
+				} else {
 					Task::none()
 				}
 			}
-			else {
+			EncryptedResponse::DatabaseUpdated => {
+				self.last_sync_finish_time = Some(Instant::now());
 				Task::none()
-			},
+			}
+			EncryptedResponse::ModifiedDate(server_modified_date) => {
+				if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
+					let server_is_more_up_to_date = self
+						.database
+						.as_ref()
+						.map(|db| server_modified_date > *db.last_changed_time())
+						.unwrap_or(true);
+
+					if server_is_more_up_to_date {
+						let _ = server_ws_message_sender
+							.send(ServerWsMessage::Request(Request::DownloadDatabase));
+						Task::none()
+					} else if let Some(database) = &self.database {
+						match database.clone().to_binary() {
+							Some(database_binary) => {
+								let _ = server_ws_message_sender.send(ServerWsMessage::Request(
+									Request::UpdateDatabase {
+										database_binary,
+										last_modified_time: *database.last_changed_time(),
+									},
+								));
+								Task::none()
+							}
+							None => self.show_error_msg("failed to serialize database".to_string()),
+						}
+					} else {
+						Task::none()
+					}
+				} else {
+					Task::none()
+				}
+			}
 		}
 	}
 
@@ -1344,11 +1527,8 @@ impl ProjectTrackerApp {
 	) -> Option<Element<Message>> {
 		content.map(|content| {
 			opaque(
-				mouse_area(
-					center(opaque(content))
-						.style(modal_background_container_style)
-				)
-				.on_press(on_close),
+				mouse_area(center(opaque(content)).style(modal_background_container_style))
+					.on_press(on_close),
 			)
 		})
 	}
@@ -1381,8 +1561,7 @@ impl ProjectTrackerApp {
 				let empty_toggle_sidebar_button_layout_width =
 					ICON_BUTTON_WIDTH * sidebar_animation_percentage;
 
-				let sidebar: Element<Message> = if show_sidebar
-					|| sidebar_animation_value.is_some()
+				let sidebar: Element<Message> = if show_sidebar || sidebar_animation_value.is_some()
 				{
 					container(arc_self.sidebar_page.view(*arc_self))
 						.width(Fill)
@@ -1399,17 +1578,14 @@ impl ProjectTrackerApp {
 				stack![
 					sidebar,
 					container(
-						container(
-							row![
-								if show_sidebar || sidebar_animation_value.is_some() {
-									Space::with_width(empty_toggle_sidebar_button_layout_width)
-										.into()
-								} else {
-									toggle_sidebar_button(false)
-								},
-								arc_self.content_page.view(&arc_self),
-							]
-						)
+						container(row![
+							if show_sidebar || sidebar_animation_value.is_some() {
+								Space::with_width(empty_toggle_sidebar_button_layout_width).into()
+							} else {
+								toggle_sidebar_button(false)
+							},
+							arc_self.content_page.view(&arc_self),
+						])
 						.style(default_background_container_style)
 					)
 					.width(Fill)
@@ -1418,8 +1594,7 @@ impl ProjectTrackerApp {
 				.into()
 			})
 			.into()
-		}
-		else {
+		} else {
 			container(
 				column![
 					text("Create new database or import existing?").size(HEADING_TEXT_SIZE),
@@ -1430,7 +1605,7 @@ impl ProjectTrackerApp {
 					.spacing(LARGE_SPACING_AMOUNT)
 				]
 				.spacing(LARGE_SPACING_AMOUNT)
-				.align_x(Horizontal::Center)
+				.align_x(Horizontal::Center),
 			)
 			.center(Fill)
 			.into()
@@ -1439,16 +1614,21 @@ impl ProjectTrackerApp {
 		Stack::new()
 			.push(underlay)
 			.push_maybe(Self::modal(
-				self.create_task_modal.as_ref()
-					.map(|create_task_modal| create_task_modal.view(&self.database, &self.preferences)),
+				self.create_task_modal.as_ref().map(|create_task_modal| {
+					create_task_modal.view(&self.database, &self.preferences)
+				}),
 				Message::CloseCreateTaskModal,
 			))
 			.push_maybe(Self::modal(
-				self.task_modal.as_ref().map(|task_modal| task_modal.view(self)),
+				self.task_modal
+					.as_ref()
+					.map(|task_modal| task_modal.view(self)),
 				Message::CloseTaskModal,
 			))
 			.push_maybe(Self::modal(
-				self.manage_tags_modal.as_ref().map(|task_modal| task_modal.view(self)),
+				self.manage_tags_modal
+					.as_ref()
+					.map(|task_modal| task_modal.view(self)),
 				Message::CloseManageTaskTagsModal,
 			))
 			.push_maybe(Self::modal(
@@ -1459,11 +1639,13 @@ impl ProjectTrackerApp {
 				self.confirm_modal.as_ref().map(ConfirmModal::view),
 				ConfirmModalMessage::Close.into(),
 			))
-			.push_maybe(Self::modal(
-				self.wait_closing_modal.view(),
-				WaitClosingModalMessage::Close
+			.push_maybe(
+				Self::modal(
+					self.wait_closing_modal.view(),
+					WaitClosingModalMessage::Close,
+				)
+				.map(|element| element.map(Message::WaitClosingModalMessage)),
 			)
-			.map(|element| element.map(Message::WaitClosingModalMessage)))
 			.push_maybe(Self::modal(
 				self.error_msg_modal.view(),
 				ErrorMsgModalMessage::Close.into(),

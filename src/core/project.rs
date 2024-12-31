@@ -1,6 +1,6 @@
-use project_tracker_core::{Project, SerializableColor, SortMode, TaskId};
 use crate::icons::Bootstrap;
 use iced::Color;
+use project_tracker_core::{Project, SerializableColor, SortMode, TaskId};
 use std::cmp::Ordering;
 
 pub trait SortModeUI {
@@ -11,11 +11,7 @@ pub trait SortModeUI {
 }
 
 impl SortModeUI for SortMode {
-	const ALL: &'static [SortMode] = &[
-		SortMode::Manual,
-		SortMode::DueDate,
-		SortMode::NeededTime,
-	];
+	const ALL: &'static [SortMode] = &[SortMode::Manual, SortMode::DueDate, SortMode::NeededTime];
 
 	fn as_str(&self) -> &'static str {
 		match self {
@@ -32,63 +28,75 @@ impl SortModeUI for SortMode {
 		}
 	}
 
-	fn sort(&self, project: &Project, tasks: &mut [TaskId], sort_unspecified_tasks_at_bottom: bool) {
+	fn sort(
+		&self,
+		project: &Project,
+		tasks: &mut [TaskId],
+		sort_unspecified_tasks_at_bottom: bool,
+	) {
 		match self {
-			Self::Manual => {},
+			Self::Manual => {}
 			Self::DueDate => {
 				tasks.sort_unstable_by(|task_id_a, task_id_b| {
-					if let (Some(task_a), Some(task_b)) = (project.get_task(task_id_a), project.get_task(task_id_b)) {
+					if let (Some(task_a), Some(task_b)) =
+						(project.get_task(task_id_a), project.get_task(task_id_b))
+					{
 						match (&task_a.due_date, &task_b.due_date) {
 							(Some(due_date_a), Some(due_date_b)) => due_date_a.cmp(due_date_b),
-							(Some(_due_date_a), None) => if sort_unspecified_tasks_at_bottom {
-								Ordering::Less
+							(Some(_due_date_a), None) => {
+								if sort_unspecified_tasks_at_bottom {
+									Ordering::Less
+								} else {
+									Ordering::Greater
+								}
 							}
-							else {
-								Ordering::Greater
-							},
-							(None, Some(_due_date_b)) => if sort_unspecified_tasks_at_bottom {
-								Ordering::Greater
+							(None, Some(_due_date_b)) => {
+								if sort_unspecified_tasks_at_bottom {
+									Ordering::Greater
+								} else {
+									Ordering::Less
+								}
 							}
-							else {
-								Ordering::Less
-							},
 							(None, None) => Ordering::Equal,
 						}
-					}
-					else {
+					} else {
 						Ordering::Equal
 					}
 				});
-			},
+			}
 			Self::NeededTime => {
 				tasks.sort_unstable_by(|task_id_a, task_id_b| {
-					if let (Some(task_a), Some(task_b)) = (project.get_task(task_id_a), project.get_task(task_id_b)) {
+					if let (Some(task_a), Some(task_b)) =
+						(project.get_task(task_id_a), project.get_task(task_id_b))
+					{
 						match (&task_a.needed_time_minutes, &task_b.needed_time_minutes) {
-							(Some(needed_time_minutes_a), Some(needed_time_minutes_b)) => needed_time_minutes_a.cmp(needed_time_minutes_b),
-							(Some(_due_date_a), None) => if sort_unspecified_tasks_at_bottom {
-								Ordering::Less
+							(Some(needed_time_minutes_a), Some(needed_time_minutes_b)) => {
+								needed_time_minutes_a.cmp(needed_time_minutes_b)
 							}
-							else {
-								Ordering::Greater
-							},
-							(None, Some(_due_date_b)) => if sort_unspecified_tasks_at_bottom {
-								Ordering::Greater
+							(Some(_due_date_a), None) => {
+								if sort_unspecified_tasks_at_bottom {
+									Ordering::Less
+								} else {
+									Ordering::Greater
+								}
 							}
-							else {
-								Ordering::Less
-							},
+							(None, Some(_due_date_b)) => {
+								if sort_unspecified_tasks_at_bottom {
+									Ordering::Greater
+								} else {
+									Ordering::Less
+								}
+							}
 							(None, None) => Ordering::Equal,
 						}
-					}
-					else {
+					} else {
 						Ordering::Equal
 					}
 				});
-			},
+			}
 		}
 	}
 }
-
 
 pub trait IcedColorConversion {
 	fn to_iced_color(&self) -> Color;

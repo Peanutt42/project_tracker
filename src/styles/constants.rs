@@ -32,8 +32,7 @@ pub mod colors {
 	pub fn selection_color(palette: &palette::Extended) -> Color {
 		if palette.is_dark {
 			color!(0x0000ee)
-		}
-		else {
+		} else {
 			color!(0x3584e4)
 		}
 	}
@@ -41,8 +40,7 @@ pub mod colors {
 	pub fn link_color(is_theme_dark: bool) -> Color {
 		if is_theme_dark {
 			iced::color!(0x3584e4)
-		}
-		else {
+		} else {
 			iced::color!(0x0000ee)
 		}
 	}

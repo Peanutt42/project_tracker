@@ -21,12 +21,17 @@ fn main() {
 			.args([
 				"req",
 				"-x509",
-				"-newkey", "rsa:4096",
-				"-keyout", &key_path.to_string_lossy(),
-				"-out", &cert_path.to_string_lossy(),
-				"-days", "365",
+				"-newkey",
+				"rsa:4096",
+				"-keyout",
+				&key_path.to_string_lossy(),
+				"-out",
+				&cert_path.to_string_lossy(),
+				"-days",
+				"365",
 				"-nodes",
-				"-subj", "/CN=localhost",
+				"-subj",
+				"/CN=localhost",
 			])
 			.output()
 			.expect("Failed to execute 'openssl'");
@@ -40,5 +45,8 @@ fn main() {
 	}
 
 	println!("cargo:rerun-if-changed=build.rs");
-	println!("cargo:rerun-if-changed={}", certificates_output_dir.display());
+	println!(
+		"cargo:rerun-if-changed={}",
+		certificates_output_dir.display()
+	);
 }

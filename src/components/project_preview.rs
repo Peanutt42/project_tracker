@@ -9,7 +9,6 @@ use crate::{
 	project_tracker::Message,
 	styles::{dropzone_container_style, project_preview_style},
 };
-use project_tracker_core::{Project, ProjectId};
 use iced::{
 	alignment::Horizontal,
 	border::rounded,
@@ -20,6 +19,7 @@ use iced::{
 };
 use iced_aw::{quad::Quad, widgets::InnerBounds};
 use iced_drop::droppable;
+use project_tracker_core::{Project, ProjectId};
 
 pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
 const PROJECT_COLOR_BLOCK_HEIGHT: f32 = 35.0;
@@ -145,12 +145,7 @@ pub fn custom_project_preview(
 			.drag_overlay(!just_minimal_dragging, None) // add override_overlay_content like with the tasks
 			.drag_hide(!just_minimal_dragging)
 			.drag_mode(false, true)
-			.style(move |t, s| project_preview_style(
-				t,
-				s,
-				selected,
-				Some(project_color)
-			)),
+			.style(move |t, s| project_preview_style(t, s, selected, Some(project_color))),
 		]
 		.into()
 	} else {

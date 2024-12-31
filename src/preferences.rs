@@ -10,6 +10,7 @@ use crate::{
 	styles::SPACING_AMOUNT,
 	theme_mode::ThemeMode,
 };
+use crate::{ProjectId, SerializableDate, TaskId};
 use iced::widget::text;
 use iced::{
 	alignment::Horizontal,
@@ -18,17 +19,24 @@ use iced::{
 	Length::Fill,
 	Task,
 };
-use crate::{ProjectId, SerializableDate, TaskId};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
+use thiserror::Error;
 
-fn default_show_sidebar() -> bool { true }
-fn default_create_new_tasks_at_top() -> bool { true }
-fn default_sort_unspecified_tasks_at_bottom() -> bool { true }
-fn default_play_timer_notification_sound() -> bool { true }
+fn default_show_sidebar() -> bool {
+	true
+}
+fn default_create_new_tasks_at_top() -> bool {
+	true
+}
+fn default_sort_unspecified_tasks_at_bottom() -> bool {
+	true
+}
+fn default_play_timer_notification_sound() -> bool {
+	true
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SynchronizationSetting {
@@ -46,7 +54,9 @@ impl SynchronizationSetting {
 
 	pub fn is_same_type(&self, other: &Self) -> bool {
 		match self {
-			SynchronizationSetting::Filepath(_) => matches!(other, SynchronizationSetting::Filepath(_)),
+			SynchronizationSetting::Filepath(_) => {
+				matches!(other, SynchronizationSetting::Filepath(_))
+			}
 			SynchronizationSetting::Server(_) => matches!(other, SynchronizationSetting::Server(_)),
 		}
 	}
@@ -121,7 +131,7 @@ pub enum StopwatchProgress {
 		paused: bool,
 		break_duration_minutes: usize,
 		break_over_notification_sent: bool,
-	}
+	},
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
@@ -204,7 +214,7 @@ pub enum SavePreferencesError {
 	FailedToSaveFile {
 		filepath: PathBuf,
 		error: std::io::Error,
-	}
+	},
 }
 pub type SavePreferencesResult<T> = Result<T, SavePreferencesError>;
 
@@ -264,10 +274,12 @@ impl Preferences {
 	pub fn update(&mut self, message: PreferenceMessage) -> PreferenceAction {
 		match message {
 			PreferenceMessage::Save => match self.to_json() {
-				Ok(json) => PreferenceAction::Task(Task::perform(Self::save(json), |result| match result {
-					Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
-					Err(error) => ErrorMsgModalMessage::open_error(error),
-				})),
+				Ok(json) => {
+					PreferenceAction::Task(Task::perform(Self::save(json), |result| match result {
+						Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
+						Err(error) => ErrorMsgModalMessage::open_error(error),
+					}))
+				}
 				Err(e) => PreferenceAction::FailedToSerailizePreferences(e),
 			},
 			PreferenceMessage::Saved(begin_time) => {
@@ -332,8 +344,12 @@ impl Preferences {
 				PreferenceAction::None
 			}
 
-			PreferenceMessage::SetSortUnspecifiedTasksAtBottom(sort_unspecified_tasks_at_bottom) => {
-				self.modify(|pref| pref.sort_unspecified_tasks_at_bottom = sort_unspecified_tasks_at_bottom);
+			PreferenceMessage::SetSortUnspecifiedTasksAtBottom(
+				sort_unspecified_tasks_at_bottom,
+			) => {
+				self.modify(|pref| {
+					pref.sort_unspecified_tasks_at_bottom = sort_unspecified_tasks_at_bottom
+				});
 				PreferenceAction::RefreshCachedTaskList
 			}
 
@@ -351,43 +367,41 @@ impl Preferences {
 			project_dirs
 				.config_local_dir()
 				.join(Self::FILE_NAME)
-				.to_path_buf()
+				.to_path_buf(),
 		)
 	}
 
 	async fn get_and_ensure_filepath() -> Option<PathBuf> {
 		let filepath = Self::get_filepath()?;
-		tokio::fs::create_dir_all(filepath.parent()?)
-			.await
-			.ok()?;
+		tokio::fs::create_dir_all(filepath.parent()?).await.ok()?;
 
 		Some(filepath)
 	}
 
 	async fn load_from(filepath: PathBuf) -> LoadPreferencesResult {
-		let file_content = tokio::fs::read_to_string(&filepath).await
+		let file_content = tokio::fs::read_to_string(&filepath)
+			.await
 			.map_err(|error| LoadPreferencesError::FailedToOpenFile {
 				filepath: filepath.clone(),
-				error
+				error,
 			})?;
 
 		serde_json::from_str(&file_content)
-			.map_err(|error| LoadPreferencesError::FailedToParse {
-				filepath,
-				error
-			})
+			.map_err(|error| LoadPreferencesError::FailedToParse { filepath, error })
 	}
 
 	pub async fn load() -> LoadPreferencesResult {
 		Self::load_from(
-			Self::get_and_ensure_filepath().await
-				.ok_or(LoadPreferencesError::FailedToFindPreferencesFilepath)?
+			Self::get_and_ensure_filepath()
+				.await
+				.ok_or(LoadPreferencesError::FailedToFindPreferencesFilepath)?,
 		)
 		.await
 	}
 
 	async fn save_to(filepath: PathBuf, json: String) -> SavePreferencesResult<()> {
-		tokio::fs::write(&filepath, json.as_bytes()).await
+		tokio::fs::write(&filepath, json.as_bytes())
+			.await
 			.map_err(|error| SavePreferencesError::FailedToSaveFile { filepath, error })
 	}
 
@@ -399,9 +413,10 @@ impl Preferences {
 	pub async fn save(json: String) -> SavePreferencesResult<Instant> {
 		let begin_time = Instant::now();
 		Self::save_to(
-			Self::get_and_ensure_filepath().await
+			Self::get_and_ensure_filepath()
+				.await
 				.ok_or(SavePreferencesError::FailedToFindPreferencesFilepath)?,
-			json
+			json,
 		)
 		.await?;
 		Ok(begin_time)
@@ -483,19 +498,23 @@ impl Preferences {
 			Self::setting_item(
 				"Sort unspecified tasks at the bottom:",
 				toggler(self.sort_unspecified_tasks_at_bottom)
-					.on_toggle(|sort_unspecified_tasks_at_bottom| PreferenceMessage::SetSortUnspecifiedTasksAtBottom(
-						sort_unspecified_tasks_at_bottom
-					)
-					.into())
+					.on_toggle(|sort_unspecified_tasks_at_bottom| {
+						PreferenceMessage::SetSortUnspecifiedTasksAtBottom(
+							sort_unspecified_tasks_at_bottom,
+						)
+						.into()
+					})
 					.size(27.5)
 			),
 			Self::setting_item(
 				"Play timer notification sound:",
 				toggler(self.play_timer_notification_sound)
-					.on_toggle(|play_timer_notification_sound| PreferenceMessage::SetPlayTimerNotificationSound(
-						play_timer_notification_sound
-					)
-					.into())
+					.on_toggle(|play_timer_notification_sound| {
+						PreferenceMessage::SetPlayTimerNotificationSound(
+							play_timer_notification_sound,
+						)
+						.into()
+					})
 					.size(27.5)
 			),
 			horizontal_seperator_padded(),
@@ -555,7 +574,6 @@ impl DateFormatting {
 	}
 }
 
-
 pub trait OptionalPreference {
 	fn show_sidebar(&self) -> bool;
 	fn date_formatting(&self) -> DateFormatting;
@@ -570,43 +588,39 @@ impl OptionalPreference for Option<Preferences> {
 	fn show_sidebar(&self) -> bool {
 		if let Some(preferences) = self {
 			preferences.show_sidebar
-		}
-		else {
+		} else {
 			default_show_sidebar()
 		}
 	}
 	fn date_formatting(&self) -> DateFormatting {
 		if let Some(preferences) = self {
 			preferences.date_formatting
-		}
-		else {
+		} else {
 			DateFormatting::default()
 		}
 	}
 	fn create_new_tasks_at_top(&self) -> bool {
 		if let Some(preferences) = self {
 			preferences.create_new_tasks_at_top
-		}
-		else {
+		} else {
 			default_create_new_tasks_at_top()
 		}
 	}
 	fn sort_unspecified_tasks_at_bottom(&self) -> bool {
 		if let Some(preferences) = self {
 			preferences.sort_unspecified_tasks_at_bottom
-		}
-		else {
+		} else {
 			default_sort_unspecified_tasks_at_bottom()
 		}
 	}
 	fn synchronization(&self) -> Option<&SynchronizationSetting> {
-		self.as_ref().and_then(|preferences| preferences.synchronization.as_ref())
+		self.as_ref()
+			.and_then(|preferences| preferences.synchronization.as_ref())
 	}
 	fn play_timer_notification_sound(&self) -> bool {
 		if let Some(preferences) = self {
 			preferences.play_timer_notification_sound
-		}
-		else {
+		} else {
 			default_play_timer_notification_sound()
 		}
 	}

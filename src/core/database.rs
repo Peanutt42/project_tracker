@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use project_tracker_core::{Database, DatabaseMessage};
 use crate::project_tracker::Message;
+use project_tracker_core::{Database, DatabaseMessage};
 
 impl From<DatabaseMessage> for Message {
 	fn from(value: DatabaseMessage) -> Self {

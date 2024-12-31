@@ -1,14 +1,28 @@
 use crate::{
 	components::{
-		complete_task_timer_button, days_left_widget, horizontal_scrollable, open_project_button, pause_timer_button, resume_timer_button, stop_timer_button, take_break_button, task_description, track_time_button, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING,
-	}, core::IcedColorConversion, pages::{ContentPageAction, ContentPageMessage}, project_tracker::Message, styles::{
-		task_tag_container_style, BOLD_FONT, FIRA_SANS_FONT, HEADING_TEXT_SIZE, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT
-	}, OptionalPreference, Preferences, ProjectTrackerApp, StopwatchProgress
+		complete_task_timer_button, days_left_widget, horizontal_scrollable, open_project_button,
+		pause_timer_button, resume_timer_button, stop_timer_button, take_break_button,
+		task_description, track_time_button, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING,
+	},
+	core::IcedColorConversion,
+	pages::{ContentPageAction, ContentPageMessage},
+	project_tracker::Message,
+	styles::{
+		task_tag_container_style, BOLD_FONT, FIRA_SANS_FONT, HEADING_TEXT_SIZE,
+		LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT,
+		SPACING_AMOUNT,
+	},
+	OptionalPreference, Preferences, ProjectTrackerApp, StopwatchProgress,
+};
+use iced::{
+	alignment::{Horizontal, Vertical},
+	keyboard, time,
+	widget::{canvas, column, container, responsive, row, text, Column, Row, Space},
+	window, Alignment, Element,
+	Length::{self, Fill},
+	Padding, Subscription,
 };
 use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, Task, TaskId, TaskType};
-use iced::{
-	alignment::{Horizontal, Vertical}, keyboard, time, widget::{canvas, column, container, responsive, row, text, Column, Row, Space}, window, Alignment, Element, Length::{self, Fill}, Padding, Subscription
-};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Default)]
@@ -34,7 +48,7 @@ pub enum StopwatchPage {
 		break_duration_minutes: usize,
 		clock: StopwatchClock,
 		break_over_notification_sent: bool,
-	}
+	},
 }
 
 #[derive(Clone, Debug)]
@@ -62,51 +76,62 @@ impl From<StopwatchPageMessage> for Message {
 }
 
 impl StopwatchPage {
-	pub fn startup_again(stopwatch_progress: StopwatchProgress, database: Option<&Database>) -> (Self, ContentPageAction) {
+	pub fn startup_again(
+		stopwatch_progress: StopwatchProgress,
+		database: Option<&Database>,
+	) -> (Self, ContentPageAction) {
 		match stopwatch_progress {
-			StopwatchProgress::TrackTime { elapsed_time_seconds, paused } => (
-				StopwatchPage::TrackTime{
+			StopwatchProgress::TrackTime {
+				elapsed_time_seconds,
+				paused,
+			} => (
+				StopwatchPage::TrackTime {
 					elapsed_time: Duration::from_secs(elapsed_time_seconds),
 					paused,
-					last_update: Instant::now()
+					last_update: Instant::now(),
 				},
-				ContentPageAction::None
+				ContentPageAction::None,
 			),
 			StopwatchProgress::Task {
 				project_id,
 				task_id,
 				paused,
-				finished_notification_sent
+				finished_notification_sent,
 			} => {
-				let time_spend_seconds = Self::get_spend_seconds(project_id, task_id, database).unwrap_or(0.0);
+				let time_spend_seconds =
+					Self::get_spend_seconds(project_id, task_id, database).unwrap_or(0.0);
 				let needed_seconds = Self::get_needed_seconds(project_id, task_id, database);
 
 				(
-					StopwatchPage::StopTaskTime{
+					StopwatchPage::StopTaskTime {
 						project_id,
 						task_id,
 						paused,
 						finished_notification_sent,
-						clock: needed_seconds.map(|needed_seconds|
+						clock: needed_seconds.map(|needed_seconds| {
 							StopwatchClock::new(
 								time_spend_seconds / needed_seconds,
 								needed_seconds - time_spend_seconds,
-								Some(needed_seconds)
+								Some(needed_seconds),
 							)
-						)
+						}),
 					},
 					if paused {
 						ContentPageAction::None
 					} else {
-						DatabaseMessage::StartTaskTimeSpend { project_id, task_id }.into()
-					}
+						DatabaseMessage::StartTaskTimeSpend {
+							project_id,
+							task_id,
+						}
+						.into()
+					},
 				)
-			},
+			}
 			StopwatchProgress::Break {
 				elapsed_time_seconds,
 				paused,
 				break_duration_minutes,
-				break_over_notification_sent
+				break_over_notification_sent,
 			} => {
 				let duration_seconds = break_duration_minutes as f32 * 60.0;
 
@@ -120,10 +145,10 @@ impl StopwatchPage {
 						clock: StopwatchClock::new(
 							elapsed_time_seconds as f32 / duration_seconds,
 							duration_seconds - elapsed_time_seconds as f32,
-							None
-						)
+							None,
+						),
 					},
-					ContentPageAction::None
+					ContentPageAction::None,
 				)
 			}
 		}
@@ -138,9 +163,10 @@ impl StopwatchPage {
 				} else {
 					time::every(Duration::from_secs(1)).map(|_| StopwatchPageMessage::Update)
 				}
-			},
-			StopwatchPage::TrackTime { .. } =>
-				time::every(Duration::from_secs(1)).map(|_| StopwatchPageMessage::Update),
+			}
+			StopwatchPage::TrackTime { .. } => {
+				time::every(Duration::from_secs(1)).map(|_| StopwatchPageMessage::Update)
+			}
 		};
 
 		let toggle_subscription = keyboard::on_key_press(|key, modifiers| match key.as_ref() {
@@ -155,23 +181,32 @@ impl StopwatchPage {
 		Subscription::batch([redraw_subscription, toggle_subscription])
 	}
 
-	pub fn get_needed_seconds(project_id: ProjectId, task_id: TaskId, database: Option<&Database>) -> Option<f32> {
-		database.and_then(|database|
-			database.get_task(&project_id, &task_id)
-				.and_then(|task|
-					task.needed_time_minutes.as_ref()
-						.map(|needed_minutes| *needed_minutes as f32 * 60.0)
-				)
-		)
+	pub fn get_needed_seconds(
+		project_id: ProjectId,
+		task_id: TaskId,
+		database: Option<&Database>,
+	) -> Option<f32> {
+		database.and_then(|database| {
+			database.get_task(&project_id, &task_id).and_then(|task| {
+				task.needed_time_minutes
+					.as_ref()
+					.map(|needed_minutes| *needed_minutes as f32 * 60.0)
+			})
+		})
 	}
 
-	pub fn get_spend_seconds(project_id: ProjectId, task_id: TaskId, database: Option<&Database>) -> Option<f32> {
-		database.and_then(|database|
-			database.get_task(&project_id, &task_id)
-				.and_then(|task|
-					task.time_spend.as_ref().map(|time_spend| time_spend.get_seconds())
-				)
-		)
+	pub fn get_spend_seconds(
+		project_id: ProjectId,
+		task_id: TaskId,
+		database: Option<&Database>,
+	) -> Option<f32> {
+		database.and_then(|database| {
+			database.get_task(&project_id, &task_id).and_then(|task| {
+				task.time_spend
+					.as_ref()
+					.map(|time_spend| time_spend.get_seconds())
+			})
+		})
 	}
 
 	pub fn update(
@@ -186,18 +221,23 @@ impl StopwatchPage {
 				*self = StopwatchPage::TrackTime {
 					elapsed_time: Duration::from_secs(0),
 					last_update: Instant::now(),
-					paused: false
+					paused: false,
 				};
 				self.set_stopwatch_progress(preferences);
 				ContentPageAction::None
-			},
-			StopwatchPageMessage::StopTask { project_id, task_id } => {
+			}
+			StopwatchPageMessage::StopTask {
+				project_id,
+				task_id,
+			} => {
 				*self = StopwatchPage::StopTaskTime {
 					paused: false,
 					project_id,
 					task_id,
-					clock: Self::get_needed_seconds(project_id, task_id, database).map(|needed_seconds|
-						StopwatchClock::new(0.0, needed_seconds, Some(needed_seconds))
+					clock: Self::get_needed_seconds(project_id, task_id, database).map(
+						|needed_seconds| {
+							StopwatchClock::new(0.0, needed_seconds, Some(needed_seconds))
+						},
 					),
 					finished_notification_sent: false,
 				};
@@ -206,11 +246,11 @@ impl StopwatchPage {
 					ContentPageAction::OpenStopwatch,
 					DatabaseMessage::StartTaskTimeSpend {
 						project_id,
-						task_id
+						task_id,
 					}
-					.into()
+					.into(),
 				])
-			},
+			}
 			StopwatchPageMessage::TakeBreak(minutes) => {
 				let duration_seconds = minutes as f32 * 60.0;
 
@@ -224,7 +264,7 @@ impl StopwatchPage {
 				};
 				self.set_stopwatch_progress(preferences);
 				ContentPageAction::None
-			},
+			}
 			StopwatchPageMessage::StartupAgain(progress) => {
 				let (new_self, action) = Self::startup_again(progress, database);
 				*self = new_self;
@@ -232,13 +272,18 @@ impl StopwatchPage {
 			}
 			StopwatchPageMessage::Stop => self.stop(preferences),
 			StopwatchPageMessage::Resume => match self {
-				StopwatchPage::TrackTime { paused, .. } |
-				StopwatchPage::TakingBreak { paused, .. } => {
+				StopwatchPage::TrackTime { paused, .. }
+				| StopwatchPage::TakingBreak { paused, .. } => {
 					*paused = false;
 					self.set_stopwatch_progress(preferences);
 					ContentPageAction::None
-				},
-				StopwatchPage::StopTaskTime { project_id, task_id, paused, .. } => {
+				}
+				StopwatchPage::StopTaskTime {
+					project_id,
+					task_id,
+					paused,
+					..
+				} => {
 					*paused = false;
 					let project_id = *project_id;
 					let task_id = *task_id;
@@ -246,20 +291,25 @@ impl StopwatchPage {
 
 					DatabaseMessage::StartTaskTimeSpend {
 						project_id,
-						task_id
+						task_id,
 					}
 					.into()
-				},
+				}
 				StopwatchPage::Idle => ContentPageAction::None,
-			}
+			},
 			StopwatchPageMessage::Pause => match self {
-				StopwatchPage::TrackTime { paused, .. } |
-				StopwatchPage::TakingBreak { paused, .. } => {
+				StopwatchPage::TrackTime { paused, .. }
+				| StopwatchPage::TakingBreak { paused, .. } => {
 					*paused = true;
 					self.set_stopwatch_progress(preferences);
 					ContentPageAction::None
-				},
-				StopwatchPage::StopTaskTime { project_id, task_id, paused, .. } => {
+				}
+				StopwatchPage::StopTaskTime {
+					project_id,
+					task_id,
+					paused,
+					..
+				} => {
 					*paused = true;
 					let project_id = *project_id;
 					let task_id = *task_id;
@@ -267,77 +317,106 @@ impl StopwatchPage {
 
 					DatabaseMessage::StopTaskTimeSpend {
 						project_id,
-							task_id
+						task_id,
 					}
 					.into()
-				},
+				}
 				StopwatchPage::Idle => ContentPageAction::None,
-			}
-			StopwatchPageMessage::Toggle => if opened {
-				match self {
-					StopwatchPage::TrackTime { paused, .. } | StopwatchPage::TakingBreak { paused, .. } => {
-						*paused = !*paused;
-						self.set_stopwatch_progress(preferences);
-						ContentPageAction::None
-					},
-					StopwatchPage::StopTaskTime { paused, project_id, task_id, .. } => {
-						// resume
-						let action = if *paused {
-							DatabaseMessage::StartTaskTimeSpend {
-								project_id: *project_id,
-								task_id: *task_id
-							}
-							.into()
+			},
+			StopwatchPageMessage::Toggle => {
+				if opened {
+					match self {
+						StopwatchPage::TrackTime { paused, .. }
+						| StopwatchPage::TakingBreak { paused, .. } => {
+							*paused = !*paused;
+							self.set_stopwatch_progress(preferences);
+							ContentPageAction::None
 						}
-						else { // pause
-							DatabaseMessage::StopTaskTimeSpend {
-								project_id: *project_id,
-								task_id: *task_id,
-							}
-							.into()
-						};
-						*paused = !*paused;
-						self.set_stopwatch_progress(preferences);
-						action
-					},
-					StopwatchPage::Idle => self.update(StopwatchPageMessage::StartTrackingTime, database, preferences, opened),
+						StopwatchPage::StopTaskTime {
+							paused,
+							project_id,
+							task_id,
+							..
+						} => {
+							// resume
+							let action = if *paused {
+								DatabaseMessage::StartTaskTimeSpend {
+									project_id: *project_id,
+									task_id: *task_id,
+								}
+								.into()
+							} else {
+								// pause
+								DatabaseMessage::StopTaskTimeSpend {
+									project_id: *project_id,
+									task_id: *task_id,
+								}
+								.into()
+							};
+							*paused = !*paused;
+							self.set_stopwatch_progress(preferences);
+							action
+						}
+						StopwatchPage::Idle => self.update(
+							StopwatchPageMessage::StartTrackingTime,
+							database,
+							preferences,
+							opened,
+						),
+					}
+				} else {
+					ContentPageAction::None
 				}
 			}
-			else {
-				ContentPageAction::None
-			},
 			StopwatchPageMessage::CompleteTask => {
-				let set_task_done_action = if let StopwatchPage::StopTaskTime { project_id, task_id, .. } = self {
+				let set_task_done_action = if let StopwatchPage::StopTaskTime {
+					project_id,
+					task_id,
+					..
+				} = self
+				{
 					DatabaseMessage::SetTaskDone {
 						project_id: *project_id,
 						task_id: *task_id,
 					}
 					.into()
-				}
-				else {
+				} else {
 					ContentPageAction::None
 				};
-				ContentPageAction::Actions(vec![
-					set_task_done_action,
-					self.stop(preferences)
-				])
-			},
+				ContentPageAction::Actions(vec![set_task_done_action, self.stop(preferences)])
+			}
 			StopwatchPageMessage::Update => {
 				// advance time
-				match self {				// stop_task_time stores the start time to get the elapsed time
-					StopwatchPage::Idle | StopwatchPage::StopTaskTime { .. } => {},
-					StopwatchPage::TrackTime { elapsed_time, last_update, paused } |
-					StopwatchPage::TakingBreak { elapsed_time, last_update, paused, .. } => {
+				match self {
+					// stop_task_time stores the start time to get the elapsed time
+					StopwatchPage::Idle | StopwatchPage::StopTaskTime { .. } => {}
+					StopwatchPage::TrackTime {
+						elapsed_time,
+						last_update,
+						paused,
+					}
+					| StopwatchPage::TakingBreak {
+						elapsed_time,
+						last_update,
+						paused,
+						..
+					} => {
 						if !*paused {
 							*elapsed_time += Instant::now().duration_since(*last_update);
 						}
 						*last_update = Instant::now();
-					},
+					}
 				}
 
 				// check if timer is finished
 				match self {
-					StopwatchPage::StopTaskTime { project_id, task_id, clock, finished_notification_sent, .. } => {
+					StopwatchPage::StopTaskTime {
+						project_id,
+						task_id,
+						clock,
+						finished_notification_sent,
+						..
+					} => {
 						let task_and_type = database
 							.as_ref()
 							.and_then(|db| db.get_task_and_type(project_id, task_id));
@@ -345,9 +424,10 @@ impl StopwatchPage {
 						if let Some((task, task_type)) = task_and_type {
 							if matches!(task_type, TaskType::Done) {
 								*self = StopwatchPage::Idle;
-							}
-							else if let Some(needed_minutes) = task.needed_time_minutes {
-								let timer_seconds = Self::get_spend_seconds(*project_id, *task_id, database).unwrap_or(0.0);
+							} else if let Some(needed_minutes) = task.needed_time_minutes {
+								let timer_seconds =
+									Self::get_spend_seconds(*project_id, *task_id, database)
+										.unwrap_or(0.0);
 								let needed_seconds = needed_minutes as f32 * 60.0;
 								let seconds_left = needed_seconds - timer_seconds;
 								let percentage = timer_seconds / needed_seconds;
@@ -356,28 +436,38 @@ impl StopwatchPage {
 									clock.set_percentage(percentage);
 									clock.set_seconds_left(seconds_left);
 									clock.set_needed_seconds(needed_seconds);
-								}
-								else {
-									*clock = Some(StopwatchClock::new(percentage, seconds_left, Some(needed_seconds)));
+								} else {
+									*clock = Some(StopwatchClock::new(
+										percentage,
+										seconds_left,
+										Some(needed_seconds),
+									));
 								}
 
 								if seconds_left <= 0.0 && !*finished_notification_sent {
 									*finished_notification_sent = true;
 
 									if preferences.play_timer_notification_sound() {
-										timer_notification(format!("{} min. timer finished!", needed_minutes), task.name().clone());
+										timer_notification(
+											format!("{} min. timer finished!", needed_minutes),
+											task.name().clone(),
+										);
 									}
 								}
-							}
-							else {
+							} else {
 								*clock = None;
 							}
-						}
-						else {
+						} else {
 							*self = StopwatchPage::Idle;
 						}
-					},
-					StopwatchPage::TakingBreak { elapsed_time, break_duration_minutes, break_over_notification_sent, clock, .. } => {
+					}
+					StopwatchPage::TakingBreak {
+						elapsed_time,
+						break_duration_minutes,
+						break_over_notification_sent,
+						clock,
+						..
+					} => {
 						let timer_seconds = elapsed_time.as_secs_f32();
 						let needed_seconds = *break_duration_minutes as f32 * 60.0;
 						let seconds_left = needed_seconds - timer_seconds;
@@ -390,44 +480,45 @@ impl StopwatchPage {
 							*break_over_notification_sent = true;
 
 							if preferences.play_timer_notification_sound() {
-								timer_notification(format!("{break_duration_minutes} min. break is over!"), "".to_string());
+								timer_notification(
+									format!("{break_duration_minutes} min. break is over!"),
+									"".to_string(),
+								);
 							}
 						}
-					},
-					_ => {},
+					}
+					_ => {}
 				}
 
 				self.set_stopwatch_progress(preferences);
 
 				ContentPageAction::None
-			},
-			StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing => if let StopwatchPage::StopTaskTime {
-				project_id,
-				task_id,
-				..
-			} = self {
-				DatabaseMessage::StopTaskTimeSpend {
-					project_id: *project_id,
-					task_id: *task_id
-				}
-				.into()
 			}
-			else {
-				ContentPageAction::None
-			},
+			StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing => {
+				if let StopwatchPage::StopTaskTime {
+					project_id,
+					task_id,
+					..
+				} = self
+				{
+					DatabaseMessage::StopTaskTimeSpend {
+						project_id: *project_id,
+						task_id: *task_id,
+					}
+					.into()
+				} else {
+					ContentPageAction::None
+				}
+			}
 		}
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
 		container(match self {
 			StopwatchPage::Idle => Element::new(responsive(move |size| {
-				let track_time = column![
-					text("Track time:")
-						.size(45),
-					track_time_button()
-				]
-				.align_x(Alignment::Center)
-				.spacing(LARGE_SPACING_AMOUNT);
+				let track_time = column![text("Track time:").size(45), track_time_button()]
+					.align_x(Alignment::Center)
+					.spacing(LARGE_SPACING_AMOUNT);
 
 				let take_break = column![
 					text("or take a break:").size(45),
@@ -442,38 +533,58 @@ impl StopwatchPage {
 				.spacing(LARGE_SPACING_AMOUNT);
 
 				let page_view: Element<Message> = if size.width > size.height * 2.0 {
-					row![
-						track_time,
-						take_break
-					]
-					.spacing(LARGE_SPACING_AMOUNT * 3)
-					.into()
-				}
-				else {
-					column![
-						track_time,
-						take_break,
-					]
-					.align_x(Alignment::Center)
-					.spacing(LARGE_SPACING_AMOUNT)
-					.into()
+					row![track_time, take_break]
+						.spacing(LARGE_SPACING_AMOUNT * 3)
+						.into()
+				} else {
+					column![track_time, take_break,]
+						.align_x(Alignment::Center)
+						.spacing(LARGE_SPACING_AMOUNT)
+						.into()
 				};
 
-				container(page_view)
-					.center(Fill)
-					.into()
+				container(page_view).center(Fill).into()
 			})),
 
-			StopwatchPage::TrackTime { elapsed_time, paused, .. } => {
-				column![
-					text(format_stopwatch_duration(
-						elapsed_time.as_secs_f64().round_ties_even() as i64,
-					))
-					.font(FIRA_SANS_FONT)
-					.size(90)
-					.width(Fill)
-					.align_x(Horizontal::Center),
+			StopwatchPage::TrackTime {
+				elapsed_time,
+				paused,
+				..
+			} => column![
+				text(format_stopwatch_duration(
+					elapsed_time.as_secs_f64().round_ties_even() as i64,
+				))
+				.font(FIRA_SANS_FONT)
+				.size(90)
+				.width(Fill)
+				.align_x(Horizontal::Center),
+				row![
+					if *paused {
+						resume_timer_button()
+					} else {
+						pause_timer_button()
+					},
+					stop_timer_button()
+				]
+				.spacing(LARGE_SPACING_AMOUNT)
+			]
+			.align_x(Alignment::Center)
+			.spacing(LARGE_SPACING_AMOUNT)
+			.width(Fill)
+			.into(),
 
+			StopwatchPage::TakingBreak {
+				break_duration_minutes,
+				paused,
+				clock,
+				..
+			} => responsive(move |size| {
+				let clock = canvas(clock)
+					.width(Length::Fixed(225.0))
+					.height(Length::Fixed(225.0));
+
+				let controls = column![
+					text(format!("{break_duration_minutes} min. break")).size(45),
 					row![
 						if *paused {
 							resume_timer_button()
@@ -485,54 +596,23 @@ impl StopwatchPage {
 					.spacing(LARGE_SPACING_AMOUNT)
 				]
 				.align_x(Alignment::Center)
-				.spacing(LARGE_SPACING_AMOUNT)
-				.width(Fill)
-				.into()
-			},
+				.spacing(LARGE_SPACING_AMOUNT);
 
-			StopwatchPage::TakingBreak { break_duration_minutes, paused, clock, .. } => {
-				responsive(move |size| {
-					let clock = canvas(clock)
-						.width(Length::Fixed(225.0))
-						.height(Length::Fixed(225.0));
-
-					let controls = column![
-						text(format!("{break_duration_minutes} min. break")).size(45),
-
-						row![
-							if *paused {
-								resume_timer_button()
-							} else {
-								pause_timer_button()
-							},
-							stop_timer_button()
-						]
+				let page_view: Element<Message> = if size.width > size.height {
+					row![clock, controls]
 						.spacing(LARGE_SPACING_AMOUNT)
-					]
-					.align_x(Alignment::Center)
-					.spacing(LARGE_SPACING_AMOUNT);
+						.align_y(Vertical::Center)
+						.into()
+				} else {
+					column![clock, controls]
+						.spacing(LARGE_SPACING_AMOUNT)
+						.align_x(Horizontal::Center)
+						.into()
+				};
 
-					let page_view: Element<Message> = if size.width > size.height {
-						row![clock, controls]
-							.spacing(LARGE_SPACING_AMOUNT)
-							.align_y(Vertical::Center)
-							.into()
-					}
-					else {
-						column![clock, controls]
-							.spacing(LARGE_SPACING_AMOUNT)
-							.align_x(Horizontal::Center)
-							.into()
-					};
-
-					container(
-						page_view
-					)
-					.center(Fill)
-					.into()
-				})
-				.into()
-			},
+				container(page_view).center(Fill).into()
+			})
+			.into(),
 
 			StopwatchPage::StopTaskTime {
 				project_id,
@@ -559,7 +639,13 @@ impl StopwatchPage {
 								.into()
 						} else {
 							text(format_stopwatch_duration(
-								Self::get_spend_seconds(*project_id, *task_id, app.database.as_ref()).unwrap_or(0.0).round_ties_even() as i64,
+								Self::get_spend_seconds(
+									*project_id,
+									*task_id,
+									app.database.as_ref(),
+								)
+								.unwrap_or(0.0)
+								.round_ties_even() as i64,
 							))
 							.font(FIRA_SANS_FONT)
 							.size(90)
@@ -586,25 +672,20 @@ impl StopwatchPage {
 						task_ref,
 						*task_id,
 						project_ref.map(|project_ref| (*project_id, project_ref)),
-						app
-					)
-					{
+						app,
+					) {
 						if size.width > size.height {
 							row![
 								clock,
-								column![
-									task_info,
-									controls,
-								]
-								.align_x(Alignment::Center)
-								.spacing(LARGE_SPACING_AMOUNT)
-								.width(Fill)
+								column![task_info, controls,]
+									.align_x(Alignment::Center)
+									.spacing(LARGE_SPACING_AMOUNT)
+									.width(Fill)
 							]
 							.spacing(LARGE_SPACING_AMOUNT)
 							.align_y(Vertical::Center)
 							.into()
-						}
-						else {
+						} else {
 							column![
 								clock,
 								Space::new(0.0, LARGE_PADDING_AMOUNT),
@@ -615,23 +696,15 @@ impl StopwatchPage {
 							.align_x(Horizontal::Center)
 							.into()
 						}
-					}
-					else {
-						column![
-							clock,
-							controls
-						]
-						.align_x(Alignment::Center)
-						.spacing(LARGE_SPACING_AMOUNT)
-						.width(Fill)
-						.into()
+					} else {
+						column![clock, controls]
+							.align_x(Alignment::Center)
+							.spacing(LARGE_SPACING_AMOUNT)
+							.width(Fill)
+							.into()
 					};
 
-					container(
-						page_view
-					)
-					.center(Fill)
-					.into()
+					container(page_view).center(Fill).into()
 				})
 				.into()
 			}
@@ -642,14 +715,18 @@ impl StopwatchPage {
 	}
 
 	fn stop(&mut self, preferences: &mut Option<Preferences>) -> ContentPageAction {
-		let action = if let StopwatchPage::StopTaskTime { project_id, task_id, .. } = self {
+		let action = if let StopwatchPage::StopTaskTime {
+			project_id,
+			task_id,
+			..
+		} = self
+		{
 			DatabaseMessage::StopTaskTimeSpend {
 				project_id: *project_id,
-				task_id: *task_id
+				task_id: *task_id,
 			}
 			.into()
-		}
-		else {
+		} else {
 			ContentPageAction::None
 		};
 		*self = StopwatchPage::Idle;
@@ -673,9 +750,13 @@ impl StopwatchPage {
 					paused: *paused,
 					finished_notification_sent: *finished_notification_sent,
 				}),
-				StopwatchPage::TrackTime { elapsed_time, paused, .. } => Some(StopwatchProgress::TrackTime {
+				StopwatchPage::TrackTime {
+					elapsed_time,
+					paused,
+					..
+				} => Some(StopwatchProgress::TrackTime {
 					elapsed_time_seconds: elapsed_time.as_secs(),
-					paused: *paused
+					paused: *paused,
 				}),
 				StopwatchPage::TakingBreak {
 					elapsed_time,
@@ -688,27 +769,28 @@ impl StopwatchPage {
 					paused: *paused,
 					break_duration_minutes: *break_duration_minutes,
 					break_over_notification_sent: *break_over_notification_sent,
-				})
+				}),
 			};
 			preferences.set_stopwatch_progress(progress);
 		}
 	}
 }
 
-
 #[cfg(target_os = "windows")]
 fn timer_notification(summary: String, body: String) {
 	use std::path::Path;
 
-	use winrt_notification::{Duration, IconCrop, Sound, Toast };
+	use winrt_notification::{Duration, IconCrop, Sound, Toast};
 
 	let notification_result = Toast::new(Toast::POWERSHELL_APP_ID)
 		.title(&summary)
 		.text1(&body)
 		.icon(
-			Path::new("C:\\Users\\madca\\AppData\\Local\\Programs\\Project Tracker\\ProjectTracker.ico"),
+			Path::new(
+				"C:\\Users\\madca\\AppData\\Local\\Programs\\Project Tracker\\ProjectTracker.ico",
+			),
 			IconCrop::Square,
-			"Project Tracker Icon"
+			"Project Tracker Icon",
 		)
 		.duration(Duration::Long)
 		.sound(Some(Sound::Reminder))
@@ -721,21 +803,19 @@ fn timer_notification(summary: String, body: String) {
 
 #[cfg(not(target_os = "windows"))]
 fn timer_notification(summary: String, body: String) {
-	use std::{io::Cursor, thread};
 	use notify_rust::{Notification, Timeout};
+	use std::{io::Cursor, thread};
 
 	// play notification sound
-	thread::spawn(|| {
-		match rodio::OutputStream::try_default() {
-			Ok((_stream, stream_handle)) => {
-				let notification_sound_data = include_bytes!("../../assets/message-new-instant.oga");
-				match stream_handle.play_once(Cursor::new(notification_sound_data)) {
-					Ok(sink) => sink.sleep_until_end(),
-					Err(e) => eprintln!("Failed to play notification sound: {e}"),
-				}
-			},
-			Err(e) => eprintln!("Failed to play notification sound: {e}"),
+	thread::spawn(|| match rodio::OutputStream::try_default() {
+		Ok((_stream, stream_handle)) => {
+			let notification_sound_data = include_bytes!("../../assets/message-new-instant.oga");
+			match stream_handle.play_once(Cursor::new(notification_sound_data)) {
+				Ok(sink) => sink.sleep_until_end(),
+				Err(e) => eprintln!("Failed to play notification sound: {e}"),
+			}
 		}
+		Err(e) => eprintln!("Failed to play notification sound: {e}"),
 	});
 
 	// show notification
@@ -748,7 +828,9 @@ fn timer_notification(summary: String, body: String) {
 		.timeout(Timeout::Never);
 
 	#[cfg(target_os = "linux")]
-	notification.hint(notify_rust::Hint::DesktopEntry("project_tracker".to_string()));
+	notification.hint(notify_rust::Hint::DesktopEntry(
+		"project_tracker".to_string(),
+	));
 
 	#[cfg(target_os = "linux")]
 	notification.hint(notify_rust::Hint::Resident(true));
@@ -757,31 +839,34 @@ fn timer_notification(summary: String, body: String) {
 	let notification_result = notification.show();
 
 	#[cfg(target_os = "linux")]
-	thread::spawn(|| {
-		match notification_result {
-			Ok(notification_handle) => notification_handle.on_close(|| {}),
-			Err(e) => eprintln!("failed to show timer notification: {e}"),
-		}
+	thread::spawn(|| match notification_result {
+		Ok(notification_handle) => notification_handle.on_close(|| {}),
+		Err(e) => eprintln!("failed to show timer notification: {e}"),
 	});
 }
 
-fn task_info<'a>(task: Option<&'a Task>, task_id: TaskId, project: Option<(ProjectId, &'a Project)>, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
+fn task_info<'a>(
+	task: Option<&'a Task>,
+	task_id: TaskId,
+	project: Option<(ProjectId, &'a Project)>,
+	app: &'a ProjectTrackerApp,
+) -> Option<Element<'a, Message>> {
 	task.map(|task| {
 		Column::new()
-			.push(
-				text(task.name())
-					.size(HEADING_TEXT_SIZE)
-					.font(BOLD_FONT)
-			)
+			.push(text(task.name()).size(HEADING_TEXT_SIZE).font(BOLD_FONT))
 			.push_maybe(task.due_date.map(|date| days_left_widget(date, false)))
-			.push(task_description(app.task_description_markdown_items.get(&task_id), app))
+			.push(task_description(
+				app.task_description_markdown_items.get(&task_id),
+				app,
+			))
 			.push_maybe(project.map(|(project_id, project)| {
 				row![
-					container(
-						open_project_button(project_id, &project.name, project.color.to_iced_color())
-					)
+					container(open_project_button(
+						project_id,
+						&project.name,
+						project.color.to_iced_color()
+					))
 					.padding(HORIZONTAL_SCROLLABLE_PADDING),
-
 					horizontal_scrollable(
 						Row::with_children(task.tags.iter().map(|tag_id| {
 							if let Some(tag) = project.task_tags.get(tag_id) {
@@ -792,7 +877,7 @@ fn task_info<'a>(task: Option<&'a Task>, task_id: TaskId, project: Option<(Proje
 									.padding(
 										Padding::new(SMALL_PADDING_AMOUNT)
 											.left(PADDING_AMOUNT)
-											.right(PADDING_AMOUNT)
+											.right(PADDING_AMOUNT),
 									)
 									.into()
 							} else {

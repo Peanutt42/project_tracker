@@ -1,7 +1,10 @@
-use iced::{futures::{self, channel::mpsc, SinkExt, Stream, StreamExt}, stream};
+use async_tungstenite::tungstenite;
+use iced::{
+	futures::{self, channel::mpsc, SinkExt, Stream, StreamExt},
+	stream,
+};
 use project_tracker_server::{Request, Response, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
 use serde::{Deserialize, Serialize};
-use async_tungstenite::tungstenite;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ServerConfig {
@@ -28,7 +31,7 @@ pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 		};
 		let mut connection = WsServerConnection::Disconnected;
 
-		while state.update(&mut connection, &mut output).await { }
+		while state.update(&mut connection, &mut output).await {}
 	})
 }
 
@@ -39,7 +42,11 @@ struct WsServerConnectionState {
 
 impl WsServerConnectionState {
 	// returns whether to continue or to quit
-	async fn update(&mut self, connection: &mut WsServerConnection, output: &mut mpsc::Sender<ServerWsEvent>) -> bool {
+	async fn update(
+		&mut self,
+		connection: &mut WsServerConnection,
+		output: &mut mpsc::Sender<ServerWsEvent>,
+	) -> bool {
 		match connection {
 			WsServerConnection::Disconnected => {
 				if !self.message_sender_sent {
@@ -47,28 +54,37 @@ impl WsServerConnectionState {
 
 					self.message_receiver = Some(receiver);
 
-					if output.send(ServerWsEvent::MessageSender(ServerWsMessageSender(sender))).await.is_ok() {
+					if output
+						.send(ServerWsEvent::MessageSender(ServerWsMessageSender(sender)))
+						.await
+						.is_ok()
+					{
 						self.message_sender_sent = true;
-					}
-					else {
+					} else {
 						return false;
 					}
 				}
 
 				if let Some(message_receiver) = &mut self.message_receiver {
-					if let Some(ServerWsMessage::Connect(server_config)) = message_receiver.next().await {
+					if let Some(ServerWsMessage::Connect(server_config)) =
+						message_receiver.next().await
+					{
 						*connection = WsServerConnection::Connecting(server_config);
 					}
 				}
 				true
-			},
+			}
 			WsServerConnection::Connecting(server_config) => {
 				let server_config = server_config.clone();
 				match self.connect(output, connection, server_config).await {
 					Ok(continue_subscription) => continue_subscription,
 					Err(e) => {
 						eprintln!("failed to connect to ws: {e}");
-						if output.send(ServerWsEvent::Error(format!("{e}"))).await.is_err() {
+						if output
+							.send(ServerWsEvent::Error(format!("{e}")))
+							.await
+							.is_err()
+						{
 							return false;
 						}
 						if output.send(ServerWsEvent::Disconnected).await.is_err() {
@@ -76,11 +92,12 @@ impl WsServerConnectionState {
 						}
 						tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 						true
-					},
+					}
 				}
-			},
+			}
 			WsServerConnection::Connected(websocket, server_config) => {
-				let (continue_subscription, new_connection_state) = self.listen(websocket, server_config.clone(), output).await;
+				let (continue_subscription, new_connection_state) =
+					self.listen(websocket, server_config.clone(), output).await;
 				if let Some(new_connection_state) = new_connection_state {
 					*connection = new_connection_state;
 				}
@@ -89,11 +106,18 @@ impl WsServerConnectionState {
 		}
 	}
 
-	async fn connect(&mut self, output: &mut mpsc::Sender<ServerWsEvent>, connection: &mut WsServerConnection, mut server_config: ServerConfig) -> Result<bool, async_tungstenite::tungstenite::Error> {
+	async fn connect(
+		&mut self,
+		output: &mut mpsc::Sender<ServerWsEvent>,
+		connection: &mut WsServerConnection,
+		mut server_config: ServerConfig,
+	) -> Result<bool, async_tungstenite::tungstenite::Error> {
 		match &mut self.message_receiver {
 			Some(message_receiver) => {
 				if let WsServerConnection::Connecting(current_server_config) = connection {
-					if let Ok(Some(ServerWsMessage::Connect(new_server_config))) = message_receiver.try_next() {
+					if let Ok(Some(ServerWsMessage::Connect(new_server_config))) =
+						message_receiver.try_next()
+					{
 						*current_server_config = new_server_config.clone();
 						server_config = new_server_config;
 					}
@@ -107,11 +131,11 @@ impl WsServerConnectionState {
 					return Ok(false);
 				}
 				*connection = WsServerConnection::Connected(webserver, server_config.clone());
-			},
+			}
 			None => {
 				self.message_sender_sent = false;
 				*connection = WsServerConnection::Disconnected;
-			},
+			}
 		}
 		Ok(true)
 	}
@@ -120,7 +144,7 @@ impl WsServerConnectionState {
 		&mut self,
 		websocket: &mut WebSocketStream,
 		server_config: ServerConfig,
-		output: &mut mpsc::Sender<ServerWsEvent>
+		output: &mut mpsc::Sender<ServerWsEvent>,
 	) -> (bool, Option<WsServerConnection>) {
 		let mut fused_websocket = websocket.by_ref().fuse();
 
@@ -199,7 +223,7 @@ impl WsServerConnectionState {
 			None => {
 				self.message_sender_sent = false;
 				(true, Some(WsServerConnection::Disconnected))
-			},
+			}
 		}
 	}
 }
@@ -211,10 +235,7 @@ type WebSocketStream = async_tungstenite::WebSocketStream<async_tungstenite::tok
 enum WsServerConnection {
 	Disconnected,
 	Connecting(ServerConfig),
-	Connected(
-		WebSocketStream,
-		ServerConfig
-	),
+	Connected(WebSocketStream, ServerConfig),
 }
 
 #[derive(Debug, Clone)]
@@ -233,7 +254,10 @@ pub enum ServerWsEvent {
 pub struct ServerWsMessageSender(mpsc::Sender<ServerWsMessage>);
 
 impl ServerWsMessageSender {
-	pub fn send(&mut self, message: ServerWsMessage) -> Result<(), mpsc::TrySendError<ServerWsMessage>> {
+	pub fn send(
+		&mut self,
+		message: ServerWsMessage,
+	) -> Result<(), mpsc::TrySendError<ServerWsMessage>> {
 		self.0.try_send(message)
 	}
 }

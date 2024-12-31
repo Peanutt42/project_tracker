@@ -1,12 +1,13 @@
 use crate::{
 	components::{
-		cancel_create_new_task_tag_button, color_palette, color_palette_item_button, create_new_task_tags_button, delete_task_tag_button, task_tag_name_button, unfocusable
-	}, core::IcedColorConversion, project_tracker::Message, styles::{
-		card_style, text_input_style_only_round_left,
-		LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT,
-	}, ProjectTrackerApp
+		cancel_create_new_task_tag_button, color_palette, color_palette_item_button,
+		create_new_task_tags_button, delete_task_tag_button, task_tag_name_button, unfocusable,
+	},
+	core::IcedColorConversion,
+	project_tracker::Message,
+	styles::{card_style, text_input_style_only_round_left, LARGE_TEXT_SIZE, SMALL_SPACING_AMOUNT},
+	ProjectTrackerApp,
 };
-use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, SerializableColor, TaskTag, TaskTagId};
 use iced::{
 	widget::{column, row, text, text_input, Column, Space},
 	Alignment, Color, Element,
@@ -14,6 +15,9 @@ use iced::{
 	Task,
 };
 use iced_aw::{card, drop_down, DropDown};
+use project_tracker_core::{
+	Database, DatabaseMessage, Project, ProjectId, SerializableColor, TaskTag, TaskTagId,
+};
 use std::sync::LazyLock;
 
 static CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID: LazyLock<text_input::Id> =
@@ -122,31 +126,32 @@ impl ManageTaskTagsModal {
 						new_color: SerializableColor::from_iced_color(new_color),
 					}
 					.into()
-				}
-				else {
+				} else {
 					ManageTaskTagsModalAction::None
 				};
 				self.stop_editing_task_tag_color();
 				action
 			}
 			ManageTaskTagsModalMessage::ChangeEditTaskTagName(new_name) => {
-				if let Some((_edit_task_tag_id, edit_task_tag_name)) = &mut self.edit_task_tag_name_id {
+				if let Some((_edit_task_tag_id, edit_task_tag_name)) =
+					&mut self.edit_task_tag_name_id
+				{
 					*edit_task_tag_name = new_name;
 				}
 				ManageTaskTagsModalAction::None
 			}
 			ManageTaskTagsModalMessage::ChangeTaskTagName => {
-				let action = if let Some((edit_task_tag_id, new_name)) = &mut self.edit_task_tag_name_id {
-					DatabaseMessage::ChangeTaskTagName {
-						project_id: self.project_id,
-						task_tag_id: *edit_task_tag_id,
-						new_name: std::mem::take(new_name),
-					}
-					.into()
-				}
-				else {
-					ManageTaskTagsModalAction::None
-				};
+				let action =
+					if let Some((edit_task_tag_id, new_name)) = &mut self.edit_task_tag_name_id {
+						DatabaseMessage::ChangeTaskTagName {
+							project_id: self.project_id,
+							task_tag_id: *edit_task_tag_id,
+							new_name: std::mem::take(new_name),
+						}
+						.into()
+					} else {
+						ManageTaskTagsModalAction::None
+					};
 				self.stop_editing_task_tag_name();
 				action
 			}
@@ -169,8 +174,7 @@ impl ManageTaskTagsModal {
 						),
 					}
 					.into()
-				}
-				else {
+				} else {
 					ManageTaskTagsModalAction::None
 				};
 				self.close_create_new_task_tag();
@@ -193,8 +197,7 @@ impl ManageTaskTagsModal {
 			.and_then(|db| db.get_project(&self.project_id))
 		{
 			card(
-				text(format!("Manage project '{}' task tags", project.name))
-					.size(LARGE_TEXT_SIZE),
+				text(format!("Manage project '{}' task tags", project.name)).size(LARGE_TEXT_SIZE),
 				self.tags_list_view(
 					project,
 					&self.create_new_task_tag,
@@ -269,25 +272,23 @@ impl ManageTaskTagsModal {
 						ManageTaskTagsModalMessage::StopEditTaskTagColor.into()
 					} else {
 						ManageTaskTagsModalMessage::EditTaskTagColor(tag_id).into()
-					}
+					},
 				),
 				color_palette(tag.color.to_iced_color(), move |new_color| {
 					ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color).into()
 				}),
-				show_color_palette
+				show_color_palette,
 			)
 			.width(Fill)
 			.alignment(drop_down::Alignment::End)
 			.on_dismiss(ManageTaskTagsModalMessage::StopEditTaskTagColor.into());
 
 			tags_list.push(
-				column![row![
-					color_picker,
-					name_element,
-					delete_task_tag_button(tag_id),
+				column![
+					row![color_picker, name_element, delete_task_tag_button(tag_id),]
+						.align_y(Alignment::Center)
+						.spacing(SMALL_SPACING_AMOUNT)
 				]
-				.align_y(Alignment::Center)
-				.spacing(SMALL_SPACING_AMOUNT)]
 				.into(),
 			);
 		}

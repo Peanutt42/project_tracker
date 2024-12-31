@@ -1,16 +1,29 @@
-use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::broadcast::{Receiver, Sender};
-use tokio::sync::mpsc;
+use crate::{
+	ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ResponseError,
+	ServerError, SharedServerData,
+};
+use async_tungstenite::{
+	tokio::accept_async,
+	tungstenite::{self, Message},
+};
+use futures_util::{SinkExt, StreamExt};
+use project_tracker_core::Database;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use async_tungstenite::{tungstenite::{self, Message}, tokio::accept_async};
-use futures_util::{SinkExt, StreamExt};
-use project_tracker_core::Database;
-use crate::{ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ResponseError, ServerError, SharedServerData};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::mpsc;
 
-pub async fn run_server(port: usize, database_filepath: PathBuf, password: String, modified_sender: Sender<ModifiedEvent>, shared_data: Arc<RwLock<SharedServerData>>) {
-	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await
+pub async fn run_server(
+	port: usize,
+	database_filepath: PathBuf,
+	password: String,
+	modified_sender: Sender<ModifiedEvent>,
+	shared_data: Arc<RwLock<SharedServerData>>,
+) {
+	let listener = TcpListener::bind(format!("0.0.0.0:{}", port))
+		.await
 		.expect("Failed to bind to port");
 
 	println!("[Native WS] listening on port {}", port);
@@ -30,7 +43,7 @@ pub async fn run_server(port: usize, database_filepath: PathBuf, password: Strin
 						password_clone,
 						modified_sender_clone,
 						modified_receiver,
-						shared_data_clone
+						shared_data_clone,
 					)
 					.await
 				});
@@ -46,24 +59,42 @@ async fn handle_client(
 	password: String,
 	modified_sender: Sender<ModifiedEvent>,
 	modified_receiver: Receiver<ModifiedEvent>,
-	shared_data: Arc<RwLock<SharedServerData>>
-)
-{
+	shared_data: Arc<RwLock<SharedServerData>>,
+) {
 	let client_addr = match stream.peer_addr() {
 		Ok(client_addr) => client_addr,
 		Err(e) => {
-			eprintln!("[Native WS] failed to get clients socket address, ignoring client, error: {e}");
+			eprintln!(
+				"[Native WS] failed to get clients socket address, ignoring client, error: {e}"
+			);
 			return;
-		},
+		}
 	};
 
 	let connected_client = ConnectedClient::NativeGUI(client_addr);
 
-	shared_data.write().unwrap().connected_clients.insert(connected_client);
+	shared_data
+		.write()
+		.unwrap()
+		.connected_clients
+		.insert(connected_client);
 
-	listen_client_thread(stream, client_addr, database_filepath, password, modified_sender, modified_receiver, shared_data.clone()).await;
+	listen_client_thread(
+		stream,
+		client_addr,
+		database_filepath,
+		password,
+		modified_sender,
+		modified_receiver,
+		shared_data.clone(),
+	)
+	.await;
 
-	shared_data.write().unwrap().connected_clients.remove(&connected_client);
+	shared_data
+		.write()
+		.unwrap()
+		.connected_clients
+		.remove(&connected_client);
 }
 
 async fn listen_client_thread(
@@ -73,14 +104,13 @@ async fn listen_client_thread(
 	password: String,
 	modified_sender: Sender<ModifiedEvent>,
 	modified_receiver: Receiver<ModifiedEvent>,
-	shared_data: Arc<RwLock<SharedServerData>>
-)
-{
+	shared_data: Arc<RwLock<SharedServerData>>,
+) {
 	let ws_stream = match accept_async(stream).await {
 		Ok(ws) => {
 			println!("[Native WS] client connected");
 			ws
-		},
+		}
 		Err(e) => {
 			eprintln!("[Native WS] WebSocket Handshake failed: {e}");
 			return;
@@ -93,70 +123,91 @@ async fn listen_client_thread(
 
 	ws_write_thread(write, write_ws_receiver);
 
-	modified_event_ws_sender_thread(client_addr, password.clone(), modified_receiver, write_ws_sender.clone());
+	modified_event_ws_sender_thread(
+		client_addr,
+		password.clone(),
+		modified_receiver,
+		write_ws_sender.clone(),
+	);
 
 	loop {
 		match read.next().await {
-			Some(Ok(tungstenite::Message::Binary(request_binary))) => match Request::decrypt(request_binary, &password) {
-				Ok(request) => respond_to_client_request(
-					request,
-					client_addr,
-					&shared_data,
-					&modified_sender,
-					&write_ws_sender,
-					&database_filepath,
-					&password
-				)
-				.await,
-				Err(e) => match e {
-					ServerError::ResponseError(e) => {
-						eprintln!("[Native WS] {e}");
-						let _ = write_ws_sender.send(Message::binary(
-							Response(Err(e))
-								.serialize()
-								.unwrap()
-						))
-						.await;
+			Some(Ok(tungstenite::Message::Binary(request_binary))) => {
+				match Request::decrypt(request_binary, &password) {
+					Ok(request) => {
+						respond_to_client_request(
+							request,
+							client_addr,
+							&shared_data,
+							&modified_sender,
+							&write_ws_sender,
+							&database_filepath,
+							&password,
+						)
+						.await
 					}
-					_ => eprintln!("[Native WS] failed to parse request: {e}"),
-				},
-			},
-			Some(Err(ref e)) if matches!(
-				e,
-				tungstenite::Error::ConnectionClosed |
-				tungstenite::Error::AlreadyClosed |
-				tungstenite::Error::Protocol(tungstenite::error::ProtocolError::ResetWithoutClosingHandshake)
-			) => {
+					Err(e) => match e {
+						ServerError::ResponseError(e) => {
+							eprintln!("[Native WS] {e}");
+							let _ = write_ws_sender
+								.send(Message::binary(Response(Err(e)).serialize().unwrap()))
+								.await;
+						}
+						_ => eprintln!("[Native WS] failed to parse request: {e}"),
+					},
+				}
+			}
+			Some(Err(ref e))
+				if matches!(
+					e,
+					tungstenite::Error::ConnectionClosed
+						| tungstenite::Error::AlreadyClosed
+						| tungstenite::Error::Protocol(
+							tungstenite::error::ProtocolError::ResetWithoutClosingHandshake
+						)
+				) =>
+			{
 				println!("[Native WS] client disconnected");
 				return;
-			},
+			}
 			None => {
 				println!("[Native WS] client disconnected");
 				return;
-			},
+			}
 			Some(Err(e)) => eprintln!("[Native WS] failed to read ws message: {e}"),
-			Some(Ok(_)) => {}, // ignore
+			Some(Ok(_)) => {} // ignore
 		}
 	}
 }
 
-async fn respond_to_client_request(request: Request, client_addr: SocketAddr, shared_data: &Arc<RwLock<SharedServerData>>, modified_sender: &Sender<ModifiedEvent>, write_ws_sender: &tokio::sync::mpsc::Sender<Message>, database_filepath: &PathBuf, password: &str) {
+async fn respond_to_client_request(
+	request: Request,
+	client_addr: SocketAddr,
+	shared_data: &Arc<RwLock<SharedServerData>>,
+	modified_sender: &Sender<ModifiedEvent>,
+	write_ws_sender: &tokio::sync::mpsc::Sender<Message>,
+	database_filepath: &PathBuf,
+	password: &str,
+) {
 	match request {
 		Request::GetModifiedDate => {
 			println!("[Native WS] sending last modified date");
-			let response = Response(Ok(
-				EncryptedResponse::ModifiedDate(*shared_data.read().unwrap().database.last_changed_time())
-					.encrypt(password)
-					.unwrap()
-			))
+			let response = Response(Ok(EncryptedResponse::ModifiedDate(
+				*shared_data.read().unwrap().database.last_changed_time(),
+			)
+			.encrypt(password)
+			.unwrap()))
 			.serialize()
 			.unwrap();
 
 			if let Err(e) = write_ws_sender.send(Message::binary(response)).await {
 				eprintln!("[Native WS] failed to respond to 'GetModifiedDate' request: {e}");
 			}
-		},
-		Request::UpdateDatabase { database_binary, last_modified_time } => {
+		}
+		Request::UpdateDatabase {
+			database_binary,
+			last_modified_time,
+		} => {
 			match Database::from_binary(&database_binary, last_modified_time) {
 				Ok(database) => {
 					let database_clone = {
@@ -166,51 +217,51 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 					};
 
 					if let Err(e) = std::fs::write(database_filepath, database_binary) {
-						panic!("[Native WS] cant write to database file: {}, error: {e}", database_filepath.display());
+						panic!(
+							"[Native WS] cant write to database file: {}, error: {e}",
+							database_filepath.display()
+						);
 					}
 
-					let _ = write_ws_sender.send(Message::binary(
-						Response(Ok(
-							EncryptedResponse::DatabaseUpdated
+					let _ = write_ws_sender
+						.send(Message::binary(
+							Response(Ok(EncryptedResponse::DatabaseUpdated
 								.encrypt(password)
-								.unwrap()
+								.unwrap()))
+							.serialize()
+							.unwrap(),
 						))
-						.serialize()
-						.unwrap()
-					))
-					.await;
+						.await;
 
 					let _ = modified_sender.send(ModifiedEvent::new(database_clone, client_addr));
 
 					println!("[Native WS] Updated database file");
-				},
+				}
 				Err(e) => {
 					eprintln!("[Native WS] failed to parse database binary of client: {e}");
 
-					let _ = write_ws_sender.send(Message::binary(
-						Response(Err(ResponseError::InvalidDatabaseBinary))
-							.serialize()
-							.unwrap()
-					))
-					.await;
-				},
+					let _ = write_ws_sender
+						.send(Message::binary(
+							Response(Err(ResponseError::InvalidDatabaseBinary))
+								.serialize()
+								.unwrap(),
+						))
+						.await;
+				}
 			};
-		},
+		}
 		Request::DownloadDatabase => {
 			let shared_data_clone = shared_data.read().unwrap().clone();
 			let last_modified_time = *shared_data_clone.database.last_changed_time();
-			let response = Response(Ok(
-				EncryptedResponse::Database{
-					database: shared_data_clone.database.to_serialized(),
-					last_modified_time,
-				}
-				.encrypt(password)
-				.unwrap()
-			));
-			match write_ws_sender.send(
-				Message::binary(response.serialize().unwrap())
-			)
-			.await
+			let response = Response(Ok(EncryptedResponse::Database {
+				database: shared_data_clone.database.to_serialized(),
+				last_modified_time,
+			}
+			.encrypt(password)
+			.unwrap()));
+			match write_ws_sender
+				.send(Message::binary(response.serialize().unwrap()))
+				.await
 			{
 				Ok(_) => println!("[Native WS] sent database"),
 				Err(e) => eprintln!("[Native WS] failed to send database to client: {e}"),
@@ -219,26 +270,30 @@ async fn respond_to_client_request(request: Request, client_addr: SocketAddr, sh
 	}
 }
 
-fn modified_event_ws_sender_thread(client_addr: SocketAddr, password: String, mut modified_receiver: Receiver<ModifiedEvent>, write_ws_sender: tokio::sync::mpsc::Sender<Message>) {
+fn modified_event_ws_sender_thread(
+	client_addr: SocketAddr,
+	password: String,
+	mut modified_receiver: Receiver<ModifiedEvent>,
+	write_ws_sender: tokio::sync::mpsc::Sender<Message>,
+) {
 	tokio::spawn(async move {
 		while let Ok(modified_event) = modified_receiver.recv().await {
 			// do not resend database updated msg to the sender that made that update
 			if modified_event.modified_sender_address != client_addr {
 				let last_modified_time = *modified_event.modified_database.last_changed_time();
-				let failed_to_send_msg = write_ws_sender.send(Message::binary(
-					Response(Ok(
-						EncryptedResponse::Database{
+				let failed_to_send_msg = write_ws_sender
+					.send(Message::binary(
+						Response(Ok(EncryptedResponse::Database {
 							database: modified_event.modified_database.to_serialized(),
 							last_modified_time,
 						}
 						.encrypt(&password)
-						.unwrap()
+						.unwrap()))
+						.serialize()
+						.unwrap(),
 					))
-					.serialize()
-					.unwrap()
-				))
-				.await
-				.is_err();
+					.await
+					.is_err();
 
 				if failed_to_send_msg {
 					break;
@@ -248,17 +303,25 @@ fn modified_event_ws_sender_thread(client_addr: SocketAddr, password: String, mu
 	});
 }
 
-type WsWriteSink = futures_util::stream::SplitSink<async_tungstenite::WebSocketStream<async_tungstenite::tokio::TokioAdapter<TcpStream>>, Message>;
-fn ws_write_thread(mut write: WsWriteSink, mut write_ws_receiver: tokio::sync::mpsc::Receiver<Message>) {
+type WsWriteSink = futures_util::stream::SplitSink<
+	async_tungstenite::WebSocketStream<async_tungstenite::tokio::TokioAdapter<TcpStream>>,
+	Message,
+>;
+fn ws_write_thread(
+	mut write: WsWriteSink,
+	mut write_ws_receiver: tokio::sync::mpsc::Receiver<Message>,
+) {
 	tokio::spawn(async move {
 		while let Some(message) = write_ws_receiver.recv().await {
 			if let Err(e) = write.send(message).await {
 				match e {
-					tungstenite::Error::AlreadyClosed |
-					tungstenite::Error::ConnectionClosed |
-					tungstenite::Error::Protocol(tungstenite::error::ProtocolError::ResetWithoutClosingHandshake) => {
+					tungstenite::Error::AlreadyClosed
+					| tungstenite::Error::ConnectionClosed
+					| tungstenite::Error::Protocol(
+						tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
+					) => {
 						return;
-					},
+					}
 					_ => eprintln!("[Native WS] failed to send response: {e}"),
 				}
 			}

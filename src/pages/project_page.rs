@@ -1,29 +1,37 @@
 use crate::{
 	components::{
-		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button, horizontal_scrollable, open_create_task_modal_button, project_context_menu_button, search_tasks_button, sort_dropdown_button, task_list, task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING
-	}, core::{IcedColorConversion, SortModeUI, import_source_code_todos}, icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT}, pages::{ContentPageAction, ContentPageMessage}, project_tracker::{Message, ProjectTrackerApp}, styles::{
-		text_input_style_borderless, text_input_style_only_round_left, PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE
-	}, OptionalPreference, Preferences
+		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button,
+		horizontal_scrollable, open_create_task_modal_button, project_context_menu_button,
+		search_tasks_button, sort_dropdown_button, task_list, task_tag_button, unfocusable,
+		ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING,
+	},
+	core::{import_source_code_todos, IcedColorConversion, SortModeUI},
+	icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT},
+	pages::{ContentPageAction, ContentPageMessage},
+	project_tracker::{Message, ProjectTrackerApp},
+	styles::{
+		text_input_style_borderless, text_input_style_only_round_left, PADDING_AMOUNT,
+		SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE,
+	},
+	OptionalPreference, Preferences,
 };
 use chrono::{DateTime, Utc};
-use indexmap::IndexMap;
-use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, SerializableColor, SortMode, Task, TaskId, TaskTagId, TaskType};
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use iced::{
 	alignment::{Alignment, Horizontal},
 	keyboard,
-	widget::{
-		column, container, row,
-		text, text_input, Row, Space,
-	},
+	widget::{column, container, row, text, text_input, Row, Space},
 	Color, Element,
 	Length::Fill,
 	Padding, Subscription,
 };
 use iced_aw::{drop_down, DropDown};
-use std::{
-	collections::HashSet, path::PathBuf, sync::LazyLock, time::SystemTime
+use indexmap::IndexMap;
+use project_tracker_core::{
+	Database, DatabaseMessage, Project, ProjectId, SerializableColor, SortMode, Task, TaskId,
+	TaskTagId, TaskType,
 };
+use std::{collections::HashSet, path::PathBuf, sync::LazyLock, time::SystemTime};
 
 static PROJECT_NAME_TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 static SEARCH_TASKS_TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
@@ -96,31 +104,33 @@ impl CachedTaskList {
 		project: &Project,
 		task_tag_filter: &HashSet<TaskTagId>,
 		search_filter: &Option<String>,
-		sort_unspecified_tasks_at_bottom: bool
+		sort_unspecified_tasks_at_bottom: bool,
 	) -> Self {
 		let mut todo_list = Vec::new();
 		let mut done_list = Vec::new();
 		let mut source_code_todo_list = Vec::new();
 
-		if let Some(search_filter) = search_filter.as_ref()
-			.and_then(|search_filter| if search_filter.is_empty() {
+		if let Some(search_filter) = search_filter.as_ref().and_then(|search_filter| {
+			if search_filter.is_empty() {
 				None // pretend that no filter is enabled when fitler is empty
 			} else {
 				Some(search_filter)
-			})
-		{
+			}
+		}) {
 			let mut todo_score_map = Vec::new();
 			let mut done_score_map = Vec::new();
 			let mut source_code_todo_score_map = Vec::new();
 			for (task_id, task, task_type) in project.iter() {
 				if task.matches_filter(task_tag_filter) {
-					let task_name_match = SkimMatcherV2::default()
-						.fuzzy_match(task.name(), search_filter);
-					let task_description_match = SkimMatcherV2::default()
-						.fuzzy_match(task.description(), search_filter);
+					let task_name_match =
+						SkimMatcherV2::default().fuzzy_match(task.name(), search_filter);
+					let task_description_match =
+						SkimMatcherV2::default().fuzzy_match(task.description(), search_filter);
 
 					let task_match = match (task_name_match, task_description_match) {
-						(Some(task_name_match), Some(task_description_match)) => Some(task_name_match + task_description_match),
+						(Some(task_name_match), Some(task_description_match)) => {
+							Some(task_name_match + task_description_match)
+						}
 						_ => task_name_match.or(task_description_match),
 					};
 
@@ -128,7 +138,9 @@ impl CachedTaskList {
 						match task_type {
 							TaskType::Todo => todo_score_map.push((task_id, task_match)),
 							TaskType::Done => done_score_map.push((task_id, task_match)),
-							TaskType::SourceCodeTodo => source_code_todo_score_map.push((task_id, task_match)),
+							TaskType::SourceCodeTodo => {
+								source_code_todo_score_map.push((task_id, task_match))
+							}
 						}
 					}
 				}
@@ -144,13 +156,16 @@ impl CachedTaskList {
 			done_score_map.sort_unstable_by(sort_compare);
 			source_code_todo_score_map.sort_unstable_by(sort_compare);
 
-			todo_list = todo_score_map.into_iter()
+			todo_list = todo_score_map
+				.into_iter()
 				.map(|(task_id, _match)| task_id)
 				.collect();
-			done_list = done_score_map.into_iter()
+			done_list = done_score_map
+				.into_iter()
 				.map(|(task_id, _match)| task_id)
 				.collect();
-			source_code_todo_list = source_code_todo_score_map.into_iter()
+			source_code_todo_list = source_code_todo_score_map
+				.into_iter()
 				.map(|(task_id, _match)| task_id)
 				.collect();
 		} else {
@@ -164,9 +179,17 @@ impl CachedTaskList {
 				}
 			}
 
-			project.sort_mode.sort(project, &mut todo_list, sort_unspecified_tasks_at_bottom);
-			project.sort_mode.sort(project, &mut done_list, sort_unspecified_tasks_at_bottom);
-			project.sort_mode.sort(project, &mut source_code_todo_list, sort_unspecified_tasks_at_bottom);
+			project
+				.sort_mode
+				.sort(project, &mut todo_list, sort_unspecified_tasks_at_bottom);
+			project
+				.sort_mode
+				.sort(project, &mut done_list, sort_unspecified_tasks_at_bottom);
+			project.sort_mode.sort(
+				project,
+				&mut source_code_todo_list,
+				sort_unspecified_tasks_at_bottom,
+			);
 		}
 
 		Self::new(todo_list, done_list, source_code_todo_list)
@@ -190,8 +213,17 @@ pub struct ProjectPage {
 }
 
 impl ProjectPage {
-	pub fn new(project_id: ProjectId, project: &Project, preferences: &Option<Preferences>) -> Self {
-		let cached_task_list = CachedTaskList::generate(project, &HashSet::new(), &None, preferences.sort_unspecified_tasks_at_bottom());
+	pub fn new(
+		project_id: ProjectId,
+		project: &Project,
+		preferences: &Option<Preferences>,
+	) -> Self {
+		let cached_task_list = CachedTaskList::generate(
+			project,
+			&HashSet::new(),
+			&None,
+			preferences.sort_unspecified_tasks_at_bottom(),
+		);
 
 		Self {
 			project_id,
@@ -210,8 +242,10 @@ impl ProjectPage {
 	}
 
 	pub fn filtering_tasks(&self) -> bool {
-		!self.filter_task_tags.is_empty() ||
-			self.search_tasks_filter.as_ref()
+		!self.filter_task_tags.is_empty()
+			|| self
+				.search_tasks_filter
+				.as_ref()
 				.map(|search_filter| !search_filter.is_empty())
 				.unwrap_or(false)
 	}
@@ -220,25 +254,40 @@ impl ProjectPage {
 		&mut self,
 		message: ProjectPageMessage,
 		database: Option<&Database>,
-		preferences: &Option<Preferences>
+		preferences: &Option<Preferences>,
 	) -> ContentPageAction {
 		let command = match message {
 			ProjectPageMessage::RefreshCachedTaskList => ContentPageAction::None,
 
-			ProjectPageMessage::OpenSortModeDropdown => { self.show_sort_mode_dropdown = true; ContentPageAction::None },
-			ProjectPageMessage::CloseSortModeDropdown => { self.show_sort_mode_dropdown = false; ContentPageAction::None },
+			ProjectPageMessage::OpenSortModeDropdown => {
+				self.show_sort_mode_dropdown = true;
+				ContentPageAction::None
+			}
+			ProjectPageMessage::CloseSortModeDropdown => {
+				self.show_sort_mode_dropdown = false;
+				ContentPageAction::None
+			}
 			ProjectPageMessage::SetSortMode(new_sort_mode) => {
 				self.show_sort_mode_dropdown = false;
 				DatabaseMessage::ChangeProjectSortMode {
 					project_id: self.project_id,
-					new_sort_mode
+					new_sort_mode,
 				}
 				.into()
 			}
 
-			ProjectPageMessage::ShowContextMenu => { self.show_context_menu = true; ContentPageAction::None },
-			ProjectPageMessage::HideContextMenu => { self.show_context_menu = false; ContentPageAction::None },
-			ProjectPageMessage::OpenManageTaskTagsModal => { self.show_context_menu = false; ContentPageAction::OpenManageTaskTagsModal(self.project_id) },
+			ProjectPageMessage::ShowContextMenu => {
+				self.show_context_menu = true;
+				ContentPageAction::None
+			}
+			ProjectPageMessage::HideContextMenu => {
+				self.show_context_menu = false;
+				ContentPageAction::None
+			}
+			ProjectPageMessage::OpenManageTaskTagsModal => {
+				self.show_context_menu = false;
+				ContentPageAction::OpenManageTaskTagsModal(self.project_id)
+			}
 
 			ProjectPageMessage::OpenSearchTasks => {
 				self.search_tasks_filter = Some(String::new());
@@ -265,53 +314,66 @@ impl ProjectPage {
 			ProjectPageMessage::ImportSourceCodeTodosDialog => {
 				self.show_context_menu = false;
 				self.importing_source_code_todos = true;
-				iced::Task::perform(Self::pick_todo_source_code_folder_dialog(), |source_code_todos| {
-					if let Some((source_code_directory, source_code_todos)) = source_code_todos {
-						ProjectPageMessage::ImportSourceCodeTodos{
-							source_code_directory,
-							source_code_todos
-						}.into()
-					} else {
-						ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into()
-					}
-				})
+				iced::Task::perform(
+					Self::pick_todo_source_code_folder_dialog(),
+					|source_code_todos| {
+						if let Some((source_code_directory, source_code_todos)) = source_code_todos
+						{
+							ProjectPageMessage::ImportSourceCodeTodos {
+								source_code_directory,
+								source_code_todos,
+							}
+							.into()
+						} else {
+							ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into()
+						}
+					},
+				)
 				.into()
 			}
 			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => {
 				self.importing_source_code_todos = false;
 				ContentPageAction::None
-			},
-			ProjectPageMessage::ImportSourceCodeTodos{ source_code_directory, source_code_todos } => {
+			}
+			ProjectPageMessage::ImportSourceCodeTodos {
+				source_code_directory,
+				source_code_todos,
+			} => {
 				self.importing_source_code_todos = false;
-				DatabaseMessage::ImportSourceCodeTodos{
+				DatabaseMessage::ImportSourceCodeTodos {
 					project_id: self.project_id,
 					source_code_directory,
-					source_code_todo_tasks: source_code_todos
+					source_code_todo_tasks: source_code_todos,
 				}
 				.into()
-			},
-			ProjectPageMessage::ReimportSourceCodeTodos =>
-			if let Some(source_code_directory) = database
-				.and_then(|db| db.get_project(&self.project_id))
-				.and_then(|project| project.source_code_directory.clone())
-			{
-				self.importing_source_code_todos = true;
-				let source_code_directory_clone = source_code_directory.clone();
+			}
+			ProjectPageMessage::ReimportSourceCodeTodos => {
+				if let Some(source_code_directory) = database
+					.and_then(|db| db.get_project(&self.project_id))
+					.and_then(|project| project.source_code_directory.clone())
+				{
+					self.importing_source_code_todos = true;
+					let source_code_directory_clone = source_code_directory.clone();
 
-				iced::Task::perform(async move {
-					import_source_code_todos(source_code_directory_clone)
-				},
-				move |source_code_todos| {
-					ProjectPageMessage::ImportSourceCodeTodos {
-						source_code_directory: source_code_directory.clone(),
-						source_code_todos
-					}
+					iced::Task::perform(
+						async move { import_source_code_todos(source_code_directory_clone) },
+						move |source_code_todos| {
+							ProjectPageMessage::ImportSourceCodeTodos {
+								source_code_directory: source_code_directory.clone(),
+								source_code_todos,
+							}
+							.into()
+						},
+					)
 					.into()
-				})
-				.into()
-			} else {
-				self.update(ProjectPageMessage::ImportSourceCodeTodosDialog, database, preferences)
-			},
+				} else {
+					self.update(
+						ProjectPageMessage::ImportSourceCodeTodosDialog,
+						database,
+						preferences,
+					)
+				}
+			}
 
 			ProjectPageMessage::ShowSourceCodeTodos(show) => {
 				self.show_source_code_todos = show;
@@ -362,16 +424,19 @@ impl ProjectPage {
 			ProjectPageMessage::ConfirmDeleteProject => {
 				self.show_context_menu = false;
 
-				let project_name = database.as_ref().and_then(|db|
-					db.get_project(&self.project_id).map(|project| project.name.clone())
-				)
-				.unwrap_or("<invalid project id>".to_string());
+				let project_name = database
+					.as_ref()
+					.and_then(|db| {
+						db.get_project(&self.project_id)
+							.map(|project| project.name.clone())
+					})
+					.unwrap_or("<invalid project id>".to_string());
 
 				ContentPageAction::ConfirmDeleteProject {
 					project_id: self.project_id,
 					project_name,
 				}
-			},
+			}
 
 			ProjectPageMessage::AnimateProgressbar => {
 				self.progressbar_animation.update();
@@ -397,7 +462,7 @@ impl ProjectPage {
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
 				keyboard::Key::Character("f") if modifiers.command() => {
 					Some(ProjectPageMessage::OpenSearchTasks)
-				},
+				}
 				_ => None,
 			}),
 		])
@@ -436,19 +501,18 @@ impl ProjectPage {
 	}
 
 	fn project_details_view<'a>(&'a self, project: &'a Project) -> Element<'a, Message> {
-		let project_name: Element<Message> =
-			text_input("New project name", &project.name)
-				.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
-				.size(TITLE_TEXT_SIZE)
-				.on_input(|edited_name| {
-					DatabaseMessage::ChangeProjectName {
-						project_id: self.project_id,
-						new_name: edited_name.clone(),
-					}
-					.into()
-				})
-				.style(|t, s| text_input_style_borderless(t, s, false))
-				.into();//text_input_style_default),
+		let project_name: Element<Message> = text_input("New project name", &project.name)
+			.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
+			.size(TITLE_TEXT_SIZE)
+			.on_input(|edited_name| {
+				DatabaseMessage::ChangeProjectName {
+					project_id: self.project_id,
+					new_name: edited_name.clone(),
+				}
+				.into()
+			})
+			.style(|t, s| text_input_style_borderless(t, s, false))
+			.into(); //text_input_style_default),
 
 		let show_color_picker_button = edit_color_palette_button(
 			project.color.to_iced_color(),
@@ -465,13 +529,15 @@ impl ProjectPage {
 			color_palette(project.color.to_iced_color(), |c| {
 				ProjectPageMessage::ChangeProjectColor(c).into()
 			}),
-			self.show_color_picker
+			self.show_color_picker,
 		)
 		.width(Fill)
 		.alignment(drop_down::Alignment::End)
 		.on_dismiss(ProjectPageMessage::HideColorPicker.into());
 
-		let task_tags_list: Vec<Element<Message>> = project.task_tags.iter()
+		let task_tags_list: Vec<Element<Message>> = project
+			.task_tags
+			.iter()
 			.map(|(tag_id, tag)| {
 				task_tag_button(tag, self.filter_task_tags.contains(&tag_id))
 					.on_press(ProjectPageMessage::ToggleFilterTaskTag(tag_id).into())
@@ -516,22 +582,19 @@ impl ProjectPage {
 		let spacer = || Space::new(Fill, SPACING_AMOUNT);
 
 		column![
-			column![row![
-				color_picker,
-				project_name,
-				quick_actions
-			]
-			.spacing(SPACING_AMOUNT)
-			.align_y(Alignment::Center)]
+			column![row![color_picker, project_name, quick_actions]
+				.spacing(SPACING_AMOUNT)
+				.align_y(Alignment::Center)]
 			.width(Fill),
 			spacer(),
 			row![
 				container("Tags:").padding(HORIZONTAL_SCROLLABLE_PADDING),
 				horizontal_scrollable(Row::with_children(task_tags_list).spacing(SPACING_AMOUNT))
 					.width(Fill),
-				container(
-					sort_dropdown_button(self.show_sort_mode_dropdown, project.sort_mode)
-				)
+				container(sort_dropdown_button(
+					self.show_sort_mode_dropdown,
+					project.sort_mode
+				))
 				.padding(HORIZONTAL_SCROLLABLE_PADDING),
 			]
 			.spacing(SPACING_AMOUNT)
@@ -571,13 +634,17 @@ impl ProjectPage {
 			ScalarAnimation::start(start_percentage, target_percentage, 0.125);
 	}
 
-	pub fn generate_cached_task_list(&mut self, database: &Database, preferences: &Option<Preferences>) {
+	pub fn generate_cached_task_list(
+		&mut self,
+		database: &Database,
+		preferences: &Option<Preferences>,
+	) {
 		if let Some(project) = database.get_project(&self.project_id) {
 			self.cached_task_list = CachedTaskList::generate(
 				project,
 				&self.filter_task_tags,
 				&self.search_tasks_filter,
-				preferences.sort_unspecified_tasks_at_bottom()
+				preferences.sort_unspecified_tasks_at_bottom(),
 			);
 
 			// update progress bar animation
@@ -600,10 +667,7 @@ impl ProjectPage {
 
 		file_dialog_result.map(|folder_handle| {
 			let pathbuf = folder_handle.path().to_path_buf();
-			(
-				pathbuf.clone(),
-				import_source_code_todos(pathbuf)
-			)
+			(pathbuf.clone(), import_source_code_todos(pathbuf))
 		})
 	}
 }

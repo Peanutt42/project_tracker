@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use project_tracker_core::Database;
+use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() {

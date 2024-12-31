@@ -1,10 +1,10 @@
 use crate::styles::{selection_color, BORDER_RADIUS};
-use std::str::FromStr;
 use iced::{
 	border::Radius,
 	widget::text_input::{Status, Style},
 	Border, Theme,
 };
+use std::str::FromStr;
 
 use super::card_style::card_background_color;
 
@@ -79,7 +79,8 @@ pub fn text_input_style_borderless(theme: &Theme, status: Status, inside_card: b
 				card_background_color(theme)
 			} else {
 				theme.extended_palette().background.base.color
-			}.into(),
+			}
+			.into(),
 			border,
 			icon: theme.extended_palette().background.weak.text,
 			placeholder,
@@ -97,11 +98,13 @@ pub fn text_input_style_borderless(theme: &Theme, status: Status, inside_card: b
 	}
 }
 
-pub fn on_number_input<Message>(input: String, on_number: impl FnOnce(Option<usize>) -> Message, on_invalid_input: Message) -> Message {
+pub fn on_number_input<Message>(
+	input: String,
+	on_number: impl FnOnce(Option<usize>) -> Message,
+	on_invalid_input: Message,
+) -> Message {
 	let new_number = match usize::from_str(&input) {
-		Ok(new_number) => {
-			Some(Some(new_number))
-		}
+		Ok(new_number) => Some(Some(new_number)),
 		Err(_) => {
 			if input.is_empty() {
 				Some(None)

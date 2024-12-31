@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, Datelike};
+use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -19,13 +19,11 @@ impl PartialOrd for SerializableDate {
 impl Ord for SerializableDate {
 	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
 		match self.year.cmp(&other.year) {
-			Ordering::Equal => {
-				match self.month.cmp(&other.month) {
-					Ordering::Equal => self.day.cmp(&other.day),
-					other => other,
-				}
+			Ordering::Equal => match self.month.cmp(&other.month) {
+				Ordering::Equal => self.day.cmp(&other.day),
+				other => other,
 			},
-			other => other
+			other => other,
 		}
 	}
 }

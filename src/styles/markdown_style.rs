@@ -1,6 +1,6 @@
-use iced::widget::markdown::Style;
-use crate::ProjectTrackerApp;
 use crate::styles::link_color;
+use crate::ProjectTrackerApp;
+use iced::widget::markdown::Style;
 
 pub fn markdown_style(app: &ProjectTrackerApp) -> Style {
 	Style {

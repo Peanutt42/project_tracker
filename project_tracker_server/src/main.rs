@@ -1,8 +1,8 @@
+use project_tracker_core::Database;
+use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
 use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::process::exit;
-use project_tracker_core::Database;
-use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
 
 #[cfg(feature = "web_server")]
 mod web_server;
@@ -32,8 +32,7 @@ async fn main() {
 				eprintln!("failed to read password file!\nset password using the 'scripts/set_server_password_linux.sh' script\n{}, error: {e}", password_filepath.display());
 				exit(1);
 			})
-	}
-	else {
+	} else {
 		eprintln!(
 			"no password is set, using default password: 1234\nset it using the 'scripts/set_server_password_linux.sh' script\nor create a plaintext password.txt with the password inside the 'SERVER_DATA_DIRECTORY'!"
 		);
@@ -42,16 +41,13 @@ async fn main() {
 
 	let shared_data = if database_filepath.exists() {
 		SharedServerData::new(database_filepath.clone())
-	}
-	else {
+	} else {
 		eprintln!("no previous database found -> creating a empty database!");
 		SharedServerData::from_memory(Database::default())
 	};
 
 	#[allow(unused)]
 	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
-
-
 
 	#[cfg(feature = "web_server")]
 	{
@@ -85,7 +81,7 @@ async fn main() {
 		database_filepath,
 		password,
 		modified_sender,
-		shared_data
+		shared_data,
 	)
 	.await;
 }

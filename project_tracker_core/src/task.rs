@@ -1,6 +1,9 @@
-use crate::{TaskTagId, SerializableDate};
+use crate::{SerializableDate, TaskTagId};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, time::{Duration, Instant}};
+use std::{
+	collections::HashSet,
+	time::{Duration, Instant},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
 pub struct TaskId(pub usize);
@@ -41,15 +44,23 @@ impl TimeSpend {
 
 	pub fn get_duration(&self) -> Duration {
 		match &self.tracking_time_start {
-			Some(tracking_time_start) => Duration::from_secs_f32(self.offset_seconds) + Instant::now().duration_since(*tracking_time_start),
-			None => Duration::from_secs_f32(self.offset_seconds)
+			Some(tracking_time_start) => {
+				Duration::from_secs_f32(self.offset_seconds)
+					+ Instant::now().duration_since(*tracking_time_start)
+			}
+			None => Duration::from_secs_f32(self.offset_seconds),
 		}
 	}
 
 	pub fn get_seconds(&self) -> f32 {
 		match &self.tracking_time_start {
-			Some(tracking_time_start) => self.offset_seconds + Instant::now().duration_since(*tracking_time_start).as_secs_f32(),
-			None => self.offset_seconds
+			Some(tracking_time_start) => {
+				self.offset_seconds
+					+ Instant::now()
+						.duration_since(*tracking_time_start)
+						.as_secs_f32()
+			}
+			None => self.offset_seconds,
 		}
 	}
 
@@ -61,12 +72,13 @@ impl TimeSpend {
 
 	pub fn stop(&mut self) {
 		if let Some(tracking_time_start) = &self.tracking_time_start {
-			self.offset_seconds += Instant::now().duration_since(*tracking_time_start).as_secs_f32();
+			self.offset_seconds += Instant::now()
+				.duration_since(*tracking_time_start)
+				.as_secs_f32();
 			self.tracking_time_start = None;
 		}
 	}
 }
-
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Task {
@@ -82,7 +94,14 @@ pub struct Task {
 }
 
 impl Task {
-	pub fn new(name: String, description: String, needed_time_minutes: Option<usize>, time_spend: Option<TimeSpend>, due_date: Option<SerializableDate>, tags: HashSet<TaskTagId>) -> Self {
+	pub fn new(
+		name: String,
+		description: String,
+		needed_time_minutes: Option<usize>,
+		time_spend: Option<TimeSpend>,
+		due_date: Option<SerializableDate>,
+		tags: HashSet<TaskTagId>,
+	) -> Self {
 		Self {
 			name,
 			description,
@@ -93,8 +112,12 @@ impl Task {
 		}
 	}
 
-	pub fn name(&self) -> &String { &self.name }
-	pub fn description(&self) -> &String { &self.description }
+	pub fn name(&self) -> &String {
+		&self.name
+	}
+	pub fn description(&self) -> &String {
+		&self.description
+	}
 
 	pub fn set_name(&mut self, new_name: String) {
 		self.name = new_name;
@@ -116,10 +139,10 @@ impl Task {
 
 impl PartialEq for Task {
 	fn eq(&self, other: &Self) -> bool {
-		self.name.eq(&other.name) &&
-		self.needed_time_minutes.eq(&other.needed_time_minutes) &&
-		self.due_date.eq(&other.due_date) &&
-		self.tags.eq(&other.tags)
+		self.name.eq(&other.name)
+			&& self.needed_time_minutes.eq(&other.needed_time_minutes)
+			&& self.due_date.eq(&other.due_date)
+			&& self.tags.eq(&other.tags)
 	}
 }
 impl Eq for Task {}

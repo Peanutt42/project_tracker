@@ -1,14 +1,14 @@
 use crate::{
-	OrderedHashMap, Project, ProjectId, SortMode, SerializableColor, SerializableDate, Task, TaskId, TaskTag,
-	TaskTagId, TaskType, TimeSpend
+	OrderedHashMap, Project, ProjectId, SerializableColor, SerializableDate, SortMode, Task,
+	TaskId, TaskTag, TaskTagId, TaskType, TimeSpend,
 };
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::SystemTime;
+use thiserror::Error;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SerializedDatabase {
@@ -28,7 +28,7 @@ pub enum DatabaseMessage {
 
 	ImportProjects(Vec<Project>),
 
-	ImportSourceCodeTodos{
+	ImportSourceCodeTodos {
 		project_id: ProjectId,
 		source_code_directory: PathBuf,
 		source_code_todo_tasks: IndexMap<TaskId, Task>,
@@ -204,7 +204,10 @@ impl Database {
 	pub const FILE_NAME: &'static str = "database.project_tracker";
 	pub const JSON_FILE_NAME: &'static str = "database.json";
 
-	pub fn new(projects: OrderedHashMap<ProjectId, Project>, last_changed_time: DateTime<Utc>) -> Self {
+	pub fn new(
+		projects: OrderedHashMap<ProjectId, Project>,
+		last_changed_time: DateTime<Utc>,
+	) -> Self {
 		Self {
 			projects,
 			last_changed_time,
@@ -226,7 +229,11 @@ impl Database {
 			.and_then(|project| project.get_task(task_id))
 	}
 
-	pub fn get_task_and_type(&self, project_id: &ProjectId, task_id: &TaskId) -> Option<(&Task, TaskType)> {
+	pub fn get_task_and_type(
+		&self,
+		project_id: &ProjectId,
+		task_id: &TaskId,
+	) -> Option<(&Task, TaskType)> {
 		self.projects
 			.get(project_id)
 			.and_then(|project| project.get_task_and_type(task_id))
@@ -272,7 +279,11 @@ impl Database {
 				}
 			}),
 
-			DatabaseMessage::ImportSourceCodeTodos{ project_id, source_code_todo_tasks, source_code_directory } => self.modify(|projects| {
+			DatabaseMessage::ImportSourceCodeTodos {
+				project_id,
+				source_code_todo_tasks,
+				source_code_directory,
+			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.source_code_todos = source_code_todo_tasks;
 					project.source_code_directory = Some(source_code_directory);
@@ -284,7 +295,10 @@ impl Database {
 				name,
 				color,
 			} => self.modify(|projects| {
-				projects.insert(project_id, Project::new(name, color, OrderedHashMap::new(), SortMode::default()));
+				projects.insert(
+					project_id,
+					Project::new(name, color, OrderedHashMap::new(), SortMode::default()),
+				);
 			}),
 			DatabaseMessage::ChangeProjectName {
 				project_id,
@@ -302,7 +316,10 @@ impl Database {
 					project.color = new_color;
 				}
 			}),
-			DatabaseMessage::ChangeProjectSortMode { project_id, new_sort_mode } => self.modify(|projects| {
+			DatabaseMessage::ChangeProjectSortMode {
+				project_id,
+				new_sort_mode,
+			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.sort_mode = new_sort_mode;
 				}
@@ -386,7 +403,10 @@ impl Database {
 				}
 			}),
 
-			DatabaseMessage::MoveTodoTaskToEnd{ project_id, task_id } => self.modify(|projects| {
+			DatabaseMessage::MoveTodoTaskToEnd {
+				project_id,
+				task_id,
+			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.todo_tasks.move_to_end(&task_id);
 				}
@@ -404,7 +424,16 @@ impl Database {
 				create_at_top,
 			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
-					project.add_task(task_id, task_name, task_description, task_tags, due_date, needed_time_minutes, time_spend, create_at_top);
+					project.add_task(
+						task_id,
+						task_name,
+						task_description,
+						task_tags,
+						due_date,
+						needed_time_minutes,
+						time_spend,
+						create_at_top,
+					);
 				}
 			}),
 			DatabaseMessage::ChangeTaskName {
@@ -450,17 +479,27 @@ impl Database {
 					project.set_task_needed_time(task_id, new_needed_time_minutes);
 				}
 			}),
-			DatabaseMessage::ChangeTaskTimeSpend { project_id, task_id, new_time_spend } => self.modify(|projects| {
+			DatabaseMessage::ChangeTaskTimeSpend {
+				project_id,
+				task_id,
+				new_time_spend,
+			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.set_task_time_spend(task_id, new_time_spend);
 				}
 			}),
-			DatabaseMessage::StartTaskTimeSpend { project_id, task_id } => self.modify(|projects| {
+			DatabaseMessage::StartTaskTimeSpend {
+				project_id,
+				task_id,
+			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.start_task_time_spend(task_id);
 				}
 			}),
-			DatabaseMessage::StopTaskTimeSpend { project_id, task_id } => self.modify(|projects| {
+			DatabaseMessage::StopTaskTimeSpend {
+				project_id,
+				task_id,
+			} => self.modify(|projects| {
 				if let Some(project) = projects.get_mut(&project_id) {
 					project.stop_task_time_spend(task_id);
 				}
@@ -546,44 +585,50 @@ impl Database {
 			project_dirs
 				.data_local_dir()
 				.join(Self::FILE_NAME)
-				.to_path_buf()
+				.to_path_buf(),
 		)
 	}
 
 	async fn get_and_ensure_filepath() -> Option<PathBuf> {
 		let filepath = Self::get_filepath()?;
 		let parent_filepath = filepath.parent()?;
-		tokio::fs::create_dir_all(parent_filepath)
-			.await
-			.ok()?;
+		tokio::fs::create_dir_all(parent_filepath).await.ok()?;
 
 		Some(filepath)
 	}
 
 	pub async fn load_json(filepath: PathBuf) -> LoadDatabaseResult {
-		let file_metadata = filepath.metadata()
-			.map_err(|e| LoadDatabaseError::FailedToOpenFile {
+		let file_metadata =
+			filepath
+				.metadata()
+				.map_err(|e| LoadDatabaseError::FailedToOpenFile {
+					filepath: filepath.clone(),
+					error: Some(e),
+				})?;
+		let file_last_modification_time = get_last_modification_date_time(&file_metadata).ok_or(
+			LoadDatabaseError::FailedToOpenFile {
 				filepath: filepath.clone(),
-				error: Some(e)
-			})?;
-		let file_last_modification_time = get_last_modification_date_time(&file_metadata)
-			.ok_or(LoadDatabaseError::FailedToOpenFile {
+				error: None,
+			},
+		)?;
+		let file_content = tokio::fs::read_to_string(&filepath).await.map_err(|e| {
+			LoadDatabaseError::FailedToOpenFile {
 				filepath: filepath.clone(),
-				error: None
-			})?;
-		let file_content = tokio::fs::read_to_string(&filepath).await
-			.map_err(|e| LoadDatabaseError::FailedToOpenFile{
-				filepath: filepath.clone(),
-				error: Some(e)
-			})?;
+				error: Some(e),
+			}
+		})?;
 
-		let serialized = serde_json::from_str(&file_content)
-			.map_err(|error| LoadDatabaseError::FailedToParseJson{
+		let serialized = serde_json::from_str(&file_content).map_err(|error| {
+			LoadDatabaseError::FailedToParseJson {
 				filepath: filepath.clone(),
-				error
-			})?;
+				error,
+			}
+		})?;
 
-		Ok(Self::from_serialized(serialized, file_last_modification_time))
+		Ok(Self::from_serialized(
+			serialized,
+			file_last_modification_time,
+		))
 	}
 
 	pub fn to_json(self) -> Option<String> {
@@ -591,38 +636,46 @@ impl Database {
 	}
 
 	pub async fn export_as_json(filepath: PathBuf, json: String) -> SaveDatabaseResult<()> {
-		tokio::fs::write(filepath.as_path(), json).await
+		tokio::fs::write(filepath.as_path(), json)
+			.await
 			.map_err(|error| SaveDatabaseError::FailedToWriteToFile { filepath, error })
 	}
 
 	pub async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
-		let file_metadata = filepath.metadata()
-			.map_err(|e| LoadDatabaseError::FailedToOpenFile {
+		let file_metadata =
+			filepath
+				.metadata()
+				.map_err(|e| LoadDatabaseError::FailedToOpenFile {
+					filepath: filepath.clone(),
+					error: Some(e),
+				})?;
+		let file_last_modification_time = get_last_modification_date_time(&file_metadata).ok_or(
+			LoadDatabaseError::FailedToOpenFile {
 				filepath: filepath.clone(),
-				error: Some(e)
-			})?;
-		let file_last_modification_time = get_last_modification_date_time(&file_metadata)
-			.ok_or(LoadDatabaseError::FailedToOpenFile {
-				filepath: filepath.clone(),
-				error: None
-			})?;
-		let file_content = tokio::fs::read(&filepath).await
-			.map_err(|e| LoadDatabaseError::FailedToOpenFile{
-				filepath: filepath.clone(),
-				error: Some(e)
-			})?;
+				error: None,
+			},
+		)?;
+		let file_content =
+			tokio::fs::read(&filepath)
+				.await
+				.map_err(|e| LoadDatabaseError::FailedToOpenFile {
+					filepath: filepath.clone(),
+					error: Some(e),
+				})?;
 
-		Self::from_binary(&file_content, file_last_modification_time)
-			.map_err(|error| LoadDatabaseError::FailedToParseBinary{
+		Self::from_binary(&file_content, file_last_modification_time).map_err(|error| {
+			LoadDatabaseError::FailedToParseBinary {
 				filepath: filepath.clone(),
-				error
-			})
+				error,
+			}
+		})
 	}
 
 	pub async fn load() -> LoadDatabaseResult {
 		Self::load_from(
-			Self::get_and_ensure_filepath().await
-				.ok_or(LoadDatabaseError::FailedToFindDatbaseFilepath)?
+			Self::get_and_ensure_filepath()
+				.await
+				.ok_or(LoadDatabaseError::FailedToFindDatbaseFilepath)?,
 		)
 		.await
 	}
@@ -633,13 +686,16 @@ impl Database {
 		}
 	}
 
-	pub fn from_serialized(serialized: SerializedDatabase, last_changed_time: DateTime<Utc>) -> Self {
+	pub fn from_serialized(
+		serialized: SerializedDatabase,
+		last_changed_time: DateTime<Utc>,
+	) -> Self {
 		Self::new(serialized.projects, last_changed_time)
 	}
 
 	pub fn from_binary(binary: &[u8], last_changed_time: DateTime<Utc>) -> bincode::Result<Self> {
 		bincode::deserialize(binary)
-    		.map(|serialized| Self::from_serialized(serialized, last_changed_time))
+			.map(|serialized| Self::from_serialized(serialized, last_changed_time))
 	}
 
 	pub fn to_binary(self) -> Option<Vec<u8>> {
@@ -647,7 +703,8 @@ impl Database {
 	}
 
 	pub async fn save_to(filepath: PathBuf, binary: Vec<u8>) -> SaveDatabaseResult<()> {
-		tokio::fs::write(filepath.as_path(), binary).await
+		tokio::fs::write(filepath.as_path(), binary)
+			.await
 			.map_err(|error| SaveDatabaseError::FailedToWriteToFile { filepath, error })
 	}
 
@@ -655,29 +712,33 @@ impl Database {
 	pub async fn save(binary: Vec<u8>) -> SaveDatabaseResult<SystemTime> {
 		let begin_time = SystemTime::now();
 		Self::save_to(
-			Self::get_and_ensure_filepath().await
+			Self::get_and_ensure_filepath()
+				.await
 				.ok_or(SaveDatabaseError::FailedToFindDatabaseFilepath)?,
-			binary
+			binary,
 		)
 		.await?;
 		Ok(begin_time)
 	}
 
-	pub async fn sync(synchronization_filepath: PathBuf, local_database_last_change_time: DateTime<Utc>) -> SyncDatabaseResult {
+	pub async fn sync(
+		synchronization_filepath: PathBuf,
+		local_database_last_change_time: DateTime<Utc>,
+	) -> SyncDatabaseResult {
 		let synchronization_filepath_metadata = match synchronization_filepath.metadata() {
 			Ok(metadata) => metadata,
 			Err(_) => return SyncDatabaseResult::InvalidSynchronizationFilepath,
 		};
 
 		match get_last_modification_date_time(&synchronization_filepath_metadata) {
-			Some(synchronization_last_modification_datetime) =>
-				if local_database_last_change_time > synchronization_last_modification_datetime
-			{
-				SyncDatabaseResult::Upload
-			} else {
-				SyncDatabaseResult::Download
-			},
-			None => SyncDatabaseResult::Download
+			Some(synchronization_last_modification_datetime) => {
+				if local_database_last_change_time > synchronization_last_modification_datetime {
+					SyncDatabaseResult::Upload
+				} else {
+					SyncDatabaseResult::Download
+				}
+			}
+			None => SyncDatabaseResult::Download,
 		}
 	}
 }
