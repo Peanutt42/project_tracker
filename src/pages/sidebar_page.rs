@@ -68,7 +68,7 @@ pub enum SidebarPageMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		task_is_todo: bool,
-		filtering_tags: bool,
+		filtering_tasks: bool,
 		point: Point,
 		rect: Rectangle,
 	},
@@ -356,7 +356,7 @@ impl SidebarPage {
 				project_id,
 				task_id,
 				task_is_todo,
-				filtering_tags,
+				filtering_tasks,
 				rect,
 				point,
 			} => {
@@ -374,7 +374,7 @@ impl SidebarPage {
 					project_options,
 					None,
 				)];
-				if task_is_todo && !filtering_tags {
+				if task_is_todo && !filtering_tasks {
 					let task_options = Self::task_dropzone_options(database, project_id, task_id, task_ui_ids);
 					commands.push(find_zones(
 						move |zones| {

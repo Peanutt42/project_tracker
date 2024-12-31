@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		create_empty_database_button, generate_task_description_markdown, import_database_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH
 	}, core::{export_database_as_json_file_dialog, export_database_file_dialog, import_database_file_dialog, import_json_database_file_dialog, ProjectUiIdMap, TaskUiIdMap}, integrations::{connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage, ServerWsMessageSender}, modals::{ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage, TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage}, pages::{
-		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
+		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPage, ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage, StopwatchPageMessage
 	}, styles::{default_background_container_style, modal_background_container_style, sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, MINIMAL_DRAG_DISTANCE}, theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode}
 };
 use crate::{LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting};
@@ -964,8 +964,8 @@ impl ProjectTrackerApp {
 			} => {
 				let is_theme_dark = self.is_theme_dark();
 
-				let filtering_tags = self.content_page.project_page.as_ref()
-					.map(|project_page| !project_page.filter_task_tags.is_empty())
+				let filtering_tasks = self.content_page.project_page.as_ref()
+					.map(ProjectPage::filtering_tasks)
 					.unwrap_or(false);
 
 				self.dragged_task = Some(task_id);
@@ -984,7 +984,7 @@ impl ProjectTrackerApp {
 						project_id,
 						task_id,
 						task_is_todo,
-						filtering_tags,
+						filtering_tasks,
 						point,
 						rect,
 					},

@@ -209,6 +209,13 @@ impl ProjectPage {
 		}
 	}
 
+	pub fn filtering_tasks(&self) -> bool {
+		!self.filter_task_tags.is_empty() ||
+			self.search_tasks_filter.as_ref()
+				.map(|search_filter| !search_filter.is_empty())
+				.unwrap_or(false)
+	}
+
 	pub fn update(
 		&mut self,
 		message: ProjectPageMessage,
