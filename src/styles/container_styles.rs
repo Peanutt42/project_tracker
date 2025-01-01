@@ -230,3 +230,11 @@ pub fn default_background_container_style(theme: &Theme) -> Style {
 		..Default::default()
 	}
 }
+
+pub fn command_background_container_style(theme: &Theme) -> Style {
+	Style {
+		background: Some(theme.extended_palette().background.base.color.into()),
+		border: rounded(BORDER_RADIUS).color(GREY).width(0.5),
+		..Default::default()
+	}
+}

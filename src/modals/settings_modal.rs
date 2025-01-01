@@ -8,9 +8,10 @@ use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::{CodeEditor, ServerConfig};
 use crate::project_tracker::{Message, ProjectTrackerApp};
 use crate::styles::{
-	grey_text_style, link_color, rounded_container_style, text_input_style_default,
-	tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING,
-	SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT,
+	command_background_container_style, grey_text_style, link_color, rounded_container_style,
+	text_input_style_default, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE,
+	SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE,
+	SPACING_AMOUNT,
 };
 use crate::{
 	components::{
@@ -26,7 +27,6 @@ use crate::{
 use iced::alignment::Vertical;
 use iced::widget::text::Span;
 use iced::widget::{rich_text, text_input, toggler, tooltip};
-use iced::Length;
 use iced::{
 	alignment::Horizontal,
 	keyboard,
@@ -35,6 +35,7 @@ use iced::{
 	Length::Fill,
 	Padding, Subscription, Task,
 };
+use iced::{Color, Length};
 use iced_aw::card;
 use project_tracker_core::{Database, DatabaseMessage};
 use project_tracker_server::DEFAULT_PASSWORD;
@@ -668,8 +669,19 @@ fn code_editor_settings_tab_view(
 							.style(text_input_style_default)
 					),
 					item(
-						"Custom Editor Command:",
-						text_input("custom_editor --open-file-location", command.as_str())
+						row![
+							"Custom Editor Command:",
+							tooltip(
+								icon_to_text(Bootstrap::QuestionCircleFill).size(ICON_FONT_SIZE),
+								text("the file location formatted as \"filepath:line:column\" is added to the end of this command")
+									.size(SMALL_TEXT_SIZE),
+								tooltip::Position::Bottom,
+							)
+							.gap(GAP)
+							.style(tooltip_container_style),
+						]
+						.spacing(SPACING_AMOUNT),
+						text_input("custom_editor --open", command.as_str())
 							.width(Length::Fixed(350.0))
 							.on_input(|new_command| SettingsModalMessage::SetCodeEditor(Some(
 								CodeEditor::Custom {
@@ -680,6 +692,22 @@ fn code_editor_settings_tab_view(
 							.into())
 							.style(text_input_style_default)
 					),
+					row![
+						text("example command:")
+							.width(Fill)
+							.style(grey_text_style),
+
+						container(
+							rich_text![
+								Span::new(command).color(Color::from_rgb8(154, 196, 248)),
+								Span::new(" \"file.txt:42:15\"").color(Color::from_rgb8(162, 250, 163))
+							]
+						)
+						.padding(Padding::new(SMALL_PADDING_AMOUNT))
+						.style(command_background_container_style),
+					]
+					.align_y(Vertical::Center)
+					.spacing(SPACING_AMOUNT)
 				]
 				.spacing(SPACING_AMOUNT),
 			)
@@ -721,8 +749,11 @@ fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
 	.into()
 }
 
-fn item<'a>(label: &'a str, content: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
-	row![label, Space::new(Fill, 0.0), content.into(),]
+fn item<'a>(
+	label: impl Into<Element<'a, Message>>,
+	content: impl Into<Element<'a, Message>>,
+) -> Element<'a, Message> {
+	row![label.into(), Space::new(Fill, 0.0), content.into(),]
 		.spacing(SMALL_SPACING_AMOUNT)
 		.align_y(Vertical::Center)
 		.into()
