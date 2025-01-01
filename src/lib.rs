@@ -16,7 +16,7 @@ pub use preferences::{
 	PreferenceAction, PreferenceMessage, Preferences, SerializedContentPage, StopwatchProgress,
 	SynchronizationSetting,
 };
-pub use project_tracker::ProjectTrackerApp;
+pub use project_tracker::{DatabaseState, ProjectTrackerApp};
 mod already_opened_app;
 pub use already_opened_app::run_already_opened_application;
 pub mod icons;

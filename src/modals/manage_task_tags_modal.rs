@@ -82,7 +82,7 @@ impl ManageTaskTagsModal {
 	pub fn update(
 		&mut self,
 		message: ManageTaskTagsModalMessage,
-		database: &Option<Database>,
+		database: Option<&Database>,
 	) -> ManageTaskTagsModalAction {
 		match message {
 			ManageTaskTagsModalMessage::OpenCreateNewTaskTag => {
@@ -193,7 +193,7 @@ impl ManageTaskTagsModal {
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<Message> {
 		if let Some(project) = app
 			.database
-			.as_ref()
+			.ok()
 			.and_then(|db| db.get_project(&self.project_id))
 		{
 			card(

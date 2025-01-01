@@ -99,7 +99,7 @@ impl TaskModal {
 	pub fn update<'a>(
 		&'a mut self,
 		message: TaskModalMessage,
-		database: &'a Option<Database>,
+		database: Option<&'a Database>,
 	) -> TaskModalAction {
 		match message {
 			TaskModalMessage::EditDescription => {
@@ -221,7 +221,7 @@ impl TaskModal {
 			Space::new(0.0, 0.0),
 			if let Some(project) = app
 				.database
-				.as_ref()
+				.ok()
 				.and_then(|db| db.get_project(&self.project_id))
 			{
 				if let Some(task) = project.get_task(&self.task_id) {

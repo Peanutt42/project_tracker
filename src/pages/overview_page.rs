@@ -303,11 +303,7 @@ impl OverviewPage {
 		show_due_date: bool,
 	) -> Element<'a, Message> {
 		Column::with_children(tasks.iter().map(|(project_id, tasks)| {
-			if let Some(project) = app
-				.database
-				.as_ref()
-				.and_then(|db| db.get_project(project_id))
-			{
+			if let Some(project) = app.database.ok().and_then(|db| db.get_project(project_id)) {
 				let list = Column::with_children(tasks.iter().map(|task_id| {
 					if let Some((task, task_type)) = project.get_task_and_type(task_id) {
 						task_widget(

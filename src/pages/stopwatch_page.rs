@@ -12,7 +12,7 @@ use crate::{
 		LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT,
 		SPACING_AMOUNT,
 	},
-	OptionalPreference, Preferences, ProjectTrackerApp, StopwatchProgress,
+	DatabaseState, OptionalPreference, Preferences, ProjectTrackerApp, StopwatchProgress,
 };
 use iced::{
 	alignment::{Horizontal, Vertical},
@@ -623,7 +623,7 @@ impl StopwatchPage {
 			} => {
 				let mut project_ref = None;
 				let mut task_ref = None;
-				if let Some(database) = &app.database {
+				if let DatabaseState::Loaded(database) = &app.database {
 					if let Some(project) = database.get_project(project_id) {
 						project_ref = Some(project);
 						task_ref = project.get_task(task_id);
@@ -639,13 +639,9 @@ impl StopwatchPage {
 								.into()
 						} else {
 							text(format_stopwatch_duration(
-								Self::get_spend_seconds(
-									*project_id,
-									*task_id,
-									app.database.as_ref(),
-								)
-								.unwrap_or(0.0)
-								.round_ties_even() as i64,
+								Self::get_spend_seconds(*project_id, *task_id, app.database.ok())
+									.unwrap_or(0.0)
+									.round_ties_even() as i64,
 							))
 							.font(FIRA_SANS_FONT)
 							.size(90)

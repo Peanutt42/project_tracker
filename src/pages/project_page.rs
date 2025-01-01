@@ -13,7 +13,7 @@ use crate::{
 		text_input_style_borderless, text_input_style_only_round_left, PADDING_AMOUNT,
 		SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE,
 	},
-	OptionalPreference, Preferences,
+	DatabaseState, OptionalPreference, Preferences,
 };
 use chrono::{DateTime, Utc};
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
@@ -469,7 +469,7 @@ impl ProjectPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
-		if let Some(database) = &app.database {
+		if let DatabaseState::Loaded(database) = &app.database {
 			if let Some(project) = database.get_project(&self.project_id) {
 				column![
 					self.project_details_view(project),

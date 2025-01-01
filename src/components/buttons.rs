@@ -410,8 +410,8 @@ pub fn import_database_button(importing: bool) -> Element<'static, Message> {
 			if importing {
 				Element::new(
 					Spinner::new()
-						.width(Length::Fixed(16.0))
-						.height(Length::Fixed(16.0))
+						.width(Length::Fixed(ICON_FONT_SIZE))
+						.height(Length::Fixed(ICON_FONT_SIZE))
 						.circle_radius(2.0),
 				)
 			} else {
@@ -439,8 +439,8 @@ pub fn export_database_button(exporting: bool) -> Element<'static, Message> {
 			if exporting {
 				Element::new(
 					Spinner::new()
-						.width(Length::Fixed(16.0))
-						.height(Length::Fixed(16.0))
+						.width(Length::Fixed(ICON_FONT_SIZE))
+						.height(Length::Fixed(ICON_FONT_SIZE))
 						.circle_radius(2.0),
 				)
 			} else {
@@ -468,8 +468,8 @@ pub fn import_json_database_button(importing_json: bool) -> Element<'static, Mes
 			if importing_json {
 				Element::new(
 					Spinner::new()
-						.width(Length::Fixed(16.0))
-						.height(Length::Fixed(16.0))
+						.width(Length::Fixed(ICON_FONT_SIZE))
+						.height(Length::Fixed(ICON_FONT_SIZE))
 						.circle_radius(2.0),
 				)
 			} else {
@@ -497,8 +497,8 @@ pub fn export_as_json_database_button(exporting_json: bool) -> Element<'static, 
 			if exporting_json {
 				Element::new(
 					Spinner::new()
-						.width(Length::Fixed(16.0))
-						.height(Length::Fixed(16.0))
+						.width(Length::Fixed(ICON_FONT_SIZE))
+						.height(Length::Fixed(ICON_FONT_SIZE))
 						.circle_radius(2.0),
 				)
 			} else {
@@ -698,8 +698,8 @@ pub fn reimport_source_code_todos_button(
 			if importing {
 				Element::new(
 					Spinner::new()
-						.width(Length::Fixed(16.0))
-						.height(Length::Fixed(16.0))
+						.width(Length::Fixed(ICON_FONT_SIZE))
+						.height(Length::Fixed(ICON_FONT_SIZE))
 						.circle_radius(2.0),
 				)
 			} else {
@@ -1040,13 +1040,22 @@ pub fn show_error_popup_button(error_msg: String) -> Element<'static, Message> {
 		text("Show full error popup").size(SMALL_TEXT_SIZE),
 		tooltip::Position::Top,
 	)
+	.gap(GAP)
+	.style(tooltip_container_style)
 	.into()
 }
 
-pub fn retry_connecting_to_server_button() -> Button<'static, Message> {
-	icon_button(Bootstrap::ArrowClockwise)
-		.on_press(Message::ConnectToServer)
-		.style(secondary_button_style_default)
+pub fn retry_connecting_to_server_button() -> Element<'static, Message> {
+	tooltip(
+		icon_button(Bootstrap::ArrowClockwise)
+			.on_press(Message::ConnectToServer)
+			.style(secondary_button_style_default),
+		text("Reconnect").size(SMALL_TEXT_SIZE),
+		tooltip::Position::Top,
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1240,4 +1249,16 @@ fn code_editor_button(
 			round_bottom,
 		)
 	})
+}
+
+pub fn retry_loading_database_button() -> Button<'static, Message> {
+	icon_label_button("Retry", Bootstrap::ArrowClockwise)
+		.style(dangerous_button_style)
+		.on_press(Message::LoadDatabase)
+}
+
+pub fn download_database_from_server_button() -> Button<'static, Message> {
+	icon_label_button("Download from server", Bootstrap::Download)
+		.on_press(Message::DownloadDatabaseFromServer)
+		.style(dangerous_button_style)
 }

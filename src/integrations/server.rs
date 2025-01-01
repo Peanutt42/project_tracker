@@ -2,9 +2,17 @@ use async_tungstenite::tungstenite;
 use iced::{
 	futures::{self, channel::mpsc, SinkExt, Stream, StreamExt},
 	stream,
+	widget::{row, text, Space},
+	Alignment, Element,
 };
 use project_tracker_server::{Request, Response, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
 use serde::{Deserialize, Serialize};
+
+use crate::{
+	components::{retry_connecting_to_server_button, show_error_popup_button},
+	project_tracker::Message,
+	styles::{danger_text_style, SPACING_AMOUNT},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ServerConfig {
@@ -292,4 +300,27 @@ pub enum ServerConnectionStatus {
 	Connected,
 	Connecting,
 	Error(String),
+}
+
+impl ServerConnectionStatus {
+	pub fn view(&self) -> Element<Message> {
+		match self {
+			ServerConnectionStatus::Error(error_msg) => row![
+				text("Server Error").style(danger_text_style),
+				show_error_popup_button(error_msg.clone()),
+				retry_connecting_to_server_button()
+			]
+			.spacing(SPACING_AMOUNT)
+			.align_y(Alignment::Center)
+			.into(),
+			ServerConnectionStatus::Disconected => {
+				row![text("Disconnected"), retry_connecting_to_server_button()]
+					.spacing(SPACING_AMOUNT)
+					.align_y(Alignment::Center)
+					.into()
+			}
+			ServerConnectionStatus::Connecting => text("Connecting...").into(),
+			ServerConnectionStatus::Connected => Element::new(Space::new(0.0, 0.0)),
+		}
+	}
 }

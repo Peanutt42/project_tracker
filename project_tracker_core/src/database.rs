@@ -632,7 +632,7 @@ impl Database {
 	}
 
 	pub fn to_json(self) -> Option<String> {
-		serde_json::to_string(&self.to_serialized()).ok()
+		serde_json::to_string_pretty(&self.to_serialized()).ok()
 	}
 
 	pub async fn export_as_json(filepath: PathBuf, json: String) -> SaveDatabaseResult<()> {

@@ -1,12 +1,13 @@
 use crate::components::{
 	create_new_project_button, custom_project_preview, loading_screen, overview_button,
-	project_preview, retry_connecting_to_server_button, settings_button, show_error_popup_button,
-	stopwatch_button, toggle_sidebar_button, LARGE_LOADING_SPINNER_SIZE,
+	project_preview, settings_button, stopwatch_button, toggle_sidebar_button,
+	LARGE_LOADING_SPINNER_SIZE,
 };
 use crate::core::{IcedColorConversion, ProjectUiIdMap, TaskUiIdMap};
 use crate::integrations::ServerConnectionStatus;
 use crate::project_tracker::ProjectTrackerApp;
-use crate::styles::{danger_text_style, LARGE_TEXT_SIZE, SPACING_AMOUNT};
+use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT};
+use crate::DatabaseState;
 use crate::{
 	components::{
 		horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable,
@@ -18,7 +19,7 @@ use crate::{
 		text_input_style_default, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT,
 	},
 };
-use iced::widget::{text, Space};
+use iced::widget::Space;
 use iced::{
 	advanced::widget::Id,
 	alignment::Horizontal,
@@ -220,7 +221,7 @@ impl SidebarPage {
 	pub fn update(
 		&mut self,
 		message: SidebarPageMessage,
-		database: &Option<Database>,
+		database: Option<&Database>,
 		project_ui_ids: &mut ProjectUiIdMap,
 		task_ui_ids: &mut TaskUiIdMap,
 		is_theme_dark: bool,
@@ -592,7 +593,7 @@ impl SidebarPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<Message> {
-		let list: Element<Message> = if let Some(database) = &app.database {
+		let list: Element<Message> = if let DatabaseState::Loaded(database) = &app.database {
 			self.project_preview_list(database.projects(), app)
 		} else {
 			container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
@@ -617,7 +618,7 @@ impl SidebarPage {
 					&app.content_page.stopwatch_page,
 					app.content_page.is_stopwatch_page_opened(),
 					matches!(self.task_dropzone_hovered, Some(TaskDropzone::Stopwatch)),
-					app.database.as_ref(),
+					app.database.ok(),
 				),
 				horizontal_seperator(),
 			]
@@ -631,21 +632,8 @@ impl SidebarPage {
 			row![
 				settings_button(),
 				container(match &self.server_connection_status {
-					Some(ServerConnectionStatus::Error(error_msg)) => row![
-						text("Server Error").style(danger_text_style),
-						show_error_popup_button(error_msg.clone()),
-						retry_connecting_to_server_button()
-					]
-					.spacing(SPACING_AMOUNT)
-					.align_y(Alignment::Center)
-					.into(),
-					Some(ServerConnectionStatus::Disconected) =>
-						row![text("Disconnected"), retry_connecting_to_server_button()]
-							.spacing(SPACING_AMOUNT)
-							.align_y(Alignment::Center)
-							.into(),
-					Some(ServerConnectionStatus::Connecting) => text("Connecting...").into(),
-					_ => Element::new(Space::new(0.0, 0.0)),
+					Some(server_connection_status) => server_connection_status.view(),
+					None => Element::new(Space::new(0.0, 0.0)),
 				})
 				.center_x(Fill),
 				create_new_project_button(self.create_new_project_name.is_none())
@@ -660,7 +648,7 @@ impl SidebarPage {
 	}
 
 	fn project_dropzone_options(
-		database: &Option<Database>,
+		database: Option<&Database>,
 		exception: ProjectId,
 		project_ui_ids: &mut ProjectUiIdMap,
 	) -> Option<Vec<Id>> {
@@ -715,7 +703,7 @@ impl SidebarPage {
 	}
 
 	fn project_dropzones_for_tasks_options(
-		database: &Option<Database>,
+		database: Option<&Database>,
 		exception: ProjectId,
 		project_ui_ids: &mut ProjectUiIdMap,
 	) -> Option<Vec<Id>> {
@@ -739,7 +727,7 @@ impl SidebarPage {
 	}
 
 	fn task_dropzone_options(
-		database: &Option<Database>,
+		database: Option<&Database>,
 		project_id: ProjectId,
 		task_exception: TaskId,
 		task_ui_ids: &mut TaskUiIdMap,

@@ -171,7 +171,7 @@ impl CreateTaskModal {
 
 	pub fn view<'a>(
 		&'a self,
-		database: &'a Option<Database>,
+		database: Option<&'a Database>,
 		preferences: &'a Option<Preferences>,
 	) -> Element<'a, Message> {
 		let edit_needed_time_view = edit_needed_time_button(
