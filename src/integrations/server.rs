@@ -25,24 +25,28 @@ impl Default for ServerConfig {
 
 pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
 	stream::channel(100, |mut output| async move {
-		let mut state = WsServerConnectionState {
-			message_receiver: None,
-			message_sender_sent: false,
-		};
+		let mut state = WsServerConnectionState::new();
 		let mut connection = WsServerConnection::Disconnected;
 
 		while state.update(&mut connection, &mut output).await {}
 	})
 }
 
-struct WsServerConnectionState {
+pub struct WsServerConnectionState {
 	message_receiver: Option<mpsc::Receiver<ServerWsMessage>>,
 	message_sender_sent: bool,
 }
 
 impl WsServerConnectionState {
+	pub fn new() -> Self {
+		Self {
+			message_receiver: None,
+			message_sender_sent: false,
+		}
+	}
+
 	// returns whether to continue or to quit
-	async fn update(
+	pub async fn update(
 		&mut self,
 		connection: &mut WsServerConnection,
 		output: &mut mpsc::Sender<ServerWsEvent>,
@@ -192,6 +196,13 @@ impl WsServerConnectionState {
 							true,
 							Some(WsServerConnection::Connecting(server_config))
 						),
+						ServerWsMessage::CloseSubscription => {
+							let _  = websocket.close(None).await;
+							(
+								false,
+								Some(WsServerConnection::Disconnected)
+							)
+						},
 						ServerWsMessage::Request(request) => {
 							match request.encrypt(&server_config.password) {
 								Ok(request_binary) => {
@@ -228,11 +239,17 @@ impl WsServerConnectionState {
 	}
 }
 
+impl Default for WsServerConnectionState {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 type WebSocketStream = async_tungstenite::WebSocketStream<async_tungstenite::tokio::ConnectStream>;
 
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
-enum WsServerConnection {
+pub enum WsServerConnection {
 	Disconnected,
 	Connecting(ServerConfig),
 	Connected(WebSocketStream, ServerConfig),
@@ -266,6 +283,7 @@ impl ServerWsMessageSender {
 pub enum ServerWsMessage {
 	Connect(ServerConfig),
 	Request(Request),
+	CloseSubscription, // closes listen thread, only used by tests
 }
 
 #[derive(Debug, Clone)]

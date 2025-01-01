@@ -10,7 +10,7 @@ use std::{
 use thiserror::Error;
 
 mod server;
-pub use server::run_server;
+pub use server::{handle_client, run_server};
 
 mod encryption;
 pub use encryption::{decrypt, encrypt, NONCE_LENGTH, SALT_LENGTH};
@@ -36,7 +36,7 @@ pub enum Request {
 	GetModifiedDate,
 	DownloadDatabase,
 	UpdateDatabase {
-		database_binary: Vec<u8>,
+		database: SerializedDatabase,
 		last_modified_time: DateTime<Utc>,
 	},
 }

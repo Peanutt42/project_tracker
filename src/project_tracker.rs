@@ -1497,26 +1497,16 @@ impl ProjectTrackerApp {
 					if server_is_more_up_to_date {
 						let _ = server_ws_message_sender
 							.send(ServerWsMessage::Request(Request::DownloadDatabase));
-						Task::none()
 					} else if let Some(database) = &self.database {
-						match database.clone().to_binary() {
-							Some(database_binary) => {
-								let _ = server_ws_message_sender.send(ServerWsMessage::Request(
-									Request::UpdateDatabase {
-										database_binary,
-										last_modified_time: *database.last_changed_time(),
-									},
-								));
-								Task::none()
-							}
-							None => self.show_error_msg("failed to serialize database".to_string()),
-						}
-					} else {
-						Task::none()
+						let _ = server_ws_message_sender.send(ServerWsMessage::Request(
+							Request::UpdateDatabase {
+								database: database.clone().to_serialized(),
+								last_modified_time: *database.last_changed_time(),
+							},
+						));
 					}
-				} else {
-					Task::none()
 				}
+				Task::none()
 			}
 		}
 	}

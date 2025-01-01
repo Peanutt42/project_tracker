@@ -1,6 +1,6 @@
 use crate::{
-	ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ResponseError,
-	ServerError, SharedServerData,
+	ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ServerError,
+	SharedServerData,
 };
 use async_tungstenite::{
 	tokio::accept_async,
@@ -53,7 +53,7 @@ pub async fn run_server(
 	}
 }
 
-async fn handle_client(
+pub async fn handle_client(
 	stream: TcpStream,
 	database_filepath: PathBuf,
 	password: String,
@@ -205,50 +205,37 @@ async fn respond_to_client_request(
 			}
 		}
 		Request::UpdateDatabase {
-			database_binary,
+			database,
 			last_modified_time,
 		} => {
-			match Database::from_binary(&database_binary, last_modified_time) {
-				Ok(database) => {
-					let database_clone = {
-						let mut shared_data = shared_data.write().unwrap();
-						shared_data.database = database;
-						shared_data.database.clone()
-					};
-
-					if let Err(e) = std::fs::write(database_filepath, database_binary) {
-						panic!(
-							"[Native WS] cant write to database file: {}, error: {e}",
-							database_filepath.display()
-						);
-					}
-
-					let _ = write_ws_sender
-						.send(Message::binary(
-							Response(Ok(EncryptedResponse::DatabaseUpdated
-								.encrypt(password)
-								.unwrap()))
-							.serialize()
-							.unwrap(),
-						))
-						.await;
-
-					let _ = modified_sender.send(ModifiedEvent::new(database_clone, client_addr));
-
-					println!("[Native WS] Updated database file");
-				}
-				Err(e) => {
-					eprintln!("[Native WS] failed to parse database binary of client: {e}");
-
-					let _ = write_ws_sender
-						.send(Message::binary(
-							Response(Err(ResponseError::InvalidDatabaseBinary))
-								.serialize()
-								.unwrap(),
-						))
-						.await;
-				}
+			let database = Database::from_serialized(database, last_modified_time);
+			let database_binary = database.clone().to_binary().unwrap();
+			let database_clone = {
+				let mut shared_data = shared_data.write().unwrap();
+				shared_data.database = database;
+				shared_data.database.clone()
 			};
+
+			if let Err(e) = std::fs::write(database_filepath, database_binary) {
+				panic!(
+					"[Native WS] cant write to database file: {}, error: {e}",
+					database_filepath.display()
+				);
+			}
+
+			let _ = write_ws_sender
+				.send(Message::binary(
+					Response(Ok(EncryptedResponse::DatabaseUpdated
+						.encrypt(password)
+						.unwrap()))
+					.serialize()
+					.unwrap(),
+				))
+				.await;
+
+			let _ = modified_sender.send(ModifiedEvent::new(database_clone, client_addr));
+
+			println!("[Native WS] Updated database file");
 		}
 		Request::DownloadDatabase => {
 			let shared_data_clone = shared_data.read().unwrap().clone();
