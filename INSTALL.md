@@ -10,6 +10,10 @@ Just download the latest project_tracker_server-X.X.X-1.ARCH.rpm package from [l
 
 ## Build from source - Prerequisites
 - Rust (programing lanuage): https://www.rust-lang.org/tools/install
+- C compiler (programming lanuage):
+	- Linux: 'gcc'
+	- Windows: 'msvc'
+	- Macos: 'clang'
 
 ## Build from source - Client
 
