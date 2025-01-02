@@ -7,6 +7,7 @@ use iced::{
 };
 use project_tracker_server::{Request, Response, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 use crate::{
 	components::{retry_connecting_to_server_button, show_error_popup_button},
@@ -91,7 +92,7 @@ impl WsServerConnectionState {
 				match self.connect(output, connection, server_config).await {
 					Ok(continue_subscription) => continue_subscription,
 					Err(e) => {
-						eprintln!("failed to connect to ws: {e}");
+						error!("failed to connect to ws: {e}");
 						if output
 							.send(ServerWsEvent::Error(format!("{e}")))
 							.await
@@ -175,7 +176,7 @@ impl WsServerConnectionState {
 									None
 								),
 								Err(e) => {
-									eprintln!("failed to parse response from server: {e}");
+									error!("failed to parse response from server: {e}");
 									(
 										output.send(ServerWsEvent::Error(format!("{e}"))).await.is_ok(),
 										None
@@ -188,7 +189,7 @@ impl WsServerConnectionState {
 							Some(WsServerConnection::Disconnected)
 						),
 						Err(e) => {
-							eprintln!("ws server disconnected: {e}");
+							error!("ws server disconnected: {e}");
 							(
 								output.send(ServerWsEvent::Disconnected).await.is_ok(),
 								Some(WsServerConnection::Disconnected)
@@ -228,7 +229,7 @@ impl WsServerConnectionState {
 									}
 								},
 								Err(e) => {
-									eprintln!("failed to encrypt request: {e}");
+									error!("failed to encrypt request: {e}");
 									(
 										output.send(ServerWsEvent::Error(format!("{e}"))).await.is_ok(),
 										None

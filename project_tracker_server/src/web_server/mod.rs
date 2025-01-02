@@ -5,12 +5,14 @@ use serde::Serialize;
 use std::{
 	convert::Infallible,
 	net::SocketAddr,
+	path::PathBuf,
 	process::{Command, Stdio},
 	str::from_utf8,
 	sync::{Arc, RwLock},
 };
 use systemstat::{saturating_sub_bytes, Platform, System};
 use tokio::sync::broadcast::Receiver;
+use tracing::{error, info};
 use warp::{
 	body,
 	filters::{
@@ -70,6 +72,7 @@ pub async fn run_web_server(
 	password: String,
 	modified_receiver: Receiver<ModifiedEvent>,
 	shared_data: Arc<RwLock<SharedServerData>>,
+	log_filepath: PathBuf,
 	custom_cert_pem: Option<Vec<u8>>,
 	custom_key_pem: Option<Vec<u8>>,
 ) {
@@ -94,9 +97,12 @@ pub async fn run_web_server(
 		.and(post())
 		.and(body::json())
 		.and(shared_data_clone)
+		.and(warp::any().map(move || log_filepath.clone()))
 		.map(
-			move |body: serde_json::Value, shared_data: Arc<RwLock<SharedServerData>>| {
-				get_admin_infos(body, password_clone.clone(), shared_data)
+			move |body: serde_json::Value,
+			      shared_data: Arc<RwLock<SharedServerData>>,
+			      log_filepath: PathBuf| {
+				get_admin_infos(body, password_clone.clone(), shared_data, log_filepath)
 			},
 		);
 
@@ -273,7 +279,7 @@ pub async fn run_web_server(
 		.key(custom_key_pem.unwrap_or(SELF_SIGNED_KEY_PEM.to_vec()))
 		.bind_ephemeral(([0, 0, 0, 0], 443));
 
-	println!("[Web Server] listening on {https_addr}");
+	info!("https server listening on {https_addr}");
 
 	tokio::spawn(messure_cpu_usage_avg_thread(shared_data.clone()));
 
@@ -286,9 +292,10 @@ fn load_database(
 	shared_data: Arc<RwLock<SharedServerData>>,
 ) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
+		info!("sending database as json");
 		reply::json(&shared_data.read().unwrap().database.clone().to_serialized()).into_response()
 	} else {
-		println!("[Web Server] invalid password providied, refusing access!");
+		info!("invalid password providied, refusing access!");
 		with_status(html("Unauthorized".to_string()), StatusCode::UNAUTHORIZED).into_response()
 	}
 }
@@ -308,8 +315,11 @@ fn get_admin_infos(
 	body: serde_json::Value,
 	password: String,
 	shared_data: Arc<RwLock<SharedServerData>>,
+	log_filepath: PathBuf,
 ) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
+		info!("sending admin infos");
+
 		let (cpu_usage, connected_clients) = {
 			let shared_data = shared_data.read().unwrap();
 			(
@@ -346,7 +356,7 @@ fn get_admin_infos(
 			Err(_) => "failed to get uptime".to_string(),
 		};
 
-		let latest_logs_of_the_day = match get_latest_logs_of_the_day() {
+		let latest_logs_of_the_day = match get_logs_as_string(log_filepath) {
 			Ok(logs) => logs,
 			Err(error_str) => error_str,
 		};
@@ -362,12 +372,12 @@ fn get_admin_infos(
 		})
 		.into_response()
 	} else {
-		println!("[Web Server] invalid password, refusing admin infos!");
+		info!("invalid password, refusing admin infos!");
 		with_status(html("Unauthorized".to_string()), StatusCode::UNAUTHORIZED).into_response()
 	}
 }
 
-fn get_latest_logs_of_the_day() -> Result<String, String> {
+fn get_latest_journal_logs() -> Result<String, String> {
 	let output = Command::new("journalctl")
 		.arg("-u")
 		.arg("project_tracker_server.service")
@@ -378,18 +388,24 @@ fn get_latest_logs_of_the_day() -> Result<String, String> {
 		.output()
 		.map_err(|e| format!("Failed to execute journalctl: {}", e))?;
 
-	if !output.status.success() {
-		let err_msg = from_utf8(&output.stderr)
-			.unwrap_or("Unknown error")
-			.to_string();
-
-		return Err(format!("journalctl error: {}", err_msg));
-	}
-
 	let logs = from_utf8(&output.stdout)
 		.map_err(|e| format!("Failed to convert output to string: {}", e))?;
 
 	Ok(logs.to_string())
+}
+
+fn read_log_file(log_filepath: PathBuf) -> Result<String, String> {
+	std::fs::read_to_string(&log_filepath).map_err(|e| {
+		format!(
+			"Failed to read log file in '{}', error: {e}",
+			log_filepath.display()
+		)
+	})
+}
+
+// returns journal logs if possible, otherwise reads the project_tracker_server.log file
+fn get_logs_as_string(log_filepath: PathBuf) -> Result<String, String> {
+	get_latest_journal_logs().or(read_log_file(log_filepath))
 }
 
 async fn messure_cpu_usage_avg_thread(shared_data: Arc<RwLock<SharedServerData>>) {
@@ -434,6 +450,8 @@ async fn on_upgrade_modified_ws(
 async fn handle_modified_ws(ws: WebSocket, mut modified_receiver: Receiver<ModifiedEvent>) {
 	let (mut write_ws, mut read_ws) = ws.split();
 
+	info!("modified ws client connected");
+
 	loop {
 		tokio::select! {
 			modified_event_result = modified_receiver.recv() => {
@@ -441,22 +459,24 @@ async fn handle_modified_ws(ws: WebSocket, mut modified_receiver: Receiver<Modif
 					Ok(modified_event) => {
 						match serde_json::to_string(&modified_event.modified_database.to_serialized()) {
 							Ok(database_json) => {
+								info!("sending database modified event in ws");
 								if let Err(e) = write_ws.send(Message::text(database_json)).await {
-									eprintln!("[Modified WS] failed to send modified event: {e}");
+									error!("failed to send modified event: {e}");
 									return;
 								}
 							},
-							Err(e) => eprintln!("[Modified WS] failed to serialize database in order to send to ws clients: {e}"),
+							Err(e) => error!("failed to serialize database in order to send to ws clients: {e}"),
 						}
 					},
 					Err(e) => {
-						eprintln!("[Modified WS] failed to receive further database modified events: {e}");
+						error!("failed to receive further database modified events: {e}");
 						return;
 					},
 				}
 			},
 			message = read_ws.next() => {
 				if matches!(message, None | Some(Err(_))) {
+					info!("modified ws connection closed");
 					let _ = write_ws.close().await;
 					return;
 				}
@@ -509,7 +529,7 @@ async fn recover_rejection(rejection: Rejection) -> Result<impl Reply, Infallibl
 		code = StatusCode::INTERNAL_SERVER_ERROR;
 		message = String::new();
 	} else {
-		eprintln!("[Web Server] unhandled rejection: {rejection:?}");
+		error!("unhandled web rejection: {rejection:?}");
 		code = StatusCode::INTERNAL_SERVER_ERROR;
 		message = "Unhandled Rejection".to_string();
 	}

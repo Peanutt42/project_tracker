@@ -14,6 +14,7 @@ use std::sync::{Arc, RwLock};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::mpsc;
+use tracing::{error, info};
 
 pub async fn run_server(
 	port: usize,
@@ -24,9 +25,9 @@ pub async fn run_server(
 ) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port))
 		.await
-		.expect("Failed to bind to port");
+		.expect("failed to bind to port");
 
-	println!("[Native WS] listening on port {}", port);
+	info!("native ws listening on port {}", port);
 
 	loop {
 		match listener.accept().await {
@@ -49,7 +50,7 @@ pub async fn run_server(
 				});
 			}
 			Err(e) => {
-				eprintln!("[Native WS] Failed to establish a connection: {e}")
+				error!("failed to establish ws connection: {e}")
 			}
 		}
 	}
@@ -66,9 +67,7 @@ pub async fn handle_client(
 	let client_addr = match stream.peer_addr() {
 		Ok(client_addr) => client_addr,
 		Err(e) => {
-			eprintln!(
-				"[Native WS] failed to get clients socket address, ignoring client, error: {e}"
-			);
+			error!("failed to get ws client socket address, ignoring client, error: {e}");
 			return;
 		}
 	};
@@ -110,11 +109,11 @@ async fn listen_client_thread(
 ) {
 	let ws_stream = match accept_async(stream).await {
 		Ok(ws) => {
-			println!("[Native WS] client connected");
+			info!("ws client connected");
 			ws
 		}
 		Err(e) => {
-			eprintln!("[Native WS] WebSocket Handshake failed: {e}");
+			error!("ws handshake failed: {e}");
 			return;
 		}
 	};
@@ -150,12 +149,12 @@ async fn listen_client_thread(
 					}
 					Err(e) => match e {
 						ServerError::ResponseError(e) => {
-							eprintln!("[Native WS] {e}");
+							error!("{e}");
 							let _ = write_ws_sender
 								.send(Message::binary(Response(Err(e)).serialize().unwrap()))
 								.await;
 						}
-						_ => eprintln!("[Native WS] failed to parse request: {e}"),
+						_ => error!("failed to parse ws request: {e}"),
 					},
 				}
 			}
@@ -169,15 +168,15 @@ async fn listen_client_thread(
 						)
 				) =>
 			{
-				println!("[Native WS] client disconnected");
+				info!("client disconnected");
 				return;
 			}
 			None => {
-				println!("[Native WS] client disconnected");
+				info!("client disconnected");
 				return;
 			}
 			Some(Err(e)) => {
-				eprintln!("[Native WS] failed to read ws message: {e}")
+				error!("failed to read ws message: {e}")
 			}
 			Some(Ok(_)) => {} // ignore
 		}
@@ -195,7 +194,7 @@ async fn respond_to_client_request(
 ) {
 	match request {
 		Request::GetModifiedDate => {
-			println!("[Native WS] sending last modified date");
+			info!("sending last modified date");
 			let response = Response(Ok(EncryptedResponse::ModifiedDate(
 				*shared_data.read().unwrap().database.last_changed_time(),
 			)
@@ -205,7 +204,7 @@ async fn respond_to_client_request(
 			.unwrap();
 
 			if let Err(e) = write_ws_sender.send(Message::binary(response)).await {
-				eprintln!("[Native WS] failed to respond to 'GetModifiedDate' request: {e}");
+				error!("failed to respond to 'GetModifiedDate' request: {e}");
 			}
 		}
 		Request::UpdateDatabase {
@@ -222,7 +221,7 @@ async fn respond_to_client_request(
 
 			if let Err(e) = std::fs::write(database_filepath, database_binary) {
 				panic!(
-					"[Native WS] cant write to database file: {}, error: {e}",
+					"cant write to database file: {}, error: {e}",
 					database_filepath.display()
 				);
 			}
@@ -239,7 +238,7 @@ async fn respond_to_client_request(
 
 			let _ = modified_sender.send(ModifiedEvent::new(database_clone, client_addr));
 
-			println!("[Native WS] Updated database file");
+			info!("updated database");
 		}
 		Request::DownloadDatabase => {
 			let shared_data_clone = shared_data.read().unwrap().clone();
@@ -254,8 +253,8 @@ async fn respond_to_client_request(
 				.send(Message::binary(response.serialize().unwrap()))
 				.await
 			{
-				Ok(_) => println!("[Native WS] sent database"),
-				Err(e) => eprintln!("[Native WS] failed to send database to client: {e}"),
+				Ok(_) => info!("sent database"),
+				Err(e) => error!("failed to send database to client: {e}"),
 			}
 		}
 	}
@@ -271,6 +270,7 @@ fn modified_event_ws_sender_thread(
 		while let Ok(modified_event) = modified_receiver.recv().await {
 			// do not resend database updated msg to the sender that made that update
 			if modified_event.modified_sender_address != client_addr {
+				info!("sending database modified event in ws");
 				let last_modified_time = *modified_event.modified_database.last_changed_time();
 				let failed_to_send_msg = write_ws_sender
 					.send(Message::binary(
@@ -287,6 +287,7 @@ fn modified_event_ws_sender_thread(
 					.is_err();
 
 				if failed_to_send_msg {
+					error!("failed to send modified event in ws, closing connection");
 					break;
 				}
 			}
@@ -313,7 +314,7 @@ fn ws_write_thread(
 					) => {
 						return;
 					}
-					_ => eprintln!("[Native WS] failed to send response: {e}"),
+					_ => error!("failed to send ws message: {e}"),
 				}
 			}
 		}

@@ -8,6 +8,7 @@ use iced::{
 	Element,
 };
 use iced_aw::card;
+use tracing::error;
 
 pub enum ErrorMsgModal {
 	Open { error_msg: String },
@@ -40,6 +41,7 @@ impl ErrorMsgModal {
 	pub fn update(&mut self, message: ErrorMsgModalMessage) {
 		match message {
 			ErrorMsgModalMessage::Open(error_msg) => {
+				error!("{error_msg}");
 				*self = ErrorMsgModal::Open { error_msg };
 			}
 			ErrorMsgModalMessage::Close => {

@@ -61,6 +61,7 @@ use std::{
 	sync::Arc,
 	time::{Duration, Instant, SystemTime},
 };
+use tracing::{error, info};
 
 #[derive(Debug)]
 pub enum DatabaseState {
@@ -476,7 +477,7 @@ impl ProjectTrackerApp {
 			Message::OpenInCodeEditor(file_location) => {
 				if let Some(code_editor) = self.preferences.code_editor() {
 					if let Err(e) = code_editor.generate_command(&file_location).spawn() {
-						eprintln!("failed to open source code todo in code editor\n{e}\ncode editor: {code_editor:?}, file_location: {file_location}");
+						error!("failed to open source code todo in code editor\n{e}\ncode editor: {code_editor:?}, file_location: {file_location}");
 					}
 				}
 				Task::none()
@@ -550,6 +551,7 @@ impl ProjectTrackerApp {
 			Message::SaveDatabase => {
 				if let DatabaseState::Loaded(database) = &self.database {
 					if let Some(database_binary) = database.clone().to_binary() {
+						info!("saving database");
 						Task::perform(Database::save(database_binary), |result| match result {
 							Ok(begin_time) => Message::DatabaseSaved(begin_time),
 							Err(error) => ErrorMsgModalMessage::open_error(error),
@@ -572,6 +574,7 @@ impl ProjectTrackerApp {
 			Message::SyncDatabase => {
 				if let Some(preferences) = &self.preferences {
 					if let Some(synchronization_settings) = preferences.synchronization() {
+						info!("syncing database");
 						self.last_sync_start_time = Some(Instant::now());
 
 						return match synchronization_settings {
@@ -790,13 +793,13 @@ impl ProjectTrackerApp {
 								if let Err(e) =
 									std::fs::copy(filepath, saved_corrupted_filepath.clone())
 								{
-									eprintln!(
+									error!(
 										"failed to copy corrupted database file to {}: {e}",
 										saved_corrupted_filepath.display()
 									);
 								}
 							} else {
-								eprintln!("failed to save a copy of the corrupted database!");
+								error!("failed to save a copy of the corrupted database!");
 							}
 							if !self.database.is_loaded() {
 								self.database = DatabaseState::Error;
@@ -854,13 +857,13 @@ impl ProjectTrackerApp {
 									filepath.clone(),
 									saved_corrupted_filepath.clone(),
 								) {
-									eprintln!(
+									error!(
 										"failed to copy corrupted preferences file to {}: {e}",
 										saved_corrupted_filepath.display()
 									);
 								}
 							} else {
-								eprintln!("failed to save copy of corrupted preferences!");
+								error!("failed to save copy of corrupted preferences!");
 							}
 							if self.preferences.is_none() {
 								self.preferences = Some(Preferences::default());
@@ -905,6 +908,7 @@ impl ProjectTrackerApp {
 					Task::none()
 				}
 				ServerWsEvent::Connected => {
+					info!("ws connected");
 					if matches!(self.settings_modal, SettingsModal::Closed) {
 						if let Some(message_sender) = &mut self.server_ws_message_sender {
 							let _ = message_sender
@@ -916,11 +920,13 @@ impl ProjectTrackerApp {
 					Task::none()
 				}
 				ServerWsEvent::Disconnected => {
+					info!("ws disconnected");
 					self.sidebar_page.server_connection_status =
 						Some(ServerConnectionStatus::Disconected);
 					Task::none()
 				}
 				ServerWsEvent::Error(error_msg) => {
+					error!("ws error: {error_msg}");
 					self.sidebar_page.server_connection_status =
 						Some(ServerConnectionStatus::Error(error_msg));
 					Task::none()
@@ -933,6 +939,7 @@ impl ProjectTrackerApp {
 				if let Some(SynchronizationSetting::Server(server_config)) =
 					self.preferences.synchronization()
 				{
+					info!("connecting to server...");
 					if let Some(message_sender) = &mut self.server_ws_message_sender {
 						let _ =
 							message_sender.send(ServerWsMessage::Connect(server_config.clone()));

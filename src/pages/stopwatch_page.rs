@@ -24,6 +24,7 @@ use iced::{
 };
 use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, Task, TaskId, TaskType};
 use std::time::{Duration, Instant};
+use tracing::error;
 
 #[derive(Debug, Default)]
 pub enum StopwatchPage {
@@ -793,7 +794,7 @@ fn timer_notification(summary: String, body: String) {
 		.show();
 
 	if let Err(e) = notification_result {
-		eprintln!("failed to show timer notification: {e}");
+		error!("failed to show timer notification: {e}");
 	}
 }
 
@@ -808,10 +809,10 @@ fn timer_notification(summary: String, body: String) {
 			let notification_sound_data = include_bytes!("../../assets/message-new-instant.oga");
 			match stream_handle.play_once(Cursor::new(notification_sound_data)) {
 				Ok(sink) => sink.sleep_until_end(),
-				Err(e) => eprintln!("Failed to play notification sound: {e}"),
+				Err(e) => error!("Failed to play notification sound: {e}"),
 			}
 		}
-		Err(e) => eprintln!("Failed to play notification sound: {e}"),
+		Err(e) => error!("Failed to play notification sound: {e}"),
 	});
 
 	// show notification
@@ -837,7 +838,7 @@ fn timer_notification(summary: String, body: String) {
 	#[cfg(target_os = "linux")]
 	thread::spawn(|| match notification_result {
 		Ok(notification_handle) => notification_handle.on_close(|| {}),
-		Err(e) => eprintln!("failed to show timer notification: {e}"),
+		Err(e) => error!("failed to show timer notification: {e}"),
 	});
 }
 

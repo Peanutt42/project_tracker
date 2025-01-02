@@ -18,6 +18,8 @@ iced_aw = { workspace = true }
 iced_drop = { path = "iced_drop" }
 iced_fonts = "0.1.1"
 tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 async-tungstenite = { workspace = true }
 rodio = "0.19"
 serde = { workspace = true }
@@ -87,6 +89,8 @@ tokio = { version = "1.4", features = [
 	"rt-multi-thread",
 	"sync",
 ] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
 chrono = { version = "0.4.38", features = ["serde"] }
 filetime = "0.2"
 thiserror = "1.0"

@@ -1,8 +1,11 @@
 use project_tracker_core::Database;
 use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
-use std::fs::read_to_string;
+use std::fs::{read_to_string, OpenOptions};
 use std::path::PathBuf;
 use std::process::exit;
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::Layer;
 
 #[cfg(feature = "web_server")]
 mod web_server;
@@ -46,6 +49,26 @@ async fn main() {
 		SharedServerData::from_memory(Database::default())
 	};
 
+	let stdout_layer = tracing_subscriber::fmt::layer()
+		.with_writer(std::io::stdout)
+		.with_filter(LevelFilter::INFO);
+	let log_filepath = server_data_directory.join("project_tracker_server.log");
+	let log_file = OpenOptions::new()
+		.append(true)
+		.create(true)
+		.open(&log_filepath)
+		.expect("failed to open log file");
+	let file_layer = tracing_subscriber::fmt::layer()
+		.with_writer(log_file)
+		.with_ansi(false)
+		.with_filter(LevelFilter::INFO);
+	tracing::subscriber::set_global_default(
+		tracing_subscriber::registry()
+			.with(stdout_layer)
+			.with(file_layer),
+	)
+	.unwrap();
+
 	#[allow(unused)]
 	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
 
@@ -67,6 +90,7 @@ async fn main() {
 						password_clone,
 						modified_receiver,
 						shared_data_clone,
+						log_filepath,
 						custom_cert_pem,
 						custom_key_pem,
 					)

@@ -23,6 +23,8 @@ fn main() -> Result<(), iced::Error> {
 		exit(1);
 	}
 
+	tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new()).unwrap();
+
 	iced::application(
 		ProjectTrackerApp::title,
 		ProjectTrackerApp::update,

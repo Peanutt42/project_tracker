@@ -13,6 +13,6 @@ async fn main() {
 		.await
 		.unwrap();
 	} else {
-		println!("usage: create_empty_database [FILEPATH]");
+		eprintln!("usage: create_empty_database [FILEPATH]");
 	}
 }
