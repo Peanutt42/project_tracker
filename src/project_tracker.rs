@@ -5,7 +5,7 @@ use crate::{
 		settings_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH,
 	},
 	core::{
-		export_database_as_json_file_dialog, export_database_file_dialog,
+		export_database_as_json_file_dialog, export_database_file_dialog, formatted_date_time,
 		import_database_file_dialog, import_json_database_file_dialog, ProjectUiIdMap, TaskUiIdMap,
 	},
 	integrations::{
@@ -29,13 +29,12 @@ use crate::{
 		MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT,
 	},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
-	DateFormatting,
 };
 use crate::{
 	LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences,
 	SynchronizationSetting,
 };
-use chrono::{Datelike, Local, Timelike, Utc};
+use chrono::Utc;
 use iced::{
 	alignment::{Horizontal, Vertical},
 	clipboard,
@@ -782,27 +781,10 @@ impl ProjectTrackerApp {
 						| LoadDatabaseError::FailedToParseJson { filepath, .. } => {
 							// saves the corrupted database, just so we don't lose the progress and can correct it afterwards
 							if let Some(mut saved_corrupted_filepath) = Database::get_filepath() {
-								let now = Local::now();
-								let time_formatted = match self.preferences.date_formatting() {
-									DateFormatting::DayMonthYear => format!(
-										"{}_{}_{} - {}_{}",
-										now.day(),
-										now.month(),
-										now.year(),
-										now.hour(),
-										now.minute()
-									),
-									DateFormatting::MonthDayYear => format!(
-										"{}_{}_{} - {}_{}",
-										now.month(),
-										now.day(),
-										now.year(),
-										now.hour(),
-										now.minute()
-									),
-								};
+								let formatted_date_time =
+									formatted_date_time(self.preferences.date_formatting());
 								saved_corrupted_filepath.set_file_name(format!(
-									"corrupted_database_{time_formatted}.project_tracker"
+									"corrupted_database_{formatted_date_time}.project_tracker"
 								));
 
 								if let Err(e) =
@@ -863,8 +845,11 @@ impl ProjectTrackerApp {
 							// saves the corrupted preferences, just so we don't lose the progress and can correct it afterwards
 							if let Some(mut saved_corrupted_filepath) = Preferences::get_filepath()
 							{
-								saved_corrupted_filepath
-									.set_file_name("corrupted - preferences.json");
+								let formatted_date_time =
+									formatted_date_time(self.preferences.date_formatting());
+								saved_corrupted_filepath.set_file_name(format!(
+									"corrupted_preferences_{formatted_date_time}.toml"
+								));
 								if let Err(e) = std::fs::copy(
 									filepath.clone(),
 									saved_corrupted_filepath.clone(),

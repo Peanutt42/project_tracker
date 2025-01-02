@@ -5,7 +5,7 @@ use project_tracker_core::{ProjectId, TaskId};
 pub use task_tag::TASK_TAG_QUAD_HEIGHT;
 
 mod date;
-pub use date::SerializableDateConversion;
+pub use date::{formatted_date_time, SerializableDateConversion};
 
 mod project;
 pub use project::{IcedColorConversion, SortModeUI};

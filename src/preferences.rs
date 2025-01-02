@@ -175,7 +175,7 @@ pub enum PreferenceAction {
 	Task(Task<Message>),
 	PreferenceMessage(PreferenceMessage),
 	RefreshCachedTaskList,
-	FailedToSerailizePreferences(serde_json::Error),
+	FailedToSerailizePreferences(toml::ser::Error),
 }
 
 impl From<PreferenceMessage> for PreferenceAction {
@@ -202,7 +202,7 @@ pub enum LoadPreferencesError {
 	#[error("parsing error:\nfailed to load preferences in '{filepath}'")]
 	FailedToParse {
 		filepath: PathBuf,
-		error: serde_json::Error,
+		error: toml::de::Error,
 	},
 }
 
@@ -221,7 +221,7 @@ pub enum SavePreferencesError {
 pub type SavePreferencesResult<T> = Result<T, SavePreferencesError>;
 
 impl Preferences {
-	const FILE_NAME: &'static str = "preferences.json";
+	const FILE_NAME: &'static str = "preferences.toml";
 
 	pub fn synchronization(&self) -> &Option<SynchronizationSetting> {
 		&self.synchronization
@@ -275,7 +275,7 @@ impl Preferences {
 
 	pub fn update(&mut self, message: PreferenceMessage) -> PreferenceAction {
 		match message {
-			PreferenceMessage::Save => match self.to_json() {
+			PreferenceMessage::Save => match self.serialized() {
 				Ok(json) => {
 					PreferenceAction::Task(Task::perform(Self::save(json), |result| match result {
 						Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
@@ -293,7 +293,7 @@ impl Preferences {
 				self.modified();
 				PreferenceAction::None
 			}
-			PreferenceMessage::Export => match self.to_json() {
+			PreferenceMessage::Export => match self.serialized() {
 				Ok(json) => PreferenceAction::Task(Task::perform(
 					Self::export_file_dialog(json),
 					|result| match result {
@@ -388,7 +388,7 @@ impl Preferences {
 				error,
 			})?;
 
-		serde_json::from_str(&file_content)
+		toml::from_str(&file_content)
 			.map_err(|error| LoadPreferencesError::FailedToParse { filepath, error })
 	}
 
@@ -407,8 +407,8 @@ impl Preferences {
 			.map_err(|error| SavePreferencesError::FailedToSaveFile { filepath, error })
 	}
 
-	pub fn to_json(&self) -> serde_json::Result<String> {
-		serde_json::to_string_pretty(self)
+	pub fn serialized(&self) -> Result<String, toml::ser::Error> {
+		toml::to_string_pretty(self)
 	}
 
 	// returns begin time of saving
@@ -428,7 +428,7 @@ impl Preferences {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Export ProjectTracker Preferences")
 			.set_file_name(Self::FILE_NAME)
-			.add_filter("Preference (.json)", &["json"])
+			.add_filter("Preference (.toml)", &["toml"])
 			.save_file()
 			.await;
 
@@ -441,7 +441,7 @@ impl Preferences {
 	pub async fn import_file_dialog() -> Option<LoadPreferencesResult> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Import ProjectTracker Preferences")
-			.add_filter("Preference (.json)", &["json"])
+			.add_filter("Preference (.toml)", &["toml"])
 			.pick_file()
 			.await;
 
