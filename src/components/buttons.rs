@@ -1224,7 +1224,9 @@ fn code_editor_button(
 	round_bottom: bool,
 ) -> Button<Message> {
 	let selected = match selected_code_editor {
-		Some(CodeEditor::Custom { .. }) => matches!(code_editor, Some(CodeEditor::Custom { .. })),
+		Some(CodeEditor::Custom { .. }) => {
+			matches!(code_editor, Some(CodeEditor::Custom { .. }))
+		}
 		_ => selected_code_editor == code_editor.as_ref(),
 	};
 

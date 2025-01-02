@@ -48,7 +48,9 @@ pub async fn run_server(
 					.await
 				});
 			}
-			Err(e) => eprintln!("[Native WS] Failed to establish a connection: {e}"),
+			Err(e) => {
+				eprintln!("[Native WS] Failed to establish a connection: {e}")
+			}
 		}
 	}
 }
@@ -174,7 +176,9 @@ async fn listen_client_thread(
 				println!("[Native WS] client disconnected");
 				return;
 			}
-			Some(Err(e)) => eprintln!("[Native WS] failed to read ws message: {e}"),
+			Some(Err(e)) => {
+				eprintln!("[Native WS] failed to read ws message: {e}")
+			}
 			Some(Ok(_)) => {} // ignore
 		}
 	}

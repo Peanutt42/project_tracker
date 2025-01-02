@@ -57,7 +57,9 @@ impl SynchronizationSetting {
 			SynchronizationSetting::Filepath(_) => {
 				matches!(other, SynchronizationSetting::Filepath(_))
 			}
-			SynchronizationSetting::Server(_) => matches!(other, SynchronizationSetting::Server(_)),
+			SynchronizationSetting::Server(_) => {
+				matches!(other, SynchronizationSetting::Server(_))
+			}
 		}
 	}
 }
@@ -489,10 +491,9 @@ impl Preferences {
 			Self::setting_item(
 				"Create new tasks at top:",
 				toggler(self.create_new_tasks_at_top)
-					.on_toggle(|create_at_top| PreferenceMessage::SetCreateNewTaskAtTop(
-						create_at_top
-					)
-					.into())
+					.on_toggle(|create_at_top| {
+						PreferenceMessage::SetCreateNewTaskAtTop(create_at_top).into()
+					})
 					.size(27.5)
 			),
 			Self::setting_item(
@@ -568,8 +569,12 @@ impl DateFormatting {
 
 	pub fn format(&self, date: &SerializableDate) -> String {
 		match self {
-			DateFormatting::DayMonthYear => format!("{}.{}.{}", date.day, date.month, date.year),
-			DateFormatting::MonthDayYear => format!("{}.{}.{}", date.month, date.day, date.year),
+			DateFormatting::DayMonthYear => {
+				format!("{}.{}.{}", date.day, date.month, date.year)
+			}
+			DateFormatting::MonthDayYear => {
+				format!("{}.{}.{}", date.month, date.day, date.year)
+			}
 		}
 	}
 }

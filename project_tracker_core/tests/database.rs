@@ -50,7 +50,9 @@ async fn test_database_serialization() {
 				panic!("Failed to find serialized file, maybe database.save_to failed?")
 			}
 			LoadDatabaseError::FailedToParseBinary { .. }
-			| LoadDatabaseError::FailedToParseJson { .. } => panic!("Failed to parse serialized file!"),
+			| LoadDatabaseError::FailedToParseJson { .. } => {
+				panic!("Failed to parse serialized file!")
+			}
 		},
 	};
 

@@ -547,7 +547,9 @@ impl SidebarPage {
 			.collect();
 
 		let end_of_list_dropzone_hovered = match self.project_dropzone_hovered {
-			Some(dropzone_hovered) => matches!(dropzone_hovered, ProjectDropzone::EndOfList),
+			Some(dropzone_hovered) => {
+				matches!(dropzone_hovered, ProjectDropzone::EndOfList)
+			}
 			None => false,
 		};
 
@@ -592,7 +594,7 @@ impl SidebarPage {
 			.into()
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<Message> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
 		let list: Element<Message> = if let DatabaseState::Loaded(database) = &app.database {
 			self.project_preview_list(database.projects(), app)
 		} else {

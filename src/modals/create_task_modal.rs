@@ -248,9 +248,9 @@ impl CreateTaskModal {
 				Space::new(0.0, SPACING_AMOUNT),
 				text("Description:"),
 				text_editor(&self.task_description)
-					.on_action(
-						|action| CreateTaskModalMessage::TaskDescriptionAction(action).into()
-					)
+					.on_action(|action| {
+						CreateTaskModalMessage::TaskDescriptionAction(action).into()
+					})
 					.style(description_text_editor_style)
 					.key_binding(|key_press| text_editor_keybindings(
 						key_press,

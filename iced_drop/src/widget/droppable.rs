@@ -153,8 +153,8 @@ where
 	}
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-	for Droppable<'a, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+	for Droppable<'_, Message, Theme, Renderer>
 where
 	Message: Clone,
 	Renderer: renderer::Renderer,
@@ -507,8 +507,8 @@ where
 	overlay_bounds: Rectangle,
 }
 
-impl<'a, 'b, Message, Theme, Renderer> overlay::Overlay<Message, Theme, Renderer>
-	for Overlay<'a, 'b, Message, Theme, Renderer>
+impl<Message, Theme, Renderer> overlay::Overlay<Message, Theme, Renderer>
+	for Overlay<'_, '_, Message, Theme, Renderer>
 where
 	Renderer: renderer::Renderer,
 {

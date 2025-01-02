@@ -339,7 +339,7 @@ impl SettingsModal {
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<Message>> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
 		match self {
 			SettingsModal::Closed => None,
 			SettingsModal::Opened {

@@ -190,7 +190,7 @@ impl ManageTaskTagsModal {
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<Message> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
 		if let Some(project) = app
 			.database
 			.ok()
