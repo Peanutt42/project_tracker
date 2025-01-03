@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
 	const database_list = document.getElementById("database");
-	const admin_dashboard_button = document.getElementById("admin_dashboard_button");
+	const admin_dashboard_button = document.getElementById(
+		"admin_dashboard_button",
+	);
 	const logout_button = document.getElementById("logout_button");
 
 	let ws = null;
@@ -9,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
 	admin_dashboard_button.addEventListener("click", open_admin_page);
 
 	logout_button.addEventListener("click", logout);
-
 
 	const stored_password = localStorage.getItem("password");
 	if (stored_password) {
@@ -21,8 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		login(stored_password);
 
 		connect_ws(stored_password);
-	}
-	else {
+	} else {
 		window.location.href = "/login";
 	}
 
@@ -45,13 +45,13 @@ document.addEventListener("DOMContentLoaded", () => {
 				localStorage.setItem("last_loaded_database", database);
 				populate_dom_from_database(database);
 			} else if (response.status === 401) {
-				console.error('invalid password, unauthorized!');
+				console.error("invalid password, unauthorized!");
 				logout();
 			} else {
-				console.error('invalid response!');
+				console.error("invalid response!");
 			}
 		} catch (error) {
-			console.error('failed to fetch response: ' + error + '!');
+			console.error("failed to fetch response: " + error + "!");
 		}
 	}
 
@@ -72,30 +72,47 @@ document.addEventListener("DOMContentLoaded", () => {
 		database_list.innerHTML = "";
 		for (const project_id in database.projects) {
 			const project = database.projects[project_id];
-			const sanitized_task_tags = sanitize_task_tags(project.task_tags);
 
 			const project_div = document.createElement("div");
 			project_div.className = "project";
 			const project_name = document.createElement("div");
 			project_name.className = "project_name";
-			const done_task_count = Object.keys(project.done_tasks).length
-			const all_task_count = done_task_count + Object.keys(project.todo_tasks).length + Object.keys(project.source_code_todos).length;
-			project_name.textContent = project.name + " (" + done_task_count + '/' + all_task_count + ')';
+			const done_task_count = Object.keys(project.done_tasks).length;
+			const all_task_count =
+				done_task_count +
+				Object.keys(project.todo_tasks).length +
+				Object.keys(project.source_code_todos).length;
+			project_name.textContent =
+				project.name + " (" + done_task_count + "/" + all_task_count + ")";
 			project_name.style.textDecorationColor = color_to_str(project.color);
 			project_div.appendChild(project_name);
 
 			const task_list = document.createElement("ul");
 			task_list.className = "task_list";
 
-			const sorted_todo_tasks = field_ordered_tasklist_to_array(project.todo_tasks);
+			const sorted_todo_tasks = field_ordered_tasklist_to_array(
+				project.todo_tasks,
+			);
 			sort_project_tasks(project.sort_mode, sorted_todo_tasks);
 			for (const task_with_id of sorted_todo_tasks) {
-				populate_dom_with_task(task_list, task_with_id[1], sanitized_task_tags, false);
+				populate_dom_with_task(
+					task_list,
+					task_with_id[1],
+					project.task_tags,
+					false,
+				);
 			}
-			const sorted_source_code_todos = field_ordered_tasklist_to_array(project.soure_code_todos);
+			const sorted_source_code_todos = field_ordered_tasklist_to_array(
+				project.soure_code_todos,
+			);
 			sort_project_tasks(project.sort_mode, sorted_source_code_todos);
 			for (const task_with_id in sorted_source_code_todos) {
-				populate_dom_with_task(task_list, task_with_id[1], sanitized_task_tags, false);
+				populate_dom_with_task(
+					task_list,
+					task_with_id[1],
+					project.task_tags,
+					false,
+				);
 			}
 			const done_task_list_section = document.createElement("details");
 			done_task_list_section.className = "show_done_task_details";
@@ -106,7 +123,12 @@ document.addEventListener("DOMContentLoaded", () => {
 			done_task_list.className = "task_list";
 			sort_project_tasks(project.sort_mode, project.done_tasks);
 			for (const task_with_id of project.done_tasks) {
-				populate_dom_with_task(done_task_list, task_with_id[1], sanitized_task_tags, true);
+				populate_dom_with_task(
+					done_task_list,
+					task_with_id[1],
+					project.task_tags,
+					true,
+				);
 			}
 			done_task_list_section.appendChild(done_task_list);
 			task_list.appendChild(done_task_list_section);
@@ -126,24 +148,9 @@ document.addEventListener("DOMContentLoaded", () => {
 	function field_ordered_tasklist_to_array(tasks) {
 		const array = [];
 		for (const task_id in tasks) {
-			array.push(
-				[
-					task_id,
-					tasks[task_id],
-				]
-			);
+			array.push([task_id, tasks[task_id]]);
 		}
 		return array;
-	}
-
-	// json field names, if numbers, are auto casted to 'number' type
-	// loosing the precision 'BigInt' might have had
-	function sanitize_task_tags(task_tags) {
-		const sanitized_task_tags = {};
-		Object.keys(task_tags).forEach((tag_id) => {
-			sanitized_task_tags[Number(tag_id)] = task_tags[tag_id];
-		});
-		return sanitized_task_tags;
 	}
 
 	function sort_project_tasks(sort_mode, tasks) {
@@ -155,8 +162,16 @@ document.addEventListener("DOMContentLoaded", () => {
 				let due_date_b = task_b.due_date;
 				if (due_date_a) {
 					if (due_date_b) {
-						const date_a = new Date(due_date_a.year, due_date_a.month - 1, due_date_a.day); // months are 0-indexed
-						const date_b = new Date(due_date_b.year, due_date_b.month - 1, due_date_b.day);
+						const date_a = new Date(
+							due_date_a.year,
+							due_date_a.month - 1,
+							due_date_a.day,
+						); // months are 0-indexed
+						const date_b = new Date(
+							due_date_b.year,
+							due_date_b.month - 1,
+							due_date_b.day,
+						);
 						return date_a - date_b;
 					} else {
 						return -1;
@@ -197,8 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		task_div.className = "task";
 
 		const checkbox = document.createElement("input");
-		checkbox.type = "checkbox",
-		checkbox.checked = done;
+		(checkbox.type = "checkbox"), (checkbox.checked = done);
 		checkbox.disabled = true; // TODO: check/uncheck tasks and send to server
 		task_div.appendChild(checkbox);
 
@@ -209,27 +223,33 @@ document.addEventListener("DOMContentLoaded", () => {
 		const task_tags_list = document.createElement("ul");
 		task_tags_list.className = "tag_list";
 		for (const [tag_id, tag] of Object.entries(task_tags)) {
-			if (task.tags.includes(Number(tag_id))) {
+			if (task.tags.includes(tag_id)) {
 				task_tags_list.appendChild(task_tag_dom(tag));
 			}
 		}
 		task_tags_and_name_div.appendChild(task_tags_list);
 
-		let task_info = '';
+		let task_info = "";
 		if (task.time_spend) {
-			task_info += Math.floor(task.time_spend.offset_seconds / 60) + 'min';
+			task_info += Math.floor(task.time_spend.offset_seconds / 60) + "min";
 			if (task.needed_time_minutes === null) {
-				task_info += '/... - ';
+				task_info += "/... - ";
 			}
 		}
 		if (task.needed_time_minutes) {
 			if (task.time_spend) {
-				task_info += '/';
+				task_info += "/";
 			}
-			task_info += task.needed_time_minutes + 'min - ';
+			task_info += task.needed_time_minutes + "min - ";
 		}
 		if (task.due_date) {
-			task_info += task.due_date.day + '.' + task.due_date.month + '.' + task.due_date.year + ' - ';
+			task_info +=
+				task.due_date.day +
+				"." +
+				task.due_date.month +
+				"." +
+				task.due_date.year +
+				" - ";
 		}
 		task_info += task.name;
 
@@ -244,8 +264,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	function connect_ws(password) {
-		console.log('connecting to modifed ws endpoint...');
-		ws = new WebSocket('wss://' + location.host + '/modified/' + password);
+		console.log("connecting to modifed ws endpoint...");
+		ws = new WebSocket("wss://" + location.host + "/modified/" + password);
 		ws.onopen = on_ws_open;
 		ws.onclose = on_ws_close;
 		ws.onmessage = on_ws_message;
@@ -258,12 +278,15 @@ document.addEventListener("DOMContentLoaded", () => {
 	function on_ws_close(event) {
 		if (reconnect_attempts < 10) {
 			reconnect_attempts++;
-			console.log('reconnecting to modified ws endpoint... (' + reconnect_attempts + '. attempt)');
+			console.log(
+				"reconnecting to modified ws endpoint... (" +
+					reconnect_attempts +
+					". attempt)",
+			);
 			// reconnect every 2 seconds
 			setTimeout(connect_ws, 2000);
-		}
-		else {
-			console.log('too many reconnect attempts, refresh when ws up again');
+		} else {
+			console.log("too many reconnect attempts, refresh when ws up again");
 		}
 	}
 

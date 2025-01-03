@@ -175,7 +175,7 @@ pub enum PreferenceAction {
 	Task(Task<Message>),
 	PreferenceMessage(PreferenceMessage),
 	RefreshCachedTaskList,
-	FailedToSerailizePreferences(toml::ser::Error),
+	FailedToSerializePreferences(toml::ser::Error),
 }
 
 impl From<PreferenceMessage> for PreferenceAction {
@@ -282,7 +282,7 @@ impl Preferences {
 						Err(error) => ErrorMsgModalMessage::open_error(error),
 					}))
 				}
-				Err(e) => PreferenceAction::FailedToSerailizePreferences(e),
+				Err(e) => PreferenceAction::FailedToSerializePreferences(e),
 			},
 			PreferenceMessage::Saved(begin_time) => {
 				self.last_saved_time = begin_time;
@@ -301,7 +301,7 @@ impl Preferences {
 						Err(error) => ErrorMsgModalMessage::open_error(error),
 					},
 				)),
-				Err(e) => PreferenceAction::FailedToSerailizePreferences(e),
+				Err(e) => PreferenceAction::FailedToSerializePreferences(e),
 			},
 			PreferenceMessage::Exported => PreferenceAction::None,
 			PreferenceMessage::Import => {

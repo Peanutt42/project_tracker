@@ -761,7 +761,7 @@ impl ProjectTrackerApp {
 							for (task_id, task, _task_type) in project.iter() {
 								self.task_description_markdown_items.insert(
 									task_id,
-									generate_task_description_markdown(task.description()),
+									generate_task_description_markdown(&task.description),
 								);
 							}
 						}
@@ -977,7 +977,7 @@ impl ProjectTrackerApp {
 								for (task_id, task, _task_type) in project.iter() {
 									self.task_description_markdown_items.insert(
 										task_id,
-										generate_task_description_markdown(task.description()),
+										generate_task_description_markdown(&task.description),
 									);
 								}
 							}
@@ -989,7 +989,7 @@ impl ProjectTrackerApp {
 							for (task_id, task) in source_code_todo_tasks.iter() {
 								self.task_description_markdown_items.insert(
 									*task_id,
-									generate_task_description_markdown(task.description()),
+									generate_task_description_markdown(&task.description),
 								);
 							}
 						}
@@ -1472,7 +1472,9 @@ impl ProjectTrackerApp {
 			PreferenceAction::None => Task::none(),
 			PreferenceAction::Task(task) => task,
 			PreferenceAction::PreferenceMessage(message) => self.update(message.into()),
-			PreferenceAction::FailedToSerailizePreferences(e) => self.show_error(e),
+			PreferenceAction::FailedToSerializePreferences(e) => {
+				self.show_error_msg(format!("Failed to serialize preferences to toml: {e}"))
+			}
 			PreferenceAction::RefreshCachedTaskList => {
 				if let Some(project_page) = &mut self.content_page.project_page {
 					if let DatabaseState::Loaded(database) = &self.database {

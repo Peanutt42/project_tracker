@@ -1,12 +1,13 @@
 use crate::SerializableColor;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct TaskTagId(pub usize);
+pub struct TaskTagId(pub Uuid);
 
 impl TaskTagId {
 	pub fn generate() -> Self {
-		Self(rand::random())
+		Self(Uuid::new_v4())
 	}
 }
 

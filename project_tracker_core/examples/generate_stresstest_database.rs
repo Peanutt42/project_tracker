@@ -42,7 +42,7 @@ async fn main() {
 				project.done_tasks.insert(task_id, task);
 			}
 		}
-		db.modify(|projects| projects.insert(ProjectId(i), project));
+		db.modify(|projects| projects.insert(ProjectId::generate(), project));
 	}
 
 	Database::save_to(

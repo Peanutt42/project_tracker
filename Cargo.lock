@@ -3665,7 +3665,6 @@ dependencies = [
  "open",
  "project_tracker_core",
  "project_tracker_server",
- "rand",
  "rayon",
  "rfd",
  "rodio",
@@ -3677,6 +3676,7 @@ dependencies = [
  "toml 0.8.19",
  "tracing",
  "tracing-subscriber",
+ "uuid",
  "walkdir",
  "which",
  "winresource",
@@ -3692,11 +3692,11 @@ dependencies = [
  "directories",
  "filetime",
  "indexmap",
- "rand",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -3720,6 +3720,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
  "warp",
 ]
 
@@ -5140,6 +5141,16 @@ name = "utf-8"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
+
+[[package]]
+name = "uuid"
+version = "1.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8c5f0a0af699448548ad1a2fbf920fb4bee257eae39953ba95cb84891a0446a"
+dependencies = [
+ "getrandom",
+ "serde",
+]
 
 [[package]]
 name = "valuable"

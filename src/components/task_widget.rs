@@ -58,7 +58,7 @@ pub fn task_widget<'a>(
 				row![
 					icon_to_text(Bootstrap::GripVertical),
 					Space::new(Fill, 0.0),
-					open_in_code_editor_button(task.description().clone(), code_editor),
+					open_in_code_editor_button(task.description.clone(), code_editor),
 				]
 				.align_y(Vertical::Center)
 				.padding(Padding::default().right(SMALL_PADDING_AMOUNT))
@@ -85,7 +85,7 @@ pub fn task_widget<'a>(
 
 	let inner = |drag_overlay: bool| -> Element<'a, Message> {
 		let inner_text_element: Element<'a, Message> =
-			text(task.name()).width(Fill).style(text_style).into();
+			text(&task.name).width(Fill).style(text_style).into();
 
 		let tags_element = Row::with_children(
 			project

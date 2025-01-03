@@ -451,7 +451,7 @@ impl StopwatchPage {
 									if preferences.play_timer_notification_sound() {
 										timer_notification(
 											format!("{} min. timer finished!", needed_minutes),
-											task.name().clone(),
+											task.name.clone(),
 										);
 									}
 								}
@@ -850,7 +850,7 @@ fn task_info<'a>(
 ) -> Option<Element<'a, Message>> {
 	task.map(|task| {
 		Column::new()
-			.push(text(task.name()).size(HEADING_TEXT_SIZE).font(BOLD_FONT))
+			.push(text(&task.name).size(HEADING_TEXT_SIZE).font(BOLD_FONT))
 			.push_maybe(task.due_date.map(|date| days_left_widget(date, false)))
 			.push(task_description(
 				app.task_description_markdown_items.get(&task_id),

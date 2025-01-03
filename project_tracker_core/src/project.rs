@@ -8,13 +8,14 @@ use indexmap::{
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, path::PathBuf};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
-pub struct ProjectId(pub usize);
+pub struct ProjectId(pub Uuid);
 
 impl ProjectId {
 	pub fn generate() -> Self {
-		Self(rand::random())
+		Self(Uuid::new_v4())
 	}
 }
 
@@ -132,13 +133,13 @@ impl Project {
 
 	pub fn set_task_name(&mut self, task_id: TaskId, new_name: String) {
 		if let Some(task) = self.get_task_mut(&task_id) {
-			task.set_name(new_name);
+			task.name = new_name;
 		}
 	}
 
 	pub fn set_task_description(&mut self, task_id: TaskId, new_description: String) {
 		if let Some(task) = self.get_task_mut(&task_id) {
-			task.set_description(new_description);
+			task.description = new_description;
 		}
 	}
 

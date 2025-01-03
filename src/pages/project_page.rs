@@ -123,9 +123,9 @@ impl CachedTaskList {
 			for (task_id, task, task_type) in project.iter() {
 				if task.matches_filter(task_tag_filter) {
 					let task_name_match =
-						SkimMatcherV2::default().fuzzy_match(task.name(), search_filter);
+						SkimMatcherV2::default().fuzzy_match(&task.name, search_filter);
 					let task_description_match =
-						SkimMatcherV2::default().fuzzy_match(task.description(), search_filter);
+						SkimMatcherV2::default().fuzzy_match(&task.description, search_filter);
 
 					let task_match = match (task_name_match, task_description_match) {
 						(Some(task_name_match), Some(task_description_match)) => {

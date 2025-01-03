@@ -4,13 +4,14 @@ use std::{
 	collections::HashSet,
 	time::{Duration, Instant},
 };
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
-pub struct TaskId(pub usize);
+pub struct TaskId(pub Uuid);
 
 impl TaskId {
 	pub fn generate() -> Self {
-		Self(rand::random())
+		Self(Uuid::new_v4())
 	}
 }
 
@@ -33,6 +34,13 @@ pub struct TimeSpend {
 	#[serde(skip)]
 	tracking_time_start: Option<Instant>,
 }
+
+impl PartialEq for TimeSpend {
+	fn eq(&self, other: &Self) -> bool {
+		self.get_duration() == other.get_duration()
+	}
+}
+impl Eq for TimeSpend {}
 
 impl TimeSpend {
 	pub fn new(seconds: f32) -> Self {
@@ -80,10 +88,10 @@ impl TimeSpend {
 	}
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Task {
-	name: String,
-	description: String,
+	pub name: String,
+	pub description: String,
 	#[serde(default)]
 	pub needed_time_minutes: Option<usize>,
 	#[serde(default)]
@@ -112,21 +120,6 @@ impl Task {
 		}
 	}
 
-	pub fn name(&self) -> &String {
-		&self.name
-	}
-	pub fn description(&self) -> &String {
-		&self.description
-	}
-
-	pub fn set_name(&mut self, new_name: String) {
-		self.name = new_name;
-	}
-
-	pub fn set_description(&mut self, new_description: String) {
-		self.description = new_description;
-	}
-
 	pub fn matches_filter(&self, filter: &HashSet<TaskTagId>) -> bool {
 		for tag_id in filter.iter() {
 			if !self.tags.contains(tag_id) {
@@ -136,13 +129,3 @@ impl Task {
 		true
 	}
 }
-
-impl PartialEq for Task {
-	fn eq(&self, other: &Self) -> bool {
-		self.name.eq(&other.name)
-			&& self.needed_time_minutes.eq(&other.needed_time_minutes)
-			&& self.due_date.eq(&other.due_date)
-			&& self.tags.eq(&other.tags)
-	}
-}
-impl Eq for Task {}

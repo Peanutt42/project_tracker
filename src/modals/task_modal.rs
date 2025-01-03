@@ -105,7 +105,7 @@ impl TaskModal {
 			TaskModalMessage::EditDescription => {
 				self.new_description = database.as_ref().and_then(|db| {
 					db.get_task(&self.project_id, &self.task_id)
-						.map(|task| text_editor::Content::with_text(task.description()))
+						.map(|task| text_editor::Content::with_text(&task.description))
 				});
 				TaskModalAction::None
 			}
@@ -316,21 +316,20 @@ impl TaskModal {
 							)
 						};
 
-					let name_text: Element<'a, Message> =
-						text_input("Input task name", task.name())
-							.id(TASK_NAME_INPUT_ID.clone())
-							.on_input(|new_task_name| {
-								DatabaseMessage::ChangeTaskName {
-									project_id: self.project_id,
-									task_id: self.task_id,
-									new_task_name,
-								}
-								.into()
-							})
-							.style(|t, s| text_input_style_borderless(t, s, true))
-							.size(HEADING_TEXT_SIZE)
-							.font(BOLD_FONT)
-							.into();
+					let name_text: Element<'a, Message> = text_input("Input task name", &task.name)
+						.id(TASK_NAME_INPUT_ID.clone())
+						.on_input(|new_task_name| {
+							DatabaseMessage::ChangeTaskName {
+								project_id: self.project_id,
+								task_id: self.task_id,
+								new_task_name,
+							}
+							.into()
+						})
+						.style(|t, s| text_input_style_borderless(t, s, true))
+						.size(HEADING_TEXT_SIZE)
+						.font(BOLD_FONT)
+						.into();
 
 					container(vertical_scrollable(column![
 						Space::new(0.0, SPACING_AMOUNT),
