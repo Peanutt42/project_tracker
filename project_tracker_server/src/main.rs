@@ -4,6 +4,7 @@ use std::fs::{read_to_string, OpenOptions};
 use std::path::PathBuf;
 use std::process::exit;
 use tracing::level_filters::LevelFilter;
+use tracing::warn;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
 
@@ -80,6 +81,19 @@ async fn main() {
 		let opt_custom_key_pem_filepath = server_data_directory.join("key.pem");
 		let custom_cert_pem = tokio::fs::read(opt_custom_cert_pem_filepath).await.ok();
 		let custom_key_pem = tokio::fs::read(opt_custom_key_pem_filepath).await.ok();
+		let custom_cert_and_key_pem = match (custom_cert_pem, custom_key_pem) {
+			(Some(_), None) => {
+				warn!("only the custom cert.pem file is present, no key.pem found --> ignoring custom certificate!");
+				None
+			}
+			(None, Some(_)) => {
+				warn!("only the custom key.pem file is present, no cert.pem found --> ignoring custom certificate!");
+				None
+			}
+			(None, None) => None,
+			(Some(cert_pem), Some(key_pem)) => Some((cert_pem, key_pem)),
+		};
+
 		std::thread::Builder::new()
 			.name("Web Server".to_string())
 			.spawn(move || {
@@ -91,8 +105,7 @@ async fn main() {
 						modified_receiver,
 						shared_data_clone,
 						log_filepath,
-						custom_cert_pem,
-						custom_key_pem,
+						custom_cert_and_key_pem,
 					)
 					.await;
 				});

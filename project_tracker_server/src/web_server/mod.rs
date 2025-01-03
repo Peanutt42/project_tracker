@@ -79,8 +79,7 @@ pub async fn run_web_server(
 	modified_receiver: Receiver<ModifiedEvent>,
 	shared_data: Arc<RwLock<SharedServerData>>,
 	log_filepath: PathBuf,
-	custom_cert_pem: Option<Vec<u8>>,
-	custom_key_pem: Option<Vec<u8>>,
+	custom_cert_and_key_pem: Option<(Vec<u8>, Vec<u8>)>,
 ) {
 	let password_clone = password.clone();
 
@@ -279,11 +278,17 @@ pub async fn run_web_server(
 		.or(get_database_route)
 		.or(modified_ws_route);
 
-	let (https_addr, https_warp) = serve(routes)
-		.tls()
-		.cert(custom_cert_pem.unwrap_or(SELF_SIGNED_CERT_PEM.to_vec()))
-		.key(custom_key_pem.unwrap_or(SELF_SIGNED_KEY_PEM.to_vec()))
-		.bind_ephemeral(([0, 0, 0, 0], 443));
+	let mut server = serve(routes).tls();
+
+	if let Some((cert_pem, key_pem)) = custom_cert_and_key_pem {
+		server = server.cert(cert_pem);
+		server = server.key(key_pem);
+	} else {
+		server = server.cert(SELF_SIGNED_CERT_PEM);
+		server = server.key(SELF_SIGNED_KEY_PEM);
+	}
+
+	let (https_addr, https_warp) = server.bind_ephemeral(([0, 0, 0, 0], 443));
 
 	info!("https server listening on {https_addr}");
 
