@@ -264,3 +264,15 @@ impl SharedServerData {
 		}))
 	}
 }
+
+pub async fn messure_cpu_usage_avg_thread(shared_data: Arc<RwLock<SharedServerData>>) {
+	let sys = System::new();
+	loop {
+		if let Ok(cpu_load) = sys.cpu_load_aggregate() {
+			tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+			if let Ok(cpu_load) = cpu_load.done() {
+				shared_data.write().unwrap().cpu_usage_avg = 1.0 - cpu_load.idle;
+			}
+		}
+	}
+}

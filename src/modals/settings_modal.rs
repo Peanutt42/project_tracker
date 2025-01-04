@@ -133,14 +133,21 @@ impl SettingTab {
 		latest_admin_infos: &'a Option<AdminInfos>,
 	) -> Element<'a, Message> {
 		match self {
-			SettingTab::General => preferences.view(),
-			SettingTab::Database => database_settings_tab_view(app, preferences, show_password),
-			SettingTab::Shortcuts => shortcuts_settings_tab_view(),
-			SettingTab::CodeEditor => {
-				code_editor_settings_tab_view(preferences, code_editor_dropdown_expanded)
+			SettingTab::General => vertical_scrollable(preferences.view()).into(),
+			SettingTab::Database => {
+				vertical_scrollable(database_settings_tab_view(app, preferences, show_password))
+					.into()
 			}
+			SettingTab::Shortcuts => vertical_scrollable(shortcuts_settings_tab_view()).into(),
+			SettingTab::CodeEditor => vertical_scrollable(code_editor_settings_tab_view(
+				preferences,
+				code_editor_dropdown_expanded,
+			))
+			.into(),
+			// no 'vertical_scrollable': loading_screen has 'Fill' height
+			// --> 'admin_infos_settings_tab_view' calls 'vertical_scrollable' internally
 			SettingTab::AdminInfos => admin_infos_settings_tab_view(latest_admin_infos),
-			SettingTab::About => about_settings_tab_view(app),
+			SettingTab::About => vertical_scrollable(about_settings_tab_view(app)).into(),
 		}
 	}
 }
@@ -396,13 +403,13 @@ impl SettingsModal {
 								.spacing(SMALL_SPACING_AMOUNT)
 						),
 						vertical_seperator(),
-						vertical_scrollable(selected_tab.view(
+						selected_tab.view(
 							app,
 							preferences,
 							*show_password,
 							*code_editor_dropdown_expanded,
 							&app.latest_admin_infos,
-						))
+						)
 					]
 					.spacing(SPACING_AMOUNT),
 				)
@@ -758,64 +765,66 @@ fn code_editor_settings_tab_view(
 
 fn admin_infos_settings_tab_view(admin_infos: &Option<AdminInfos>) -> Element<Message> {
 	if let Some(admin_infos) = admin_infos {
-		column![
-			item(
-				"Cpu Usage:",
-				text(format!("{}%", (admin_infos.cpu_usage * 100.0).round()))
-			),
-			horizontal_seperator_padded(),
-			item(
-				"Cpu Temp:",
-				text(
-					admin_infos
-						.cpu_temp
-						.map(|cpu_temp| format!("{} °C", cpu_temp.round()))
-						.unwrap_or("failed to get cpu_temp".to_string())
+		vertical_scrollable(
+			column![
+				item(
+					"Cpu Usage:",
+					text(format!("{}%", (admin_infos.cpu_usage * 100.0).round()))
+				),
+				horizontal_seperator_padded(),
+				item(
+					"Cpu Temp:",
+					text(
+						admin_infos
+							.cpu_temp
+							.map(|cpu_temp| format!("{} °C", cpu_temp.round()))
+							.unwrap_or("failed to get cpu_temp".to_string())
+					)
+				),
+				horizontal_seperator_padded(),
+				item("Ram Usage:", text(&admin_infos.ram_info),),
+				horizontal_seperator_padded(),
+				item("Uptime:", text(&admin_infos.uptime)),
+				horizontal_seperator_padded(),
+				item(
+					"Native GUI Clients:",
+					Column::with_children(
+						admin_infos
+							.connected_native_gui_clients
+							.iter()
+							.map(|connection| text(format!("{connection}")).into())
+					)
+				),
+				horizontal_seperator_padded(),
+				item(
+					"Web Clients:",
+					Column::with_children(
+						admin_infos
+							.connected_web_clients
+							.iter()
+							.map(|connection| text(format!("{connection}")).into())
+					)
+				),
+				horizontal_seperator_padded(),
+				text("Latest Logs:"),
+				container(
+					scrollable(
+						container(text(&admin_infos.latest_logs_of_the_day).font(MONOSPACE_FONT))
+							.style(markdown_background_container_style)
+							.padding(Padding::new(PADDING_AMOUNT))
+					)
+					.height(Length::Fixed(350.0))
+					.direction(Direction::Both {
+						horizontal: Scrollbar::default(),
+						vertical: Scrollbar::default(),
+					})
+					.anchor_bottom()
+					.style(logs_scrollable_style)
 				)
-			),
-			horizontal_seperator_padded(),
-			item("Ram Usage:", text(&admin_infos.ram_info),),
-			horizontal_seperator_padded(),
-			item("Uptime:", text(&admin_infos.uptime)),
-			horizontal_seperator_padded(),
-			item(
-				"Native GUI Clients:",
-				Column::with_children(
-					admin_infos
-						.connected_native_gui_clients
-						.iter()
-						.map(|connection| text(format!("{connection}")).into())
-				)
-			),
-			horizontal_seperator_padded(),
-			item(
-				"Web Clients:",
-				Column::with_children(
-					admin_infos
-						.connected_web_clients
-						.iter()
-						.map(|connection| text(format!("{connection}")).into())
-				)
-			),
-			horizontal_seperator_padded(),
-			text("Latest Logs:"),
-			container(
-				scrollable(
-					container(text(&admin_infos.latest_logs_of_the_day).font(MONOSPACE_FONT))
-						.style(markdown_background_container_style)
-						.padding(Padding::new(PADDING_AMOUNT))
-				)
-				.height(Length::Fixed(350.0))
-				.direction(Direction::Both {
-					horizontal: Scrollbar::default(),
-					vertical: Scrollbar::default(),
-				})
-				.anchor_bottom()
-				.style(logs_scrollable_style)
-			)
-			.padding(Padding::default().right(PADDING_AMOUNT))
-		]
-		.spacing(SPACING_AMOUNT)
+				.padding(Padding::default().right(PADDING_AMOUNT))
+			]
+			.spacing(SPACING_AMOUNT),
+		)
 		.into()
 	} else {
 		container(loading_screen(LARGE_LOADING_SPINNER_SIZE))

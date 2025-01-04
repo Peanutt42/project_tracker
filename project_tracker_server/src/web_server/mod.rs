@@ -6,7 +6,6 @@ use std::{
 	path::PathBuf,
 	sync::{Arc, RwLock},
 };
-use systemstat::{Platform, System};
 use tokio::sync::broadcast::Receiver;
 use tracing::{error, info};
 use warp::{
@@ -282,8 +281,6 @@ pub async fn run_web_server(
 
 	info!("https server listening on {https_addr}");
 
-	tokio::spawn(messure_cpu_usage_avg_thread(shared_data.clone()));
-
 	https_warp.await;
 }
 
@@ -313,18 +310,6 @@ fn get_admin_infos(
 	} else {
 		info!("invalid password, refusing admin infos!");
 		with_status(html("Unauthorized".to_string()), StatusCode::UNAUTHORIZED).into_response()
-	}
-}
-
-async fn messure_cpu_usage_avg_thread(shared_data: Arc<RwLock<SharedServerData>>) {
-	let sys = System::new();
-	loop {
-		if let Ok(cpu_load) = sys.cpu_load_aggregate() {
-			tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-			if let Ok(cpu_load) = cpu_load.done() {
-				shared_data.write().unwrap().cpu_usage_avg = 1.0 - cpu_load.idle;
-			}
-		}
 	}
 }
 

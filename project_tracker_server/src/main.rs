@@ -1,5 +1,7 @@
 use project_tracker_core::Database;
-use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{
+	messure_cpu_usage_avg_thread, SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT,
+};
 use std::fs::{read_to_string, OpenOptions};
 use std::path::PathBuf;
 use std::process::exit;
@@ -69,6 +71,8 @@ async fn main() {
 			.with(file_layer),
 	)
 	.unwrap();
+
+	tokio::spawn(messure_cpu_usage_avg_thread(shared_data.clone()));
 
 	#[allow(unused)]
 	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
