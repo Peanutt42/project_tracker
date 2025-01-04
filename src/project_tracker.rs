@@ -9,8 +9,8 @@ use crate::{
 		import_database_file_dialog, import_json_database_file_dialog, ProjectUiIdMap, TaskUiIdMap,
 	},
 	integrations::{
-		connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage,
-		ServerWsMessageSender,
+		connect_ws, ServerConfig, ServerConnectionStatus, ServerWsError, ServerWsEvent,
+		ServerWsMessage, ServerWsMessageSender,
 	},
 	modals::{
 		ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction,
@@ -164,7 +164,7 @@ pub enum Message {
 	SyncDatabaseFromServer,
 	RequestAdminInfos,
 	DownloadDatabaseFromServer,
-	ServerWsEvent(ServerWsEvent),
+	ServerWsEvent(Result<ServerWsEvent, ServerWsError>),
 	ConnectToServer,
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
@@ -903,45 +903,48 @@ impl ProjectTrackerApp {
 				}
 				Task::none()
 			}
-			Message::ServerWsEvent(event) => match event {
-				ServerWsEvent::MessageSender(mut message_sender) => {
-					if let Some(SynchronizationSetting::Server(server_config)) =
-						self.preferences.synchronization()
-					{
-						let _ =
-							message_sender.send(ServerWsMessage::Connect(server_config.clone()));
-						self.sidebar_page.server_connection_status =
-							Some(ServerConnectionStatus::Connecting);
-					}
-					self.server_ws_message_sender = Some(message_sender);
-					Task::none()
-				}
-				ServerWsEvent::Connected => {
-					info!("ws connected");
-					if matches!(self.settings_modal, SettingsModal::Closed) {
-						if let Some(message_sender) = &mut self.server_ws_message_sender {
+			Message::ServerWsEvent(event_result) => match event_result {
+				Ok(event) => match event {
+					ServerWsEvent::MessageSender(mut message_sender) => {
+						if let Some(SynchronizationSetting::Server(server_config)) =
+							self.preferences.synchronization()
+						{
 							let _ = message_sender
-								.send(ServerWsMessage::Request(Request::GetModifiedDate));
+								.send(ServerWsMessage::Connect(server_config.clone()));
+							self.sidebar_page.server_connection_status =
+								Some(ServerConnectionStatus::Connecting);
 						}
+						self.server_ws_message_sender = Some(message_sender);
+						Task::none()
 					}
+					ServerWsEvent::Connected => {
+						info!("ws connected");
+						if matches!(self.settings_modal, SettingsModal::Closed) {
+							if let Some(message_sender) = &mut self.server_ws_message_sender {
+								let _ = message_sender
+									.send(ServerWsMessage::Request(Request::GetModifiedDate));
+							}
+						}
+						self.sidebar_page.server_connection_status =
+							Some(ServerConnectionStatus::Connected);
+						Task::none()
+					}
+					ServerWsEvent::Disconnected => {
+						info!("ws disconnected");
+						self.sidebar_page.server_connection_status =
+							Some(ServerConnectionStatus::Disconected);
+						Task::none()
+					}
+					ServerWsEvent::Response { response, password } => {
+						self.handle_server_response(response, password)
+					}
+				},
+				Err(e) => {
+					let error_str = format!("{e}");
+					error!("{error_str}");
 					self.sidebar_page.server_connection_status =
-						Some(ServerConnectionStatus::Connected);
+						Some(ServerConnectionStatus::Error(error_str));
 					Task::none()
-				}
-				ServerWsEvent::Disconnected => {
-					info!("ws disconnected");
-					self.sidebar_page.server_connection_status =
-						Some(ServerConnectionStatus::Disconected);
-					Task::none()
-				}
-				ServerWsEvent::Error(error_msg) => {
-					error!("ws error: {error_msg}");
-					self.sidebar_page.server_connection_status =
-						Some(ServerConnectionStatus::Error(error_msg));
-					Task::none()
-				}
-				ServerWsEvent::Response { response, password } => {
-					self.handle_server_response(response, password)
 				}
 			},
 			Message::ConnectToServer => {

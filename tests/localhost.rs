@@ -1,7 +1,8 @@
 use iced::futures::{channel::mpsc::Receiver, StreamExt};
 use project_tracker::{
 	integrations::{
-		ServerConfig, ServerWsEvent, ServerWsMessage, WsServerConnection, WsServerConnectionState,
+		ServerConfig, ServerWsError, ServerWsEvent, ServerWsMessage, WsServerConnection,
+		WsServerConnectionState,
 	},
 	Database, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId,
 };
@@ -87,7 +88,7 @@ fn spawn_server_thread(
 	});
 }
 
-fn spawn_client_listen_events_thread(mut receiver: Receiver<ServerWsEvent>) {
+fn spawn_client_listen_events_thread(mut receiver: Receiver<Result<ServerWsEvent, ServerWsError>>) {
 	tokio::spawn(async move {
 		let test_server_config = ServerConfig {
 			hostname: TEST_HOSTNAME.to_string(),
@@ -102,7 +103,7 @@ fn spawn_client_listen_events_thread(mut receiver: Receiver<ServerWsEvent>) {
 
 		loop {
 			match receiver.next().await {
-				Some(event) => match event {
+				Some(event_result) => match event_result.unwrap() {
 					ServerWsEvent::MessageSender(new_message_sender) => {
 						message_sender = Some(new_message_sender);
 						message_sender
@@ -173,7 +174,6 @@ fn spawn_client_listen_events_thread(mut receiver: Receiver<ServerWsEvent>) {
 							EncryptedResponse::AdminInfos(_) => panic!("client received admin infos eventhough the client never requested them"),
 						}
 					}
-					ServerWsEvent::Error(error_str) => panic!("client listen error: {error_str}"),
 					ServerWsEvent::Disconnected => {
 						panic!("clients connection to server disconnected")
 					}

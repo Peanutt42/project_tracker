@@ -7,7 +7,8 @@ use iced::{
 };
 use project_tracker_server::{Request, Response, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT};
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use thiserror::Error;
+use tracing::{error, info};
 
 use crate::{
 	components::{retry_connecting_to_server_button, show_error_popup_button},
@@ -32,7 +33,7 @@ impl Default for ServerConfig {
 	}
 }
 
-pub fn connect_ws() -> impl Stream<Item = ServerWsEvent> {
+pub fn connect_ws() -> impl Stream<Item = Result<ServerWsEvent, ServerWsError>> {
 	stream::channel(100, |mut output| async move {
 		let mut state = WsServerConnectionState::new();
 		let mut connection = WsServerConnection::Disconnected;
@@ -58,7 +59,7 @@ impl WsServerConnectionState {
 	pub async fn update(
 		&mut self,
 		connection: &mut WsServerConnection,
-		output: &mut mpsc::Sender<ServerWsEvent>,
+		output: &mut mpsc::Sender<Result<ServerWsEvent, ServerWsError>>,
 	) -> bool {
 		match connection {
 			WsServerConnection::Disconnected => {
@@ -68,7 +69,9 @@ impl WsServerConnectionState {
 					self.message_receiver = Some(receiver);
 
 					if output
-						.send(ServerWsEvent::MessageSender(ServerWsMessageSender(sender)))
+						.send(Ok(ServerWsEvent::MessageSender(ServerWsMessageSender(
+							sender,
+						))))
 						.await
 						.is_ok()
 					{
@@ -94,13 +97,13 @@ impl WsServerConnectionState {
 					Err(e) => {
 						error!("failed to connect to ws: {e}");
 						if output
-							.send(ServerWsEvent::Error(format!("{e}")))
+							.send(Err(ServerWsError::ConnectToWsServer(format!("{e}"))))
 							.await
 							.is_err()
 						{
 							return false;
 						}
-						if output.send(ServerWsEvent::Disconnected).await.is_err() {
+						if output.send(Ok(ServerWsEvent::Disconnected)).await.is_err() {
 							return false;
 						}
 						tokio::time::sleep(std::time::Duration::from_secs(1)).await;
@@ -121,7 +124,7 @@ impl WsServerConnectionState {
 
 	async fn connect(
 		&mut self,
-		output: &mut mpsc::Sender<ServerWsEvent>,
+		output: &mut mpsc::Sender<Result<ServerWsEvent, ServerWsError>>,
 		connection: &mut WsServerConnection,
 		mut server_config: ServerConfig,
 	) -> Result<bool, async_tungstenite::tungstenite::Error> {
@@ -140,7 +143,7 @@ impl WsServerConnectionState {
 
 				let (webserver, _) = async_tungstenite::tokio::connect_async(address).await?;
 
-				if output.send(ServerWsEvent::Connected).await.is_err() {
+				if output.send(Ok(ServerWsEvent::Connected)).await.is_err() {
 					return Ok(false);
 				}
 				*connection = WsServerConnection::Connected(webserver, server_config.clone());
@@ -157,7 +160,7 @@ impl WsServerConnectionState {
 		&mut self,
 		websocket: &mut WebSocketStream,
 		server_config: ServerConfig,
-		output: &mut mpsc::Sender<ServerWsEvent>,
+		output: &mut mpsc::Sender<Result<ServerWsEvent, ServerWsError>>,
 	) -> (bool, Option<WsServerConnection>) {
 		let mut fused_websocket = websocket.by_ref().fuse();
 
@@ -165,33 +168,18 @@ impl WsServerConnectionState {
 			Some(message_receiver) => futures::select! {
 				received = fused_websocket.select_next_some() => {
 					match received {
-						Ok(tungstenite::Message::Binary(binary)) => {
-							match Response::deserialize(binary) {
-								Ok(response) => (
-									output.send(ServerWsEvent::Response{
-										response,
-										password: server_config.password
-									})
-									.await.is_ok(),
-									None
-								),
-								Err(e) => {
-									error!("failed to parse response from server: {e}");
-									(
-										output.send(ServerWsEvent::Error(format!("{e}"))).await.is_ok(),
-										None
-									)
-								}
-							}
-						}
+						Ok(tungstenite::Message::Binary(binary)) => (
+							output.send(Self::parse_server_response(binary, server_config.password.clone())).await.is_ok(),
+							None
+						),
 						Ok(tungstenite::Message::Close(_)) => (
-							output.send(ServerWsEvent::Disconnected).await.is_ok(),
+							output.send(Ok(ServerWsEvent::Disconnected)).await.is_ok(),
 							Some(WsServerConnection::Disconnected)
 						),
 						Err(e) => {
-							error!("ws server disconnected: {e}");
+							info!("ws server disconnected: {e}");
 							(
-								output.send(ServerWsEvent::Disconnected).await.is_ok(),
+								output.send(Ok(ServerWsEvent::Disconnected)).await.is_ok(),
 								Some(WsServerConnection::Disconnected)
 							)
 						}
@@ -213,29 +201,16 @@ impl WsServerConnectionState {
 							)
 						},
 						ServerWsMessage::Request(request) => {
-							match request.encrypt(&server_config.password) {
-								Ok(request_binary) => {
-									if websocket.send(tungstenite::Message::Binary(request_binary)).await.is_ok() {
-										(
-											true,
-											None
-										)
-									}
-									else {
-										(
-											output.send(ServerWsEvent::Disconnected).await.is_ok(),
-											Some(WsServerConnection::Disconnected)
-										)
-									}
-								},
-								Err(e) => {
-									error!("failed to encrypt request: {e}");
-									(
-										output.send(ServerWsEvent::Error(format!("{e}"))).await.is_ok(),
-										None
-									)
-								}
-							}
+							let (opt_event_result, opt_new_connection) = Self::send_request(request, &server_config.password, websocket).await;
+							let continue_subscription = match opt_event_result {
+								Some(event_result) => output.send(event_result).await.is_ok(),
+								None => true,
+							};
+
+							(
+								continue_subscription,
+								opt_new_connection,
+							)
 						}
 					}
 				},
@@ -244,6 +219,49 @@ impl WsServerConnectionState {
 				self.message_sender_sent = false;
 				(true, Some(WsServerConnection::Disconnected))
 			}
+		}
+	}
+
+	fn parse_server_response(
+		binary_response: Vec<u8>,
+		password: String,
+	) -> Result<ServerWsEvent, ServerWsError> {
+		match Response::deserialize(binary_response) {
+			Ok(response) => Ok(ServerWsEvent::Response { response, password }),
+			Err(e) => Err(ServerWsError::ParseServerResponse(format!("{e}"))),
+		}
+	}
+
+	// returns:
+	// 1. 'Option<Result<ServerWsEvent, ServerWsError>>': a potential server ws event result to be send to iced app
+	// 2. 'Option<WsServerConnection>': a potential new server connection state ('WsServerConnection::Disconnected')
+	async fn send_request(
+		request: Request,
+		password: &str,
+		websocket: &mut WebSocketStream,
+	) -> (
+		Option<Result<ServerWsEvent, ServerWsError>>,
+		Option<WsServerConnection>,
+	) {
+		match request.encrypt(password) {
+			Ok(request_binary) => {
+				if websocket
+					.send(tungstenite::Message::Binary(request_binary))
+					.await
+					.is_ok()
+				{
+					(None, None)
+				} else {
+					(
+						Some(Ok(ServerWsEvent::Disconnected)),
+						Some(WsServerConnection::Disconnected),
+					)
+				}
+			}
+			Err(e) => (
+				Some(Err(ServerWsError::EncryptRequest(format!("{e}")))),
+				None,
+			),
 		}
 	}
 }
@@ -273,7 +291,16 @@ pub enum ServerWsEvent {
 		response: Response,
 		password: String,
 	},
-	Error(String),
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum ServerWsError {
+	#[error("failed to connect to ws server: {0}")]
+	ConnectToWsServer(String),
+	#[error("failed to encrypt request: {0}")]
+	EncryptRequest(String),
+	#[error("failed to parse server response: {0}")]
+	ParseServerResponse(String),
 }
 
 #[derive(Debug, Clone)]

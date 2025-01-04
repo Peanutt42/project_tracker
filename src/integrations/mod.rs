@@ -6,8 +6,8 @@ pub use google_tasks::{
 
 mod server;
 pub use server::{
-	connect_ws, ServerConfig, ServerConnectionStatus, ServerWsEvent, ServerWsMessage,
-	ServerWsMessageSender, WsServerConnection, WsServerConnectionState,
+	connect_ws, ServerConfig, ServerConnectionStatus, ServerWsError, ServerWsEvent,
+	ServerWsMessage, ServerWsMessageSender, WsServerConnection, WsServerConnectionState,
 };
 
 mod code_editor;
