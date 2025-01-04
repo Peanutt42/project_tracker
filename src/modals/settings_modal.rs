@@ -769,7 +769,7 @@ fn admin_infos_settings_tab_view(admin_infos: &Option<AdminInfos>) -> Element<Me
 				text(
 					admin_infos
 						.cpu_temp
-						.map(|cpu_temp| format!("{cpu_temp} °C"))
+						.map(|cpu_temp| format!("{} °C", cpu_temp.round()))
 						.unwrap_or("failed to get cpu_temp".to_string())
 				)
 			),
