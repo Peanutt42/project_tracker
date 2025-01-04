@@ -68,6 +68,7 @@ fn should_import_source_code_todos_from_file(filepath: &Path) -> bool {
 	}
 }
 
+// TODO: support multiline comments (--> 2.. lines into description?)
 fn import_source_code_todos_from_file(entry: DirEntry) -> IndexMap<TaskId, Task> {
 	if let Ok(file) = File::open(entry.path()) {
 		let mut todos = IndexMap::new();
@@ -77,46 +78,85 @@ fn import_source_code_todos_from_file(entry: DirEntry) -> IndexMap<TaskId, Task>
 			.map_while(Result::ok)
 			.enumerate()
 		{
-			let mut search_todo = |keyword: &'static str| {
-				if let Some(index) = line.to_lowercase().find(&keyword.to_lowercase()) {
-					let mut string_quotes_counter = 0;
-					for c in line[0..index].chars() {
-						if c == '\"' || c == '\'' {
-							string_quotes_counter += 1;
-						}
-					}
-
-					if string_quotes_counter % 2 == 0 {
-						let line = line[index + keyword.len()..].to_string();
-						let line = line.strip_prefix(':').unwrap_or(&line);
-						let line = line.strip_prefix(' ').unwrap_or(line);
-						let source = entry.path().display();
-						let line_number = line_index + 1;
-						let column_number = index + 1;
-						todos.insert(
-							TaskId::generate(),
-							Task::new(
-								line.to_string(),
-								format!("{source}:{line_number}:{column_number}"),
-								None,
-								None,
-								None,
-								HashSet::new(),
-							),
-						);
-					}
-				}
-			};
-
-			// case insensitive!
-			search_todo("// todo");
-			search_todo("//todo");
-			search_todo("# todo");
-			search_todo("#todo");
+			if let Some((name, column_number)) = import_source_code_comment_from_line(line) {
+				let source = entry.path().display();
+				let line_number = line_index + 1;
+				todos.insert(
+					TaskId::generate(),
+					Task::new(
+						name,
+						format!("{source}:{line_number}:{column_number}"),
+						None,
+						None,
+						None,
+						HashSet::new(),
+					),
+				);
+			}
 		}
 
 		todos
 	} else {
 		IndexMap::new()
 	}
+}
+
+// (todo_name, column_number)
+fn import_source_code_comment_from_line(line: String) -> Option<(String, usize)> {
+	let line_lowercase = line.to_lowercase();
+
+	let search_todo_comment = |keyword: &'static str| {
+		if let Some(index) = line_lowercase.find(&keyword.to_lowercase()) {
+			let mut string_quotes_counter = 0;
+			for c in line[0..index].chars() {
+				if c == '\"' || c == '\'' {
+					string_quotes_counter += 1;
+				}
+			}
+
+			if string_quotes_counter % 2 == 0 {
+				let todo_name = line[index + keyword.len() + 1..].to_string();
+				let todo_name = todo_name.strip_prefix(':').unwrap_or(&todo_name);
+				let todo_name = todo_name.strip_prefix(' ').unwrap_or(todo_name);
+				let column_number = index + 1;
+				return Some((todo_name.to_string(), column_number));
+			}
+		}
+		None
+	};
+
+	let search_todo_macro = {
+		const TODO_MACRO_KEYWORD_START: &str = "todo!(";
+		if let Some(index) = line_lowercase.find(TODO_MACRO_KEYWORD_START) {
+			let mut string_quotes_counter = 0;
+			for c in line[0..index].chars() {
+				if c == '\"' || c == '\'' {
+					string_quotes_counter += 1;
+				}
+			}
+			if string_quotes_counter % 2 == 0 {
+				let todo_macro_arg_start_index = index + TODO_MACRO_KEYWORD_START.len();
+				let todo_name = if let Some('\"') = line.chars().nth(todo_macro_arg_start_index) {
+					let todo_name_start_index = todo_macro_arg_start_index + 1;
+					let mut todo_name_end_index = todo_name_start_index;
+					if let Some(i) = line[todo_name_start_index..].find('\"') {
+						todo_name_end_index = todo_name_start_index + i;
+					}
+					line[todo_name_start_index..todo_name_end_index].to_string()
+				} else {
+					String::new()
+				};
+				let column_number = index + 1;
+				return Some((todo_name.to_string(), column_number));
+			}
+		}
+		None
+	};
+
+	// case insensitive!
+	search_todo_comment("// todo")
+		.or(search_todo_comment("//todo"))
+		.or(search_todo_comment("# todo"))
+		.or(search_todo_comment("#todo"))
+		.or(search_todo_macro)
 }
