@@ -175,6 +175,7 @@ pub enum PreferenceAction {
 	Task(Task<Message>),
 	PreferenceMessage(PreferenceMessage),
 	RefreshCachedTaskList,
+	RequestAdminInfos,
 	FailedToSerializePreferences(toml::ser::Error),
 }
 

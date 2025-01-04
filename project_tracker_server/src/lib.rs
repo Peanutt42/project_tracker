@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use humantime::format_duration;
 use project_tracker_core::{get_last_modification_date_time, Database, SerializedDatabase};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -7,6 +8,7 @@ use std::{
 	path::PathBuf,
 	sync::{Arc, RwLock},
 };
+use systemstat::{saturating_sub_bytes, Platform, System};
 use thiserror::Error;
 
 mod server;
@@ -14,6 +16,9 @@ pub use server::{handle_client, run_server};
 
 mod encryption;
 pub use encryption::{decrypt, encrypt, NONCE_LENGTH, SALT_LENGTH};
+
+mod logs;
+pub use logs::get_logs_as_string;
 
 pub const DEFAULT_HOSTNAME: &str = "127.0.0.1";
 pub const DEFAULT_PORT: usize = 8080;
@@ -39,6 +44,7 @@ pub enum Request {
 		database: SerializedDatabase,
 		last_modified_time: DateTime<Utc>,
 	},
+	AdminInfos,
 }
 
 impl Request {
@@ -67,6 +73,7 @@ pub enum EncryptedResponse {
 		last_modified_time: DateTime<Utc>,
 	},
 	DatabaseUpdated,
+	AdminInfos(AdminInfos),
 }
 impl EncryptedResponse {
 	pub fn decrypt(encrypted: EncryptedMessage, password: &str) -> ServerResult<Self> {
@@ -128,6 +135,72 @@ impl EncryptedMessage {
 		let bytes = decrypt(&self.encrypted_message, password, &self.salt, &self.nonce)
 			.map_err(|_| ResponseError::InvalidPassword)?;
 		Ok(bytes)
+	}
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AdminInfos {
+	pub connected_native_gui_clients: Vec<SocketAddr>,
+	pub connected_web_clients: Vec<SocketAddr>,
+	pub cpu_usage: f32,
+	pub cpu_temp: Option<f32>,
+	pub ram_info: String,
+	pub uptime: String,
+	pub latest_logs_of_the_day: String,
+}
+
+impl AdminInfos {
+	pub fn generate(shared_data: Arc<RwLock<SharedServerData>>, log_filepath: &PathBuf) -> Self {
+		let (cpu_usage, connected_clients) = {
+			let shared_data = shared_data.read().unwrap();
+			(
+				shared_data.cpu_usage_avg,
+				shared_data.connected_clients.clone(),
+			)
+		};
+
+		let mut connected_native_gui_clients = Vec::new();
+		let mut connected_web_clients = Vec::new();
+
+		for connected_client in connected_clients {
+			match connected_client {
+				ConnectedClient::NativeGUI(addr) => connected_native_gui_clients.push(addr),
+				ConnectedClient::Web(addr) => connected_web_clients.push(addr),
+			}
+		}
+
+		let sys = System::new();
+
+		let cpu_temp = sys.cpu_temp().ok();
+
+		let ram_info = match sys.memory() {
+			Ok(mem) => format!(
+				"{} / {}",
+				saturating_sub_bytes(mem.total, mem.free),
+				mem.total
+			),
+			Err(_) => "failed to get ram info".to_string(),
+		};
+
+		let uptime = match sys.uptime() {
+			Ok(uptime) => format_duration(uptime).to_string(),
+			Err(_) => "failed to get uptime".to_string(),
+		};
+
+		let latest_logs_of_the_day = match get_logs_as_string(log_filepath) {
+			Ok(logs) => logs,
+			Err(error_str) => error_str,
+		};
+
+		AdminInfos {
+			connected_native_gui_clients,
+			connected_web_clients,
+			cpu_usage,
+			cpu_temp,
+			ram_info,
+			uptime,
+			latest_logs_of_the_day,
+		}
 	}
 }
 

@@ -39,7 +39,7 @@ mod text_editor;
 pub use text_editor::{description_text_editor_style, text_editor_keybindings, unindent_text};
 
 mod scrollable;
-pub use scrollable::scrollable_style;
+pub use scrollable::{logs_scrollable_style, scrollable_style};
 
 mod card_style;
 pub use card_style::card_style;
@@ -64,6 +64,7 @@ pub use constants::{
 mod text;
 pub use text::{
 	danger_text_style, default_text_style, grey_text_style, text_color, BOLD_FONT, FIRA_SANS_FONT,
+	MONOSPACE_FONT,
 };
 
 mod theme;

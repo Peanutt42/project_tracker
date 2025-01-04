@@ -679,7 +679,7 @@ pub fn settings_tab_button(tab: SettingTab, selected_tab: SettingTab) -> Button<
 	icon_label_button(tab.label(), tab.icon())
 		.width(Fill)
 		.style(move |t, s| settings_tab_button_style(t, s, tab == selected_tab))
-		.on_press(SettingsModalMessage::SwitchSettingsTab(tab).into())
+		.on_press(SettingsModalMessage::OpenTab(tab).into())
 }
 
 fn import_source_code_todos_button() -> Button<'static, Message> {

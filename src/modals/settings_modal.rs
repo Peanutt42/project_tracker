@@ -1,15 +1,17 @@
 use crate::components::{
 	code_editor_dropdown_button, export_as_json_database_button, hide_password_button,
-	horizontal_seperator_padded, import_json_database_button, show_password_button,
+	horizontal_seperator_padded, import_json_database_button, loading_screen, show_password_button,
 	synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding,
+	LARGE_LOADING_SPINNER_SIZE,
 };
 use crate::core::export_database_file_dialog;
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::{CodeEditor, ServerConfig};
 use crate::project_tracker::{Message, ProjectTrackerApp};
 use crate::styles::{
-	command_background_container_style, grey_text_style, link_color, rounded_container_style,
-	text_input_style_default, tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE,
+	command_background_container_style, grey_text_style, link_color, logs_scrollable_style,
+	markdown_background_container_style, rounded_container_style, text_input_style_default,
+	tooltip_container_style, GAP, HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, MONOSPACE_FONT,
 	SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE,
 	SPACING_AMOUNT,
 };
@@ -24,13 +26,15 @@ use crate::{
 	styles::{card_style, PADDING_AMOUNT},
 	DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting,
 };
+use iced::advanced::graphics::futures::backend::default::time;
 use iced::alignment::Vertical;
+use iced::widget::scrollable::{Direction, Scrollbar};
 use iced::widget::text::Span;
 use iced::widget::{rich_text, text_input, toggler, tooltip};
 use iced::{
 	alignment::Horizontal,
 	keyboard,
-	widget::{column, container, row, text, Column, Space},
+	widget::{column, container, row, scrollable, text, Column, Space},
 	Alignment, Element,
 	Length::Fill,
 	Padding, Subscription, Task,
@@ -38,14 +42,14 @@ use iced::{
 use iced::{Color, Length};
 use iced_aw::card;
 use project_tracker_core::{Database, DatabaseMessage};
-use project_tracker_server::DEFAULT_PASSWORD;
+use project_tracker_server::{AdminInfos, DEFAULT_PASSWORD};
 use std::str::FromStr;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {
 	Open,
 	Close,
-	SwitchSettingsTab(SettingTab),
 	OpenTab(SettingTab),
 
 	ShowPassword,
@@ -84,15 +88,17 @@ pub enum SettingTab {
 	Database,
 	Shortcuts,
 	CodeEditor,
+	AdminInfos,
 	About,
 }
 
 impl SettingTab {
-	const ALL: [SettingTab; 5] = [
+	const ALL: [SettingTab; 6] = [
 		SettingTab::General,
 		SettingTab::Database,
 		SettingTab::Shortcuts,
 		SettingTab::CodeEditor,
+		SettingTab::AdminInfos,
 		SettingTab::About,
 	];
 
@@ -102,6 +108,7 @@ impl SettingTab {
 			Self::Database => Bootstrap::DatabaseFillGear,
 			Self::Shortcuts => Bootstrap::Command,
 			Self::CodeEditor => Bootstrap::CodeSlash,
+			Self::AdminInfos => Bootstrap::BarChartFill,
 			Self::About => Bootstrap::InfoSquare,
 		}
 	}
@@ -112,6 +119,7 @@ impl SettingTab {
 			Self::Database => "Database",
 			Self::Shortcuts => "Shortcuts",
 			Self::CodeEditor => "Code Editor",
+			Self::AdminInfos => "Admin Infos",
 			Self::About => "About",
 		}
 	}
@@ -122,6 +130,7 @@ impl SettingTab {
 		preferences: &'a Preferences,
 		show_password: bool,
 		code_editor_dropdown_expanded: bool,
+		latest_admin_infos: &'a Option<AdminInfos>,
 	) -> Element<'a, Message> {
 		match self {
 			SettingTab::General => preferences.view(),
@@ -130,6 +139,7 @@ impl SettingTab {
 			SettingTab::CodeEditor => {
 				code_editor_settings_tab_view(preferences, code_editor_dropdown_expanded)
 			}
+			SettingTab::AdminInfos => admin_infos_settings_tab_view(latest_admin_infos),
 			SettingTab::About => about_settings_tab_view(app),
 		}
 	}
@@ -151,13 +161,29 @@ impl SettingsModal {
 		matches!(self, SettingsModal::Opened { .. })
 	}
 
-	pub fn subscription(&self) -> Subscription<SettingsModalMessage> {
-		keyboard::on_key_press(|key, modifiers| match key.as_ref() {
-			keyboard::Key::Character(",") if modifiers.command() => {
-				Some(SettingsModalMessage::Open)
+	pub fn subscription(&self) -> Subscription<Message> {
+		let listen_open_shortcut_subscription =
+			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
+				keyboard::Key::Character(",") if modifiers.command() => {
+					Some(SettingsModalMessage::Open.into())
+				}
+				_ => None,
+			});
+
+		let mut subscriptions = vec![listen_open_shortcut_subscription];
+
+		if matches!(
+			self,
+			SettingsModal::Opened {
+				selected_tab: SettingTab::AdminInfos,
+				..
 			}
-			_ => None,
-		})
+		) {
+			subscriptions
+				.push(time::every(Duration::from_secs(2)).map(|_| Message::RequestAdminInfos));
+		}
+
+		Subscription::batch(subscriptions)
 	}
 
 	pub fn update(
@@ -179,12 +205,21 @@ impl SettingsModal {
 				PreferenceAction::None
 			}
 			SettingsModalMessage::OpenTab(tab) => {
-				*self = SettingsModal::Opened {
-					selected_tab: tab,
-					show_password: false,
-					code_editor_dropdown_expanded: false,
-				};
-				PreferenceAction::None
+				if let SettingsModal::Opened {
+					selected_tab,
+					show_password,
+					code_editor_dropdown_expanded,
+					..
+				} = self
+				{
+					*selected_tab = tab;
+					*show_password = false;
+					*code_editor_dropdown_expanded = false;
+				}
+				match tab {
+					SettingTab::AdminInfos => PreferenceAction::RequestAdminInfos,
+					_ => PreferenceAction::None,
+				}
 			}
 
 			SettingsModalMessage::ShowPassword => {
@@ -266,20 +301,6 @@ impl SettingsModal {
 				}
 			}
 
-			SettingsModalMessage::SwitchSettingsTab(new_tab) => {
-				if let SettingsModal::Opened {
-					selected_tab,
-					show_password,
-					code_editor_dropdown_expanded,
-				} = self
-				{
-					*selected_tab = new_tab;
-					*show_password = false;
-					*code_editor_dropdown_expanded = false;
-				}
-				PreferenceAction::None
-			}
-
 			SettingsModalMessage::EnableSynchronization => {
 				PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Filepath(None)))
 					.into()
@@ -347,9 +368,23 @@ impl SettingsModal {
 				show_password,
 				code_editor_dropdown_expanded,
 			} => app.preferences.as_ref().map(|preferences| {
+				let server_configs_provided = matches!(
+					preferences.synchronization(),
+					&Some(SynchronizationSetting::Server(_))
+				);
+
 				let tabs: Vec<Element<Message>> = SettingTab::ALL
 					.iter()
-					.map(|tab| settings_tab_button(*tab, *selected_tab).into())
+					.filter_map(|tab| match tab {
+						SettingTab::AdminInfos => {
+							if server_configs_provided {
+								Some(settings_tab_button(*tab, *selected_tab).into())
+							} else {
+								None
+							}
+						}
+						_ => Some(settings_tab_button(*tab, *selected_tab).into()),
+					})
 					.collect();
 
 				card(
@@ -365,7 +400,8 @@ impl SettingsModal {
 							app,
 							preferences,
 							*show_password,
-							*code_editor_dropdown_expanded
+							*code_editor_dropdown_expanded,
+							&app.latest_admin_infos,
 						))
 					]
 					.spacing(SPACING_AMOUNT),
@@ -718,6 +754,74 @@ fn code_editor_settings_tab_view(
 	.width(Fill)
 	.spacing(SPACING_AMOUNT)
 	.into()
+}
+
+fn admin_infos_settings_tab_view(admin_infos: &Option<AdminInfos>) -> Element<Message> {
+	if let Some(admin_infos) = admin_infos {
+		column![
+			item(
+				"Cpu Usage:",
+				text(format!("{}%", (admin_infos.cpu_usage * 100.0).round()))
+			),
+			horizontal_seperator_padded(),
+			item(
+				"Cpu Temp:",
+				text(
+					admin_infos
+						.cpu_temp
+						.map(|cpu_temp| format!("{cpu_temp} °C"))
+						.unwrap_or("failed to get cpu_temp".to_string())
+				)
+			),
+			horizontal_seperator_padded(),
+			item("Ram Usage:", text(&admin_infos.ram_info),),
+			horizontal_seperator_padded(),
+			item("Uptime:", text(&admin_infos.uptime)),
+			horizontal_seperator_padded(),
+			item(
+				"Native GUI Clients:",
+				Column::with_children(
+					admin_infos
+						.connected_native_gui_clients
+						.iter()
+						.map(|connection| text(format!("{connection}")).into())
+				)
+			),
+			horizontal_seperator_padded(),
+			item(
+				"Web Clients:",
+				Column::with_children(
+					admin_infos
+						.connected_web_clients
+						.iter()
+						.map(|connection| text(format!("{connection}")).into())
+				)
+			),
+			horizontal_seperator_padded(),
+			text("Latest Logs:"),
+			container(
+				scrollable(
+					container(text(&admin_infos.latest_logs_of_the_day).font(MONOSPACE_FONT))
+						.style(markdown_background_container_style)
+						.padding(Padding::new(PADDING_AMOUNT))
+				)
+				.height(Length::Fixed(350.0))
+				.direction(Direction::Both {
+					horizontal: Scrollbar::default(),
+					vertical: Scrollbar::default(),
+				})
+				.anchor_bottom()
+				.style(logs_scrollable_style)
+			)
+			.padding(Padding::default().right(PADDING_AMOUNT))
+		]
+		.spacing(SPACING_AMOUNT)
+		.into()
+	} else {
+		container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
+			.center(Fill)
+			.into()
+	}
 }
 
 fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {

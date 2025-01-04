@@ -52,7 +52,7 @@ use project_tracker_core::{
 	Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, SyncDatabaseResult,
 	TaskId,
 };
-use project_tracker_server::{EncryptedResponse, Request, Response};
+use project_tracker_server::{AdminInfos, EncryptedResponse, Request, Response};
 use std::{
 	collections::HashMap,
 	hash::{DefaultHasher, Hash, Hasher},
@@ -100,6 +100,7 @@ pub struct ProjectTrackerApp {
 	pub exporting_database: bool,
 	pub last_sync_start_time: Option<Instant>,
 	pub last_sync_finish_time: Option<Instant>,
+	pub latest_admin_infos: Option<AdminInfos>,
 	pub server_ws_message_sender: Option<ServerWsMessageSender>,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: Option<ConfirmModal>,
@@ -161,6 +162,7 @@ pub enum Message {
 	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	SyncDatabaseFromServer,
+	RequestAdminInfos,
 	DownloadDatabaseFromServer,
 	ServerWsEvent(ServerWsEvent),
 	ConnectToServer,
@@ -264,6 +266,7 @@ impl ProjectTrackerApp {
 				exporting_database: false,
 				last_sync_start_time: None,
 				last_sync_finish_time: None,
+				latest_admin_infos: None,
 				server_ws_message_sender: None,
 				preferences: None,
 				confirm_modal: None,
@@ -399,9 +402,7 @@ impl ProjectTrackerApp {
 			self.content_page
 				.subscription()
 				.map(Message::ContentPageMessage),
-			self.settings_modal
-				.subscription()
-				.map(Message::SettingsModalMessage),
+			self.settings_modal.subscription(),
 			time::every(Duration::from_secs(1)).map(|_| Message::SaveChangedFiles),
 			time::every(Duration::from_secs(1)).map(|_| Message::SyncIfChanged),
 			Subscription::run_with_id(server_config_hash, connect_ws()).map(Message::ServerWsEvent),
@@ -891,6 +892,14 @@ impl ProjectTrackerApp {
 
 					let _ = server_ws_message_sender
 						.send(ServerWsMessage::Request(Request::DownloadDatabase));
+				}
+				Task::none()
+			}
+			Message::RequestAdminInfos => {
+				if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
+					info!("requesting admin infos...");
+					let _ = server_ws_message_sender
+						.send(ServerWsMessage::Request(Request::AdminInfos));
 				}
 				Task::none()
 			}
@@ -1483,6 +1492,7 @@ impl ProjectTrackerApp {
 				}
 				Task::none()
 			}
+			PreferenceAction::RequestAdminInfos => self.update(Message::RequestAdminInfos),
 		}
 	}
 
@@ -1573,6 +1583,10 @@ impl ProjectTrackerApp {
 						));
 					}
 				}
+				Task::none()
+			}
+			EncryptedResponse::AdminInfos(admin_infos) => {
+				self.latest_admin_infos = Some(admin_infos);
 				Task::none()
 			}
 		}

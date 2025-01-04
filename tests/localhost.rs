@@ -26,6 +26,9 @@ const TEST_PASSWORD: &str = "testing password 1234!";
 */
 #[tokio::test]
 async fn localhost_client_and_server() {
+	let server_log_filepath: PathBuf =
+		PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("tmp_server.log");
+
 	let server_test_db_filepath: PathBuf =
 		PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("tmp_test_server_database.project_tracker");
 
@@ -34,6 +37,7 @@ async fn localhost_client_and_server() {
 
 	spawn_server_thread(
 		server_test_db_filepath,
+		server_log_filepath,
 		shared_data.clone(),
 		modified_sender,
 	);
@@ -55,6 +59,7 @@ async fn localhost_client_and_server() {
 // simplified 'project_tracker_server::run_server' procedure to only handle the one test client and then quit
 fn spawn_server_thread(
 	database_filepath: PathBuf,
+	server_log_filepath: PathBuf,
 	shared_data: Arc<RwLock<SharedServerData>>,
 	modified_sender: Sender<ModifiedEvent>,
 ) {
@@ -72,6 +77,7 @@ fn spawn_server_thread(
 		project_tracker_server::handle_client(
 			stream,
 			database_filepath,
+			server_log_filepath,
 			TEST_PASSWORD.to_string(),
 			modified_sender,
 			modified_receiver,
@@ -164,6 +170,7 @@ fn spawn_client_listen_events_thread(mut receiver: Receiver<ServerWsEvent>) {
 								}
 							}
 							EncryptedResponse::ModifiedDate(_modified_date) => panic!("client received server db modified date eventhough the client never requested it"),
+							EncryptedResponse::AdminInfos(_) => panic!("client received admin infos eventhough the client never requested them"),
 						}
 					}
 					ServerWsEvent::Error(error_str) => panic!("client listen error: {error_str}"),

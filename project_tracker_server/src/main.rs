@@ -76,6 +76,7 @@ async fn main() {
 	#[cfg(feature = "web_server")]
 	{
 		let password_clone = password.clone();
+		let log_filepath_clone = log_filepath.clone();
 		let shared_data_clone = shared_data.clone();
 		let opt_custom_cert_pem_filepath = server_data_directory.join("cert.pem");
 		let opt_custom_key_pem_filepath = server_data_directory.join("key.pem");
@@ -104,7 +105,7 @@ async fn main() {
 						password_clone,
 						modified_receiver,
 						shared_data_clone,
-						log_filepath,
+						log_filepath_clone,
 						custom_cert_and_key_pem,
 					)
 					.await;
@@ -116,6 +117,7 @@ async fn main() {
 	project_tracker_server::run_server(
 		DEFAULT_PORT,
 		database_filepath,
+		log_filepath,
 		password,
 		modified_sender,
 		shared_data,

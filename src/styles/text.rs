@@ -1,5 +1,9 @@
 use crate::styles::GREY;
-use iced::{font::Weight, widget::text::Style, Color, Font, Theme};
+use iced::{
+	font::{Family, Weight},
+	widget::text::Style,
+	Color, Font, Theme,
+};
 
 pub fn text_color(background: Color) -> Color {
 	let brightness = 0.2126 * background.r + 0.7152 * background.g + 0.0722 * background.b;
@@ -14,6 +18,11 @@ pub const FIRA_SANS_FONT: Font = Font::with_name("FiraSans");
 
 pub const BOLD_FONT: Font = Font {
 	weight: Weight::Bold,
+	..Font::DEFAULT
+};
+
+pub const MONOSPACE_FONT: Font = Font {
+	family: Family::Monospace,
 	..Font::DEFAULT
 };
 

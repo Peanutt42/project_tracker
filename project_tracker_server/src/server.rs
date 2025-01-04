@@ -1,5 +1,5 @@
 use crate::{
-	ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ServerError,
+	AdminInfos, ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ServerError,
 	SharedServerData,
 };
 use async_tungstenite::{
@@ -19,6 +19,7 @@ use tracing::{error, info};
 pub async fn run_server(
 	port: usize,
 	database_filepath: PathBuf,
+	log_filepath: PathBuf,
 	password: String,
 	modified_sender: Sender<ModifiedEvent>,
 	shared_data: Arc<RwLock<SharedServerData>>,
@@ -33,6 +34,7 @@ pub async fn run_server(
 		match listener.accept().await {
 			Ok((stream, _addr)) => {
 				let database_filepath_clone = database_filepath.clone();
+				let log_filepath_clone = log_filepath.clone();
 				let password_clone = password.clone();
 				let modified_sender_clone = modified_sender.clone();
 				let modified_receiver = modified_sender.subscribe();
@@ -41,6 +43,7 @@ pub async fn run_server(
 					handle_client(
 						stream,
 						database_filepath_clone,
+						log_filepath_clone,
 						password_clone,
 						modified_sender_clone,
 						modified_receiver,
@@ -59,6 +62,7 @@ pub async fn run_server(
 pub async fn handle_client(
 	stream: TcpStream,
 	database_filepath: PathBuf,
+	log_filepath: PathBuf,
 	password: String,
 	modified_sender: Sender<ModifiedEvent>,
 	modified_receiver: Receiver<ModifiedEvent>,
@@ -84,6 +88,7 @@ pub async fn handle_client(
 		stream,
 		client_addr,
 		database_filepath,
+		log_filepath,
 		password,
 		modified_sender,
 		modified_receiver,
@@ -98,10 +103,12 @@ pub async fn handle_client(
 		.remove(&connected_client);
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn listen_client_thread(
 	stream: TcpStream,
 	client_addr: SocketAddr,
 	database_filepath: PathBuf,
+	log_filepath: PathBuf,
 	password: String,
 	modified_sender: Sender<ModifiedEvent>,
 	modified_receiver: Receiver<ModifiedEvent>,
@@ -143,6 +150,7 @@ async fn listen_client_thread(
 							&modified_sender,
 							&write_ws_sender,
 							&database_filepath,
+							&log_filepath,
 							&password,
 						)
 						.await
@@ -183,6 +191,7 @@ async fn listen_client_thread(
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn respond_to_client_request(
 	request: Request,
 	client_addr: SocketAddr,
@@ -190,6 +199,7 @@ async fn respond_to_client_request(
 	modified_sender: &Sender<ModifiedEvent>,
 	write_ws_sender: &tokio::sync::mpsc::Sender<Message>,
 	database_filepath: &PathBuf,
+	log_filepath: &PathBuf,
 	password: &str,
 ) {
 	match request {
@@ -255,6 +265,21 @@ async fn respond_to_client_request(
 			{
 				Ok(_) => info!("sent database"),
 				Err(e) => error!("failed to send database to client: {e}"),
+			}
+		}
+		Request::AdminInfos => {
+			let response = Response(Ok(EncryptedResponse::AdminInfos(AdminInfos::generate(
+				shared_data.clone(),
+				log_filepath,
+			))
+			.encrypt(password)
+			.unwrap()));
+			match write_ws_sender
+				.send(Message::binary(response.serialize().unwrap()))
+				.await
+			{
+				Ok(_) => info!("sent admin infos"),
+				Err(e) => error!("failed to send admin infos: {e}"),
 			}
 		}
 	}
