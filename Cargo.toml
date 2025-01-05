@@ -93,6 +93,14 @@ async-tungstenite = { version = "0.24", features = [
 ] }
 humantime = "2.1"
 
+# argon2 (and aes_gcm) are veryyy slow in debug mode
+# (im not debugging encryption library code)
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.aes-gcm]
+opt-level = 3
+
 [build-dependencies]
 winresource = "0.1.17"
 

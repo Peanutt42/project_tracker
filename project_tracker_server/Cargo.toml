@@ -21,9 +21,9 @@ chrono = { workspace = true }
 thiserror = { workspace = true }
 humantime = { workspace = true }
 rand = "0.8.5"
-sha2 = "0.10.8"
-aes-gcm = "0.10.3"
-pbkdf2 = "0.12.2"
+aes-gcm = { version = "0.10.3", features = ["std"] }
+argon2 = { version = "0.5.3", features = ["std"] }
+static_assertions = "1.1.0"
 futures-util = { version = "0.3", default-features = false, features = [
 	"sink",
 ] }
