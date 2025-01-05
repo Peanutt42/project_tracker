@@ -3660,7 +3660,6 @@ dependencies = [
  "iced_fonts",
  "image",
  "indexmap",
- "libc",
  "notify-rust",
  "open",
  "project_tracker_core",
