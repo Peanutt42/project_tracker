@@ -49,14 +49,6 @@ winrt-notification = "0.5.0"
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 notify-rust = "4"
 
-[dev-dependencies]
-tokio = { version = "1.4", features = [
-	"fs",
-	"rt-multi-thread",
-	"macros",
-	"net",
-	"io-util",
-] }
 
 [workspace.dependencies]
 iced = { version = "0.13.1", features = [

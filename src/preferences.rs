@@ -225,6 +225,9 @@ impl Preferences {
 	pub fn synchronization(&self) -> &Option<SynchronizationSetting> {
 		&self.synchronization
 	}
+	pub fn set_synchronization(&mut self, setting: Option<SynchronizationSetting>) {
+		self.modify(|pref| pref.synchronization = setting);
+	}
 	pub fn theme_mode(&self) -> &ThemeMode {
 		&self.theme_mode
 	}
@@ -332,7 +335,7 @@ impl Preferences {
 			}
 
 			PreferenceMessage::SetSynchronization(setting) => {
-				self.modify(|pref| pref.synchronization = setting);
+				self.set_synchronization(setting);
 				PreferenceAction::None
 			}
 
