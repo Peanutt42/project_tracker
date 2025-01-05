@@ -6,6 +6,8 @@ use iced::{
 use std::fmt::{Display, Formatter, Result};
 use std::sync::LazyLock;
 
+pub static APP_ICON_BYTES: &[u8] = include_bytes!("../../assets/icon.png");
+
 pub static VSCODE_ICON_IMAGE_HANDLE: LazyLock<Handle> = LazyLock::new(|| {
 	Handle::from_bytes(Bytes::from_static(include_bytes!(
 		"../../assets/vscode_icon.ico"

@@ -87,7 +87,31 @@ impl DatabaseState {
 	}
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct AppFlags {
+	custom_database_filepath: Option<PathBuf>,
+	custom_preferences_filepath: Option<PathBuf>,
+}
+
+impl AppFlags {
+	pub fn custom(custom_database_filepath: PathBuf, custom_preferences_filepath: PathBuf) -> Self {
+		Self {
+			custom_database_filepath: Some(custom_database_filepath),
+			custom_preferences_filepath: Some(custom_preferences_filepath),
+		}
+	}
+
+	pub fn get_database_filepath(&self) -> Option<PathBuf> {
+		Database::get_filepath(self.custom_database_filepath.clone())
+	}
+
+	pub fn get_preferences_filepath(&self) -> Option<PathBuf> {
+		Preferences::get_filepath(self.custom_preferences_filepath.clone())
+	}
+}
+
 pub struct ProjectTrackerApp {
+	pub flags: AppFlags,
 	pub sidebar_page: SidebarPage,
 	pub sidebar_animation: ScalarAnimation,
 	pub content_page: ContentPage,
@@ -160,6 +184,7 @@ pub enum Message {
 	SyncDatabaseFilepathFailed(String), // error_msg
 	LoadDatabase,
 	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
+	SavePreferences,
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	SyncDatabaseFromServer,
 	RequestAdminInfos,
@@ -208,8 +233,8 @@ pub enum Message {
 }
 
 impl ProjectTrackerApp {
-	fn show_error_msg(&mut self, error_msg: String) -> Task<Message> {
-		self.update(ErrorMsgModalMessage::open(error_msg))
+	fn show_error_msg(&mut self, error_msg: impl Into<String>) -> Task<Message> {
+		self.update(ErrorMsgModalMessage::open(error_msg.into()))
 	}
 
 	fn show_error<E: std::error::Error>(&mut self, error: E) -> Task<Message> {
@@ -251,9 +276,10 @@ impl ProjectTrackerApp {
 		get_theme(self.is_theme_dark())
 	}
 
-	pub fn new() -> (Self, Task<Message>) {
+	pub fn new(flags: AppFlags) -> (Self, Task<Message>) {
 		(
 			Self {
+				flags: flags.clone(),
 				sidebar_page: SidebarPage::new(),
 				sidebar_animation: ScalarAnimation::Idle,
 				content_page: ContentPage::new(None, &None),
@@ -283,12 +309,17 @@ impl ProjectTrackerApp {
 				is_system_theme_dark: is_system_theme_dark(),
 			},
 			Task::batch([
-				Task::perform(Preferences::load(), |result| {
-					Message::LoadedPreferences(result.map_err(Arc::new))
-				}),
-				Task::perform(Database::load(), |result| {
-					Message::LoadedDatabase(result.map_err(Arc::new))
-				}),
+				match flags.get_preferences_filepath() {
+					Some(preferences_filepath) => {
+						Task::perform(Preferences::load(preferences_filepath), |result| {
+							Message::LoadedPreferences(result.map_err(Arc::new))
+						})
+					}
+					None => Task::perform(async move {}, |_| {
+						ErrorMsgModalMessage::open("failed to get preferences filepath".to_string())
+					}),
+				},
+				Task::perform(async move {}, |_| Message::LoadDatabase),
 			]),
 		)
 	}
@@ -424,12 +455,16 @@ impl ProjectTrackerApp {
 					self.wait_closing_modal = WaitClosingModal::Opened { waiting_reason };
 					Task::none()
 				} else {
-					Task::batch([
-						self.update(StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing.into()),
-						self.update(Message::SaveDatabase),
-						self.update(PreferenceMessage::Save.into()),
-						window::get_latest().and_then(window::close),
-					])
+					match self.flags.get_preferences_filepath() {
+						Some(preferences_filepath) => self
+							.update(StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing.into())
+							.chain(self.update(Message::SaveDatabase))
+							.chain(
+								self.update(PreferenceMessage::Save(preferences_filepath).into()),
+							)
+							.chain(window::get_latest().and_then(window::close)),
+						None => self.show_error_msg("failed to get preferences filepath!"),
+					}
 				}
 			}
 			Message::EscapePressed => {
@@ -484,19 +519,18 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::SaveChangedFiles => {
-				let mut commands = Vec::new();
+				let mut tasks = Vec::new();
 				if let DatabaseState::Loaded(database) = &mut self.database {
 					if database.has_unsaved_changes() {
-						commands.push(self.update(Message::SaveDatabase));
+						tasks.push(self.update(Message::SaveDatabase));
 					}
 				}
 				if let Some(preferences) = &mut self.preferences {
 					if preferences.has_unsaved_changes() {
-						let action = preferences.update(PreferenceMessage::Save);
-						commands.push(self.perform_preference_action(action));
+						tasks.push(self.update(Message::SavePreferences));
 					}
 				}
-				Task::batch(commands)
+				Task::batch(tasks)
 			}
 			Message::SyncIfChanged => {
 				if self.has_unsynced_changes() &&
@@ -551,16 +585,22 @@ impl ProjectTrackerApp {
 				.map(Message::WaitClosingModalMessage),
 			Message::SaveDatabase => {
 				if let DatabaseState::Loaded(database) = &self.database {
-					if let Some(database_binary) = database.clone().to_binary() {
-						info!("saving database");
-						Task::perform(Database::save(database_binary), |result| match result {
-							Ok(begin_time) => Message::DatabaseSaved(begin_time),
-							Err(error) => ErrorMsgModalMessage::open_error(error),
-						})
-					} else {
-						self.show_error_msg(
-							"failed to serialize database to save to file!".to_string(),
-						)
+					match self.flags.get_database_filepath() {
+						Some(database_filepath) => {
+							if let Some(database_binary) = database.clone().to_binary() {
+								info!("saving database");
+								Task::perform(
+									Database::save(database_filepath, database_binary),
+									|result| match result {
+										Ok(begin_time) => Message::DatabaseSaved(begin_time),
+										Err(error) => ErrorMsgModalMessage::open_error(error),
+									},
+								)
+							} else {
+								self.show_error_msg("failed to serialize database to save to file!")
+							}
+						}
+						None => self.show_error_msg("failed to get database filepath!"),
 					}
 				} else {
 					Task::none()
@@ -615,7 +655,7 @@ impl ProjectTrackerApp {
 					match database.clone().to_binary() {
 						Some(database_binary) => {
 							self.exporting_database = true;
-							Task::perform(Database::save_to(filepath, database_binary), |result| {
+							Task::perform(Database::save(filepath, database_binary), |result| {
 								match result {
 									Ok(_) => Message::DatabaseExported,
 									Err(e) => Message::ExportDatabaseFailed(Arc::new(e)),
@@ -683,7 +723,7 @@ impl ProjectTrackerApp {
 			}
 			Message::ImportDatabase(filepath) => {
 				self.importing_database = true;
-				Task::perform(Database::load_from(filepath), |result| {
+				Task::perform(Database::load(filepath), |result| {
 					Message::DatabaseImported(result.map_err(Arc::new))
 				})
 			}
@@ -722,7 +762,7 @@ impl ProjectTrackerApp {
 			Message::SyncDatabaseFilepathUpload(filepath) => {
 				if let DatabaseState::Loaded(database) = &self.database {
 					match database.clone().to_binary() {
-						Some(database_binary) => Task::perform(Database::save_to(filepath, database_binary), |_| {
+						Some(database_binary) => Task::perform(Database::save(filepath, database_binary), |_| {
 							Message::SyncDatabaseFilepathUploaded
 						}),
 						None => self.show_error_msg("failed to serialize database to binary in order to upload it to the server".to_string()),
@@ -736,7 +776,7 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::SyncDatabaseFilepathDownload(filepath) => {
-				Task::perform(Database::load_from(filepath), |result| {
+				Task::perform(Database::load(filepath), |result| {
 					Message::SyncDatabaseFilepathDownloaded(result.map_err(Arc::new))
 				})
 			}
@@ -748,9 +788,14 @@ impl ProjectTrackerApp {
 				Err(e) => self.update(Message::DatabaseImported(Err(e))),
 			},
 			Message::SyncDatabaseFilepathFailed(error_msg) => self.show_error_msg(error_msg),
-			Message::LoadDatabase => Task::perform(Database::load(), |result| {
-				Message::LoadedDatabase(result.map_err(Arc::new))
-			}),
+			Message::LoadDatabase => match self.flags.get_database_filepath() {
+				Some(database_filepath) => {
+					Task::perform(Database::load(database_filepath), |result| {
+						Message::LoadedDatabase(result.map_err(Arc::new))
+					})
+				}
+				None => self.show_error_msg("failed to get database filepath"),
+			},
 			Message::LoadedDatabase(load_database_result) => {
 				self.loading_database = false;
 				self.importing_database = false;
@@ -773,7 +818,6 @@ impl ProjectTrackerApp {
 						self.perform_content_page_action(action)
 					}
 					Err(error) => match error.as_ref() {
-						LoadDatabaseError::FailedToFindDatbaseFilepath => self.show_error(error),
 						LoadDatabaseError::FailedToOpenFile { .. } => {
 							if self.database.is_loaded() {
 								self.show_error(error)
@@ -784,7 +828,9 @@ impl ProjectTrackerApp {
 						LoadDatabaseError::FailedToParseBinary { filepath, .. }
 						| LoadDatabaseError::FailedToParseJson { filepath, .. } => {
 							// saves the corrupted database, just so we don't lose the progress and can correct it afterwards
-							if let Some(mut saved_corrupted_filepath) = Database::get_filepath() {
+							if let Some(mut saved_corrupted_filepath) =
+								self.flags.get_database_filepath()
+							{
 								let formatted_date_time =
 									formatted_date_time(self.preferences.date_formatting());
 								saved_corrupted_filepath.set_file_name(format!(
@@ -813,6 +859,19 @@ impl ProjectTrackerApp {
 					},
 				}
 			}
+			Message::SavePreferences => match &mut self.preferences {
+				Some(preferences) => match self.flags.get_preferences_filepath() {
+					Some(preferences_filepath) => {
+						let action =
+							preferences.update(PreferenceMessage::Save(preferences_filepath));
+						self.perform_preference_action(action)
+					}
+					None => Task::perform(async move {}, |_| {
+						ErrorMsgModalMessage::open("failed to get preferences filepath".to_string())
+					}),
+				},
+				None => Task::none(),
+			},
 			Message::LoadedPreferences(load_preferences_result) => {
 				match load_preferences_result {
 					Ok(preferences) => {
@@ -829,25 +888,23 @@ impl ProjectTrackerApp {
 							.content_page
 							.restore_from_serialized(self.database.ok(), &mut self.preferences);
 						Task::batch([
-							self.update(PreferenceMessage::Save.into()),
+							self.update(Message::SavePreferences),
 							self.perform_content_page_action(content_page_action),
 						])
 					}
 					Err(error) => match error.as_ref() {
-						LoadPreferencesError::FailedToFindPreferencesFilepath => {
-							self.show_error(error)
-						}
 						LoadPreferencesError::FailedToOpenFile { .. } => {
 							if self.preferences.is_none() {
 								self.preferences = Some(Preferences::default());
-								self.update(PreferenceMessage::Save.into())
+								self.update(Message::SavePreferences)
 							} else {
 								self.show_error(error)
 							}
 						}
 						LoadPreferencesError::FailedToParse { filepath, .. } => {
 							// saves the corrupted preferences, just so we don't lose the progress and can correct it afterwards
-							if let Some(mut saved_corrupted_filepath) = Preferences::get_filepath()
+							if let Some(mut saved_corrupted_filepath) =
+								self.flags.get_preferences_filepath()
 							{
 								let formatted_date_time =
 									formatted_date_time(self.preferences.date_formatting());
@@ -870,7 +927,7 @@ impl ProjectTrackerApp {
 								self.preferences = Some(Preferences::default());
 							}
 							Task::batch([
-								self.update(PreferenceMessage::Save.into()),
+								self.update(Message::SavePreferences),
 								self.show_error(error),
 							])
 						}

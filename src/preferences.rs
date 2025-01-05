@@ -1,5 +1,6 @@
 use crate::icons::Bootstrap;
 use crate::integrations::{CodeEditor, ServerConfig};
+use crate::project_tracker::AppFlags;
 use crate::{
 	components::{
 		dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded,
@@ -146,7 +147,7 @@ pub enum SerializedContentPage {
 
 #[derive(Clone, Debug)]
 pub enum PreferenceMessage {
-	Save,
+	Save(PathBuf),
 	Saved(Instant), // begin_time of saving
 	Reset,
 	Export,
@@ -193,8 +194,6 @@ impl From<Task<Message>> for PreferenceAction {
 
 #[derive(Debug, Error)]
 pub enum LoadPreferencesError {
-	#[error("failed to find preferences filepath")]
-	FailedToFindPreferencesFilepath,
 	#[error("failed to open preferences file: {filepath}\n{error}")]
 	FailedToOpenFile {
 		filepath: PathBuf,
@@ -211,8 +210,6 @@ pub type LoadPreferencesResult = Result<Preferences, LoadPreferencesError>;
 
 #[derive(Debug, Error)]
 pub enum SavePreferencesError {
-	#[error("failed to find preferences filepath")]
-	FailedToFindPreferencesFilepath,
 	#[error("failed to save preferences file: {filepath}, error: {error}")]
 	FailedToSaveFile {
 		filepath: PathBuf,
@@ -222,7 +219,7 @@ pub enum SavePreferencesError {
 pub type SavePreferencesResult<T> = Result<T, SavePreferencesError>;
 
 impl Preferences {
-	const FILE_NAME: &'static str = "preferences.toml";
+	pub const FILE_NAME: &'static str = "preferences.toml";
 
 	pub fn synchronization(&self) -> &Option<SynchronizationSetting> {
 		&self.synchronization
@@ -276,13 +273,14 @@ impl Preferences {
 
 	pub fn update(&mut self, message: PreferenceMessage) -> PreferenceAction {
 		match message {
-			PreferenceMessage::Save => match self.serialized() {
-				Ok(json) => {
-					PreferenceAction::Task(Task::perform(Self::save(json), |result| match result {
+			PreferenceMessage::Save(filepath) => match self.serialized() {
+				Ok(serialized_str) => PreferenceAction::Task(Task::perform(
+					Self::save(filepath, serialized_str),
+					|result| match result {
 						Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
 						Err(error) => ErrorMsgModalMessage::open_error(error),
-					}))
-				}
+					},
+				)),
 				Err(e) => PreferenceAction::FailedToSerializePreferences(e),
 			},
 			PreferenceMessage::Saved(begin_time) => {
@@ -295,8 +293,8 @@ impl Preferences {
 				PreferenceAction::None
 			}
 			PreferenceMessage::Export => match self.serialized() {
-				Ok(json) => PreferenceAction::Task(Task::perform(
-					Self::export_file_dialog(json),
+				Ok(serialized_str) => PreferenceAction::Task(Task::perform(
+					Self::export_file_dialog(serialized_str),
 					|result| match result {
 						Ok(_) => PreferenceMessage::Exported.into(),
 						Err(error) => ErrorMsgModalMessage::open_error(error),
@@ -363,7 +361,7 @@ impl Preferences {
 		}
 	}
 
-	pub fn get_filepath() -> Option<PathBuf> {
+	fn get_default_filepath() -> Option<PathBuf> {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")?;
 
 		Some(
@@ -374,14 +372,12 @@ impl Preferences {
 		)
 	}
 
-	async fn get_and_ensure_filepath() -> Option<PathBuf> {
-		let filepath = Self::get_filepath()?;
-		tokio::fs::create_dir_all(filepath.parent()?).await.ok()?;
-
-		Some(filepath)
+	// either returns custom filepath or the default filepath based on the system
+	pub fn get_filepath(custom_filepath: Option<PathBuf>) -> Option<PathBuf> {
+		custom_filepath.or(Self::get_default_filepath())
 	}
 
-	async fn load_from(filepath: PathBuf) -> LoadPreferencesResult {
+	pub async fn load(filepath: PathBuf) -> LoadPreferencesResult {
 		let file_content = tokio::fs::read_to_string(&filepath)
 			.await
 			.map_err(|error| LoadPreferencesError::FailedToOpenFile {
@@ -393,39 +389,24 @@ impl Preferences {
 			.map_err(|error| LoadPreferencesError::FailedToParse { filepath, error })
 	}
 
-	pub async fn load() -> LoadPreferencesResult {
-		Self::load_from(
-			Self::get_and_ensure_filepath()
-				.await
-				.ok_or(LoadPreferencesError::FailedToFindPreferencesFilepath)?,
-		)
-		.await
-	}
-
-	async fn save_to(filepath: PathBuf, json: String) -> SavePreferencesResult<()> {
-		tokio::fs::write(&filepath, json.as_bytes())
+	// returns begin time of saving
+	pub async fn save(filepath: PathBuf, serialized_str: String) -> SavePreferencesResult<Instant> {
+		let begin_time = Instant::now();
+		if let Some(parent) = filepath.parent() {
+			// if this fails, 'tokio::fs::write' will also fail --> correct io error
+			let _ = tokio::fs::create_dir_all(parent).await;
+		}
+		tokio::fs::write(&filepath, serialized_str.as_bytes())
 			.await
-			.map_err(|error| SavePreferencesError::FailedToSaveFile { filepath, error })
+			.map_err(|error| SavePreferencesError::FailedToSaveFile { filepath, error })?;
+		Ok(begin_time)
 	}
 
 	pub fn serialized(&self) -> Result<String, toml::ser::Error> {
 		toml::to_string_pretty(self)
 	}
 
-	// returns begin time of saving
-	pub async fn save(json: String) -> SavePreferencesResult<Instant> {
-		let begin_time = Instant::now();
-		Self::save_to(
-			Self::get_and_ensure_filepath()
-				.await
-				.ok_or(SavePreferencesError::FailedToFindPreferencesFilepath)?,
-			json,
-		)
-		.await?;
-		Ok(begin_time)
-	}
-
-	pub async fn export_file_dialog(json: String) -> SavePreferencesResult<()> {
+	pub async fn export_file_dialog(serialized_str: String) -> SavePreferencesResult<()> {
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Export ProjectTracker Preferences")
 			.set_file_name(Self::FILE_NAME)
@@ -434,7 +415,7 @@ impl Preferences {
 			.await;
 
 		if let Some(result) = file_dialog_result {
-			Self::save_to(result.path().to_path_buf(), json).await?;
+			Self::save(result.path().to_path_buf(), serialized_str).await?;
 		}
 		Ok(())
 	}
@@ -447,7 +428,7 @@ impl Preferences {
 			.await;
 
 		if let Some(result) = file_dialog_result {
-			Some(Self::load_from(result.path().to_path_buf()).await)
+			Some(Self::load(result.path().to_path_buf()).await)
 		} else {
 			None
 		}
@@ -464,7 +445,7 @@ impl Preferences {
 		.align_y(Alignment::Center)
 	}
 
-	pub fn view(&self) -> Element<Message> {
+	pub fn view<'a>(&'a self, app_flags: &'a AppFlags) -> Element<'a, Message> {
 		column![
 			Self::setting_item(
 				"Theme Mode:",
@@ -522,9 +503,9 @@ impl Preferences {
 			horizontal_seperator_padded(),
 			Self::setting_item(
 				container("Preferences file location:").padding(HORIZONTAL_SCROLLABLE_PADDING),
-				match Self::get_filepath() {
+				match app_flags.get_preferences_filepath() {
 					Some(filepath) => file_location(filepath),
-					None => text("couldnt get filepath").into(),
+					None => text("could not get filepath").into(),
 				}
 			),
 			container(

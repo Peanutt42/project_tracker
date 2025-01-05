@@ -64,7 +64,7 @@ pub use constants::{
 mod text;
 pub use text::{
 	danger_text_style, default_text_style, grey_text_style, text_color, BOLD_FONT, FIRA_SANS_FONT,
-	MONOSPACE_FONT,
+	FIRA_SANS_FONT_BYTES, MONOSPACE_FONT,
 };
 
 mod theme;

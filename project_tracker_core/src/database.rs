@@ -161,8 +161,6 @@ pub enum DatabaseMessage {
 
 #[derive(Debug, Error)]
 pub enum LoadDatabaseError {
-	#[error("failed to find database filepath")]
-	FailedToFindDatbaseFilepath,
 	#[error("failed to open file: {filepath}, io-error: {error:?}")]
 	FailedToOpenFile {
 		filepath: PathBuf,
@@ -183,8 +181,6 @@ pub type LoadDatabaseResult = Result<Database, LoadDatabaseError>;
 
 #[derive(Debug, Error)]
 pub enum SaveDatabaseError {
-	#[error("failed to find database filepath")]
-	FailedToFindDatabaseFilepath,
 	#[error("failed to write to file: {filepath}, error: {error}")]
 	FailedToWriteToFile {
 		filepath: PathBuf,
@@ -578,7 +574,7 @@ impl Database {
 		}
 	}
 
-	pub fn get_filepath() -> Option<PathBuf> {
+	fn get_default_filepath() -> Option<PathBuf> {
 		let project_dirs = directories::ProjectDirs::from("", "", "ProjectTracker")?;
 
 		Some(
@@ -589,12 +585,9 @@ impl Database {
 		)
 	}
 
-	async fn get_and_ensure_filepath() -> Option<PathBuf> {
-		let filepath = Self::get_filepath()?;
-		let parent_filepath = filepath.parent()?;
-		tokio::fs::create_dir_all(parent_filepath).await.ok()?;
-
-		Some(filepath)
+	// either returns custom filepath or the default filepath based on the system
+	pub fn get_filepath(custom_filepath: Option<PathBuf>) -> Option<PathBuf> {
+		custom_filepath.or(Self::get_default_filepath())
 	}
 
 	pub async fn load_json(filepath: PathBuf) -> LoadDatabaseResult {
@@ -641,7 +634,7 @@ impl Database {
 			.map_err(|error| SaveDatabaseError::FailedToWriteToFile { filepath, error })
 	}
 
-	pub async fn load_from(filepath: PathBuf) -> LoadDatabaseResult {
+	pub async fn load(filepath: PathBuf) -> LoadDatabaseResult {
 		let file_metadata =
 			filepath
 				.metadata()
@@ -671,15 +664,6 @@ impl Database {
 		})
 	}
 
-	pub async fn load() -> LoadDatabaseResult {
-		Self::load_from(
-			Self::get_and_ensure_filepath()
-				.await
-				.ok_or(LoadDatabaseError::FailedToFindDatbaseFilepath)?,
-		)
-		.await
-	}
-
 	pub fn to_serialized(self) -> SerializedDatabase {
 		SerializedDatabase {
 			projects: self.projects,
@@ -702,22 +686,16 @@ impl Database {
 		bincode::serialize(&self.to_serialized()).ok()
 	}
 
-	pub async fn save_to(filepath: PathBuf, binary: Vec<u8>) -> SaveDatabaseResult<()> {
+	// returns begin time of saving
+	pub async fn save(filepath: PathBuf, binary: Vec<u8>) -> SaveDatabaseResult<SystemTime> {
+		let begin_time = SystemTime::now();
+		if let Some(parent_filepath) = filepath.parent() {
+			// if this fails, 'tokio::fs::write' will also fail --> correct io error
+			let _ = tokio::fs::create_dir_all(parent_filepath).await;
+		}
 		tokio::fs::write(filepath.as_path(), binary)
 			.await
-			.map_err(|error| SaveDatabaseError::FailedToWriteToFile { filepath, error })
-	}
-
-	// returns begin time of saving
-	pub async fn save(binary: Vec<u8>) -> SaveDatabaseResult<SystemTime> {
-		let begin_time = SystemTime::now();
-		Self::save_to(
-			Self::get_and_ensure_filepath()
-				.await
-				.ok_or(SaveDatabaseError::FailedToFindDatabaseFilepath)?,
-			binary,
-		)
-		.await?;
+			.map_err(|error| SaveDatabaseError::FailedToWriteToFile { filepath, error })?;
 		Ok(begin_time)
 	}
 

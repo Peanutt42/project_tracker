@@ -1,32 +1,24 @@
-// only enables the 'windows' subsystem when compiling in release
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-use std::process::exit;
-
-#[cfg(target_os = "linux")]
-use iced::window::settings::PlatformSpecific;
 use iced::{
-	window::{self, icon},
+	window::{self, icon, settings::PlatformSpecific},
 	Size,
 };
 use iced_fonts::REQUIRED_FONT_BYTES;
 use project_tracker::{
 	icons::{APP_ICON_BYTES, BOOTSTRAP_FONT_BYTES},
-	run_already_opened_application,
 	styles::{FIRA_SANS_FONT, FIRA_SANS_FONT_BYTES},
-	AppFlags, ProjectTrackerApp,
+	AppFlags, Database, Preferences, ProjectTrackerApp,
 };
-use single_instance::SingleInstance;
 
 fn main() -> Result<(), iced::Error> {
-	let instance = SingleInstance::new("ProjectTrackerInstance").unwrap();
-	if !instance.is_single() {
-		eprintln!("another instance is already running. closing...");
-		run_already_opened_application()?;
-		exit(1);
-	}
-
 	tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new()).unwrap();
+
+	let temp_dir = std::env::temp_dir();
+	let custom_database_filepath = temp_dir.join(Database::FILE_NAME);
+	let custom_preferences_filepath = temp_dir.join(Preferences::FILE_NAME);
+
+	// clean up previous temp files from us
+	let _ = std::fs::remove_file(&custom_database_filepath);
+	let _ = std::fs::remove_file(&custom_preferences_filepath);
 
 	iced::application(
 		ProjectTrackerApp::title,
@@ -51,5 +43,10 @@ fn main() -> Result<(), iced::Error> {
 		},
 		..Default::default()
 	})
-	.run_with(|| ProjectTrackerApp::new(AppFlags::default()))
+	.run_with(move || {
+		ProjectTrackerApp::new(AppFlags::custom(
+			custom_database_filepath,
+			custom_preferences_filepath,
+		))
+	})
 }

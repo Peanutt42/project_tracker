@@ -41,7 +41,7 @@ use iced::{
 };
 use iced::{Color, Length};
 use iced_aw::card;
-use project_tracker_core::{Database, DatabaseMessage};
+use project_tracker_core::DatabaseMessage;
 use project_tracker_server::{AdminInfos, DEFAULT_PASSWORD};
 use std::str::FromStr;
 use std::time::Duration;
@@ -133,7 +133,7 @@ impl SettingTab {
 		latest_admin_infos: &'a Option<AdminInfos>,
 	) -> Element<'a, Message> {
 		match self {
-			SettingTab::General => vertical_scrollable(preferences.view()).into(),
+			SettingTab::General => vertical_scrollable(preferences.view(&app.flags)).into(),
 			SettingTab::Database => {
 				vertical_scrollable(database_settings_tab_view(app, preferences, show_password))
 					.into()
@@ -432,9 +432,9 @@ fn database_settings_tab_view<'a>(
 	column![
 		row![
 			container("Database file location: ").padding(HORIZONTAL_SCROLLABLE_PADDING),
-			container(match Database::get_filepath() {
+			container(match app.flags.get_database_filepath() {
 				Some(filepath) => file_location(filepath),
-				None => text("couldnt find database filepath").into(),
+				None => text("could not find database filepath").into(),
 			})
 			.width(Fill)
 			.align_x(Horizontal::Right),

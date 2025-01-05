@@ -36,16 +36,13 @@ async fn test_database_serialization() {
 
 	let original = database.clone();
 
-	Database::save_to(output_filepath.clone(), database.to_binary().unwrap())
+	Database::save(output_filepath.clone(), database.to_binary().unwrap())
 		.await
 		.unwrap();
 
-	match Database::load_from(output_filepath.clone()).await {
+	match Database::load(output_filepath.clone()).await {
 		Ok(database) => assert_eq!(database.projects(), original.projects()),
 		Err(e) => match e {
-			LoadDatabaseError::FailedToFindDatbaseFilepath => {
-				panic!("Failed to find database filepath!")
-			}
 			LoadDatabaseError::FailedToOpenFile { .. } => {
 				panic!("Failed to find serialized file, maybe database.save_to failed?")
 			}

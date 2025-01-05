@@ -45,7 +45,7 @@ async fn main() {
 		db.modify(|projects| projects.insert(ProjectId::generate(), project));
 	}
 
-	Database::save_to(
+	Database::save(
 		PathBuf::from("stresstest_database.project_tracker"),
 		db.to_binary().unwrap(),
 	)
