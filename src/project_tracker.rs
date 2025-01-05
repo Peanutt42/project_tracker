@@ -622,7 +622,7 @@ impl ProjectTrackerApp {
 							SynchronizationSetting::Server(_) => {
 								self.update(Message::SyncDatabaseFromServer)
 							}
-							SynchronizationSetting::Filepath(filepath) => match filepath {
+							SynchronizationSetting::Filepath { filepath } => match filepath {
 								Some(filepath) => {
 									self.update(Message::SyncDatabaseFilepath(filepath.clone()))
 								}

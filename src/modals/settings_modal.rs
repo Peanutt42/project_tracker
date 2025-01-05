@@ -279,7 +279,9 @@ impl SettingsModal {
 			SettingsModalMessage::BrowseSynchronizationFilepath => {
 				Task::perform(export_database_file_dialog(), |filepath| match filepath {
 					Some(filepath) => PreferenceMessage::SetSynchronization(Some(
-						SynchronizationSetting::Filepath(Some(filepath)),
+						SynchronizationSetting::Filepath {
+							filepath: Some(filepath),
+						},
 					))
 					.into(),
 					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
@@ -309,8 +311,10 @@ impl SettingsModal {
 			}
 
 			SettingsModalMessage::EnableSynchronization => {
-				PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Filepath(None)))
-					.into()
+				PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Filepath {
+					filepath: None,
+				}))
+				.into()
 			}
 			SettingsModalMessage::DisableSynchronization => {
 				PreferenceMessage::SetSynchronization(None).into()
@@ -507,7 +511,7 @@ Server: your own hosted ProjectTracker-server"
 						container(
 							row![
 								synchronization_type_button(
-									SynchronizationSetting::Filepath(None),
+									SynchronizationSetting::Filepath{ filepath: None },
 									synchronization_setting,
 									true,
 									false
@@ -526,7 +530,7 @@ Server: your own hosted ProjectTracker-server"
 					.align_y(Alignment::Center),
 
 					match synchronization_setting {
-						SynchronizationSetting::Filepath(filepath) => {
+						SynchronizationSetting::Filepath{ filepath } => {
 							let horizontal_scrollable_padding = if filepath.is_some() {
 								HORIZONTAL_SCROLLABLE_PADDING
 							}

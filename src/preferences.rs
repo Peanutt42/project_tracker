@@ -41,22 +41,23 @@ fn default_play_timer_notification_sound() -> bool {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SynchronizationSetting {
-	Filepath(Option<PathBuf>),
+	// needs to be a { fileapth: .. } because 'Filepath(Option<_>)' doesnt work with toml serde serialization
+	Filepath { filepath: Option<PathBuf> },
 	Server(ServerConfig),
 }
 
 impl SynchronizationSetting {
 	pub fn as_str(&self) -> &'static str {
 		match self {
-			SynchronizationSetting::Filepath(_) => "Filepath",
+			SynchronizationSetting::Filepath { .. } => "Filepath",
 			SynchronizationSetting::Server(_) => "Server",
 		}
 	}
 
 	pub fn is_same_type(&self, other: &Self) -> bool {
 		match self {
-			SynchronizationSetting::Filepath(_) => {
-				matches!(other, SynchronizationSetting::Filepath(_))
+			SynchronizationSetting::Filepath { .. } => {
+				matches!(other, SynchronizationSetting::Filepath { .. })
 			}
 			SynchronizationSetting::Server(_) => {
 				matches!(other, SynchronizationSetting::Server(_))
