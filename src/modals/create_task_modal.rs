@@ -24,6 +24,7 @@ use iced_aw::card;
 use project_tracker_core::{Database, ProjectId, SerializableDate, TaskId, TaskTagId, TimeSpend};
 use std::collections::HashSet;
 use std::sync::LazyLock;
+use tracing::error;
 
 static TASK_NAME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
@@ -233,6 +234,7 @@ impl CreateTaskModal {
 						.into()
 					}
 				} else {
+					error!("invalid project_id: doesnt exist in database!");
 					Element::new(text("<invalid project id>"))
 				},
 				text_input("task name", &self.task_name)

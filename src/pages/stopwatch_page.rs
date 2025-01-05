@@ -651,6 +651,7 @@ impl StopwatchPage {
 							.into()
 						}
 					} else {
+						error!("invalid project_id or task_id: doesnt exist in database!");
 						text("<invalid project or task id>").into()
 					};
 
@@ -878,6 +879,7 @@ fn task_info<'a>(
 									)
 									.into()
 							} else {
+								error!("invalid tag_id: doesnt exist in database!");
 								"<invalid tag id>".into()
 							}
 						}))

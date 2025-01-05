@@ -22,6 +22,7 @@ use std::{
 	collections::{BTreeMap, HashMap},
 	time::SystemTime,
 };
+use tracing::error;
 
 #[derive(Debug, Clone)]
 pub struct OverviewPage {
@@ -324,6 +325,7 @@ impl OverviewPage {
 							show_due_date,
 						)
 					} else {
+						error!("invalid task_id: doesnt exist in database!");
 						text("<invalid task id>").into()
 					}
 				}))
@@ -350,6 +352,7 @@ impl OverviewPage {
 				]
 				.into()
 			} else {
+				error!("invalid project_id: doesnt exist in database!");
 				Element::new(text("<invalid project id>"))
 			}
 		}))

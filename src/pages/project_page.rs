@@ -32,6 +32,7 @@ use project_tracker_core::{
 	TaskTagId, TaskType,
 };
 use std::{collections::HashSet, path::PathBuf, sync::LazyLock, time::SystemTime};
+use tracing::error;
 
 static PROJECT_NAME_TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 static SEARCH_TASKS_TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
@@ -430,7 +431,10 @@ impl ProjectPage {
 						db.get_project(&self.project_id)
 							.map(|project| project.name.clone())
 					})
-					.unwrap_or("<invalid project id>".to_string());
+					.unwrap_or({
+						error!("invalid project_id: doesnt exist in database!");
+						"<invalid project id>".to_string()
+					});
 
 				ContentPageAction::ConfirmDeleteProject {
 					project_id: self.project_id,
@@ -493,6 +497,7 @@ impl ProjectPage {
 				.height(Fill)
 				.into()
 			} else {
+				error!("invalid project_id inside project_page: doesnt exist in database!");
 				text("<Invalid ProjectId>").into()
 			}
 		} else {

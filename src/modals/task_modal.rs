@@ -26,6 +26,7 @@ use iced_aw::card;
 use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, TaskId};
 use std::sync::LazyLock;
 use std::time::Duration;
+use tracing::error;
 
 static TASK_NAME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 static EDIT_NEEDED_TIME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
@@ -362,9 +363,11 @@ impl TaskModal {
 					.padding(Padding::default().bottom(SCROLLBAR_WIDTH + SMALL_PADDING_AMOUNT))
 					.into()
 				} else {
+					error!("invalid task_id: doesnt exist in database!");
 					text("<invalid task id>").into()
 				}
 			} else {
+				error!("invalid project_id: doesnt exist in database!");
 				Element::new(text("<invalid project id>"))
 			},
 		)
