@@ -904,7 +904,7 @@ pub fn synchronization_type_button(
 				round_right,
 			)
 		})
-		.width(80.0)
+		.width(90.0)
 		.on_press(PreferenceMessage::SetSynchronization(Some(synchronization_setting)).into())
 }
 
