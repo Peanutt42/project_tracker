@@ -149,29 +149,23 @@ pub fn project_context_menu_button(opened: bool) -> Element<'static, Message> {
 	.into()
 }
 
-pub fn edit_task_description_button(editing: bool) -> Element<'static, Message> {
+/// !viewing => editing
+pub fn toggle_view_edit_task_description_button(viewing: bool) -> Element<'static, Message> {
 	tooltip(
-		icon_button(Bootstrap::PencilSquare)
-			.on_press(TaskModalMessage::EditDescription.into())
-			.style(move |t, s| {
-				selection_list_button_style(t, s, editing, false, true, false, true)
-			}),
-		text("Edit description").size(SMALL_TEXT_SIZE),
-		tooltip::Position::Bottom,
-	)
-	.gap(GAP)
-	.style(tooltip_container_style)
-	.into()
-}
-
-pub fn view_task_description_button(viewing: bool) -> Element<'static, Message> {
-	tooltip(
-		icon_button(Bootstrap::BodyText)
-			.on_press(TaskModalMessage::ViewDescription.into())
-			.style(move |t, s| {
-				selection_list_button_style(t, s, viewing, true, false, true, false)
-			}),
-		text("View description").size(SMALL_TEXT_SIZE),
+		if viewing {
+			icon_button(Bootstrap::Pencil)
+				.on_press(TaskModalMessage::EditDescription.into())
+				.style(primary_button_style)
+		} else {
+			icon_button(Bootstrap::Book)
+				.on_press(TaskModalMessage::ViewDescription.into())
+				.style(primary_button_style)
+		},
+		if viewing {
+			text("Edit").size(SMALL_TEXT_SIZE)
+		} else {
+			text("View").size(SMALL_TEXT_SIZE)
+		},
 		tooltip::Position::Bottom,
 	)
 	.gap(GAP)

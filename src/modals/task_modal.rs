@@ -1,17 +1,17 @@
 use crate::{
 	components::{
 		delete_task_button, due_date_button, duration_str, duration_to_minutes,
-		edit_needed_time_button, edit_task_description_button, horizontal_scrollable,
-		parse_duration_from_str, start_task_timer_button, task_description,
-		task_description_editor, task_tag_button, vertical_scrollable,
-		view_task_description_button, ICON_BUTTON_WIDTH, SCROLLBAR_WIDTH,
+		edit_needed_time_button, horizontal_scrollable, parse_duration_from_str,
+		start_task_timer_button, task_description, task_description_editor, task_tag_button,
+		toggle_view_edit_task_description_button, vertical_scrollable, ICON_BUTTON_WIDTH,
+		SCROLLBAR_WIDTH,
 	},
 	core::SerializableDateConversion,
 	project_tracker::Message,
 	styles::{
 		card_style, markdown_background_container_style, text_input_style_borderless,
-		tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT,
-		LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT,
+		unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE,
+		PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT,
 	},
 	OptionalPreference, ProjectTrackerApp,
 };
@@ -280,14 +280,9 @@ impl TaskModal {
 						.into(),
 					);
 
-					let editing_description = self.new_description.is_some();
-					let viewing_description = !editing_description;
+					let viewing_description = self.new_description.is_none();
 					let description_hover_button: Element<'a, Message> = container(
-						container(row![
-							view_task_description_button(viewing_description),
-							edit_task_description_button(editing_description),
-						])
-						.style(tooltip_container_style),
+						toggle_view_edit_task_description_button(viewing_description),
 					)
 					.width(Fill)
 					.height(Fill)
