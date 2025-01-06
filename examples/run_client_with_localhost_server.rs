@@ -56,6 +56,7 @@ fn main() -> Result<(), iced::Error> {
 
 	info!("closing for server process");
 	let _ = server_process.kill();
+	let _ = server_process.wait().unwrap();
 
 	result
 }
