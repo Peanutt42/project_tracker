@@ -14,13 +14,15 @@ use crate::{
 		SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT,
 	},
 };
-use iced::widget::{hover, markdown, Space};
 use iced::{
 	alignment::Vertical,
-	widget::{button, checkbox, column, container, container::Id, row, text, Column, Row},
+	widget::{
+		button, checkbox, column, container, container::Id, hover, markdown, row, text, Column,
+		Row, Space,
+	},
 	Alignment, Element,
 	Length::Fill,
-	Padding,
+	Padding, Size,
 };
 use iced_drop::droppable;
 use project_tracker_core::{DatabaseMessage, Project, ProjectId, SortMode, Task, TaskId, TaskType};
@@ -268,7 +270,12 @@ pub fn task_widget<'a>(
 						rect
 					})
 					.on_cancel(Message::CancelDragTask)
-					.drag_overlay(!just_minimal_dragging, Some(inner(true)))
+					.drag_overlay(!just_minimal_dragging)
+					.override_overlay(
+						container(inner(true)).center_y(Fill).into(),
+						Some(Size::new(300.0, 80.0))
+					)
+					.drag_center(true)
 					.drag_hide(false) //-  !just_minimal_dragging)
 					.style(move |t, s| task_button_style(t, s, dragging && !just_minimal_dragging)),
 				on_hover_view

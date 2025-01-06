@@ -7,6 +7,11 @@ use iced::advanced::{self, layout, mouse, overlay, renderer, Layout};
 use iced::widget::button::{Catalog, Status, Style, StyleFn};
 use iced::{Color, Element, Point, Rectangle, Size, Vector};
 
+/// index of the tree children that contains the tree for the content (and also the overlay if drag_overlay is false)
+const CONTENT_TREE_CHILD_INDEX: usize = 0;
+/// index of the tree children that contains the tree for the custom override overlay
+const OVERRIDE_OVERLAY_TREE_CHILD_INDEX: usize = 1;
+
 /// An element that can be dragged and dropped on a [`DropZone`]
 pub struct Droppable<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
@@ -24,6 +29,7 @@ where
 	drag_mode: Option<(bool, bool)>,
 	drag_overlay: bool,
 	override_drag_overlay_content: Option<Element<'a, Message, Theme, Renderer>>,
+	override_drag_overlay_size: Option<Size>,
 	drag_hide: bool,
 	drag_center: bool,
 	drag_size: Option<Size>,
@@ -41,6 +47,7 @@ where
 		Self {
 			content: content.into(),
 			override_drag_overlay_content: None,
+			override_drag_overlay_size: None,
 			class: Theme::default(),
 			id: None,
 			on_click: None,
@@ -104,13 +111,19 @@ where
 	}
 
 	/// Sets whether the [`Droppable`] should be drawn under the cursor while dragging.
-	pub fn drag_overlay(
-		mut self,
-		drag_overlay: bool,
-		override_drag_overlay_content: Option<Element<'a, Message, Theme, Renderer>>,
-	) -> Self {
+	pub fn drag_overlay(mut self, drag_overlay: bool) -> Self {
 		self.drag_overlay = drag_overlay;
-		self.override_drag_overlay_content = override_drag_overlay_content;
+		self
+	}
+
+	/// Sets a custom [`Element`] and a optional custom size for the overlay.
+	pub fn override_overlay(
+		mut self,
+		overlay_content: Element<'a, Message, Theme, Renderer>,
+		overlay_size: Option<Size>,
+	) -> Self {
+		self.override_drag_overlay_content = Some(overlay_content);
+		self.override_drag_overlay_size = overlay_size;
 		self
 	}
 
@@ -169,11 +182,23 @@ where
 	}
 
 	fn children(&self) -> Vec<iced::advanced::widget::Tree> {
-		vec![advanced::widget::Tree::new(&self.content)]
+		match &self.override_drag_overlay_content {
+			Some(override_drag_overlay_content) => vec![
+				advanced::widget::Tree::new(&self.content), // see ['CONTENT_TREE_CHILD_INDEX']
+				advanced::widget::Tree::new(override_drag_overlay_content), // see ['OVERRIDE_OVERLAY_TREE_CHILD_INDEX']
+			],
+			_ => vec![advanced::widget::Tree::new(&self.content)],
+		}
 	}
 
 	fn diff(&self, tree: &mut iced::advanced::widget::Tree) {
-		tree.diff_children(std::slice::from_ref(&self.content))
+		match &self.override_drag_overlay_content {
+			Some(override_drag_overlay_content) => {
+				// see ['CONTENT_TREE_CHILD_INDEX'] and ['OVERRIDE_OVERLAY_TREE_CHILD_INDEX']
+				tree.diff_children(&[&self.content, override_drag_overlay_content]);
+			}
+			_ => tree.diff_children(std::slice::from_ref(&self.content)),
+		}
 	}
 
 	fn size(&self) -> iced::Size<iced::Length> {
@@ -193,7 +218,7 @@ where
 	) -> iced::advanced::graphics::core::event::Status {
 		// handle the on event of the content first, in case that the droppable is nested
 		let status = self.content.as_widget_mut().on_event(
-			&mut tree.children[0],
+			&mut tree.children[CONTENT_TREE_CHILD_INDEX],
 			event.clone(),
 			layout,
 			cursor,
@@ -218,8 +243,19 @@ where
 							state.action = Action::Select(cursor.position().unwrap());
 							let bounds = layout.bounds();
 							state.widget_pos = bounds.position();
-							state.overlay_bounds.width = bounds.width;
-							state.overlay_bounds.height = bounds.height;
+							match &self.override_drag_overlay_size {
+								// even if self.drag_overlay is false now, it can still change later
+								// --> if it stays false --> state.overlay_bounds is not used
+								// --> if it changes to true --> we want the specified override_drag_overlay_size to take effect
+								Some(override_drag_overlay_size) => {
+									state.overlay_bounds.width = override_drag_overlay_size.width;
+									state.overlay_bounds.height = override_drag_overlay_size.height;
+								}
+								_ => {
+									state.overlay_bounds.width = bounds.width;
+									state.overlay_bounds.height = bounds.height;
+								}
+							}
 
 							if let Some(on_click) = self.on_click.clone() {
 								shell.publish(on_click);
@@ -300,10 +336,11 @@ where
 		limits: &iced::advanced::layout::Limits,
 	) -> iced::advanced::layout::Node {
 		let state: &mut State = tree.state.downcast_mut::<State>();
-		let content_node = self
-			.content
-			.as_widget()
-			.layout(&mut tree.children[0], renderer, limits);
+		let content_node = self.content.as_widget().layout(
+			&mut tree.children[CONTENT_TREE_CHILD_INDEX],
+			renderer,
+			limits,
+		);
 
 		// Adjust the size of the original widget if it's being dragged or we're wating to reset the size
 		if let Some(new_size) = self.drag_size {
@@ -343,9 +380,12 @@ where
 		let state = tree.state.downcast_mut::<State>();
 		operation.custom(state, self.id.as_ref());
 		operation.container(self.id.as_ref(), layout.bounds(), &mut |operation| {
-			self.content
-				.as_widget()
-				.operate(&mut tree.children[0], layout, renderer, operation);
+			self.content.as_widget().operate(
+				&mut tree.children[CONTENT_TREE_CHILD_INDEX],
+				layout,
+				renderer,
+				operation,
+			);
 		});
 	}
 
@@ -389,7 +429,7 @@ where
 		}
 
 		self.content.as_widget().draw(
-			&tree.children[0],
+			&tree.children[CONTENT_TREE_CHILD_INDEX],
 			renderer,
 			theme,
 			&renderer::Style {
@@ -409,7 +449,6 @@ where
 		_translation: Vector,
 	) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
 		let state: &mut State = tree.state.downcast_mut::<State>();
-		let mut children = tree.children.iter_mut();
 		if self.drag_overlay {
 			if let Action::Drag(_, _) = state.action {
 				return Some(overlay::Element::new(Box::new(Overlay {
@@ -417,13 +456,17 @@ where
 						.override_drag_overlay_content
 						.as_ref()
 						.unwrap_or(&self.content),
-					tree: children.next().unwrap(),
+					tree: match tree.children.len() {
+						1 => { eprintln!("[iced_drop]: missing child in tree for custom override overlay content!"); &mut tree.children[CONTENT_TREE_CHILD_INDEX] },
+						2 => &mut tree.children[OVERRIDE_OVERLAY_TREE_CHILD_INDEX],
+						_ => unreachable!("[iced_drop]: there shall only be 1 or 2 children (2. child is custom override overlay). Technically there should be 2 children, but 1 is a bug that should not crash."),
+					},
 					overlay_bounds: state.overlay_bounds,
 				})));
 			}
 		}
 		self.content.as_widget_mut().overlay(
-			children.next().unwrap(),
+			&mut tree.children[CONTENT_TREE_CHILD_INDEX],
 			layout,
 			renderer,
 			_translation,
@@ -439,7 +482,7 @@ where
 		_renderer: &Renderer,
 	) -> iced::advanced::mouse::Interaction {
 		let child_interact = self.content.as_widget().mouse_interaction(
-			&tree.children[0],
+			&tree.children[CONTENT_TREE_CHILD_INDEX],
 			layout,
 			cursor,
 			_viewport,
