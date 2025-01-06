@@ -1,9 +1,10 @@
 use crate::{
 	components::{
 		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button,
-		horizontal_scrollable, open_create_task_modal_button, project_context_menu_button,
-		search_tasks_button, sort_dropdown_button, task_list, task_tag_button, unfocusable,
-		ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING,
+		horizontal_scrollable, loading_screen, open_create_task_modal_button,
+		project_context_menu_button, search_tasks_button, sort_dropdown_button, task_list,
+		task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING,
+		LARGE_LOADING_SPINNER_SIZE,
 	},
 	core::{import_source_code_todos, IcedColorConversion, SortModeUI},
 	icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT},
@@ -501,7 +502,9 @@ impl ProjectPage {
 				text("<Invalid ProjectId>").into()
 			}
 		} else {
-			column![].into()
+			container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
+				.center(Fill)
+				.into()
 		}
 	}
 

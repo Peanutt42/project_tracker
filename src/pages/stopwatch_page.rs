@@ -1,8 +1,9 @@
 use crate::{
 	components::{
-		complete_task_timer_button, days_left_widget, horizontal_scrollable, open_project_button,
-		pause_timer_button, resume_timer_button, stop_timer_button, take_break_button,
-		task_description, track_time_button, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING,
+		complete_task_timer_button, days_left_widget, horizontal_scrollable, loading_screen,
+		open_project_button, pause_timer_button, resume_timer_button, stop_timer_button,
+		take_break_button, task_description, track_time_button, StopwatchClock,
+		HORIZONTAL_SCROLLABLE_PADDING, LARGE_LOADING_SPINNER_SIZE,
 	},
 	core::IcedColorConversion,
 	pages::{ContentPageAction, ContentPageMessage},
@@ -19,7 +20,7 @@ use iced::{
 	keyboard, time,
 	widget::{canvas, column, container, responsive, row, text, Column, Row, Space},
 	window, Alignment, Element,
-	Length::{self, Fill},
+	Length::{self, Fill, Fixed},
 	Padding, Subscription,
 };
 use project_tracker_core::{Database, DatabaseMessage, Project, ProjectId, Task, TaskId, TaskType};
@@ -458,7 +459,7 @@ impl StopwatchPage {
 							} else {
 								*clock = None;
 							}
-						} else {
+						} else if database.is_some() {
 							*self = StopwatchPage::Idle;
 						}
 					}
@@ -635,8 +636,8 @@ impl StopwatchPage {
 					let clock: Element<Message> = if task_ref.is_some() {
 						if let Some(clock) = clock {
 							canvas(clock)
-								.width(Length::Fixed(300.0))
-								.height(Length::Fixed(300.0))
+								.width(Fixed(300.0))
+								.height(Fixed(300.0))
 								.into()
 						} else {
 							text(format_stopwatch_duration(
@@ -650,9 +651,14 @@ impl StopwatchPage {
 							.align_x(Horizontal::Center)
 							.into()
 						}
-					} else {
+					} else if app.database.is_loaded() {
 						error!("invalid project_id or task_id: doesnt exist in database!");
 						text("<invalid project or task id>").into()
+					} else {
+						// db is still loading
+						container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
+							.center(Fixed(300.0))
+							.into()
 					};
 
 					let controls = row![
@@ -878,9 +884,12 @@ fn task_info<'a>(
 											.right(PADDING_AMOUNT),
 									)
 									.into()
-							} else {
+							} else if app.database.is_loaded() {
 								error!("invalid tag_id: doesnt exist in database!");
 								"<invalid tag id>".into()
+							} else {
+								// db still loading
+								Space::new(0.0, 0.0).into()
 							}
 						}))
 						.spacing(SPACING_AMOUNT)
