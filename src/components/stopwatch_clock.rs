@@ -1,4 +1,6 @@
-use crate::{pages::format_stopwatch_duration, project_tracker::Message, styles::FIRA_SANS_FONT};
+use crate::{
+	pages::format_stopwatch_duration, project_tracker::Message, styles::JET_BRAINS_MONO_FONT,
+};
 use iced::{
 	alignment::{Horizontal, Vertical},
 	widget::canvas::{path::Arc, stroke, Cache, Geometry, LineCap, Path, Program, Stroke, Text},
@@ -120,7 +122,7 @@ impl Program<Message> for StopwatchClock {
 				horizontal_alignment: Horizontal::Center,
 				vertical_alignment: Vertical::Center,
 				size: label_text_size.into(),
-				font: FIRA_SANS_FONT,
+				font: JET_BRAINS_MONO_FONT,
 				..Default::default()
 			});
 
@@ -132,7 +134,7 @@ impl Program<Message> for StopwatchClock {
 					horizontal_alignment: Horizontal::Center,
 					vertical_alignment: Vertical::Center,
 					size: 25.0.into(),
-					font: FIRA_SANS_FONT,
+					font: JET_BRAINS_MONO_FONT,
 					..Default::default()
 				});
 			}

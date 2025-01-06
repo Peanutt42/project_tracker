@@ -1,5 +1,8 @@
 use crate::{
-	styles::{dangerous_button_style, ProjectTrackerTheme, PADDING_AMOUNT},
+	styles::{
+		dangerous_button_style, ProjectTrackerTheme, FIRA_SANS_FONT, FIRA_SANS_FONT_BYTES,
+		PADDING_AMOUNT,
+	},
 	theme_mode::is_system_theme_dark,
 };
 #[cfg(target_os = "linux")]
@@ -9,9 +12,9 @@ use iced::{
 	keyboard::{key, on_key_press, Key},
 	widget::{button, column, container, text, Space},
 	window::{self, icon},
-	Element, Error, Font,
+	Element,
 	Length::Fill,
-	Size, Subscription, Task, Theme,
+	Result, Size, Subscription, Task, Theme,
 };
 use iced_fonts::REQUIRED_FONT_BYTES;
 
@@ -80,7 +83,7 @@ impl Default for AlreadyOpenedApp {
 	}
 }
 
-pub fn run_already_opened_application() -> Result<(), Error> {
+pub fn run_already_opened_application() -> Result {
 	iced::application(
 		"Project Tracker already opened",
 		AlreadyOpenedApp::update,
@@ -89,8 +92,8 @@ pub fn run_already_opened_application() -> Result<(), Error> {
 	.theme(AlreadyOpenedApp::theme)
 	.subscription(AlreadyOpenedApp::subscription)
 	.font(REQUIRED_FONT_BYTES)
-	.font(include_bytes!("../assets/FiraSans-Regular.ttf"))
-	.default_font(Font::with_name("Fira Sans"))
+	.font(FIRA_SANS_FONT_BYTES)
+	.default_font(FIRA_SANS_FONT)
 	.antialiasing(true)
 	.window(window::Settings {
 		icon: icon::from_file_data(

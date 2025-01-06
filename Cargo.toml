@@ -17,6 +17,7 @@ iced = { workspace = true }
 iced_aw = { workspace = true }
 iced_drop = { path = "iced_drop" }
 iced_fonts = "0.1.1"
+pulldown-cmark = "0.11.3"
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

@@ -9,7 +9,7 @@ use crate::{
 	pages::{ContentPageAction, ContentPageMessage},
 	project_tracker::Message,
 	styles::{
-		task_tag_container_style, BOLD_FONT, FIRA_SANS_FONT, HEADING_TEXT_SIZE,
+		task_tag_container_style, BOLD_FONT, HEADING_TEXT_SIZE, JET_BRAINS_MONO_FONT,
 		LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT,
 		SPACING_AMOUNT,
 	},
@@ -556,7 +556,7 @@ impl StopwatchPage {
 				text(format_stopwatch_duration(
 					elapsed_time.as_secs_f64().round_ties_even() as i64,
 				))
-				.font(FIRA_SANS_FONT)
+				.font(JET_BRAINS_MONO_FONT)
 				.size(90)
 				.width(Fill)
 				.align_x(Horizontal::Center),
@@ -645,7 +645,7 @@ impl StopwatchPage {
 									.unwrap_or(0.0)
 									.round_ties_even() as i64,
 							))
-							.font(FIRA_SANS_FONT)
+							.font(JET_BRAINS_MONO_FONT)
 							.size(90)
 							.width(Fill)
 							.align_x(Horizontal::Center)

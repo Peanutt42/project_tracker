@@ -2,19 +2,19 @@ use crate::{
 	components::{
 		close_create_new_task_modal_button, create_new_task_modal_button, due_date_button,
 		duration_to_minutes, edit_needed_time_button, horizontal_scrollable,
-		parse_duration_from_str, task_tag_button, vertical_scrollable, SCROLLBAR_WIDTH,
+		parse_duration_from_str, task_description_editor, task_tag_button, vertical_scrollable,
+		SCROLLBAR_WIDTH,
 	},
 	core::SerializableDateConversion,
 	project_tracker::Message,
 	styles::{
-		card_style, description_text_editor_style, text_editor_keybindings,
-		text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT,
-		LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT,
+		card_style, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE,
+		LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT,
 	},
 	OptionalPreference, Preferences,
 };
 use iced::{
-	font, highlighter,
+	font,
 	widget::{column, container, row, text, text_editor, text_input, Row, Space},
 	Element, Font,
 	Length::Fill,
@@ -249,17 +249,11 @@ impl CreateTaskModal {
 					}),
 				Space::new(0.0, SPACING_AMOUNT),
 				text("Description:"),
-				text_editor(&self.task_description)
-					.on_action(|action| {
-						CreateTaskModalMessage::TaskDescriptionAction(action).into()
-					})
-					.wrapping(text::Wrapping::Word)
-					.highlight("markdown", highlighter::Theme::Base16Eighties)
-					.style(description_text_editor_style)
-					.key_binding(|key_press| text_editor_keybindings(
-						key_press,
-						CreateTaskModalMessage::UnindentDescription.into()
-					)),
+				task_description_editor(
+					&self.task_description,
+					|action| { CreateTaskModalMessage::TaskDescriptionAction(action).into() },
+					CreateTaskModalMessage::UnindentDescription.into()
+				),
 				Space::new(0.0, LARGE_SPACING_AMOUNT),
 				row![
 					edit_needed_time_view,

@@ -22,8 +22,8 @@ use crate::{
 		secondary_button_style_only_round_right, secondary_button_style_only_round_top,
 		selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style,
 		task_tag_button_style, text_input_style, timer_button_style, tooltip_container_style, GAP,
-		HEADING_TEXT_SIZE, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
-		SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT,
+		HEADING_TEXT_SIZE, JET_BRAINS_MONO_FONT, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING,
+		SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT,
 	},
 	theme_mode::ThemeMode,
 	DateFormatting, PreferenceMessage, SynchronizationSetting,
@@ -311,9 +311,13 @@ pub fn stopwatch_button(
 				text("Stopwatch").size(LARGE_TEXT_SIZE)
 			]
 			.push_maybe(stopwatch_label.map(|stopwatch_label| {
-				container(text(stopwatch_label).size(SMALL_TEXT_SIZE))
-					.width(Fill)
-					.align_x(Horizontal::Right)
+				container(
+					text(stopwatch_label)
+						.size(SMALL_TEXT_SIZE)
+						.font(JET_BRAINS_MONO_FONT),
+				)
+				.width(Fill)
+				.align_x(Horizontal::Right)
 			}))
 			.width(Fill)
 			.spacing(SPACING_AMOUNT)

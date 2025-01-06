@@ -32,7 +32,9 @@ mod task_widget;
 pub use task_widget::task_widget;
 
 mod task_description;
-pub use task_description::{generate_task_description_markdown, task_description};
+pub use task_description::{
+	generate_task_description_markdown, task_description, task_description_editor,
+};
 
 mod duration_widget;
 pub use duration_widget::{

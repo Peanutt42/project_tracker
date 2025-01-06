@@ -2,22 +2,21 @@ use crate::{
 	components::{
 		delete_task_button, due_date_button, duration_str, duration_to_minutes,
 		edit_needed_time_button, edit_task_description_button, horizontal_scrollable,
-		parse_duration_from_str, start_task_timer_button, task_description, task_tag_button,
-		vertical_scrollable, view_task_description_button, ICON_BUTTON_WIDTH, SCROLLBAR_WIDTH,
+		parse_duration_from_str, start_task_timer_button, task_description,
+		task_description_editor, task_tag_button, vertical_scrollable,
+		view_task_description_button, ICON_BUTTON_WIDTH, SCROLLBAR_WIDTH,
 	},
 	core::SerializableDateConversion,
 	project_tracker::Message,
 	styles::{
-		card_style, description_text_editor_style, markdown_background_container_style,
-		text_editor_keybindings, text_input_style_borderless, tooltip_container_style,
-		unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE,
-		PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT,
+		card_style, markdown_background_container_style, text_input_style_borderless,
+		tooltip_container_style, unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT,
+		LARGE_TEXT_SIZE, PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT,
 	},
 	OptionalPreference, ProjectTrackerApp,
 };
 use iced::{
 	alignment::{Horizontal, Vertical},
-	highlighter,
 	widget::{column, container, row, stack, text, text_editor, text_input, Row, Space},
 	Element,
 	Length::Fill,
@@ -298,21 +297,13 @@ impl TaskModal {
 
 					let description_text: Element<'a, Message> =
 						if let Some(new_description) = &self.new_description {
-							text_editor(new_description)
-								.on_action(|action| {
-									TaskModalMessage::EditDescriptionAction(action).into()
-								})
-								.wrapping(text::Wrapping::Word)
-								.highlight("markdown", highlighter::Theme::Base16Eighties)
-								.style(description_text_editor_style)
-								.key_binding(|key_press| {
-									text_editor_keybindings(
-										key_press,
-										TaskModalMessage::UnindentDescription.into(),
-									)
-								})
-								.padding(PADDING_AMOUNT)
-								.into()
+							task_description_editor(
+								new_description,
+								|action| TaskModalMessage::EditDescriptionAction(action).into(),
+								TaskModalMessage::UnindentDescription.into(),
+							)
+							.padding(PADDING_AMOUNT)
+							.into()
 						} else {
 							task_description(
 								app.task_description_markdown_items.get(&self.task_id),

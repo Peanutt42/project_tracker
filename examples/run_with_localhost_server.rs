@@ -1,13 +1,6 @@
-use iced::{
-	window::{self, icon, settings::PlatformSpecific},
-	Size,
-};
-use iced_fonts::REQUIRED_FONT_BYTES;
 use project_tracker::{
-	icons::{APP_ICON_BYTES, BOOTSTRAP_FONT_BYTES},
-	integrations::ServerConfig,
-	styles::{FIRA_SANS_FONT, FIRA_SANS_FONT_BYTES},
-	AppFlags, Database, Preferences, ProjectTrackerApp, SynchronizationSetting,
+	integrations::ServerConfig, run_project_tracker_app, AppFlags, Database, Preferences,
+	SynchronizationSetting,
 };
 use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
 
@@ -54,33 +47,8 @@ async fn main() -> Result<(), iced::Error> {
 		shared_data,
 	));
 
-	iced::application(
-		ProjectTrackerApp::title,
-		ProjectTrackerApp::update,
-		ProjectTrackerApp::view,
-	)
-	.theme(ProjectTrackerApp::theme)
-	.subscription(ProjectTrackerApp::subscription)
-	.font(BOOTSTRAP_FONT_BYTES)
-	.font(REQUIRED_FONT_BYTES)
-	.font(FIRA_SANS_FONT_BYTES)
-	.default_font(FIRA_SANS_FONT)
-	.antialiasing(true)
-	.window(window::Settings {
-		icon: icon::from_file_data(APP_ICON_BYTES, Some(image::ImageFormat::Png)).ok(),
-		exit_on_close_request: false,
-		size: Size::new(1200.0, 900.0),
-		#[cfg(target_os = "linux")]
-		platform_specific: PlatformSpecific {
-			application_id: "project_tracker".to_string(),
-			..Default::default()
-		},
-		..Default::default()
-	})
-	.run_with(move || {
-		ProjectTrackerApp::new(AppFlags::custom(
-			custom_database_filepath,
-			custom_preferences_filepath,
-		))
-	})
+	run_project_tracker_app(AppFlags::custom(
+		custom_database_filepath,
+		custom_preferences_filepath,
+	))
 }

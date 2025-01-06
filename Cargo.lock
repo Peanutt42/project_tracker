@@ -3683,6 +3683,7 @@ dependencies = [
  "open",
  "project_tracker_core",
  "project_tracker_server",
+ "pulldown-cmark",
  "rayon",
  "rfd",
  "rodio",

@@ -1,14 +1,5 @@
 use chrono::Local;
-use iced::{
-	window::{self, icon, settings::PlatformSpecific},
-	Size,
-};
-use iced_fonts::REQUIRED_FONT_BYTES;
-use project_tracker::{
-	icons::{APP_ICON_BYTES, BOOTSTRAP_FONT_BYTES},
-	styles::{FIRA_SANS_FONT, FIRA_SANS_FONT_BYTES},
-	AppFlags, Preferences, ProjectTrackerApp,
-};
+use project_tracker::{run_project_tracker_app, AppFlags, Preferences};
 use project_tracker_core::{
 	Database, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, Task, TaskId,
 };
@@ -17,7 +8,7 @@ use tokio::time::Instant;
 use tracing::info;
 
 #[tokio::main]
-async fn main() -> Result<(), iced::Error> {
+async fn main() -> iced::Result {
 	tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new()).unwrap();
 
 	let gen_stresstest_start = Instant::now();
@@ -81,33 +72,8 @@ async fn main() -> Result<(), iced::Error> {
 
 	info!("running gui...");
 
-	iced::application(
-		ProjectTrackerApp::title,
-		ProjectTrackerApp::update,
-		ProjectTrackerApp::view,
-	)
-	.theme(ProjectTrackerApp::theme)
-	.subscription(ProjectTrackerApp::subscription)
-	.font(BOOTSTRAP_FONT_BYTES)
-	.font(REQUIRED_FONT_BYTES)
-	.font(FIRA_SANS_FONT_BYTES)
-	.default_font(FIRA_SANS_FONT)
-	.antialiasing(true)
-	.window(window::Settings {
-		icon: icon::from_file_data(APP_ICON_BYTES, Some(image::ImageFormat::Png)).ok(),
-		exit_on_close_request: false,
-		size: Size::new(1200.0, 900.0),
-		#[cfg(target_os = "linux")]
-		platform_specific: PlatformSpecific {
-			application_id: "project_tracker".to_string(),
-			..Default::default()
-		},
-		..Default::default()
-	})
-	.run_with(move || {
-		ProjectTrackerApp::new(AppFlags::custom(
-			custom_database_filepath,
-			custom_preferences_filepath,
-		))
-	})
+	run_project_tracker_app(AppFlags::custom(
+		custom_database_filepath,
+		custom_preferences_filepath,
+	))
 }

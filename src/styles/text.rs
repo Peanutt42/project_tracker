@@ -15,7 +15,11 @@ pub fn text_color(background: Color) -> Color {
 }
 
 pub const FIRA_SANS_FONT_BYTES: &[u8] = include_bytes!("../../assets/FiraSans-Regular.ttf");
-pub const FIRA_SANS_FONT: Font = Font::with_name("FiraSans");
+pub const FIRA_SANS_FONT: Font = Font::with_name("Fira Sans");
+
+pub const JET_BRAINS_MONO_FONT_BYTES: &[u8] =
+	include_bytes!("../../assets/JetBrainsMono-Regular.ttf");
+pub const JET_BRAINS_MONO_FONT: Font = Font::with_name("JetBrains Mono");
 
 pub const BOLD_FONT: Font = Font {
 	weight: Weight::Bold,
