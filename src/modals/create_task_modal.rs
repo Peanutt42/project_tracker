@@ -14,7 +14,7 @@ use crate::{
 	OptionalPreference, Preferences,
 };
 use iced::{
-	font,
+	font, highlighter,
 	widget::{column, container, row, text, text_editor, text_input, Row, Space},
 	Element, Font,
 	Length::Fill,
@@ -253,6 +253,8 @@ impl CreateTaskModal {
 					.on_action(|action| {
 						CreateTaskModalMessage::TaskDescriptionAction(action).into()
 					})
+					.wrapping(text::Wrapping::Word)
+					.highlight("markdown", highlighter::Theme::Base16Eighties)
 					.style(description_text_editor_style)
 					.key_binding(|key_press| text_editor_keybindings(
 						key_press,

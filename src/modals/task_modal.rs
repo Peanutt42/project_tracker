@@ -17,6 +17,7 @@ use crate::{
 };
 use iced::{
 	alignment::{Horizontal, Vertical},
+	highlighter,
 	widget::{column, container, row, stack, text, text_editor, text_input, Row, Space},
 	Element,
 	Length::Fill,
@@ -301,6 +302,8 @@ impl TaskModal {
 								.on_action(|action| {
 									TaskModalMessage::EditDescriptionAction(action).into()
 								})
+								.wrapping(text::Wrapping::Word)
+								.highlight("markdown", highlighter::Theme::Base16Eighties)
 								.style(description_text_editor_style)
 								.key_binding(|key_press| {
 									text_editor_keybindings(
