@@ -1,8 +1,9 @@
 use crate::{
 	components::{
 		create_empty_database_button, download_database_from_server_button,
-		generate_task_description_markdown, import_database_button, retry_loading_database_button,
-		settings_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH,
+		generate_task_description_markdown, import_database_button, markdown,
+		retry_loading_database_button, settings_button, toggle_sidebar_button, ScalarAnimation,
+		ICON_BUTTON_WIDTH,
 	},
 	core::{
 		export_database_as_json_file_dialog, export_database_file_dialog, formatted_date_time,
@@ -41,8 +42,7 @@ use iced::{
 	event::Status,
 	keyboard, mouse, time,
 	widget::{
-		center, column, container, markdown, mouse_area, opaque, responsive, row, stack, text,
-		Space, Stack,
+		center, column, container, mouse_area, opaque, responsive, row, stack, text, Space, Stack,
 	},
 	window, Element, Event,
 	Length::Fill,

@@ -13,7 +13,8 @@ mod container_styles;
 pub use container_styles::{
 	command_background_container_style, default_background_container_style,
 	dropdown_container_style, dropzone_container_style, in_between_dropzone_container_style,
-	markdown_background_container_style, modal_background_container_style, palette_container_style,
+	markdown_background_container_style, markdown_code_container_style,
+	modal_background_container_style, palette_container_style,
 	project_preview_background_container_style, rounded_container_style,
 	sidebar_background_container_style, task_background_container_style, task_tag_container_style,
 	tooltip_container_style,

@@ -238,3 +238,11 @@ pub fn command_background_container_style(theme: &Theme) -> Style {
 		..Default::default()
 	}
 }
+
+pub fn markdown_code_container_style(_theme: &Theme) -> Style {
+	Style {
+		background: Some(Color::from_rgb8(17, 17, 17).into()),
+		border: rounded(BORDER_RADIUS),
+		..Default::default()
+	}
+}

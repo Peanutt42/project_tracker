@@ -77,3 +77,5 @@ pub use stopwatch_clock::StopwatchClock;
 
 mod animation;
 pub use animation::ScalarAnimation;
+
+pub mod markdown;

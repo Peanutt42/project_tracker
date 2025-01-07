@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		days_left_widget, duration_str, duration_widget, in_between_dropzone,
+		days_left_widget, duration_str, duration_widget, in_between_dropzone, markdown,
 		open_in_code_editor_button, round_duration_to_seconds,
 	},
 	core::{View, TASK_TAG_QUAD_HEIGHT},
@@ -17,8 +17,7 @@ use crate::{
 use iced::{
 	alignment::Vertical,
 	widget::{
-		button, checkbox, column, container, container::Id, hover, markdown, row, text, Column,
-		Row, Space,
+		button, checkbox, column, container, container::Id, hover, row, text, Column, Row, Space,
 	},
 	Alignment, Element,
 	Length::Fill,

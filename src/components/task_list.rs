@@ -1,7 +1,8 @@
 use crate::{
 	components::{
-		delete_all_done_tasks_button, in_between_dropzone, reimport_source_code_todos_button,
-		show_done_tasks_button, show_source_code_todos_button, task_widget, vertical_scrollable,
+		delete_all_done_tasks_button, in_between_dropzone, markdown,
+		reimport_source_code_todos_button, show_done_tasks_button, show_source_code_todos_button,
+		task_widget, vertical_scrollable,
 	},
 	core::TaskUiIdMap,
 	integrations::CodeEditor,
@@ -9,7 +10,7 @@ use crate::{
 	project_tracker::Message,
 	styles::PADDING_AMOUNT,
 };
-use iced::widget::{container::Id, markdown, Space};
+use iced::widget::{container::Id, Space};
 use iced::{
 	alignment::Horizontal,
 	widget::{column, container, row, scrollable, Column},
