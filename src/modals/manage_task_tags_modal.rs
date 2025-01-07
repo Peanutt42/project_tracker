@@ -119,15 +119,14 @@ impl ManageTaskTagsModal {
 				self.update(ManageTaskTagsModalMessage::StopEditTaskTagColor, database)
 			}
 			ManageTaskTagsModalMessage::ChangeTaskTagColor(new_color) => {
-				let action = if let Some(edit_task_tag_id) = &self.edit_task_tag_color_id {
-					DatabaseMessage::ChangeTaskTagColor {
+				let action = match &self.edit_task_tag_color_id {
+					Some(edit_task_tag_id) => DatabaseMessage::ChangeTaskTagColor {
 						project_id: self.project_id,
 						task_tag_id: *edit_task_tag_id,
 						new_color: SerializableColor::from_iced_color(new_color),
 					}
-					.into()
-				} else {
-					ManageTaskTagsModalAction::None
+					.into(),
+					None => ManageTaskTagsModalAction::None,
 				};
 				self.stop_editing_task_tag_color();
 				action
@@ -141,17 +140,15 @@ impl ManageTaskTagsModal {
 				ManageTaskTagsModalAction::None
 			}
 			ManageTaskTagsModalMessage::ChangeTaskTagName => {
-				let action =
-					if let Some((edit_task_tag_id, new_name)) = &mut self.edit_task_tag_name_id {
-						DatabaseMessage::ChangeTaskTagName {
-							project_id: self.project_id,
-							task_tag_id: *edit_task_tag_id,
-							new_name: std::mem::take(new_name),
-						}
-						.into()
-					} else {
-						ManageTaskTagsModalAction::None
-					};
+				let action = match &mut self.edit_task_tag_name_id {
+					Some((edit_task_tag_id, new_name)) => DatabaseMessage::ChangeTaskTagName {
+						project_id: self.project_id,
+						task_tag_id: *edit_task_tag_id,
+						new_name: std::mem::take(new_name),
+					}
+					.into(),
+					None => ManageTaskTagsModalAction::None,
+				};
 				self.stop_editing_task_tag_name();
 				action
 			}
@@ -164,8 +161,8 @@ impl ManageTaskTagsModal {
 				ManageTaskTagsModalAction::None
 			}
 			ManageTaskTagsModalMessage::CreateNewTaskTag => {
-				let action = if let Some(new_task_tag_name) = &mut self.create_new_task_tag {
-					DatabaseMessage::CreateTaskTag {
+				let action = match &mut self.create_new_task_tag {
+					Some(new_task_tag_name) => DatabaseMessage::CreateTaskTag {
 						project_id: self.project_id,
 						task_tag_id: TaskTagId::generate(),
 						task_tag: TaskTag::new(
@@ -173,9 +170,8 @@ impl ManageTaskTagsModal {
 							SerializableColor::from_iced_color(Color::WHITE),
 						),
 					}
-					.into()
-				} else {
-					ManageTaskTagsModalAction::None
+					.into(),
+					None => ManageTaskTagsModalAction::None,
 				};
 				self.close_create_new_task_tag();
 				action
@@ -191,12 +187,12 @@ impl ManageTaskTagsModal {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
-		if let Some(project) = app
+		match app
 			.database
 			.ok()
 			.and_then(|db| db.get_project(&self.project_id))
 		{
-			card(
+			Some(project) => card(
 				text(format!("Manage project '{}' task tags", project.name)).size(LARGE_TEXT_SIZE),
 				self.tags_list_view(
 					project,
@@ -209,9 +205,8 @@ impl ManageTaskTagsModal {
 			.max_width(500.0)
 			.close_size(LARGE_TEXT_SIZE)
 			.on_close(Message::CloseManageTaskTagsModal)
-			.into()
-		} else {
-			Space::new(0.0, 0.0).into()
+			.into(),
+			None => Space::new(0.0, 0.0).into(),
 		}
 	}
 
@@ -248,16 +243,15 @@ impl ManageTaskTagsModal {
 				_ => None,
 			};
 
-			let name_element: Element<Message> = if let Some(edited_name) = edited_name {
-				text_input("tag name", edited_name)
+			let name_element: Element<Message> = match edited_name {
+				Some(edited_name) => text_input("tag name", edited_name)
 					.on_input(move |new_name| {
 						ManageTaskTagsModalMessage::ChangeEditTaskTagName(new_name).into()
 					})
 					.on_submit(ManageTaskTagsModalMessage::ChangeTaskTagName.into())
 					.style(text_input_style_only_round_left)
-					.into()
-			} else {
-				task_tag_name_button(tag_id, &tag.name).into()
+					.into(),
+				None => task_tag_name_button(tag_id, &tag.name).into(),
 			};
 
 			let color_picker = DropDown::new(
@@ -293,27 +287,23 @@ impl ManageTaskTagsModal {
 			);
 		}
 
-		if let Some(create_new_task_tag_name) = create_new_task_tag {
-			tags_list.push(
-				row![
-					unfocusable(
-						text_input("New tag name", create_new_task_tag_name)
-							.id(CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID.clone())
-							.on_input(|new_name| {
-								ManageTaskTagsModalMessage::ChangeCreateNewTaskTagName(new_name)
-									.into()
-							})
-							.on_submit(ManageTaskTagsModalMessage::CreateNewTaskTag.into())
-							.style(text_input_style_only_round_left),
-						ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into()
-					),
-					cancel_create_new_task_tag_button(),
-				]
-				.into(),
-			);
-		} else {
-			tags_list.push(create_new_task_tags_button().into());
-		}
+		tags_list.push(match create_new_task_tag {
+			Some(create_new_task_tag_name) => row![
+				unfocusable(
+					text_input("New tag name", create_new_task_tag_name)
+						.id(CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID.clone())
+						.on_input(|new_name| {
+							ManageTaskTagsModalMessage::ChangeCreateNewTaskTagName(new_name).into()
+						})
+						.on_submit(ManageTaskTagsModalMessage::CreateNewTaskTag.into())
+						.style(text_input_style_only_round_left),
+					ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into()
+				),
+				cancel_create_new_task_tag_button(),
+			]
+			.into(),
+			None => create_new_task_tags_button().into(),
+		});
 
 		Column::with_children(tags_list)
 			.spacing(SMALL_SPACING_AMOUNT)

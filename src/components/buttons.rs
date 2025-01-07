@@ -218,10 +218,9 @@ pub fn dangerous_button(
 ) -> Button<'static, Message> {
 	icon_label_button(text, icon)
 		.style(dangerous_button_style)
-		.on_press(if let Some(label) = confirm_label {
-			ConfirmModalMessage::open(label, on_press)
-		} else {
-			on_press.into()
+		.on_press(match confirm_label {
+			Some(label) => ConfirmModalMessage::open(label, on_press),
+			None => on_press.into(),
 		})
 }
 
@@ -1067,33 +1066,33 @@ pub fn edit_needed_time_button<'a, Message: 'static + Clone>(
 	clear_needed_time: Message,
 	text_input_id: text_input::Id,
 ) -> Element<'a, Message> {
-	if let Some(new_needed_time_minutes) = new_needed_time_minutes {
-		let edit_needed_time_element = unfocusable(
-			text_input("ex: 30min", new_needed_time_minutes)
-				.id(text_input_id)
-				.width(Fixed(80.0))
-				.on_input(on_input)
-				.on_submit_maybe(on_submit)
-				.style(move |t, s| text_input_style(t, s, true, false, false, true)),
-			stop_editing,
-		);
+	match new_needed_time_minutes {
+		Some(new_needed_time_minutes) => {
+			let edit_needed_time_element = unfocusable(
+				text_input("ex: 30min", new_needed_time_minutes)
+					.id(text_input_id)
+					.width(Fixed(80.0))
+					.on_input(on_input)
+					.on_submit_maybe(on_submit)
+					.style(move |t, s| text_input_style(t, s, true, false, false, true)),
+				stop_editing,
+			);
 
-		row![
-			edit_needed_time_element,
-			clear_task_needed_time_button(clear_needed_time)
-		]
-		.into()
-	} else {
-		button(
-			if let Some(needed_time_minutes) = task_needed_time_minutes {
+			row![
+				edit_needed_time_element,
+				clear_task_needed_time_button(clear_needed_time)
+			]
+			.into()
+		}
+		None => button(match task_needed_time_minutes {
+			Some(needed_time_minutes) => {
 				duration_text(Duration::from_secs(needed_time_minutes as u64 * 60))
-			} else {
-				text("Add needed time")
-			},
-		)
+			}
+			None => text("Add needed time"),
+		})
 		.on_press(on_edit)
 		.style(secondary_button_style_default)
-		.into()
+		.into(),
 	}
 }
 
@@ -1119,14 +1118,15 @@ pub fn due_date_button<Message: 'static + Clone>(
 			on_submit,
 		)
 		.into()
-	} else if let Some(due_date) = due_date {
-		row![
-			edit_due_date_button(due_date, date_formatting, on_edit),
-			clear_task_due_date_button(on_clear),
-		]
-		.into()
 	} else {
-		add_due_date_button.into()
+		match due_date {
+			Some(due_date) => row![
+				edit_due_date_button(due_date, date_formatting, on_edit),
+				clear_task_due_date_button(on_clear),
+			]
+			.into(),
+			None => add_due_date_button.into(),
+		}
 	}
 }
 

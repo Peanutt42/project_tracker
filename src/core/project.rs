@@ -38,59 +38,57 @@ impl SortModeUI for SortMode {
 			Self::Manual => {}
 			Self::DueDate => {
 				tasks.sort_unstable_by(|task_id_a, task_id_b| {
-					if let (Some(task_a), Some(task_b)) =
-						(project.get_task(task_id_a), project.get_task(task_id_b))
-					{
-						match (&task_a.due_date, &task_b.due_date) {
-							(Some(due_date_a), Some(due_date_b)) => due_date_a.cmp(due_date_b),
-							(Some(_due_date_a), None) => {
-								if sort_unspecified_tasks_at_bottom {
-									Ordering::Less
-								} else {
-									Ordering::Greater
+					match (project.get_task(task_id_a), project.get_task(task_id_b)) {
+						(Some(task_a), Some(task_b)) => {
+							match (&task_a.due_date, &task_b.due_date) {
+								(Some(due_date_a), Some(due_date_b)) => due_date_a.cmp(due_date_b),
+								(Some(_due_date_a), None) => {
+									if sort_unspecified_tasks_at_bottom {
+										Ordering::Less
+									} else {
+										Ordering::Greater
+									}
 								}
-							}
-							(None, Some(_due_date_b)) => {
-								if sort_unspecified_tasks_at_bottom {
-									Ordering::Greater
-								} else {
-									Ordering::Less
+								(None, Some(_due_date_b)) => {
+									if sort_unspecified_tasks_at_bottom {
+										Ordering::Greater
+									} else {
+										Ordering::Less
+									}
 								}
+								(None, None) => Ordering::Equal,
 							}
-							(None, None) => Ordering::Equal,
 						}
-					} else {
-						Ordering::Equal
+						_ => Ordering::Equal,
 					}
 				});
 			}
 			Self::NeededTime => {
 				tasks.sort_unstable_by(|task_id_a, task_id_b| {
-					if let (Some(task_a), Some(task_b)) =
-						(project.get_task(task_id_a), project.get_task(task_id_b))
-					{
-						match (&task_a.needed_time_minutes, &task_b.needed_time_minutes) {
-							(Some(needed_time_minutes_a), Some(needed_time_minutes_b)) => {
-								needed_time_minutes_a.cmp(needed_time_minutes_b)
-							}
-							(Some(_due_date_a), None) => {
-								if sort_unspecified_tasks_at_bottom {
-									Ordering::Less
-								} else {
-									Ordering::Greater
+					match (project.get_task(task_id_a), project.get_task(task_id_b)) {
+						(Some(task_a), Some(task_b)) => {
+							match (&task_a.needed_time_minutes, &task_b.needed_time_minutes) {
+								(Some(needed_time_minutes_a), Some(needed_time_minutes_b)) => {
+									needed_time_minutes_a.cmp(needed_time_minutes_b)
 								}
-							}
-							(None, Some(_due_date_b)) => {
-								if sort_unspecified_tasks_at_bottom {
-									Ordering::Greater
-								} else {
-									Ordering::Less
+								(Some(_due_date_a), None) => {
+									if sort_unspecified_tasks_at_bottom {
+										Ordering::Less
+									} else {
+										Ordering::Greater
+									}
 								}
+								(None, Some(_due_date_b)) => {
+									if sort_unspecified_tasks_at_bottom {
+										Ordering::Greater
+									} else {
+										Ordering::Less
+									}
+								}
+								(None, None) => Ordering::Equal,
 							}
-							(None, None) => Ordering::Equal,
 						}
-					} else {
-						Ordering::Equal
+						_ => Ordering::Equal,
 					}
 				});
 			}

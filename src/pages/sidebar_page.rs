@@ -244,9 +244,8 @@ impl SidebarPage {
 				SidebarPageAction::None
 			}
 			SidebarPageMessage::CreateNewProject(project_id) => {
-				let create_new_project_name = self.create_new_project_name.take();
-				if let Some(create_new_project_name) = create_new_project_name {
-					SidebarPageAction::Actions(vec![
+				match self.create_new_project_name.take() {
+					Some(create_new_project_name) => SidebarPageAction::Actions(vec![
 						DatabaseMessage::CreateProject {
 							project_id,
 							name: create_new_project_name,
@@ -256,9 +255,8 @@ impl SidebarPage {
 						}
 						.into(),
 						SidebarPageAction::SelectProject(project_id),
-					])
-				} else {
-					SidebarPageAction::None
+					]),
+					None => SidebarPageAction::None,
 				}
 			}
 
@@ -266,8 +264,8 @@ impl SidebarPage {
 				project_id,
 				task_id,
 				..
-			} => {
-				if let Some(hovered_task_dropzone) = self.task_dropzone_hovered {
+			} => match self.task_dropzone_hovered {
+				Some(hovered_task_dropzone) => {
 					self.task_dropzone_hovered = None;
 					match hovered_task_dropzone {
 						TaskDropzone::Project(hovered_project_id) => DatabaseMessage::MoveTask {
@@ -298,10 +296,9 @@ impl SidebarPage {
 						}
 						.into(),
 					}
-				} else {
-					SidebarPageAction::None
 				}
-			}
+				None => SidebarPageAction::None,
+			},
 			SidebarPageMessage::CancelDragTask => {
 				self.task_dropzone_hovered = None;
 				SidebarPageAction::None
@@ -433,14 +430,17 @@ impl SidebarPage {
 				rect,
 			} => {
 				self.dragged_project_id = Some(project_id);
-				if let Some(start_dragging_point) = self.start_dragging_point {
-					if self.just_minimal_dragging {
-						self.just_minimal_dragging =
-							start_dragging_point.distance(point) < MINIMAL_DRAG_DISTANCE;
+				match self.start_dragging_point {
+					Some(start_dragging_point) => {
+						if self.just_minimal_dragging {
+							self.just_minimal_dragging =
+								start_dragging_point.distance(point) < MINIMAL_DRAG_DISTANCE;
+						}
 					}
-				} else {
-					self.start_dragging_point = Some(point);
-					self.just_minimal_dragging = true;
+					None => {
+						self.start_dragging_point = Some(point);
+						self.just_minimal_dragging = true;
+					}
 				}
 				let options = Self::project_dropzone_options(database, project_id, project_ui_ids);
 				find_zones(
@@ -595,12 +595,11 @@ impl SidebarPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
-		let list: Element<Message> = if let DatabaseState::Loaded(database) = &app.database {
-			self.project_preview_list(database.projects(), app)
-		} else {
-			container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
+		let list: Element<Message> = match &app.database {
+			DatabaseState::Loaded(database) => self.project_preview_list(database.projects(), app),
+			_ => container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
 				.center(Fill)
-				.into()
+				.into(),
 		};
 
 		column![
@@ -734,7 +733,7 @@ impl SidebarPage {
 		task_exception: TaskId,
 		task_ui_ids: &mut TaskUiIdMap,
 	) -> Option<Vec<Id>> {
-		if let Some(database) = database {
+		database.map(|database| {
 			let mut options = Vec::new();
 
 			if let Some(project) = database.get_project(&project_id) {
@@ -761,11 +760,8 @@ impl SidebarPage {
 					}
 				}
 			}
-
-			Some(options)
-		} else {
-			None
-		}
+			options
+		})
 	}
 }
 

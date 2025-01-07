@@ -136,10 +136,11 @@ pub async fn import_google_tasks_dialog() -> Option<Result<Vec<Project>, ImportG
 		.pick_file()
 		.await;
 
-	if let Some(file_handle) = file_dialog_result {
-		let filepath = file_handle.path().to_path_buf();
-		Some(import_google_tasks(filepath).await)
-	} else {
-		None
+	match file_dialog_result {
+		Some(file_handle) => {
+			let filepath = file_handle.path().to_path_buf();
+			Some(import_google_tasks(filepath).await)
+		}
+		None => None,
 	}
 }

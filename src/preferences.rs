@@ -308,12 +308,11 @@ impl Preferences {
 			},
 			PreferenceMessage::Exported => PreferenceAction::None,
 			PreferenceMessage::Import => {
-				Task::perform(Preferences::import_file_dialog(), |result| {
-					if let Some(load_preference_result) = result {
+				Task::perform(Preferences::import_file_dialog(), |result| match result {
+					Some(load_preference_result) => {
 						Message::LoadedPreferences(load_preference_result.map_err(Arc::new))
-					} else {
-						PreferenceMessage::ImportFailed.into()
 					}
+					None => PreferenceMessage::ImportFailed.into(),
 				})
 				.into()
 			}
@@ -431,10 +430,9 @@ impl Preferences {
 			.pick_file()
 			.await;
 
-		if let Some(result) = file_dialog_result {
-			Some(Self::load(result.path().to_path_buf()).await)
-		} else {
-			None
+		match file_dialog_result {
+			Some(result) => Some(Self::load(result.path().to_path_buf()).await),
+			None => None,
 		}
 	}
 
@@ -577,31 +575,27 @@ pub trait OptionalPreference {
 
 impl OptionalPreference for Option<Preferences> {
 	fn show_sidebar(&self) -> bool {
-		if let Some(preferences) = self {
-			preferences.show_sidebar
-		} else {
-			default_show_sidebar()
+		match self {
+			Some(preferences) => preferences.show_sidebar,
+			None => default_show_sidebar(),
 		}
 	}
 	fn date_formatting(&self) -> DateFormatting {
-		if let Some(preferences) = self {
-			preferences.date_formatting
-		} else {
-			DateFormatting::default()
+		match self {
+			Some(preferences) => preferences.date_formatting,
+			None => DateFormatting::default(),
 		}
 	}
 	fn create_new_tasks_at_top(&self) -> bool {
-		if let Some(preferences) = self {
-			preferences.create_new_tasks_at_top
-		} else {
-			default_create_new_tasks_at_top()
+		match self {
+			Some(preferences) => preferences.create_new_tasks_at_top,
+			None => default_create_new_tasks_at_top(),
 		}
 	}
 	fn sort_unspecified_tasks_at_bottom(&self) -> bool {
-		if let Some(preferences) = self {
-			preferences.sort_unspecified_tasks_at_bottom
-		} else {
-			default_sort_unspecified_tasks_at_bottom()
+		match self {
+			Some(preferences) => preferences.sort_unspecified_tasks_at_bottom,
+			None => default_sort_unspecified_tasks_at_bottom(),
 		}
 	}
 	fn synchronization(&self) -> Option<&SynchronizationSetting> {
@@ -609,10 +603,9 @@ impl OptionalPreference for Option<Preferences> {
 			.and_then(|preferences| preferences.synchronization.as_ref())
 	}
 	fn play_timer_notification_sound(&self) -> bool {
-		if let Some(preferences) = self {
-			preferences.play_timer_notification_sound
-		} else {
-			default_play_timer_notification_sound()
+		match self {
+			Some(preferences) => preferences.play_timer_notification_sound,
+			None => default_play_timer_notification_sound(),
 		}
 	}
 	fn code_editor(&self) -> Option<&CodeEditor> {

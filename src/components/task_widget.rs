@@ -55,21 +55,16 @@ pub fn task_widget<'a>(
 	let on_hover_view: Element<'a, Message> = if show_drag_grip {
 		let normal_grip_view = Element::new(icon_to_text(Bootstrap::GripVertical));
 
-		container(if let Some(code_editor) = code_editor {
-			if matches!(task_type, TaskType::SourceCodeTodo) {
-				row![
-					icon_to_text(Bootstrap::GripVertical),
-					Space::new(Fill, 0.0),
-					open_in_code_editor_button(task.description.clone(), code_editor),
-				]
-				.align_y(Vertical::Center)
-				.padding(Padding::default().right(SMALL_PADDING_AMOUNT))
-				.into()
-			} else {
-				normal_grip_view
-			}
-		} else {
-			normal_grip_view
+		container(match code_editor {
+			Some(code_editor) if matches!(task_type, TaskType::SourceCodeTodo) => row![
+				icon_to_text(Bootstrap::GripVertical),
+				Space::new(Fill, 0.0),
+				open_in_code_editor_button(task.description.clone(), code_editor),
+			]
+			.align_y(Vertical::Center)
+			.padding(Padding::default().right(SMALL_PADDING_AMOUNT))
+			.into(),
+			_ => normal_grip_view,
 		})
 		.padding(Padding {
 			top: if task.tags.is_empty() {

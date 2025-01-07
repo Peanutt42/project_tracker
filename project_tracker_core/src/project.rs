@@ -251,15 +251,17 @@ impl<'a> Iterator for TaskIter<'a> {
 	type Item = (TaskId, &'a Task, TaskType);
 
 	fn next(&mut self) -> Option<Self::Item> {
-		if let Some((task_id, task)) = self.todo_tasks_iter.next() {
-			Some((task_id, task, TaskType::Todo))
-		} else if let Some((task_id, task)) = self.done_tasks_iter.next() {
-			Some((*task_id, task, TaskType::Done))
-		} else if let Some((task_id, task)) = self.source_code_tasks_iter.next() {
-			Some((*task_id, task, TaskType::SourceCodeTodo))
-		} else {
-			None
-		}
+		self.todo_tasks_iter
+			.next()
+			.map(|(task_id, task)| (task_id, task, TaskType::Todo))
+			.or(self
+				.done_tasks_iter
+				.next()
+				.map(|(task_id, task)| (*task_id, task, TaskType::Done)))
+			.or(self
+				.source_code_tasks_iter
+				.next()
+				.map(|(task_id, task)| (*task_id, task, TaskType::SourceCodeTodo)))
 	}
 }
 

@@ -304,56 +304,62 @@ impl OverviewPage {
 		show_due_date: bool,
 	) -> Element<'a, Message> {
 		Column::with_children(tasks.iter().map(|(project_id, tasks)| {
-			if let Some(project) = app.database.ok().and_then(|db| db.get_project(project_id)) {
-				let list = Column::with_children(tasks.iter().map(|task_id| {
-					if let Some((task, task_type)) = project.get_task_and_type(task_id) {
-						task_widget(
-							task,
-							*task_id,
-							app.task_ui_id_map
-								.get_dropzone_id(*task_id)
-								.unwrap_or(Id::unique()),
-							task_type,
-							app.task_description_markdown_items.get(task_id),
+			match app.database.ok().and_then(|db| db.get_project(project_id)) {
+				Some(project) => {
+					let list = Column::with_children(tasks.iter().map(|task_id| {
+						match project.get_task_and_type(task_id) {
+							Some((task, task_type)) => task_widget(
+								task,
+								*task_id,
+								app.task_ui_id_map
+									.get_dropzone_id(*task_id)
+									.unwrap_or(Id::unique()),
+								task_type,
+								app.task_description_markdown_items.get(task_id),
+								*project_id,
+								project,
+								app.preferences.code_editor(),
+								false,
+								true,
+								false,
+								false,
+								show_due_date,
+							),
+							None => {
+								error!("invalid task_id: doesnt exist in database!");
+								text("<invalid task id>").into()
+							}
+						}
+					}))
+					.spacing(SMALL_SPACING_AMOUNT);
+
+					let first_task_has_tags = tasks
+						.first()
+						.and_then(|task_id| {
+							project.get_task(task_id).map(|task| !task.tags.is_empty())
+						})
+						.unwrap_or(false);
+
+					row![
+						container(open_project_button(
 							*project_id,
-							project,
-							app.preferences.code_editor(),
-							false,
-							true,
-							false,
-							false,
-							show_due_date,
-						)
-					} else {
-						error!("invalid task_id: doesnt exist in database!");
-						text("<invalid task id>").into()
-					}
-				}))
-				.spacing(SMALL_SPACING_AMOUNT);
-
-				let first_task_has_tags = tasks
-					.first()
-					.and_then(|task_id| project.get_task(task_id).map(|task| !task.tags.is_empty()))
-					.unwrap_or(false);
-
-				row![
-					container(open_project_button(
-						*project_id,
-						&project.name,
-						project.color.to_iced_color()
-					))
-					.width(120.0)
-					.padding(Padding::default().top(if first_task_has_tags {
-						TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT
-					} else {
-						0.0
-					})),
-					list.padding(Padding::default().left(PADDING_AMOUNT)),
-				]
-				.into()
-			} else {
-				error!("invalid project_id: doesnt exist in database!");
-				Element::new(text("<invalid project id>"))
+							&project.name,
+							project.color.to_iced_color()
+						))
+						.width(120.0)
+						.padding(Padding::default().top(if first_task_has_tags {
+							TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT
+						} else {
+							0.0
+						})),
+						list.padding(Padding::default().left(PADDING_AMOUNT)),
+					]
+					.into()
+				}
+				None => {
+					error!("invalid project_id: doesnt exist in database!");
+					Element::new(text("<invalid project id>"))
+				}
 			}
 		}))
 		.spacing(SPACING_AMOUNT)

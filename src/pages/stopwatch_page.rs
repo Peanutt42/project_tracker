@@ -371,19 +371,17 @@ impl StopwatchPage {
 				}
 			}
 			StopwatchPageMessage::CompleteTask => {
-				let set_task_done_action = if let StopwatchPage::StopTaskTime {
-					project_id,
-					task_id,
-					..
-				} = self
-				{
-					DatabaseMessage::SetTaskDone {
+				let set_task_done_action = match self {
+					StopwatchPage::StopTaskTime {
+						project_id,
+						task_id,
+						..
+					} => DatabaseMessage::SetTaskDone {
 						project_id: *project_id,
 						task_id: *task_id,
 					}
-					.into()
-				} else {
-					ContentPageAction::None
+					.into(),
+					_ => ContentPageAction::None,
 				};
 				ContentPageAction::Actions(vec![set_task_done_action, self.stop(preferences)])
 			}
@@ -423,44 +421,57 @@ impl StopwatchPage {
 							.as_ref()
 							.and_then(|db| db.get_task_and_type(project_id, task_id));
 
-						if let Some((task, task_type)) = task_and_type {
-							if matches!(task_type, TaskType::Done) {
-								*self = StopwatchPage::Idle;
-							} else if let Some(needed_minutes) = task.needed_time_minutes {
-								let timer_seconds =
-									Self::get_spend_seconds(*project_id, *task_id, database)
-										.unwrap_or(0.0);
-								let needed_seconds = needed_minutes as f32 * 60.0;
-								let seconds_left = needed_seconds - timer_seconds;
-								let percentage = timer_seconds / needed_seconds;
-
-								if let Some(clock) = clock {
-									clock.set_percentage(percentage);
-									clock.set_seconds_left(seconds_left);
-									clock.set_needed_seconds(needed_seconds);
+						match task_and_type {
+							Some((task, task_type)) => {
+								if matches!(task_type, TaskType::Done) {
+									*self = StopwatchPage::Idle;
 								} else {
-									*clock = Some(StopwatchClock::new(
-										percentage,
-										seconds_left,
-										Some(needed_seconds),
-									));
-								}
+									match task.needed_time_minutes {
+										Some(needed_minutes) => {
+											let timer_seconds = Self::get_spend_seconds(
+												*project_id,
+												*task_id,
+												database,
+											)
+											.unwrap_or(0.0);
+											let needed_seconds = needed_minutes as f32 * 60.0;
+											let seconds_left = needed_seconds - timer_seconds;
+											let percentage = timer_seconds / needed_seconds;
 
-								if seconds_left <= 0.0 && !*finished_notification_sent {
-									*finished_notification_sent = true;
+											match clock {
+												Some(clock) => {
+													clock.set_percentage(percentage);
+													clock.set_seconds_left(seconds_left);
+													clock.set_needed_seconds(needed_seconds);
+												}
+												None => {
+													*clock = Some(StopwatchClock::new(
+														percentage,
+														seconds_left,
+														Some(needed_seconds),
+													));
+												}
+											}
 
-									if preferences.play_timer_notification_sound() {
-										timer_notification(
-											format!("{} min. timer finished!", needed_minutes),
-											task.name.clone(),
-										);
+											if seconds_left <= 0.0 && !*finished_notification_sent {
+												*finished_notification_sent = true;
+
+												if preferences.play_timer_notification_sound() {
+													timer_notification(
+														format!(
+															"{} min. timer finished!",
+															needed_minutes
+														),
+														task.name.clone(),
+													);
+												}
+											}
+										}
+										None => *clock = None,
 									}
 								}
-							} else {
-								*clock = None;
 							}
-						} else if database.is_some() {
-							*self = StopwatchPage::Idle;
+							None => *self = StopwatchPage::Idle,
 						}
 					}
 					StopwatchPage::TakingBreak {
@@ -496,22 +507,18 @@ impl StopwatchPage {
 
 				ContentPageAction::None
 			}
-			StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing => {
-				if let StopwatchPage::StopTaskTime {
+			StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing => match self {
+				StopwatchPage::StopTaskTime {
 					project_id,
 					task_id,
 					..
-				} = self
-				{
-					DatabaseMessage::StopTaskTimeSpend {
-						project_id: *project_id,
-						task_id: *task_id,
-					}
-					.into()
-				} else {
-					ContentPageAction::None
+				} => DatabaseMessage::StopTaskTimeSpend {
+					project_id: *project_id,
+					task_id: *task_id,
 				}
-			}
+				.into(),
+				_ => ContentPageAction::None,
+			},
 		}
 	}
 
@@ -634,13 +641,12 @@ impl StopwatchPage {
 
 				responsive(move |size| -> Element<Message> {
 					let clock: Element<Message> = if task_ref.is_some() {
-						if let Some(clock) = clock {
-							canvas(clock)
+						match clock {
+							Some(clock) => canvas(clock)
 								.width(Fixed(300.0))
 								.height(Fixed(300.0))
-								.into()
-						} else {
-							text(format_stopwatch_duration(
+								.into(),
+							None => text(format_stopwatch_duration(
 								Self::get_spend_seconds(*project_id, *task_id, app.database.ok())
 									.unwrap_or(0.0)
 									.round_ties_even() as i64,
@@ -649,7 +655,7 @@ impl StopwatchPage {
 							.size(90)
 							.width(Fill)
 							.align_x(Horizontal::Center)
-							.into()
+							.into(),
 						}
 					} else if app.database.is_loaded() {
 						error!("invalid project_id or task_id: doesnt exist in database!");
@@ -672,40 +678,41 @@ impl StopwatchPage {
 					]
 					.spacing(LARGE_SPACING_AMOUNT);
 
-					let page_view: Element<Message> = if let Some(task_info) = task_info(
+					let page_view: Element<Message> = match task_info(
 						task_ref,
 						*task_id,
 						project_ref.map(|project_ref| (*project_id, project_ref)),
 						app,
 					) {
-						if size.width > size.height {
-							row![
-								clock,
-								column![task_info, controls,]
-									.align_x(Alignment::Center)
-									.spacing(LARGE_SPACING_AMOUNT)
-									.width(Fill)
-							]
-							.spacing(LARGE_SPACING_AMOUNT)
-							.align_y(Vertical::Center)
-							.into()
-						} else {
-							column![
-								clock,
-								Space::new(0.0, LARGE_PADDING_AMOUNT),
-								task_info,
-								controls,
-							]
-							.spacing(LARGE_SPACING_AMOUNT)
-							.align_x(Horizontal::Center)
-							.into()
+						Some(task_info) => {
+							if size.width > size.height {
+								row![
+									clock,
+									column![task_info, controls,]
+										.align_x(Alignment::Center)
+										.spacing(LARGE_SPACING_AMOUNT)
+										.width(Fill)
+								]
+								.spacing(LARGE_SPACING_AMOUNT)
+								.align_y(Vertical::Center)
+								.into()
+							} else {
+								column![
+									clock,
+									Space::new(0.0, LARGE_PADDING_AMOUNT),
+									task_info,
+									controls,
+								]
+								.spacing(LARGE_SPACING_AMOUNT)
+								.align_x(Horizontal::Center)
+								.into()
+							}
 						}
-					} else {
-						column![clock, controls]
+						None => column![clock, controls]
 							.align_x(Alignment::Center)
 							.spacing(LARGE_SPACING_AMOUNT)
 							.width(Fill)
-							.into()
+							.into(),
 					};
 
 					container(page_view).center(Fill).into()
@@ -719,19 +726,17 @@ impl StopwatchPage {
 	}
 
 	fn stop(&mut self, preferences: &mut Option<Preferences>) -> ContentPageAction {
-		let action = if let StopwatchPage::StopTaskTime {
-			project_id,
-			task_id,
-			..
-		} = self
-		{
-			DatabaseMessage::StopTaskTimeSpend {
+		let action = match self {
+			StopwatchPage::StopTaskTime {
+				project_id,
+				task_id,
+				..
+			} => DatabaseMessage::StopTaskTimeSpend {
 				project_id: *project_id,
 				task_id: *task_id,
 			}
-			.into()
-		} else {
-			ContentPageAction::None
+			.into(),
+			_ => ContentPageAction::None,
 		};
 		*self = StopwatchPage::Idle;
 		self.set_stopwatch_progress(preferences);
@@ -873,8 +878,8 @@ fn task_info<'a>(
 					.padding(HORIZONTAL_SCROLLABLE_PADDING),
 					horizontal_scrollable(
 						Row::with_children(task.tags.iter().map(|tag_id| {
-							if let Some(tag) = project.task_tags.get(tag_id) {
-								container(text(&tag.name))
+							match project.task_tags.get(tag_id) {
+								Some(tag) => container(text(&tag.name))
 									.style(|t| {
 										task_tag_container_style(t, tag.color.to_iced_color())
 									})
@@ -883,13 +888,16 @@ fn task_info<'a>(
 											.left(PADDING_AMOUNT)
 											.right(PADDING_AMOUNT),
 									)
-									.into()
-							} else if app.database.is_loaded() {
-								error!("invalid tag_id: doesnt exist in database!");
-								"<invalid tag id>".into()
-							} else {
-								// db still loading
-								Space::new(0.0, 0.0).into()
+									.into(),
+								None => {
+									if app.database.is_loaded() {
+										error!("invalid tag_id: doesnt exist in database!");
+										"<invalid tag id>".into()
+									} else {
+										// db still loading
+										Space::new(0.0, 0.0).into()
+									}
+								}
 							}
 						}))
 						.spacing(SPACING_AMOUNT)

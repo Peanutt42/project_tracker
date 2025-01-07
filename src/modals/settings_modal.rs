@@ -302,13 +302,12 @@ impl SettingsModal {
 			}
 			SettingsModalMessage::ImportGoogleTasksFileDialogCanceled => PreferenceAction::None,
 
-			SettingsModalMessage::SetDateFormatting(date_formatting) => {
-				if let Some(preferences) = preferences {
+			SettingsModalMessage::SetDateFormatting(date_formatting) => match preferences {
+				Some(preferences) => {
 					preferences.update(PreferenceMessage::SetDateFormatting(date_formatting))
-				} else {
-					PreferenceAction::None
 				}
-			}
+				None => PreferenceAction::None,
+			},
 
 			SettingsModalMessage::EnableSynchronization => {
 				PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Filepath {
@@ -539,13 +538,11 @@ Server: your own hosted ProjectTracker-server"
 							};
 
 							row![
-								if let Some(filepath) = filepath {
-									filepath_widget(filepath.clone())
+								match filepath {
+									Some(filepath) => filepath_widget(filepath.clone())
 										.width(Fill)
-										.into()
-								}
-								else {
-									Element::new(text("Filepath not specified!"))
+										.into(),
+									None => Element::new(text("Filepath not specified!")),
 								},
 
 								container(select_synchronization_filepath_button())
@@ -698,68 +695,69 @@ fn code_editor_settings_tab_view(
 		code_editor_dropdown_button(preferences.code_editor().as_ref(), dropdown_expanded),
 	)]
 	.push_maybe(
-		if let Some(CodeEditor::Custom { name, command }) = preferences.code_editor().as_ref() {
-			Some(
-				column![
-					horizontal_seperator_padded(),
-					item(
-						"Custom Editor Name:",
-						text_input("Custom Editor name", name.as_str())
-							.width(Length::Fixed(350.0))
-							.on_input(|new_name| SettingsModalMessage::SetCodeEditor(Some(
-								CodeEditor::Custom {
-									name: new_name,
-									command: command.clone(),
-								}
-							))
-							.into())
-							.style(text_input_style_default)
-					),
-					item(
-						row![
-							"Custom Editor Command:",
-							tooltip(
-								icon_to_text(Bootstrap::QuestionCircleFill).size(ICON_FONT_SIZE),
-								text("the file location formatted as \"filepath:line:column\" is added to the end of this command")
-									.size(SMALL_TEXT_SIZE),
-								tooltip::Position::Bottom,
-							)
-							.gap(GAP)
-							.style(tooltip_container_style),
-						]
-						.spacing(SPACING_AMOUNT),
-						text_input("custom_editor --open", command.as_str())
-							.width(Length::Fixed(350.0))
-							.on_input(|new_command| SettingsModalMessage::SetCodeEditor(Some(
-								CodeEditor::Custom {
-									name: name.clone(),
-									command: new_command,
-								}
-							))
-							.into())
-							.style(text_input_style_default)
-					),
-					row![
-						text("example command:")
-							.width(Fill)
-							.style(grey_text_style),
-
-						container(
-							rich_text![
-								Span::new(command).color(Color::from_rgb8(154, 196, 248)),
-								Span::new(" \"file.txt:42:15\"").color(Color::from_rgb8(162, 250, 163))
+		match preferences.code_editor().as_ref()  {
+			Some(CodeEditor::Custom { name, command }) => {
+				Some(
+					column![
+						horizontal_seperator_padded(),
+						item(
+							"Custom Editor Name:",
+							text_input("Custom Editor name", name.as_str())
+								.width(Length::Fixed(350.0))
+								.on_input(|new_name| SettingsModalMessage::SetCodeEditor(Some(
+									CodeEditor::Custom {
+										name: new_name,
+										command: command.clone(),
+									}
+								))
+								.into())
+								.style(text_input_style_default)
+						),
+						item(
+							row![
+								"Custom Editor Command:",
+								tooltip(
+									icon_to_text(Bootstrap::QuestionCircleFill).size(ICON_FONT_SIZE),
+									text("the file location formatted as \"filepath:line:column\" is added to the end of this command")
+										.size(SMALL_TEXT_SIZE),
+									tooltip::Position::Bottom,
+								)
+								.gap(GAP)
+								.style(tooltip_container_style),
 							]
-						)
-						.padding(Padding::new(SMALL_PADDING_AMOUNT))
-						.style(command_background_container_style),
+							.spacing(SPACING_AMOUNT),
+							text_input("custom_editor --open", command.as_str())
+								.width(Length::Fixed(350.0))
+								.on_input(|new_command| SettingsModalMessage::SetCodeEditor(Some(
+									CodeEditor::Custom {
+										name: name.clone(),
+										command: new_command,
+									}
+								))
+								.into())
+								.style(text_input_style_default)
+						),
+						row![
+							text("example command:")
+								.width(Fill)
+								.style(grey_text_style),
+
+							container(
+								rich_text![
+									Span::new(command).color(Color::from_rgb8(154, 196, 248)),
+									Span::new(" \"file.txt:42:15\"").color(Color::from_rgb8(162, 250, 163))
+								]
+							)
+							.padding(Padding::new(SMALL_PADDING_AMOUNT))
+							.style(command_background_container_style),
+						]
+						.align_y(Vertical::Center)
+						.spacing(SPACING_AMOUNT)
 					]
-					.align_y(Vertical::Center)
-					.spacing(SPACING_AMOUNT)
-				]
-				.spacing(SPACING_AMOUNT),
-			)
-		} else {
-			None
+					.spacing(SPACING_AMOUNT),
+				)
+			},
+			_ => None,
 		},
 	)
 	.width(Fill)
@@ -768,8 +766,8 @@ fn code_editor_settings_tab_view(
 }
 
 fn admin_infos_settings_tab_view(admin_infos: &Option<AdminInfos>) -> Element<Message> {
-	if let Some(admin_infos) = admin_infos {
-		vertical_scrollable(
+	match admin_infos {
+		Some(admin_infos) => vertical_scrollable(
 			column![
 				item(
 					"Cpu Usage:",
@@ -829,11 +827,10 @@ fn admin_infos_settings_tab_view(admin_infos: &Option<AdminInfos>) -> Element<Me
 			]
 			.spacing(SPACING_AMOUNT),
 		)
-		.into()
-	} else {
-		container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
+		.into(),
+		None => container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
 			.center(Fill)
-			.into()
+			.into(),
 	}
 }
 

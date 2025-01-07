@@ -52,12 +52,13 @@ impl CodeEditor {
 				let mut args = Vec::new();
 				// if vscode is installed natively -> run code
 				// if installed with flatpak -> run flatpak
-				if let Ok(code_filepath) = which::which("code") {
-					command = Command::new(code_filepath);
-				} else {
-					command = Command::new("flatpak");
-					args.push("run");
-					args.push("com.visualstudio.code");
+				match which::which("code") {
+					Ok(code_filepath) => command = Command::new(code_filepath),
+					Err(_) => {
+						command = Command::new("flatpak");
+						args.push("run");
+						args.push("com.visualstudio.code");
+					}
 				}
 				args.push("--goto");
 				args.push(file_location);
@@ -78,14 +79,16 @@ impl CodeEditor {
 					})
 					.ok()
 					.and_then(|path| if path.exists() { Some(path) } else { None });
-				if let Ok(zed_filepath) = which::which("zed") {
-					command = Command::new(zed_filepath);
-				} else if let Some(local_zed_filepath) = local_zed_filepath {
-					command = Command::new(local_zed_filepath);
-				} else {
-					command = Command::new("flatpak");
-					args.push("run");
-					args.push("dev.zed.Zed");
+				match which::which("zed") {
+					Ok(zed_filepath) => command = Command::new(zed_filepath),
+					Err(_) => match local_zed_filepath {
+						Some(local_zed_filepath) => command = Command::new(local_zed_filepath),
+						None => {
+							command = Command::new("flatpak");
+							args.push("run");
+							args.push("dev.zed.Zed");
+						}
+					},
 				}
 				args.push(file_location);
 				command.args(args);

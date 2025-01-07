@@ -8,6 +8,7 @@ use std::{
 	io::{self, BufRead},
 	path::{Path, PathBuf},
 };
+use tracing::debug;
 use walkdir::{DirEntry, WalkDir};
 
 pub fn import_source_code_todos(root_directory: PathBuf) -> IndexMap<TaskId, Task> {
@@ -61,43 +62,51 @@ fn should_import_source_code_todos_from_file(filepath: &Path) -> bool {
 		return false;
 	}
 
-	if let Some(parent_path) = filepath.parent() {
-		should_import_source_code_todos_from_folder(parent_path)
-	} else {
-		true
+	match filepath.parent() {
+		Some(parent_path) => should_import_source_code_todos_from_folder(parent_path),
+		None => true,
 	}
 }
 
 // TODO: support multiline comments (--> 2.. lines into description?)
 fn import_source_code_todos_from_file(entry: DirEntry) -> IndexMap<TaskId, Task> {
-	if let Ok(file) = File::open(entry.path()) {
-		let mut todos = IndexMap::new();
+	let filepath = entry.path();
 
-		for (line_index, line) in io::BufReader::new(file)
-			.lines()
-			.map_while(Result::ok)
-			.enumerate()
-		{
-			if let Some((name, column_number)) = import_source_code_comment_from_line(line) {
-				let source = entry.path().display();
-				let line_number = line_index + 1;
-				todos.insert(
-					TaskId::generate(),
-					Task::new(
-						name,
-						format!("{source}:{line_number}:{column_number}"),
-						None,
-						None,
-						None,
-						HashSet::new(),
-					),
-				);
+	match File::open(filepath) {
+		Ok(file) => {
+			let mut todos = IndexMap::new();
+
+			for (line_index, line) in io::BufReader::new(file)
+				.lines()
+				.map_while(Result::ok)
+				.enumerate()
+			{
+				if let Some((name, column_number)) = import_source_code_comment_from_line(line) {
+					let source = entry.path().display();
+					let line_number = line_index + 1;
+					todos.insert(
+						TaskId::generate(),
+						Task::new(
+							name,
+							format!("{source}:{line_number}:{column_number}"),
+							None,
+							None,
+							None,
+							HashSet::new(),
+						),
+					);
+				}
 			}
-		}
 
-		todos
-	} else {
-		IndexMap::new()
+			todos
+		}
+		Err(_) => {
+			debug!(
+				"could not open source code file in '{}'",
+				filepath.display()
+			);
+			IndexMap::new()
+		}
 	}
 }
 
@@ -136,15 +145,16 @@ fn import_source_code_comment_from_line(line: String) -> Option<(String, usize)>
 			}
 			if string_quotes_counter % 2 == 0 {
 				let todo_macro_arg_start_index = index + TODO_MACRO_KEYWORD_START.len();
-				let todo_name = if let Some('\"') = line.chars().nth(todo_macro_arg_start_index) {
-					let todo_name_start_index = todo_macro_arg_start_index + 1;
-					let mut todo_name_end_index = todo_name_start_index;
-					if let Some(i) = line[todo_name_start_index..].find('\"') {
-						todo_name_end_index = todo_name_start_index + i;
+				let todo_name = match line.chars().nth(todo_macro_arg_start_index) {
+					Some('\"') => {
+						let todo_name_start_index = todo_macro_arg_start_index + 1;
+						let mut todo_name_end_index = todo_name_start_index;
+						if let Some(i) = line[todo_name_start_index..].find('\"') {
+							todo_name_end_index = todo_name_start_index + i;
+						}
+						line[todo_name_start_index..todo_name_end_index].to_string()
 					}
-					line[todo_name_start_index..todo_name_end_index].to_string()
-				} else {
-					String::new()
+					_ => String::new(),
 				};
 				let column_number = index + 1;
 				return Some((todo_name.to_string(), column_number));

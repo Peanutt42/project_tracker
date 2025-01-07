@@ -117,8 +117,8 @@ pub fn custom_project_preview(
 	)
 	.style(move |t| project_preview_background_container_style(t, dragging));
 
-	if let Some(project_id) = project_id {
-		column![
+	match project_id {
+		Some(project_id) => column![
 			in_between_dropzone(
 				project_dropzone_id.unwrap_or(container::Id::unique()),
 				project_dropzone_highlight
@@ -147,11 +147,10 @@ pub fn custom_project_preview(
 			.drag_mode(false, true)
 			.style(move |t, s| project_preview_style(t, s, selected, Some(project_color))),
 		]
-		.into()
-	} else {
-		row![inner, cancel_create_project_button()]
+		.into(),
+		None => row![inner, cancel_create_project_button()]
 			.align_y(Alignment::Center)
 			.width(Fill)
-			.into()
+			.into(),
 	}
 }

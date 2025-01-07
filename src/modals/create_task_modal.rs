@@ -200,42 +200,44 @@ impl CreateTaskModal {
 		);
 
 		card(
-			if let Some(project) = database
+			match database
 				.as_ref()
 				.and_then(|db| db.get_project(&self.project_id))
 			{
-				text(format!("Create Task in {}", project.name))
-			} else {
-				text("Create Task")
+				Some(project) => text(format!("Create Task in {}", project.name)),
+				None => text("Create Task"),
 			}
 			.size(LARGE_TEXT_SIZE),
 			container(vertical_scrollable(column![
-				if let Some(project) = database
+				match database
 					.as_ref()
 					.and_then(|db| db.get_project(&self.project_id))
 				{
-					let task_tags_list: Vec<Element<Message>> = project
-						.task_tags
-						.iter()
-						.map(|(tag_id, tag)| {
-							task_tag_button(tag, self.task_tags.contains(&tag_id))
-								.on_press(CreateTaskModalMessage::ToggleTaskTag(tag_id).into())
-								.into()
-						})
-						.collect();
+					Some(project) => {
+						let task_tags_list: Vec<Element<Message>> = project
+							.task_tags
+							.iter()
+							.map(|(tag_id, tag)| {
+								task_tag_button(tag, self.task_tags.contains(&tag_id))
+									.on_press(CreateTaskModalMessage::ToggleTaskTag(tag_id).into())
+									.into()
+							})
+							.collect();
 
-					if task_tags_list.is_empty() {
-						Element::new(Space::new(0.0, 0.0))
-					} else {
-						horizontal_scrollable(
-							Row::with_children(task_tags_list).spacing(SPACING_AMOUNT),
-						)
-						.width(Fill)
-						.into()
+						if task_tags_list.is_empty() {
+							Element::new(Space::new(0.0, 0.0))
+						} else {
+							horizontal_scrollable(
+								Row::with_children(task_tags_list).spacing(SPACING_AMOUNT),
+							)
+							.width(Fill)
+							.into()
+						}
 					}
-				} else {
-					error!("invalid project_id: doesnt exist in database!");
-					Element::new(text("<invalid project id>"))
+					None => {
+						error!("invalid project_id: doesnt exist in database!");
+						Element::new(text("<invalid project id>"))
+					}
 				},
 				text_input("task name", &self.task_name)
 					.id(TASK_NAME_INPUT_ID.clone())

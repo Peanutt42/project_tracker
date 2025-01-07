@@ -112,86 +112,89 @@ impl CachedTaskList {
 		let mut done_list = Vec::new();
 		let mut source_code_todo_list = Vec::new();
 
-		if let Some(search_filter) = search_filter.as_ref().and_then(|search_filter| {
+		match search_filter.as_ref().and_then(|search_filter| {
 			if search_filter.is_empty() {
 				None // pretend that no filter is enabled when fitler is empty
 			} else {
 				Some(search_filter)
 			}
 		}) {
-			let mut todo_score_map = Vec::new();
-			let mut done_score_map = Vec::new();
-			let mut source_code_todo_score_map = Vec::new();
-			for (task_id, task, task_type) in project.iter() {
-				if task.matches_filter(task_tag_filter) {
-					let task_name_match =
-						SkimMatcherV2::default().fuzzy_match(&task.name, search_filter);
-					let task_description_match =
-						SkimMatcherV2::default().fuzzy_match(&task.description, search_filter);
+			Some(search_filter) => {
+				let mut todo_score_map = Vec::new();
+				let mut done_score_map = Vec::new();
+				let mut source_code_todo_score_map = Vec::new();
+				for (task_id, task, task_type) in project.iter() {
+					if task.matches_filter(task_tag_filter) {
+						let task_name_match =
+							SkimMatcherV2::default().fuzzy_match(&task.name, search_filter);
+						let task_description_match =
+							SkimMatcherV2::default().fuzzy_match(&task.description, search_filter);
 
-					let task_match = match (task_name_match, task_description_match) {
-						(Some(task_name_match), Some(task_description_match)) => {
-							Some(task_name_match + task_description_match)
-						}
-						_ => task_name_match.or(task_description_match),
-					};
+						let task_match = match (task_name_match, task_description_match) {
+							(Some(task_name_match), Some(task_description_match)) => {
+								Some(task_name_match + task_description_match)
+							}
+							_ => task_name_match.or(task_description_match),
+						};
 
-					if let Some(task_match) = task_match {
-						match task_type {
-							TaskType::Todo => todo_score_map.push((task_id, task_match)),
-							TaskType::Done => done_score_map.push((task_id, task_match)),
-							TaskType::SourceCodeTodo => {
-								source_code_todo_score_map.push((task_id, task_match))
+						if let Some(task_match) = task_match {
+							match task_type {
+								TaskType::Todo => todo_score_map.push((task_id, task_match)),
+								TaskType::Done => done_score_map.push((task_id, task_match)),
+								TaskType::SourceCodeTodo => {
+									source_code_todo_score_map.push((task_id, task_match))
+								}
 							}
 						}
 					}
 				}
+
+				let sort_compare = |a: &(TaskId, i64), b: &(TaskId, i64)| {
+					let (_task_id_a, score_a) = a;
+					let (_task_id_b, score_b) = b;
+					score_b.cmp(score_a)
+				};
+
+				todo_score_map.sort_unstable_by(sort_compare);
+				done_score_map.sort_unstable_by(sort_compare);
+				source_code_todo_score_map.sort_unstable_by(sort_compare);
+
+				todo_list = todo_score_map
+					.into_iter()
+					.map(|(task_id, _match)| task_id)
+					.collect();
+				done_list = done_score_map
+					.into_iter()
+					.map(|(task_id, _match)| task_id)
+					.collect();
+				source_code_todo_list = source_code_todo_score_map
+					.into_iter()
+					.map(|(task_id, _match)| task_id)
+					.collect();
 			}
-
-			let sort_compare = |a: &(TaskId, i64), b: &(TaskId, i64)| {
-				let (_task_id_a, score_a) = a;
-				let (_task_id_b, score_b) = b;
-				score_b.cmp(score_a)
-			};
-
-			todo_score_map.sort_unstable_by(sort_compare);
-			done_score_map.sort_unstable_by(sort_compare);
-			source_code_todo_score_map.sort_unstable_by(sort_compare);
-
-			todo_list = todo_score_map
-				.into_iter()
-				.map(|(task_id, _match)| task_id)
-				.collect();
-			done_list = done_score_map
-				.into_iter()
-				.map(|(task_id, _match)| task_id)
-				.collect();
-			source_code_todo_list = source_code_todo_score_map
-				.into_iter()
-				.map(|(task_id, _match)| task_id)
-				.collect();
-		} else {
-			for (task_id, task, task_type) in project.iter() {
-				if task.matches_filter(task_tag_filter) {
-					match task_type {
-						TaskType::Todo => todo_list.push(task_id),
-						TaskType::Done => done_list.push(task_id),
-						TaskType::SourceCodeTodo => source_code_todo_list.push(task_id),
+			None => {
+				for (task_id, task, task_type) in project.iter() {
+					if task.matches_filter(task_tag_filter) {
+						match task_type {
+							TaskType::Todo => todo_list.push(task_id),
+							TaskType::Done => done_list.push(task_id),
+							TaskType::SourceCodeTodo => source_code_todo_list.push(task_id),
+						}
 					}
 				}
-			}
 
-			project
-				.sort_mode
-				.sort(project, &mut todo_list, sort_unspecified_tasks_at_bottom);
-			project
-				.sort_mode
-				.sort(project, &mut done_list, sort_unspecified_tasks_at_bottom);
-			project.sort_mode.sort(
-				project,
-				&mut source_code_todo_list,
-				sort_unspecified_tasks_at_bottom,
-			);
+				project
+					.sort_mode
+					.sort(project, &mut todo_list, sort_unspecified_tasks_at_bottom);
+				project
+					.sort_mode
+					.sort(project, &mut done_list, sort_unspecified_tasks_at_bottom);
+				project.sort_mode.sort(
+					project,
+					&mut source_code_todo_list,
+					sort_unspecified_tasks_at_bottom,
+				);
+			}
 		}
 
 		Self::new(todo_list, done_list, source_code_todo_list)
@@ -318,17 +321,15 @@ impl ProjectPage {
 				self.importing_source_code_todos = true;
 				iced::Task::perform(
 					Self::pick_todo_source_code_folder_dialog(),
-					|source_code_todos| {
-						if let Some((source_code_directory, source_code_todos)) = source_code_todos
-						{
+					|source_code_todos| match source_code_todos {
+						Some((source_code_directory, source_code_todos)) => {
 							ProjectPageMessage::ImportSourceCodeTodos {
 								source_code_directory,
 								source_code_todos,
 							}
 							.into()
-						} else {
-							ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into()
 						}
+						None => ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into(),
 					},
 				)
 				.into()
@@ -350,30 +351,31 @@ impl ProjectPage {
 				.into()
 			}
 			ProjectPageMessage::ReimportSourceCodeTodos => {
-				if let Some(source_code_directory) = database
+				match database
 					.and_then(|db| db.get_project(&self.project_id))
 					.and_then(|project| project.source_code_directory.clone())
 				{
-					self.importing_source_code_todos = true;
-					let source_code_directory_clone = source_code_directory.clone();
+					Some(source_code_directory) => {
+						self.importing_source_code_todos = true;
+						let source_code_directory_clone = source_code_directory.clone();
 
-					iced::Task::perform(
-						async move { import_source_code_todos(source_code_directory_clone) },
-						move |source_code_todos| {
-							ProjectPageMessage::ImportSourceCodeTodos {
-								source_code_directory: source_code_directory.clone(),
-								source_code_todos,
-							}
-							.into()
-						},
-					)
-					.into()
-				} else {
-					self.update(
+						iced::Task::perform(
+							async move { import_source_code_todos(source_code_directory_clone) },
+							move |source_code_todos| {
+								ProjectPageMessage::ImportSourceCodeTodos {
+									source_code_directory: source_code_directory.clone(),
+									source_code_todos,
+								}
+								.into()
+							},
+						)
+						.into()
+					}
+					None => self.update(
 						ProjectPageMessage::ImportSourceCodeTodosDialog,
 						database,
 						preferences,
-					)
+					),
 				}
 			}
 
@@ -474,37 +476,39 @@ impl ProjectPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
-		if let DatabaseState::Loaded(database) = &app.database {
-			if let Some(project) = database.get_project(&self.project_id) {
-				column![
-					self.project_details_view(project),
-					task_list(
-						self.project_id,
-						project,
-						&self.cached_task_list,
-						&app.task_ui_id_map,
-						&app.task_description_markdown_items,
-						app.preferences.code_editor(),
-						app.dragged_task,
-						app.just_minimal_dragging,
-						app.sidebar_page.task_dropzone_hovered,
-						self.show_done_tasks,
-						self.show_source_code_todos,
-						self.importing_source_code_todos
-					),
-				]
-				// .spacing(SPACING_AMOUNT) this is not needed since every task in the list has a SPACING_AMOUNT height dropzone
-				.width(Fill)
-				.height(Fill)
-				.into()
-			} else {
-				error!("invalid project_id inside project_page: doesnt exist in database!");
-				text("<Invalid ProjectId>").into()
+		match &app.database {
+			DatabaseState::Loaded(database) => {
+				match database.get_project(&self.project_id) {
+					Some(project) => column![
+						self.project_details_view(project),
+						task_list(
+							self.project_id,
+							project,
+							&self.cached_task_list,
+							&app.task_ui_id_map,
+							&app.task_description_markdown_items,
+							app.preferences.code_editor(),
+							app.dragged_task,
+							app.just_minimal_dragging,
+							app.sidebar_page.task_dropzone_hovered,
+							self.show_done_tasks,
+							self.show_source_code_todos,
+							self.importing_source_code_todos
+						),
+					]
+					// .spacing(SPACING_AMOUNT) this is not needed since every task in the list has a SPACING_AMOUNT height dropzone
+					.width(Fill)
+					.height(Fill)
+					.into(),
+					None => {
+						error!("invalid project_id inside project_page: doesnt exist in database!");
+						text("<Invalid ProjectId>").into()
+					}
+				}
 			}
-		} else {
-			container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
+			_ => container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
 				.center(Fill)
-				.into()
+				.into(),
 		}
 	}
 
@@ -553,10 +557,8 @@ impl ProjectPage {
 			})
 			.collect();
 
-		let search_tasks_element: Element<Message> = if let Some(search_tasks_filter) =
-			&self.search_tasks_filter
-		{
-			row![
+		let search_tasks_element: Element<Message> = match &self.search_tasks_filter {
+			Some(search_tasks_filter) => row![
 				unfocusable(
 					text_input("Search tasks...", search_tasks_filter)
 						.id(SEARCH_TASKS_TEXT_INPUT_ID.clone())
@@ -575,9 +577,8 @@ impl ProjectPage {
 				),
 				cancel_search_tasks_button(),
 			]
-			.into()
-		} else {
-			search_tasks_button().into()
+			.into(),
+			None => search_tasks_button().into(),
 		};
 
 		let quick_actions: Element<Message> = row![

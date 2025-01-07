@@ -227,11 +227,9 @@ where
 	type Item = (K, &'a V);
 
 	fn next(&mut self) -> Option<Self::Item> {
-		if let Some(key) = self.order_iter.next() {
-			self.hash_map.get(key).map(|value| (*key, value))
-		} else {
-			None
-		}
+		self.order_iter
+			.next()
+			.and_then(|key| self.hash_map.get(key).map(|value| (*key, value)))
 	}
 }
 
@@ -257,10 +255,9 @@ impl<'de, K: Copy + Eq + Hash + Deserialize<'de>, V: Eq + Deserialize<'de>> Visi
 	}
 
 	fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
-		let mut ordered_hash_map = if let Some(capacity) = map.size_hint() {
-			OrderedHashMap::with_capacity(capacity)
-		} else {
-			OrderedHashMap::default()
+		let mut ordered_hash_map = match map.size_hint() {
+			Some(capacity) => OrderedHashMap::with_capacity(capacity),
+			None => OrderedHashMap::default(),
 		};
 
 		while let Some((key, value)) = map.next_entry()? {

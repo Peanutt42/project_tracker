@@ -269,12 +269,15 @@ pub async fn run_web_server(
 
 	let mut server = serve(routes).tls();
 
-	if let Some((cert_pem, key_pem)) = custom_cert_and_key_pem {
-		server = server.cert(cert_pem);
-		server = server.key(key_pem);
-	} else {
-		server = server.cert(SELF_SIGNED_CERT_PEM);
-		server = server.key(SELF_SIGNED_KEY_PEM);
+	match custom_cert_and_key_pem {
+		Some((cert_pem, key_pem)) => {
+			server = server.cert(cert_pem);
+			server = server.key(key_pem);
+		}
+		None => {
+			server = server.cert(SELF_SIGNED_CERT_PEM);
+			server = server.key(SELF_SIGNED_KEY_PEM);
+		}
 	}
 
 	let (https_addr, https_warp) = server.bind_ephemeral(([0, 0, 0, 0], 443));

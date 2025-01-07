@@ -87,31 +87,33 @@ impl ContentPage {
 		database: Option<&Database>,
 		preferences: &mut Option<Preferences>,
 	) -> ContentPageAction {
-		if let Some(ref_preferences) = preferences {
-			let action = if let Some(stopwatch_progress) = ref_preferences.stopwatch_progress() {
-				let (stopwatch_page, action) =
-					StopwatchPage::startup_again(*stopwatch_progress, database);
-				self.stopwatch_page = stopwatch_page;
-				action
-			} else {
-				ContentPageAction::None
-			};
+		match preferences {
+			Some(ref_preferences) => {
+				let action = match ref_preferences.stopwatch_progress() {
+					Some(stopwatch_progress) => {
+						let (stopwatch_page, action) =
+							StopwatchPage::startup_again(*stopwatch_progress, database);
+						self.stopwatch_page = stopwatch_page;
+						action
+					}
+					None => ContentPageAction::None,
+				};
 
-			match ref_preferences.selected_content_page() {
-				SerializedContentPage::Overview => self.open_overview(database, preferences),
-				SerializedContentPage::Stopwatch => self.open_stopwatch(preferences),
-				SerializedContentPage::Project(project_id) => {
-					let project_id_to_open = match &self.project_page {
-						Some(project_page) => project_page.project_id,
-						None => *project_id,
-					};
-					self.open_project_page(project_id_to_open, database, preferences);
+				match ref_preferences.selected_content_page() {
+					SerializedContentPage::Overview => self.open_overview(database, preferences),
+					SerializedContentPage::Stopwatch => self.open_stopwatch(preferences),
+					SerializedContentPage::Project(project_id) => {
+						let project_id_to_open = match &self.project_page {
+							Some(project_page) => project_page.project_id,
+							None => *project_id,
+						};
+						self.open_project_page(project_id_to_open, database, preferences);
+					}
 				}
-			}
 
-			action
-		} else {
-			ContentPageAction::None
+				action
+			}
+			None => ContentPageAction::None,
 		}
 	}
 
@@ -132,12 +134,11 @@ impl ContentPage {
 			self.stopwatch_page
 				.subscription(self.project_page.is_none())
 				.map(ContentPageMessage::StopwatchPageMessage),
-			if let Some(project_page) = &self.project_page {
-				project_page
+			match &self.project_page {
+				Some(project_page) => project_page
 					.subscription()
-					.map(ContentPageMessage::ProjectPageMessage)
-			} else {
-				Subscription::none()
+					.map(ContentPageMessage::ProjectPageMessage),
+				None => Subscription::none(),
 			},
 		])
 	}
@@ -149,13 +150,10 @@ impl ContentPage {
 		preferences: &mut Option<Preferences>,
 	) -> ContentPageAction {
 		match message {
-			ContentPageMessage::ProjectPageMessage(message) => {
-				if let Some(project_page) = &mut self.project_page {
-					project_page.update(message, database, preferences)
-				} else {
-					ContentPageAction::None
-				}
-			}
+			ContentPageMessage::ProjectPageMessage(message) => match &mut self.project_page {
+				Some(project_page) => project_page.update(message, database, preferences),
+				None => ContentPageAction::None,
+			},
 			ContentPageMessage::StopwatchPageMessage(message) => {
 				let mut actions = Vec::new();
 				if matches!(message, StopwatchPageMessage::StopTask { .. }) {
@@ -214,17 +212,20 @@ impl ContentPage {
 				.get_project(&project_id)
 				.map(|project| (project_id, project))
 		});
-		if let Some((project_id, project)) = open_project_info {
-			self.project_page = Some(ProjectPage::new(project_id, project, preferences));
-			if let Some(preferences) = preferences {
-				preferences.set_selected_content_page(SerializedContentPage::Project(project_id));
+		match open_project_info {
+			Some((project_id, project)) => {
+				self.project_page = Some(ProjectPage::new(project_id, project, preferences));
+				if let Some(preferences) = preferences {
+					preferences
+						.set_selected_content_page(SerializedContentPage::Project(project_id));
+				}
 			}
-		} else if database.is_some() {
-			self.open_stopwatch(preferences);
-		} else {
-			// database is not loaded yet -> dont override saved selected content page yet
-			self.overview_page = None;
-			self.project_page = None;
+			None if database.is_some() => self.open_stopwatch(preferences),
+			None => {
+				// database is not loaded yet -> dont override saved selected content page yet
+				self.overview_page = None;
+				self.project_page = None;
+			}
 		}
 	}
 
@@ -237,12 +238,12 @@ impl ContentPage {
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
-		if let Some(project_page) = &self.project_page {
-			project_page.view(app)
-		} else if let Some(overview_page) = &self.overview_page {
-			overview_page.view(app)
-		} else {
-			self.stopwatch_page.view(app)
+		match &self.project_page {
+			Some(project_page) => project_page.view(app),
+			None => match &self.overview_page {
+				Some(overview_page) => overview_page.view(app),
+				None => self.stopwatch_page.view(app),
+			},
 		}
 	}
 }
