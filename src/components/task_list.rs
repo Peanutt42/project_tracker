@@ -129,7 +129,7 @@ pub fn task_list<'a>(
 			.into()
 		};
 
-	let show_tasks_button: Element<Message> = if cached_task_list.done.is_empty() {
+	let show_done_tasks_button: Element<Message> = if cached_task_list.done.is_empty() {
 		column![].into()
 	} else {
 		container(
@@ -164,7 +164,7 @@ pub fn task_list<'a>(
 		Column::with_children(todo_task_elements).padding(task_indentation_padding),
 		show_source_code_todos_button,
 		Column::with_children(source_code_todo_elements).padding(task_indentation_padding),
-		show_tasks_button,
+		show_done_tasks_button,
 		Column::with_children(done_task_elements).padding(task_indentation_padding),
 	])
 	.id(TASK_LIST_ID.clone())
