@@ -60,7 +60,7 @@ pub fn color_palette(
 			color_item(Color::from_rgb8(139, 49, 0), false, false, false, false), // brown
 			color_item(Color::from_rgb8(229, 156, 0), false, false, false, false), // dark yellow
 			color_item(Color::from_rgb8(27, 135, 0), false, false, false, false), // dark green
-			color_item(Color::from_rgb8(0, 37, 158), false, false, false, false), // dark blue
+			color_item(Color::from_rgb8(2, 56, 234), false, false, false, false), // dark blue
 			color_item(Color::from_rgb8(161, 79, 195), false, false, false, true), // pink
 		]
 	])

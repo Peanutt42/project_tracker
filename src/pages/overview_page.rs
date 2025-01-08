@@ -1,4 +1,8 @@
+use crate::components::date_text;
 use crate::core::SortModeUI;
+use crate::styles::{
+	rounded_container_style, LARGE_PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
+};
 use crate::{
 	components::{
 		open_project_button, overview_time_section_button, task_widget, vertical_scrollable,
@@ -13,7 +17,7 @@ use chrono::{DateTime, Days, NaiveDate, Utc};
 use iced::{
 	widget::{column, container, container::Id, row, text, Column},
 	Element,
-	Length::Fill,
+	Length::{Fill, Fixed},
 	Padding,
 };
 use iced_aw::date_picker::Date;
@@ -23,6 +27,8 @@ use std::{
 	time::SystemTime,
 };
 use tracing::error;
+
+const DATE_WIDGET_WIDTH: f32 = 90.0;
 
 #[derive(Debug, Clone)]
 pub struct OverviewPage {
@@ -262,11 +268,44 @@ impl OverviewPage {
 				None
 			} else {
 				Some(
-					Column::with_children(
-						tasks
+					Column::with_children(tasks.iter().map(|(date, tasks)| {
+						let first_task_has_tags = tasks
 							.iter()
-							.map(|(_date, tasks)| Self::view_tasks(tasks, app, true)),
-					)
+							.next()
+							.and_then(|(project_id, tasks)| {
+								tasks.first().and_then(|task_id| {
+									app.database.ok().and_then(|db| {
+										db.get_task(project_id, task_id)
+											.map(|task| !task.tags.is_empty())
+									})
+								})
+							})
+							.unwrap_or(false);
+
+						row![
+							container(
+								container(date_text(date, app.preferences.date_formatting()))
+									.padding(SMALL_HORIZONTAL_PADDING)
+									.style(rounded_container_style)
+							)
+							.width(Fixed(DATE_WIDGET_WIDTH))
+							.padding(Padding::default().top(
+								SMALL_PADDING_AMOUNT
+									+ if first_task_has_tags {
+										TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT
+									} else {
+										0.0
+									}
+							)),
+							Self::view_tasks(tasks, app),
+						]
+						.padding(
+							Padding::default()
+								.left(PADDING_AMOUNT)
+								.bottom(LARGE_PADDING_AMOUNT),
+						)
+						.into()
+					}))
 					.spacing(SPACING_AMOUNT),
 				)
 			})
@@ -292,7 +331,10 @@ impl OverviewPage {
 			.push_maybe(if tasks.is_empty() || collapsed {
 				None
 			} else {
-				Some(Self::view_tasks(tasks, app, false))
+				Some(
+					container(Self::view_tasks(tasks, app))
+						.padding(Padding::default().left(PADDING_AMOUNT + DATE_WIDGET_WIDTH)), // no need for date widget for single day section
+				)
 			})
 			.spacing(SPACING_AMOUNT)
 			.into()
@@ -301,7 +343,6 @@ impl OverviewPage {
 	fn view_tasks<'a>(
 		tasks: &'a HashMap<ProjectId, Vec<TaskId>>,
 		app: &'a ProjectTrackerApp,
-		show_due_date: bool,
 	) -> Element<'a, Message> {
 		Column::with_children(tasks.iter().map(|(project_id, tasks)| {
 			match app.database.ok().and_then(|db| db.get_project(project_id)) {
@@ -323,7 +364,7 @@ impl OverviewPage {
 								true,
 								false,
 								false,
-								show_due_date,
+								false,
 							),
 							None => {
 								error!("invalid task_id: doesnt exist in database!");
