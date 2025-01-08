@@ -1,7 +1,8 @@
 use crate::components::date_text;
 use crate::core::SortModeUI;
 use crate::styles::{
-	rounded_container_style, LARGE_PADDING_AMOUNT, SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT,
+	rounded_container_style, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, SMALL_HORIZONTAL_PADDING,
+	SMALL_PADDING_AMOUNT,
 };
 use crate::{
 	components::{
@@ -241,7 +242,7 @@ impl OverviewPage {
 				),
 			]
 			.width(Fill)
-			.spacing(SPACING_AMOUNT)
+			.spacing(LARGE_SPACING_AMOUNT + SPACING_AMOUNT)
 			.padding(PADDING_AMOUNT),
 		))
 		.width(Fill)
