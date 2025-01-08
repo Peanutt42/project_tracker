@@ -150,14 +150,12 @@ pub struct AdminInfos {
 }
 
 impl AdminInfos {
-	pub fn generate(shared_data: Arc<RwLock<SharedServerData>>, log_filepath: &PathBuf) -> Self {
-		let (cpu_usage, connected_clients) = {
-			let shared_data = shared_data.read().unwrap();
-			(
-				shared_data.cpu_usage_avg,
-				shared_data.connected_clients.clone(),
-			)
-		};
+	pub fn generate(
+		connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
+		cpu_usage_avg: Arc<RwLock<f32>>,
+		log_filepath: &PathBuf,
+	) -> Self {
+		let connected_clients = connected_clients.read().unwrap().clone();
 
 		let mut connected_native_gui_clients = Vec::new();
 		let mut connected_web_clients = Vec::new();
@@ -195,7 +193,7 @@ impl AdminInfos {
 		AdminInfos {
 			connected_native_gui_clients,
 			connected_web_clients,
-			cpu_usage,
+			cpu_usage: *cpu_usage_avg.read().unwrap(),
 			cpu_temp,
 			ram_info,
 			uptime,
@@ -225,53 +223,28 @@ pub enum ConnectedClient {
 	Web(SocketAddr),
 }
 
-#[derive(Debug, Clone)]
-pub struct SharedServerData {
-	pub database: Database,
-	pub connected_clients: HashSet<ConnectedClient>,
-	pub cpu_usage_avg: f32,
+pub fn load_database_from_file(filepath: PathBuf) -> Database {
+	let last_modified_time = get_last_modification_date_time(
+		&filepath
+			.metadata()
+			.expect("Failed to get the last modified metadata of database file"),
+	)
+	.expect("Failed to get the last modified metadata of database file");
+
+	let database_file_content =
+		std::fs::read(&filepath).expect("Failed to read database file at startup!");
+
+	Database::from_binary(&database_file_content, last_modified_time)
+		.expect("Failed to parse database file content at startup!")
 }
 
-impl SharedServerData {
-	pub fn new(filepath: PathBuf) -> Arc<RwLock<Self>> {
-		let last_modified_time = get_last_modification_date_time(
-			&filepath
-				.metadata()
-				.expect("Failed to get the last modified metadata of database file"),
-		)
-		.expect("Failed to get the last modified metadata of database file");
-
-		let database_file_content =
-			std::fs::read(&filepath).expect("Failed to read database file at startup!");
-
-		let database = Database::from_binary(&database_file_content, last_modified_time)
-			.expect("Failed to parse database file content at startup!");
-
-		let shared_data = SharedServerData {
-			database,
-			connected_clients: HashSet::new(),
-			cpu_usage_avg: 0.0,
-		};
-
-		Arc::new(RwLock::new(shared_data))
-	}
-
-	pub fn from_memory(database: Database) -> Arc<RwLock<Self>> {
-		Arc::new(RwLock::new(SharedServerData {
-			database,
-			connected_clients: HashSet::new(),
-			cpu_usage_avg: 0.0,
-		}))
-	}
-}
-
-pub async fn messure_cpu_usage_avg_thread(shared_data: Arc<RwLock<SharedServerData>>) {
+pub async fn messure_cpu_usage_avg_thread(cpu_usage_avg: Arc<RwLock<f32>>) {
 	let sys = System::new();
 	loop {
 		if let Ok(cpu_load) = sys.cpu_load_aggregate() {
 			tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 			if let Ok(cpu_load) = cpu_load.done() {
-				shared_data.write().unwrap().cpu_usage_avg = 1.0 - cpu_load.idle;
+				*cpu_usage_avg.write().unwrap() = 1.0 - cpu_load.idle;
 			}
 		}
 	}

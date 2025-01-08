@@ -6,7 +6,9 @@ use project_tracker::{
 	},
 	Database, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, TaskId,
 };
-use project_tracker_server::{EncryptedResponse, ModifiedEvent, Request, SharedServerData};
+use project_tracker_server::{
+	messure_cpu_usage_avg_thread, ConnectedClient, EncryptedResponse, ModifiedEvent, Request,
+};
 use std::{
 	collections::HashSet,
 	path::PathBuf,
@@ -33,13 +35,20 @@ async fn localhost_client_and_server() {
 	let server_test_db_filepath: PathBuf =
 		PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("tmp_test_server_database.project_tracker");
 
-	let shared_data = SharedServerData::from_memory(Database::default());
+	let shared_database = Arc::new(RwLock::new(Database::default()));
+	let connected_clients = Arc::new(RwLock::new(HashSet::new()));
 	let (modified_sender, _modified_receiver) = tokio::sync::broadcast::channel(10);
+
+	let cpu_usage_avg = Arc::new(RwLock::new(0.0));
+	let cpu_usage_avg_clone = cpu_usage_avg.clone();
+	tokio::spawn(messure_cpu_usage_avg_thread(cpu_usage_avg_clone));
 
 	spawn_server_thread(
 		server_test_db_filepath,
 		server_log_filepath,
-		shared_data.clone(),
+		shared_database.clone(),
+		connected_clients.clone(),
+		cpu_usage_avg.clone(),
 		modified_sender,
 	);
 
@@ -61,7 +70,9 @@ async fn localhost_client_and_server() {
 fn spawn_server_thread(
 	database_filepath: PathBuf,
 	server_log_filepath: PathBuf,
-	shared_data: Arc<RwLock<SharedServerData>>,
+	shared_database: Arc<RwLock<Database>>,
+	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
+	cpu_usage_avg: Arc<RwLock<f32>>,
 	modified_sender: Sender<ModifiedEvent>,
 ) {
 	tokio::spawn(async move {
@@ -82,7 +93,9 @@ fn spawn_server_thread(
 			TEST_PASSWORD.to_string(),
 			modified_sender,
 			modified_receiver,
-			shared_data,
+			shared_database,
+			connected_clients,
+			cpu_usage_avg,
 		)
 		.await;
 	});

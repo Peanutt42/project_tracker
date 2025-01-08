@@ -1,6 +1,5 @@
 use crate::{
 	AdminInfos, ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ServerError,
-	SharedServerData,
 };
 use async_tungstenite::{
 	tokio::accept_async,
@@ -8,21 +7,23 @@ use async_tungstenite::{
 };
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
-use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+use std::{collections::HashSet, net::SocketAddr};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast::{Receiver, Sender};
-use tokio::sync::mpsc;
 use tracing::{error, info};
 
+#[allow(clippy::too_many_arguments)]
 pub async fn run_server(
 	port: usize,
 	database_filepath: PathBuf,
 	log_filepath: PathBuf,
 	password: String,
 	modified_sender: Sender<ModifiedEvent>,
-	shared_data: Arc<RwLock<SharedServerData>>,
+	shared_database: Arc<RwLock<Database>>,
+	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
+	cpu_usage_avg: Arc<RwLock<f32>>,
 ) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port))
 		.await
@@ -38,7 +39,9 @@ pub async fn run_server(
 				let password_clone = password.clone();
 				let modified_sender_clone = modified_sender.clone();
 				let modified_receiver = modified_sender.subscribe();
-				let shared_data_clone = shared_data.clone();
+				let shared_database_clone = shared_database.clone();
+				let connected_clients_clone = connected_clients.clone();
+				let cpu_usage_avg_clone = cpu_usage_avg.clone();
 				tokio::spawn(async move {
 					handle_client(
 						stream,
@@ -47,7 +50,9 @@ pub async fn run_server(
 						password_clone,
 						modified_sender_clone,
 						modified_receiver,
-						shared_data_clone,
+						shared_database_clone,
+						connected_clients_clone,
+						cpu_usage_avg_clone,
 					)
 					.await
 				});
@@ -59,6 +64,7 @@ pub async fn run_server(
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn handle_client(
 	stream: TcpStream,
 	database_filepath: PathBuf,
@@ -66,7 +72,9 @@ pub async fn handle_client(
 	password: String,
 	modified_sender: Sender<ModifiedEvent>,
 	modified_receiver: Receiver<ModifiedEvent>,
-	shared_data: Arc<RwLock<SharedServerData>>,
+	shared_database: Arc<RwLock<Database>>,
+	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
+	cpu_usage_avg: Arc<RwLock<f32>>,
 ) {
 	let client_addr = match stream.peer_addr() {
 		Ok(client_addr) => client_addr,
@@ -78,11 +86,7 @@ pub async fn handle_client(
 
 	let connected_client = ConnectedClient::NativeGUI(client_addr);
 
-	shared_data
-		.write()
-		.unwrap()
-		.connected_clients
-		.insert(connected_client);
+	connected_clients.write().unwrap().insert(connected_client);
 
 	listen_client_thread(
 		stream,
@@ -92,15 +96,13 @@ pub async fn handle_client(
 		password,
 		modified_sender,
 		modified_receiver,
-		shared_data.clone(),
+		shared_database.clone(),
+		connected_clients.clone(),
+		cpu_usage_avg.clone(),
 	)
 	.await;
 
-	shared_data
-		.write()
-		.unwrap()
-		.connected_clients
-		.remove(&connected_client);
+	connected_clients.write().unwrap().remove(&connected_client);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -111,8 +113,10 @@ async fn listen_client_thread(
 	log_filepath: PathBuf,
 	password: String,
 	modified_sender: Sender<ModifiedEvent>,
-	modified_receiver: Receiver<ModifiedEvent>,
-	shared_data: Arc<RwLock<SharedServerData>>,
+	mut modified_receiver: Receiver<ModifiedEvent>,
+	shared_database: Arc<RwLock<Database>>,
+	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
+	cpu_usage_avg: Arc<RwLock<f32>>,
 ) {
 	let ws_stream = match accept_async(stream).await {
 		Ok(ws) => {
@@ -125,68 +129,86 @@ async fn listen_client_thread(
 		}
 	};
 
-	let (write, mut read) = ws_stream.split();
-
-	let (write_ws_sender, write_ws_receiver) = mpsc::channel(10);
-
-	ws_write_thread(write, write_ws_receiver);
-
-	modified_event_ws_sender_thread(
-		client_addr,
-		password.clone(),
-		modified_receiver,
-		write_ws_sender.clone(),
-	);
+	let (mut write, mut read) = ws_stream.split();
 
 	loop {
-		match read.next().await {
-			Some(Ok(tungstenite::Message::Binary(request_binary))) => {
-				match Request::decrypt(request_binary, &password) {
-					Ok(request) => {
-						respond_to_client_request(
-							request,
-							client_addr,
-							&shared_data,
-							&modified_sender,
-							&write_ws_sender,
-							&database_filepath,
-							&log_filepath,
-							&password,
-						)
-						.await
-					}
-					Err(e) => match e {
-						ServerError::ResponseError(e) => {
-							error!("{e}");
-							let _ = write_ws_sender
-								.send(Message::binary(Response(Err(e)).serialize().unwrap()))
-								.await;
+		tokio::select! {
+			ws_message = read.next() => match ws_message {
+				Some(Ok(tungstenite::Message::Binary(request_binary))) => {
+					match Request::decrypt(request_binary, &password) {
+						Ok(request) => {
+							respond_to_client_request(
+								request,
+								client_addr,
+								&shared_database,
+								&connected_clients,
+								&cpu_usage_avg,
+								&modified_sender,
+								&mut write,
+								&database_filepath,
+								&log_filepath,
+								&password,
+							)
+							.await
 						}
-						_ => error!("failed to parse ws request: {e}"),
-					},
+						Err(e) => match e {
+							ServerError::ResponseError(e) => {
+								error!("{e}");
+								let _ = write
+									.send(Message::binary(Response(Err(e)).serialize().unwrap()))
+									.await;
+							}
+							_ => error!("failed to parse ws request: {e}"),
+						},
+					}
+				}
+				Some(Err(ref e))
+					if matches!(
+						e,
+						tungstenite::Error::ConnectionClosed
+							| tungstenite::Error::AlreadyClosed
+							| tungstenite::Error::Protocol(
+								tungstenite::error::ProtocolError::ResetWithoutClosingHandshake
+							)
+					) =>
+				{
+					info!("client disconnected");
+					return;
+				}
+				None => {
+					info!("client disconnected");
+					return;
+				}
+				Some(Err(e)) => {
+					error!("failed to read ws message: {e}")
+				}
+				Some(Ok(_)) => { info!("ignoring ws msg that isnt binary"); }
+			},
+			modified_event = modified_receiver.recv() => if let Ok(modified_event) = modified_event {
+				// do not resend database updated msg to the sender that made that update
+				if modified_event.modified_sender_address != client_addr {
+					info!("sending database modified event in ws");
+					let last_modified_time = *modified_event.modified_database.last_changed_time();
+					let failed_to_send_msg = write
+						.send(Message::binary(
+							Response(Ok(EncryptedResponse::Database {
+								database: modified_event.modified_database.to_serialized(),
+								last_modified_time,
+							}
+							.encrypt(&password)
+							.unwrap()))
+							.serialize()
+							.unwrap(),
+						))
+						.await
+						.is_err();
+
+					if failed_to_send_msg {
+						error!("failed to send modified event in ws, closing connection");
+						break;
+					}
 				}
 			}
-			Some(Err(ref e))
-				if matches!(
-					e,
-					tungstenite::Error::ConnectionClosed
-						| tungstenite::Error::AlreadyClosed
-						| tungstenite::Error::Protocol(
-							tungstenite::error::ProtocolError::ResetWithoutClosingHandshake
-						)
-				) =>
-			{
-				info!("client disconnected");
-				return;
-			}
-			None => {
-				info!("client disconnected");
-				return;
-			}
-			Some(Err(e)) => {
-				error!("failed to read ws message: {e}")
-			}
-			Some(Ok(_)) => {} // ignore
 		}
 	}
 }
@@ -195,9 +217,11 @@ async fn listen_client_thread(
 async fn respond_to_client_request(
 	request: Request,
 	client_addr: SocketAddr,
-	shared_data: &Arc<RwLock<SharedServerData>>,
+	shared_database: &Arc<RwLock<Database>>,
+	connected_clients: &Arc<RwLock<HashSet<ConnectedClient>>>,
+	cpu_usage_avg: &Arc<RwLock<f32>>,
 	modified_sender: &Sender<ModifiedEvent>,
-	write_ws_sender: &tokio::sync::mpsc::Sender<Message>,
+	ws_write: &mut WsWriteSink,
 	database_filepath: &PathBuf,
 	log_filepath: &PathBuf,
 	password: &str,
@@ -206,14 +230,14 @@ async fn respond_to_client_request(
 		Request::GetModifiedDate => {
 			info!("sending last modified date");
 			let response = Response(Ok(EncryptedResponse::ModifiedDate(
-				*shared_data.read().unwrap().database.last_changed_time(),
+				*shared_database.read().unwrap().last_changed_time(),
 			)
 			.encrypt(password)
 			.unwrap()))
 			.serialize()
 			.unwrap();
 
-			if let Err(e) = write_ws_sender.send(Message::binary(response)).await {
+			if let Err(e) = ws_write.send(Message::binary(response)).await {
 				error!("failed to respond to 'GetModifiedDate' request: {e}");
 			}
 		}
@@ -224,9 +248,9 @@ async fn respond_to_client_request(
 			let database = Database::from_serialized(database, last_modified_time);
 			let database_binary = database.clone().to_binary().unwrap();
 			let database_clone = {
-				let mut shared_data = shared_data.write().unwrap();
-				shared_data.database = database;
-				shared_data.database.clone()
+				let mut shared_data = shared_database.write().unwrap();
+				*shared_data = database;
+				shared_data.clone()
 			};
 
 			if let Err(e) = std::fs::write(database_filepath, database_binary) {
@@ -236,7 +260,7 @@ async fn respond_to_client_request(
 				);
 			}
 
-			let _ = write_ws_sender
+			let _ = ws_write
 				.send(Message::binary(
 					Response(Ok(EncryptedResponse::DatabaseUpdated
 						.encrypt(password)
@@ -251,15 +275,15 @@ async fn respond_to_client_request(
 			info!("updated database");
 		}
 		Request::DownloadDatabase => {
-			let shared_data_clone = shared_data.read().unwrap().clone();
-			let last_modified_time = *shared_data_clone.database.last_changed_time();
+			let shared_data_clone = shared_database.read().unwrap().clone();
+			let last_modified_time = *shared_data_clone.last_changed_time();
 			let response = Response(Ok(EncryptedResponse::Database {
-				database: shared_data_clone.database.to_serialized(),
+				database: shared_data_clone.to_serialized(),
 				last_modified_time,
 			}
 			.encrypt(password)
 			.unwrap()));
-			match write_ws_sender
+			match ws_write
 				.send(Message::binary(response.serialize().unwrap()))
 				.await
 			{
@@ -269,12 +293,13 @@ async fn respond_to_client_request(
 		}
 		Request::AdminInfos => {
 			let response = Response(Ok(EncryptedResponse::AdminInfos(AdminInfos::generate(
-				shared_data.clone(),
+				connected_clients.clone(),
+				cpu_usage_avg.clone(),
 				log_filepath,
 			))
 			.encrypt(password)
 			.unwrap()));
-			match write_ws_sender
+			match ws_write
 				.send(Message::binary(response.serialize().unwrap()))
 				.await
 			{
@@ -285,63 +310,7 @@ async fn respond_to_client_request(
 	}
 }
 
-fn modified_event_ws_sender_thread(
-	client_addr: SocketAddr,
-	password: String,
-	mut modified_receiver: Receiver<ModifiedEvent>,
-	write_ws_sender: tokio::sync::mpsc::Sender<Message>,
-) {
-	tokio::spawn(async move {
-		while let Ok(modified_event) = modified_receiver.recv().await {
-			// do not resend database updated msg to the sender that made that update
-			if modified_event.modified_sender_address != client_addr {
-				info!("sending database modified event in ws");
-				let last_modified_time = *modified_event.modified_database.last_changed_time();
-				let failed_to_send_msg = write_ws_sender
-					.send(Message::binary(
-						Response(Ok(EncryptedResponse::Database {
-							database: modified_event.modified_database.to_serialized(),
-							last_modified_time,
-						}
-						.encrypt(&password)
-						.unwrap()))
-						.serialize()
-						.unwrap(),
-					))
-					.await
-					.is_err();
-
-				if failed_to_send_msg {
-					error!("failed to send modified event in ws, closing connection");
-					break;
-				}
-			}
-		}
-	});
-}
-
 type WsWriteSink = futures_util::stream::SplitSink<
 	async_tungstenite::WebSocketStream<async_tungstenite::tokio::TokioAdapter<TcpStream>>,
 	Message,
 >;
-fn ws_write_thread(
-	mut write: WsWriteSink,
-	mut write_ws_receiver: tokio::sync::mpsc::Receiver<Message>,
-) {
-	tokio::spawn(async move {
-		while let Some(message) = write_ws_receiver.recv().await {
-			if let Err(e) = write.send(message).await {
-				match e {
-					tungstenite::Error::AlreadyClosed
-					| tungstenite::Error::ConnectionClosed
-					| tungstenite::Error::Protocol(
-						tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
-					) => {
-						return;
-					}
-					_ => error!("failed to send ws message: {e}"),
-				}
-			}
-		}
-	});
-}

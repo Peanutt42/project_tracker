@@ -1,6 +1,10 @@
 use project_tracker::Database;
-use project_tracker_server::{SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT};
-use std::fs::OpenOptions;
+use project_tracker_server::{messure_cpu_usage_avg_thread, DEFAULT_PASSWORD, DEFAULT_PORT};
+use std::{
+	collections::HashSet,
+	fs::OpenOptions,
+	sync::{Arc, RwLock},
+};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, Layer};
 
@@ -36,15 +40,22 @@ async fn main() {
 	)
 	.unwrap();
 
-	let shared_data = SharedServerData::from_memory(Database::default());
+	let shared_database = Arc::new(RwLock::new(Database::default()));
+	let connected_clients = Arc::new(RwLock::new(HashSet::new()));
 	let (modified_sender, _modified_receiver) = tokio::sync::broadcast::channel(10);
+	let cpu_usage_avg = Arc::new(RwLock::new(0.0));
+	let cpu_usage_avg_clone = cpu_usage_avg.clone();
+	tokio::spawn(messure_cpu_usage_avg_thread(cpu_usage_avg_clone));
+
 	project_tracker_server::run_server(
 		DEFAULT_PORT,
 		server_database_filepath,
 		server_log_filepath,
 		DEFAULT_PASSWORD.to_string(),
 		modified_sender,
-		shared_data,
+		shared_database,
+		connected_clients,
+		cpu_usage_avg,
 	)
 	.await;
 }

@@ -1,10 +1,13 @@
 use project_tracker_core::Database;
 use project_tracker_server::{
-	messure_cpu_usage_avg_thread, SharedServerData, DEFAULT_PASSWORD, DEFAULT_PORT,
+	load_database_from_file, messure_cpu_usage_avg_thread, ConnectedClient, DEFAULT_PASSWORD,
+	DEFAULT_PORT,
 };
+use std::collections::HashSet;
 use std::fs::{read_to_string, OpenOptions};
 use std::path::PathBuf;
 use std::process::exit;
+use std::sync::{Arc, RwLock};
 use tracing::level_filters::LevelFilter;
 use tracing::warn;
 use tracing_subscriber::layer::SubscriberExt;
@@ -45,12 +48,13 @@ async fn main() {
 		DEFAULT_PASSWORD.to_string()
 	};
 
-	let shared_data = if database_filepath.exists() {
-		SharedServerData::new(database_filepath.clone())
+	let database = if database_filepath.exists() {
+		load_database_from_file(database_filepath.clone())
 	} else {
 		eprintln!("no previous database found -> creating a empty database!");
-		SharedServerData::from_memory(Database::default())
+		Database::default()
 	};
+	let shared_database = Arc::new(RwLock::new(database));
 
 	let stdout_layer = tracing_subscriber::fmt::layer()
 		.with_writer(std::io::stdout)
@@ -72,7 +76,11 @@ async fn main() {
 	)
 	.unwrap();
 
-	tokio::spawn(messure_cpu_usage_avg_thread(shared_data.clone()));
+	let cpu_usage_avg = Arc::new(RwLock::new(0.0));
+
+	tokio::spawn(messure_cpu_usage_avg_thread(cpu_usage_avg.clone()));
+
+	let connected_clients = Arc::new(RwLock::new(HashSet::<ConnectedClient>::new()));
 
 	#[allow(unused)]
 	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
@@ -81,7 +89,9 @@ async fn main() {
 	{
 		let password_clone = password.clone();
 		let log_filepath_clone = log_filepath.clone();
-		let shared_data_clone = shared_data.clone();
+		let shared_database_clone = shared_database.clone();
+		let connected_clients_clone = connected_clients.clone();
+		let cpu_usage_avg_clone = cpu_usage_avg.clone();
 		let opt_custom_cert_pem_filepath = server_data_directory.join("cert.pem");
 		let opt_custom_key_pem_filepath = server_data_directory.join("key.pem");
 		let custom_cert_pem = tokio::fs::read(opt_custom_cert_pem_filepath).await.ok();
@@ -108,7 +118,9 @@ async fn main() {
 					web_server::run_web_server(
 						password_clone,
 						modified_receiver,
-						shared_data_clone,
+						shared_database_clone,
+						connected_clients_clone,
+						cpu_usage_avg_clone,
 						log_filepath_clone,
 						custom_cert_and_key_pem,
 					)
@@ -124,7 +136,9 @@ async fn main() {
 		log_filepath,
 		password,
 		modified_sender,
-		shared_data,
+		shared_database,
+		connected_clients,
+		cpu_usage_avg,
 	)
 	.await;
 }

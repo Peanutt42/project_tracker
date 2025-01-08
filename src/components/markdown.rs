@@ -169,11 +169,7 @@ pub fn markdown_with_jetbrainsmono_font<'a>(
 	items: impl IntoIterator<Item = &'a Item>,
 	settings: markdown::Settings,
 	style: markdown::Style,
-) -> Element<'a, markdown::Url>
-/*where
-	Theme: markdown::Catalog + 'a,
-	Renderer: iced::advanced::text::Renderer<Font = Font> + 'a,*/
-{
+) -> Element<'a, markdown::Url> {
 	let markdown::Settings {
 		text_size,
 		h1_size,
@@ -270,49 +266,6 @@ pub fn markdown_with_jetbrainsmono_font<'a>(
 // copied from iced_widget-0.13.4/src/markdown.rs:190..491
 // TODO: add gfm support with blocknotes --> see 'pulldown_cmark::Options::ENABLE_GFM'
 /// Parse the given Markdown content.
-///
-/// # Example
-/// ```no_run
-/// # mod iced { pub mod widget { pub use iced_widget::*; } pub use iced_widget::Renderer; pub use iced_widget::core::*; }
-/// # pub type Element<'a, Message> = iced_widget::core::Element<'a, Message, iced_widget::Theme, iced_widget::Renderer>;
-/// #
-/// use iced::widget::markdown;
-/// use iced::Theme;
-///
-/// struct State {
-///    markdown: Vec<markdown::Item>,
-/// }
-///
-/// enum Message {
-///     LinkClicked(markdown::Url),
-/// }
-///
-/// impl State {
-///     pub fn new() -> Self {
-///         Self {
-///             markdown: markdown::parse("This is some **Markdown**!").collect(),
-///         }
-///     }
-///
-///     fn view(&self) -> Element<'_, Message> {
-///         markdown::view(
-///             &self.markdown,
-///             markdown::Settings::default(),
-///             markdown::Style::from_palette(Theme::TokyoNightStorm.palette()),
-///         )
-///         .map(Message::LinkClicked)
-///         .into()
-///     }
-///
-///     fn update(state: &mut State, message: Message) {
-///         match message {
-///             Message::LinkClicked(url) => {
-///                 println!("The following url was clicked: {url}");
-///             }
-///         }
-///     }
-/// }
-/// ```
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 	struct List {

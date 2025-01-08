@@ -1,6 +1,8 @@
 use futures_util::{SinkExt, StreamExt};
-use project_tracker_server::{AdminInfos, ConnectedClient, ModifiedEvent, SharedServerData};
+use project_tracker_core::Database;
+use project_tracker_server::{AdminInfos, ConnectedClient, ModifiedEvent};
 use std::{
+	collections::HashSet,
 	convert::Infallible,
 	net::SocketAddr,
 	path::PathBuf,
@@ -66,37 +68,50 @@ impl warp::reject::Reject for InvalidPassword {}
 pub async fn run_web_server(
 	password: String,
 	modified_receiver: Receiver<ModifiedEvent>,
-	shared_data: Arc<RwLock<SharedServerData>>,
+	shared_database: Arc<RwLock<Database>>,
+	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
+	cpu_usage_avg: Arc<RwLock<f32>>,
 	log_filepath: PathBuf,
 	custom_cert_and_key_pem: Option<(Vec<u8>, Vec<u8>)>,
 ) {
 	let password_clone = password.clone();
 
-	let shared_data_clone = shared_data.clone();
+	let shared_database_clone = shared_database.clone();
 
 	let get_database_route =
 		path("load_database")
 			.and(post())
 			.and(body::json())
 			.map(move |body: serde_json::Value| {
-				load_database(body, password_clone.clone(), shared_data_clone.clone())
+				load_database(body, password_clone.clone(), shared_database_clone.clone())
 			});
 
 	let password_clone = password.clone();
 
-	let shared_data_clone = shared_data.clone();
-	let shared_data_clone = warp::any().map(move || shared_data_clone.clone());
+	let connected_clients_clone = connected_clients.clone();
+	let connected_clients_clone = warp::any().map(move || connected_clients_clone.clone());
+
+	let cpu_usage_avg_clone = cpu_usage_avg.clone();
+	let cpu_usage_avg_clone = warp::any().map(move || cpu_usage_avg_clone.clone());
 
 	let admin_infos_route = path("admin_infos")
 		.and(post())
 		.and(body::json())
-		.and(shared_data_clone)
+		.and(connected_clients_clone)
+		.and(cpu_usage_avg_clone)
 		.and(warp::any().map(move || log_filepath.clone()))
 		.map(
 			move |body: serde_json::Value,
-			      shared_data: Arc<RwLock<SharedServerData>>,
+			      connected_clients_clone: Arc<RwLock<HashSet<ConnectedClient>>>,
+			      cpu_usage_avg: Arc<RwLock<f32>>,
 			      log_filepath: PathBuf| {
-				get_admin_infos(body, password_clone.clone(), shared_data, &log_filepath)
+				get_admin_infos(
+					body,
+					password_clone.clone(),
+					connected_clients_clone,
+					cpu_usage_avg,
+					&log_filepath,
+				)
 			},
 		);
 
@@ -106,22 +121,22 @@ pub async fn run_web_server(
 	let password_clone = password.clone();
 	let password_clone = warp::any().map(move || password_clone.clone());
 
-	let shared_data_clone = shared_data.clone();
-	let shared_data_clone = warp::any().map(move || shared_data_clone.clone());
+	let connected_clients_clone = connected_clients.clone();
+	let connected_clients_clone = warp::any().map(move || connected_clients_clone.clone());
 
 	let modified_ws_route = path("modified")
 		.and(ws())
 		.and(path::param())
 		.and(warp::addr::remote())
 		.and(modified_receiver)
-		.and(shared_data_clone)
+		.and(connected_clients_clone)
 		.and(password_clone)
 		.and_then(
 			move |ws: Ws,
 			      client_password: String,
 			      client_addr: Option<SocketAddr>,
 			      modified_receiver: Arc<RwLock<Receiver<ModifiedEvent>>>,
-			      shared_data: Arc<RwLock<SharedServerData>>,
+			      connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
 			      password: String| {
 				async move {
 					if client_password == password {
@@ -130,7 +145,7 @@ pub async fn run_web_server(
 								socket,
 								client_addr,
 								modified_receiver.read().unwrap().resubscribe(),
-								shared_data,
+								connected_clients,
 							)
 						}))
 					} else {
@@ -290,11 +305,11 @@ pub async fn run_web_server(
 fn load_database(
 	body: serde_json::Value,
 	password: String,
-	shared_data: Arc<RwLock<SharedServerData>>,
+	shared_database: Arc<RwLock<Database>>,
 ) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
 		info!("sending database as json");
-		reply::json(&shared_data.read().unwrap().database.clone().to_serialized()).into_response()
+		reply::json(&shared_database.read().unwrap().clone().to_serialized()).into_response()
 	} else {
 		info!("invalid password providied, refusing access!");
 		with_status(html("Unauthorized".to_string()), StatusCode::UNAUTHORIZED).into_response()
@@ -304,12 +319,18 @@ fn load_database(
 fn get_admin_infos(
 	body: serde_json::Value,
 	password: String,
-	shared_data: Arc<RwLock<SharedServerData>>,
+	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
+	cpu_usage_avg: Arc<RwLock<f32>>,
 	log_filepath: &PathBuf,
 ) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
 		info!("sending admin infos");
-		reply::json(&AdminInfos::generate(shared_data, log_filepath)).into_response()
+		reply::json(&AdminInfos::generate(
+			connected_clients,
+			cpu_usage_avg,
+			log_filepath,
+		))
+		.into_response()
 	} else {
 		info!("invalid password, refusing admin infos!");
 		with_status(html("Unauthorized".to_string()), StatusCode::UNAUTHORIZED).into_response()
@@ -320,26 +341,18 @@ async fn on_upgrade_modified_ws(
 	ws: WebSocket,
 	client_addr: Option<SocketAddr>,
 	modified_receiver: Receiver<ModifiedEvent>,
-	shared_data: Arc<RwLock<SharedServerData>>,
+	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
 ) {
 	let connected_client = client_addr.map(ConnectedClient::Web);
 
 	if let Some(connected_client) = connected_client {
-		shared_data
-			.write()
-			.unwrap()
-			.connected_clients
-			.insert(connected_client);
+		connected_clients.write().unwrap().insert(connected_client);
 	}
 
 	handle_modified_ws(ws, modified_receiver).await;
 
 	if let Some(connected_client) = connected_client {
-		shared_data
-			.write()
-			.unwrap()
-			.connected_clients
-			.remove(&connected_client);
+		connected_clients.write().unwrap().remove(&connected_client);
 	}
 }
 
