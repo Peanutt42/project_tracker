@@ -1,17 +1,17 @@
 use crate::{
 	components::{
 		complete_task_timer_button, days_left_widget, horizontal_scrollable, loading_screen,
-		open_project_button, pause_timer_button, resume_timer_button, stop_timer_button,
-		take_break_button, task_description, track_time_button, StopwatchClock,
-		HORIZONTAL_SCROLLABLE_PADDING, LARGE_LOADING_SPINNER_SIZE,
+		open_project_button, open_task_by_name_link_button, pause_timer_button,
+		resume_timer_button, stop_timer_button, take_break_button, task_description,
+		track_time_button, StopwatchClock, HORIZONTAL_SCROLLABLE_PADDING,
+		LARGE_LOADING_SPINNER_SIZE,
 	},
 	core::IcedColorConversion,
 	pages::{ContentPageAction, ContentPageMessage},
 	project_tracker::Message,
 	styles::{
-		task_tag_container_style, BOLD_FONT, HEADING_TEXT_SIZE, JET_BRAINS_MONO_FONT,
-		LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, PADDING_AMOUNT, SMALL_PADDING_AMOUNT,
-		SPACING_AMOUNT,
+		task_tag_container_style, JET_BRAINS_MONO_FONT, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT,
+		PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT,
 	},
 	DatabaseState, OptionalPreference, Preferences, ProjectTrackerApp, StopwatchProgress,
 };
@@ -862,7 +862,9 @@ fn task_info<'a>(
 ) -> Option<Element<'a, Message>> {
 	task.map(|task| {
 		Column::new()
-			.push(text(&task.name).size(HEADING_TEXT_SIZE).font(BOLD_FONT))
+			.push_maybe(project.as_ref().map(|(project_id, _project)| {
+				open_task_by_name_link_button(*project_id, task_id, &task.name)
+			}))
 			.push_maybe(task.due_date.map(|date| days_left_widget(date, false)))
 			.push(task_description(
 				app.task_description_markdown_items.get(&task_id),

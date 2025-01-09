@@ -21,9 +21,10 @@ use crate::{
 		secondary_button_style_no_rounding, secondary_button_style_only_round_left,
 		secondary_button_style_only_round_right, secondary_button_style_only_round_top,
 		selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style,
-		task_tag_button_style, text_input_style, timer_button_style, tooltip_container_style, GAP,
-		HEADING_TEXT_SIZE, JET_BRAINS_MONO_FONT, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING,
-		SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT,
+		task_tag_button_style, text_input_style, timer_button_style, tooltip_container_style,
+		BOLD_FONT, GAP, HEADING_TEXT_SIZE, JET_BRAINS_MONO_FONT, LARGE_TEXT_SIZE,
+		SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE,
+		SPACING_AMOUNT,
 	},
 	theme_mode::ThemeMode,
 	DateFormatting, PreferenceMessage, SynchronizationSetting,
@@ -978,14 +979,38 @@ pub fn open_project_button(
 	project_name: &str,
 	project_color: Color,
 ) -> Button<Message> {
-	button(rich_text![Span::new(format!("{project_name}:"))
+	let project_link_text = Span::new(format!("{project_name}:"))
 		.link(Message::ContentPageMessage(
-			ContentPageMessage::OpenProjectPage(project_id)
+			ContentPageMessage::OpenProjectPage(project_id),
 		))
 		.underline(true)
-		.color(project_color)])
-	.style(hidden_secondary_button_style)
-	.on_press(ContentPageMessage::OpenProjectPage(project_id).into())
+		.color(project_color);
+
+	button(rich_text![project_link_text])
+		.style(hidden_secondary_button_style)
+		.on_press(ContentPageMessage::OpenProjectPage(project_id).into())
+}
+
+pub fn open_task_by_name_link_button(
+	project_id: ProjectId,
+	task_id: TaskId,
+	task_name: &str,
+) -> Button<Message> {
+	let task_link_text = Span::new(task_name)
+		.link(Message::OpenTaskModal {
+			project_id,
+			task_id,
+		})
+		.underline(true)
+		.size(HEADING_TEXT_SIZE)
+		.font(BOLD_FONT);
+
+	button(rich_text![task_link_text])
+		.style(hidden_secondary_button_style)
+		.on_press(Message::OpenTaskModal {
+			project_id,
+			task_id,
+		})
 }
 
 pub fn overview_time_section_button(
