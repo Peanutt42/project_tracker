@@ -43,7 +43,7 @@ pub fn connect_ws() -> impl Stream<Item = Result<ServerWsEvent, ServerWsError>> 
 }
 
 pub struct WsServerConnectionState {
-	message_receiver: Option<mpsc::Receiver<ServerWsMessage>>,
+	message_receiver: Option<mpsc::UnboundedReceiver<ServerWsMessage>>,
 	message_sender_sent: bool,
 }
 
@@ -64,7 +64,7 @@ impl WsServerConnectionState {
 		match connection {
 			WsServerConnection::Disconnected => {
 				if !self.message_sender_sent {
-					let (sender, receiver) = mpsc::channel(100);
+					let (sender, receiver) = mpsc::unbounded();
 
 					self.message_receiver = Some(receiver);
 
@@ -304,14 +304,14 @@ pub enum ServerWsError {
 }
 
 #[derive(Debug, Clone)]
-pub struct ServerWsMessageSender(mpsc::Sender<ServerWsMessage>);
+pub struct ServerWsMessageSender(mpsc::UnboundedSender<ServerWsMessage>);
 
 impl ServerWsMessageSender {
 	pub fn send(
 		&mut self,
 		message: ServerWsMessage,
 	) -> Result<(), mpsc::TrySendError<ServerWsMessage>> {
-		self.0.try_send(message)
+		self.0.unbounded_send(message)
 	}
 }
 
