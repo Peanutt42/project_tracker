@@ -1039,7 +1039,7 @@ impl ProjectTrackerApp {
 						} => {
 							for (task_id, task) in source_code_todo_tasks.iter() {
 								self.task_description_markdown_items.insert(
-									*task_id,
+									task_id,
 									generate_task_description_markdown(&task.description),
 								);
 							}
@@ -1613,7 +1613,7 @@ impl ProjectTrackerApp {
 					} else if let DatabaseState::Loaded(database) = &self.database {
 						let _ = server_ws_message_sender.send(ServerWsMessage::Request(
 							Request::UpdateDatabase {
-								database: database.clone().to_serialized(),
+								database: database.serialized().clone(),
 								last_modified_time: *database.last_changed_time(),
 							},
 						));

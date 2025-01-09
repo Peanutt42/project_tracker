@@ -1,15 +1,12 @@
-use std::{collections::HashSet, path::PathBuf};
-
+use crate::core::IcedColorConversion;
 use chrono::{DateTime, Datelike, Local, TimeZone};
 use iced::Color;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
-
 use project_tracker_core::{
 	OrderedHashMap, Project, SerializableColor, SerializableDate, SortMode, Task, TaskId,
 };
-
-use crate::core::IcedColorConversion;
+use serde::{Deserialize, Serialize};
+use std::{collections::BTreeSet, path::PathBuf};
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ImportGoogleTasksError {
@@ -110,7 +107,7 @@ pub fn import_google_tasks_json(json: &str) -> Result<Vec<Project>, serde_json::
 					None,
 					None,
 					task_due_date,
-					HashSet::new(),
+					BTreeSet::new(),
 				);
 
 				let task_id = TaskId::generate();

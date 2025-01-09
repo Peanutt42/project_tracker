@@ -9,7 +9,6 @@ repository = "https://github.com/Peanutt42/project_tracker"
 serde = { workspace = true }
 serde_json = { workspace = true }
 bincode = { workspace = true }
-indexmap = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
 directories = { workspace = true }

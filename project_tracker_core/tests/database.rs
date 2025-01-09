@@ -2,7 +2,7 @@ use project_tracker_core::{
 	Database, LoadDatabaseError, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode,
 	TaskId,
 };
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::BTreeSet, path::PathBuf};
 
 #[tokio::test]
 async fn test_database_serialization() {
@@ -23,7 +23,7 @@ async fn test_database_serialization() {
 				TaskId::generate(),
 				format!("Task Nr. {j}"),
 				"A detailed description of the task".to_string(),
-				HashSet::new(),
+				BTreeSet::new(),
 				None,
 				None,
 				None,

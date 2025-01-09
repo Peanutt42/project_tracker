@@ -10,7 +10,7 @@ use project_tracker_server::{
 	messure_cpu_usage_avg_thread, ConnectedClient, EncryptedResponse, ModifiedEvent, Request,
 };
 use std::{
-	collections::HashSet,
+	collections::{BTreeSet, HashSet},
 	path::PathBuf,
 	sync::{Arc, RwLock},
 };
@@ -145,14 +145,14 @@ fn spawn_client_listen_events_thread(mut receiver: Receiver<Result<ServerWsEvent
 								last_modified_time,
 							} => {
 								if !downloaded_first_empty_server_database {
-									assert_eq!(database, Database::default().to_serialized());
+									assert_eq!(database, Database::default().into_serialized());
 									downloaded_first_empty_server_database = true;
 
 									message_sender
 										.as_mut()
 										.unwrap()
 										.send(ServerWsMessage::Request(Request::UpdateDatabase {
-											database: actual_testing_db.clone().to_serialized(),
+											database: actual_testing_db.serialized().clone(),
 											last_modified_time: *actual_testing_db
 												.last_changed_time(),
 										}))
@@ -162,7 +162,7 @@ fn spawn_client_listen_events_thread(mut receiver: Receiver<Result<ServerWsEvent
 										last_modified_time,
 										*actual_testing_db.last_changed_time()
 									);
-									assert_eq!(database, actual_testing_db.to_serialized());
+									assert_eq!(&database, actual_testing_db.serialized());
 									// closes client listen thread
 									message_sender.as_mut().unwrap().send(ServerWsMessage::CloseSubscription).unwrap();
 									return;
@@ -215,7 +215,7 @@ fn generate_testing_db() -> Database {
 				TaskId::generate(),
 				format!("Task Nr. {j}"),
 				"A detailed description of the task".to_string(),
-				HashSet::new(),
+				BTreeSet::new(),
 				None,
 				None,
 				None,

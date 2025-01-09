@@ -3,7 +3,7 @@ use project_tracker::{run_project_tracker_app, AppFlags, Preferences};
 use project_tracker_core::{
 	Database, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode, Task, TaskId,
 };
-use std::{collections::HashSet, time::Duration};
+use std::{collections::BTreeSet, time::Duration};
 use tokio::time::Instant;
 use tracing::info;
 
@@ -50,7 +50,7 @@ async fn main() -> iced::Result {
 				} else {
 					None
 				},
-				HashSet::new(),
+				BTreeSet::new(),
 			);
 			if j % 2 == 0 {
 				project.todo_tasks.insert(task_id, task);

@@ -192,7 +192,7 @@ async fn listen_client_thread(
 					let failed_to_send_msg = write
 						.send(Message::binary(
 							Response(Ok(EncryptedResponse::Database {
-								database: modified_event.modified_database.to_serialized(),
+								database: modified_event.modified_database.into_serialized(),
 								last_modified_time,
 							}
 							.encrypt(&password)
@@ -275,10 +275,10 @@ async fn respond_to_client_request(
 			info!("updated database");
 		}
 		Request::DownloadDatabase => {
-			let shared_data_clone = shared_database.read().unwrap().clone();
-			let last_modified_time = *shared_data_clone.last_changed_time();
+			let shared_database_clone = shared_database.read().unwrap().clone();
+			let last_modified_time = *shared_database_clone.last_changed_time();
 			let response = Response(Ok(EncryptedResponse::Database {
-				database: shared_data_clone.to_serialized(),
+				database: shared_database_clone.into_serialized(),
 				last_modified_time,
 			}
 			.encrypt(password)

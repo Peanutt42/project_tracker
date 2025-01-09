@@ -1,9 +1,8 @@
 use crate::{
 	OrderedHashMap, SerializableDate, Task, TaskId, TaskTag, TaskTagId, TaskType, TimeSpend,
 };
-use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::BTreeSet, path::PathBuf};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Serialize, Deserialize)]
@@ -15,7 +14,7 @@ impl ProjectId {
 	}
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SortMode {
 	#[default]
 	Manual,
@@ -23,17 +22,15 @@ pub enum SortMode {
 	NeededTime,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Project {
 	pub name: String,
 	pub color: SerializableColor,
 	pub sort_mode: SortMode,
 	pub task_tags: OrderedHashMap<TaskTagId, TaskTag>,
 	pub todo_tasks: OrderedHashMap<TaskId, Task>,
-	#[serde(with = "indexmap::map::serde_seq")]
-	pub done_tasks: IndexMap<TaskId, Task>,
-	#[serde(with = "indexmap::map::serde_seq")]
-	pub source_code_todos: IndexMap<TaskId, Task>,
+	pub done_tasks: OrderedHashMap<TaskId, Task>,
+	pub source_code_todos: OrderedHashMap<TaskId, Task>,
 	#[serde(default)]
 	pub source_code_directory: Option<PathBuf>,
 }
@@ -51,8 +48,8 @@ impl Project {
 			task_tags,
 			sort_mode,
 			todo_tasks: OrderedHashMap::new(),
-			done_tasks: IndexMap::new(),
-			source_code_todos: IndexMap::new(),
+			done_tasks: OrderedHashMap::new(),
+			source_code_todos: OrderedHashMap::new(),
 			source_code_directory: None,
 		}
 	}
@@ -90,7 +87,7 @@ impl Project {
 		task_id: TaskId,
 		name: String,
 		description: String,
-		tags: HashSet<TaskTagId>,
+		tags: BTreeSet<TaskTagId>,
 		due_date: Option<SerializableDate>,
 		needed_time_minutes: Option<usize>,
 		time_spend: Option<TimeSpend>,
@@ -119,11 +116,11 @@ impl Project {
 			.map(|task| (TaskType::Todo, task))
 			.or(self
 				.done_tasks
-				.shift_remove(task_id)
+				.remove(task_id)
 				.map(|task| (TaskType::Done, task)))
 			.or(self
 				.source_code_todos
-				.shift_remove(task_id)
+				.remove(task_id)
 				.map(|task| (TaskType::SourceCodeTodo, task)))
 	}
 
@@ -140,7 +137,7 @@ impl Project {
 	}
 
 	pub fn set_task_todo(&mut self, task_id: TaskId) {
-		if let Some(task) = self.done_tasks.shift_remove(&task_id) {
+		if let Some(task) = self.done_tasks.remove(&task_id) {
 			self.todo_tasks.insert(task_id, task);
 		}
 	}
@@ -149,7 +146,7 @@ impl Project {
 		if let Some(task) = self
 			.todo_tasks
 			.remove(&task_id)
-			.or(self.source_code_todos.shift_remove(&task_id))
+			.or(self.source_code_todos.remove(&task_id))
 		{
 			self.done_tasks.insert(task_id, task);
 		}
@@ -228,11 +225,11 @@ impl Project {
 		let source_code_task_iter = self
 			.source_code_todos
 			.iter()
-			.map(|(task_id, task)| (*task_id, task, TaskType::SourceCodeTodo));
+			.map(|(task_id, task)| (task_id, task, TaskType::SourceCodeTodo));
 		let done_task_iter = self
 			.done_tasks
 			.iter()
-			.map(|(task_id, task)| (*task_id, task, TaskType::Done));
+			.map(|(task_id, task)| (task_id, task, TaskType::Done));
 		todo_task_iter
 			.chain(source_code_task_iter)
 			.chain(done_task_iter)

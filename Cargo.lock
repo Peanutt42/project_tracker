@@ -2302,7 +2302,6 @@ checksum = "93ead53efc7ea8ed3cfb0c79fc8023fbb782a5432b52830b6518941cebe6505c"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.5",
- "serde",
 ]
 
 [[package]]
@@ -3678,7 +3677,6 @@ dependencies = [
  "iced_drop",
  "iced_fonts",
  "image",
- "indexmap",
  "notify-rust",
  "open",
  "project_tracker_core",
@@ -3710,7 +3708,6 @@ dependencies = [
  "chrono",
  "directories",
  "filetime",
- "indexmap",
  "serde",
  "serde_json",
  "thiserror",

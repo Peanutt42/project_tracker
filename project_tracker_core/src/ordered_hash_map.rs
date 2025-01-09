@@ -13,7 +13,7 @@ use std::slice::Iter;
 pub struct OrderedHashMap<K, V>
 where
 	K: Copy + Eq + Hash,
-	V: Eq,
+	V: Eq + Clone,
 {
 	hash_map: HashMap<K, V>,
 	order: Vec<K>,
@@ -22,7 +22,7 @@ where
 impl<K, V> OrderedHashMap<K, V>
 where
 	K: Copy + Eq + Hash,
-	V: Eq,
+	V: Eq + Clone,
 {
 	pub fn new() -> Self {
 		Self {
@@ -140,6 +140,12 @@ where
 		self.order.push(key);
 	}
 
+	/// moves all elements of 'other' into 'self', leaving 'other' empty
+	pub fn append(&mut self, other: &mut Self) {
+		self.hash_map.extend(other.hash_map.drain());
+		self.order.append(&mut other.order);
+	}
+
 	pub fn insert_at_top(&mut self, key: K, value: V) {
 		self.hash_map.insert(key, value);
 		self.order.insert(0, key);
@@ -170,6 +176,11 @@ where
 			self.order.remove(old_order);
 			self.order.insert(order, key);
 		}
+	}
+
+	pub fn clear(&mut self) {
+		self.order.clear();
+		self.hash_map.clear();
 	}
 
 	pub fn len(&self) -> usize {
@@ -203,7 +214,7 @@ where
 impl<K, V> Default for OrderedHashMap<K, V>
 where
 	K: Copy + Eq + Hash,
-	V: Eq,
+	V: Eq + Clone,
 {
 	fn default() -> Self {
 		Self::new()
@@ -213,7 +224,7 @@ where
 pub struct OrderedHashMapIter<'a, K, V>
 where
 	K: Eq + Copy + Hash,
-	V: Eq,
+	V: Eq + Clone,
 {
 	order_iter: Iter<'a, K>,
 	hash_map: &'a HashMap<K, V>,
@@ -222,7 +233,7 @@ where
 impl<'a, K, V> Iterator for OrderedHashMapIter<'a, K, V>
 where
 	K: Eq + Copy + Hash,
-	V: Eq,
+	V: Eq + Clone,
 {
 	type Item = (K, &'a V);
 
@@ -233,7 +244,18 @@ where
 	}
 }
 
-impl<K: Copy + Eq + Hash + Serialize, V: Eq + Serialize> Serialize for OrderedHashMap<K, V> {
+impl<K: Copy + Eq + Hash, V: Eq + Clone + Hash> Hash for OrderedHashMap<K, V> {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		for (key, value) in self.iter() {
+			key.hash(state);
+			value.hash(state);
+		}
+	}
+}
+
+impl<K: Copy + Eq + Hash + Serialize, V: Eq + Clone + Serialize> Serialize
+	for OrderedHashMap<K, V>
+{
 	fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
 		let mut map = serializer.serialize_map(Some(self.len()))?;
 		for (key, value) in self.iter() {
@@ -245,7 +267,7 @@ impl<K: Copy + Eq + Hash + Serialize, V: Eq + Serialize> Serialize for OrderedHa
 
 struct OrderedHashMapVisitor<K, V>(PhantomData<(K, V)>);
 
-impl<'de, K: Copy + Eq + Hash + Deserialize<'de>, V: Eq + Deserialize<'de>> Visitor<'de>
+impl<'de, K: Copy + Eq + Hash + Deserialize<'de>, V: Eq + Clone + Deserialize<'de>> Visitor<'de>
 	for OrderedHashMapVisitor<K, V>
 {
 	type Value = OrderedHashMap<K, V>;
@@ -268,7 +290,7 @@ impl<'de, K: Copy + Eq + Hash + Deserialize<'de>, V: Eq + Deserialize<'de>> Visi
 	}
 }
 
-impl<'de, K: Copy + Eq + Hash + Deserialize<'de>, V: Eq + Deserialize<'de>> Deserialize<'de>
+impl<'de, K: Copy + Eq + Hash + Deserialize<'de>, V: Eq + Clone + Deserialize<'de>> Deserialize<'de>
 	for OrderedHashMap<K, V>
 {
 	fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {

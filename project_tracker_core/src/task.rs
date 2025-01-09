@@ -1,7 +1,8 @@
 use crate::{SerializableDate, TaskTagId};
 use serde::{Deserialize, Serialize};
 use std::{
-	collections::HashSet,
+	collections::{BTreeSet, HashSet},
+	hash::Hash,
 	time::{Duration, Instant},
 };
 use uuid::Uuid;
@@ -41,6 +42,11 @@ impl PartialEq for TimeSpend {
 	}
 }
 impl Eq for TimeSpend {}
+impl Hash for TimeSpend {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		self.get_duration().hash(state);
+	}
+}
 
 impl TimeSpend {
 	pub fn new(seconds: f32) -> Self {
@@ -88,7 +94,7 @@ impl TimeSpend {
 	}
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Task {
 	pub name: String,
 	pub description: String,
@@ -98,7 +104,7 @@ pub struct Task {
 	pub time_spend: Option<TimeSpend>,
 	#[serde(default)]
 	pub due_date: Option<SerializableDate>,
-	pub tags: HashSet<TaskTagId>,
+	pub tags: BTreeSet<TaskTagId>,
 }
 
 impl Task {
@@ -108,7 +114,7 @@ impl Task {
 		needed_time_minutes: Option<usize>,
 		time_spend: Option<TimeSpend>,
 		due_date: Option<SerializableDate>,
-		tags: HashSet<TaskTagId>,
+		tags: BTreeSet<TaskTagId>,
 	) -> Self {
 		Self {
 			name,

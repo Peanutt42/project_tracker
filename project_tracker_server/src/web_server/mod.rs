@@ -309,7 +309,7 @@ fn load_database(
 ) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
 		info!("sending database as json");
-		reply::json(&shared_database.read().unwrap().clone().to_serialized()).into_response()
+		reply::json(&shared_database.read().unwrap().serialized().clone()).into_response()
 	} else {
 		info!("invalid password providied, refusing access!");
 		with_status(html("Unauthorized".to_string()), StatusCode::UNAUTHORIZED).into_response()
@@ -366,15 +366,15 @@ async fn handle_modified_ws(ws: WebSocket, mut modified_receiver: Receiver<Modif
 			modified_event_result = modified_receiver.recv() => {
 				match modified_event_result {
 					Ok(modified_event) => {
-						match serde_json::to_string(&modified_event.modified_database.to_serialized()) {
-							Ok(database_json) => {
+						match modified_event.modified_database.to_json() {
+							Some(database_json) => {
 								info!("sending database modified event in ws");
 								if let Err(e) = write_ws.send(Message::text(database_json)).await {
 									error!("failed to send modified event: {e}");
 									return;
 								}
 							},
-							Err(e) => error!("failed to serialize database in order to send to ws clients: {e}"),
+							None => error!("failed to serialize database in order to send to ws clients"),
 						}
 					},
 					Err(e) => {

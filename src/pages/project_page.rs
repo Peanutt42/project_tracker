@@ -27,10 +27,9 @@ use iced::{
 	Padding, Subscription,
 };
 use iced_aw::{drop_down, DropDown};
-use indexmap::IndexMap;
 use project_tracker_core::{
-	Database, DatabaseMessage, Project, ProjectId, SerializableColor, SortMode, Task, TaskId,
-	TaskTagId, TaskType,
+	Database, DatabaseMessage, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode,
+	Task, TaskId, TaskTagId, TaskType,
 };
 use std::{collections::HashSet, path::PathBuf, sync::LazyLock, time::SystemTime};
 use tracing::error;
@@ -57,7 +56,7 @@ pub enum ProjectPageMessage {
 	ImportSourceCodeTodosDialog,
 	ImportSourceCodeTodos {
 		source_code_directory: PathBuf,
-		source_code_todos: IndexMap<TaskId, Task>,
+		source_code_todos: OrderedHashMap<TaskId, Task>,
 	},
 	ReimportSourceCodeTodos,
 	ImportSourceCodeTodosDialogCanceled,
@@ -668,7 +667,8 @@ impl ProjectPage {
 		}
 	}
 
-	async fn pick_todo_source_code_folder_dialog() -> Option<(PathBuf, IndexMap<TaskId, Task>)> {
+	async fn pick_todo_source_code_folder_dialog() -> Option<(PathBuf, OrderedHashMap<TaskId, Task>)>
+	{
 		let file_dialog_result = rfd::AsyncFileDialog::new()
 			.set_title("Import Todos from source code folder")
 			.pick_folder()

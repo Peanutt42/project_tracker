@@ -22,7 +22,7 @@ use iced::{
 };
 use iced_aw::card;
 use project_tracker_core::{Database, ProjectId, SerializableDate, TaskId, TaskTagId, TimeSpend};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::sync::LazyLock;
 use tracing::error;
 
@@ -60,7 +60,7 @@ pub enum CreateTaskModalAction {
 		task_id: TaskId,
 		task_name: String,
 		task_description: String,
-		task_tags: HashSet<TaskTagId>,
+		task_tags: BTreeSet<TaskTagId>,
 		due_date: Option<SerializableDate>,
 		needed_time_minutes: Option<usize>,
 		time_spend: Option<TimeSpend>,
@@ -78,7 +78,7 @@ pub struct CreateTaskModal {
 	project_id: ProjectId,
 	task_name: String,
 	task_description: text_editor::Content,
-	task_tags: HashSet<TaskTagId>,
+	task_tags: BTreeSet<TaskTagId>,
 	due_date: Option<SerializableDate>,
 	edit_due_date: bool,
 	needed_time_minutes: Option<String>,
@@ -90,7 +90,7 @@ impl CreateTaskModal {
 			project_id,
 			task_name: String::new(),
 			task_description: text_editor::Content::new(),
-			task_tags: HashSet::new(),
+			task_tags: BTreeSet::new(),
 			due_date: None,
 			edit_due_date: false,
 			needed_time_minutes: None,

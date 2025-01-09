@@ -3,17 +3,14 @@ use crate::{
 	TaskId, TaskTag, TaskTagId, TaskType, TimeSpend,
 };
 use chrono::{DateTime, Utc};
-use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 use std::time::SystemTime;
 use thiserror::Error;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct SerializedDatabase {
-	projects: OrderedHashMap<ProjectId, Project>,
-}
+pub type SerializedDatabase = OrderedHashMap<ProjectId, Project>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Database {
@@ -31,7 +28,7 @@ pub enum DatabaseMessage {
 	ImportSourceCodeTodos {
 		project_id: ProjectId,
 		source_code_directory: PathBuf,
-		source_code_todo_tasks: IndexMap<TaskId, Task>,
+		source_code_todo_tasks: OrderedHashMap<TaskId, Task>,
 	},
 
 	CreateProject {
@@ -76,7 +73,7 @@ pub enum DatabaseMessage {
 		task_id: TaskId,
 		task_name: String,
 		task_description: String,
-		task_tags: HashSet<TaskTagId>,
+		task_tags: BTreeSet<TaskTagId>,
 		due_date: Option<SerializableDate>,
 		needed_time_minutes: Option<usize>,
 		time_spend: Option<TimeSpend>,
@@ -389,10 +386,10 @@ impl Database {
 						match task_type {
 							TaskType::Todo => dst_project.todo_tasks.insert(task_id, task),
 							TaskType::Done => {
-								let _ = dst_project.done_tasks.insert(task_id, task);
+								dst_project.done_tasks.insert(task_id, task);
 							}
 							TaskType::SourceCodeTodo => {
-								let _ = dst_project.source_code_todos.insert(task_id, task);
+								dst_project.source_code_todos.insert(task_id, task);
 							}
 						}
 					}
@@ -624,8 +621,8 @@ impl Database {
 		))
 	}
 
-	pub fn to_json(self) -> Option<String> {
-		serde_json::to_string_pretty(&self.to_serialized()).ok()
+	pub fn to_json(&self) -> Option<String> {
+		serde_json::to_string_pretty(self.serialized()).ok()
 	}
 
 	pub async fn export_as_json(filepath: PathBuf, json: String) -> SaveDatabaseResult<()> {
@@ -664,17 +661,26 @@ impl Database {
 		})
 	}
 
-	pub fn to_serialized(self) -> SerializedDatabase {
-		SerializedDatabase {
-			projects: self.projects,
-		}
+	/// for now just uses the hash of 'self.projects'
+	pub fn checksum(&self) -> u64 {
+		let mut hasher = std::hash::DefaultHasher::default();
+		self.serialized().hash(&mut hasher);
+		hasher.finish()
+	}
+
+	pub fn serialized(&self) -> &SerializedDatabase {
+		&self.projects
+	}
+
+	pub fn into_serialized(self) -> SerializedDatabase {
+		self.projects
 	}
 
 	pub fn from_serialized(
 		serialized: SerializedDatabase,
 		last_changed_time: DateTime<Utc>,
 	) -> Self {
-		Self::new(serialized.projects, last_changed_time)
+		Self::new(serialized, last_changed_time)
 	}
 
 	pub fn from_binary(binary: &[u8], last_changed_time: DateTime<Utc>) -> bincode::Result<Self> {
@@ -682,8 +688,8 @@ impl Database {
 			.map(|serialized| Self::from_serialized(serialized, last_changed_time))
 	}
 
-	pub fn to_binary(self) -> Option<Vec<u8>> {
-		bincode::serialize(&self.to_serialized()).ok()
+	pub fn to_binary(&self) -> Option<Vec<u8>> {
+		bincode::serialize(self.serialized()).ok()
 	}
 
 	// returns begin time of saving

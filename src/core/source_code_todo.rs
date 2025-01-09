@@ -1,9 +1,8 @@
 use crate::Task;
-use indexmap::IndexMap;
-use project_tracker_core::TaskId;
+use project_tracker_core::{OrderedHashMap, TaskId};
 use rayon::prelude::*;
 use std::{
-	collections::HashSet,
+	collections::BTreeSet,
 	fs::File,
 	io::{self, BufRead},
 	path::{Path, PathBuf},
@@ -11,8 +10,8 @@ use std::{
 use tracing::debug;
 use walkdir::{DirEntry, WalkDir};
 
-pub fn import_source_code_todos(root_directory: PathBuf) -> IndexMap<TaskId, Task> {
-	let todos: Vec<IndexMap<TaskId, Task>> = WalkDir::new(&root_directory)
+pub fn import_source_code_todos(root_directory: PathBuf) -> OrderedHashMap<TaskId, Task> {
+	let todos: Vec<OrderedHashMap<TaskId, Task>> = WalkDir::new(&root_directory)
 		.into_iter()
 		.par_bridge()
 		.filter_map(|e| e.ok())
@@ -20,7 +19,7 @@ pub fn import_source_code_todos(root_directory: PathBuf) -> IndexMap<TaskId, Tas
 			if should_import_source_code_todos_from_file(entry.path()) {
 				import_source_code_todos_from_file(entry)
 			} else {
-				IndexMap::new()
+				OrderedHashMap::new()
 			}
 		})
 		.collect();
@@ -29,7 +28,7 @@ pub fn import_source_code_todos(root_directory: PathBuf) -> IndexMap<TaskId, Tas
 	for todos in todos.iter() {
 		capacity += todos.len();
 	}
-	let mut source_code_todos = IndexMap::with_capacity(capacity);
+	let mut source_code_todos = OrderedHashMap::with_capacity(capacity);
 	for mut todos in todos {
 		source_code_todos.append(&mut todos);
 	}
@@ -69,12 +68,12 @@ fn should_import_source_code_todos_from_file(filepath: &Path) -> bool {
 }
 
 // TODO: support multiline comments (--> 2.. lines into description?)
-fn import_source_code_todos_from_file(entry: DirEntry) -> IndexMap<TaskId, Task> {
+fn import_source_code_todos_from_file(entry: DirEntry) -> OrderedHashMap<TaskId, Task> {
 	let filepath = entry.path();
 
 	match File::open(filepath) {
 		Ok(file) => {
-			let mut todos = IndexMap::new();
+			let mut todos = OrderedHashMap::new();
 
 			for (line_index, line) in io::BufReader::new(file)
 				.lines()
@@ -92,7 +91,7 @@ fn import_source_code_todos_from_file(entry: DirEntry) -> IndexMap<TaskId, Task>
 							None,
 							None,
 							None,
-							HashSet::new(),
+							BTreeSet::new(),
 						),
 					);
 				}
@@ -105,7 +104,7 @@ fn import_source_code_todos_from_file(entry: DirEntry) -> IndexMap<TaskId, Task>
 				"could not open source code file in '{}'",
 				filepath.display()
 			);
-			IndexMap::new()
+			OrderedHashMap::new()
 		}
 	}
 }

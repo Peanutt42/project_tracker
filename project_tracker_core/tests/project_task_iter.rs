@@ -1,8 +1,7 @@
-use std::collections::HashSet;
-
 use project_tracker_core::{
 	OrderedHashMap, Project, SerializableColor, SortMode, Task, TaskId, TaskType,
 };
+use std::collections::BTreeSet;
 
 #[test]
 fn task_iterator_visits_all_task_types() {
@@ -25,7 +24,7 @@ fn task_iterator_visits_all_task_types() {
 			None,
 			None,
 			None,
-			HashSet::new(),
+			BTreeSet::new(),
 		),
 	);
 
@@ -37,7 +36,7 @@ fn task_iterator_visits_all_task_types() {
 			None,
 			None,
 			None,
-			HashSet::new(),
+			BTreeSet::new(),
 		),
 	);
 
@@ -49,7 +48,7 @@ fn task_iterator_visits_all_task_types() {
 			None,
 			None,
 			None,
-			HashSet::new(),
+			BTreeSet::new(),
 		),
 	);
 

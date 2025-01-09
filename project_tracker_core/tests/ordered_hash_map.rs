@@ -106,3 +106,29 @@ fn test_move_to_end() {
 	assert_eq!(iter.next().unwrap().0, 4);
 	assert_eq!(iter.next().unwrap().0, 2);
 }
+
+#[test]
+fn test_append_ordered_hash_maps() {
+	let mut ordered_hash_map = OrderedHashMap::new();
+	ordered_hash_map.insert(1, 2);
+	ordered_hash_map.insert(3, 4);
+	ordered_hash_map.insert(5, 6);
+
+	let mut other_ordered_hash_map = OrderedHashMap::new();
+	other_ordered_hash_map.insert(7, 8);
+	other_ordered_hash_map.insert(9, 10);
+	other_ordered_hash_map.insert(11, 12);
+
+	let mut expected_hash_map = OrderedHashMap::new();
+	expected_hash_map.insert(1, 2);
+	expected_hash_map.insert(3, 4);
+	expected_hash_map.insert(5, 6);
+	expected_hash_map.insert(7, 8);
+	expected_hash_map.insert(9, 10);
+	expected_hash_map.insert(11, 12);
+
+	ordered_hash_map.append(&mut other_ordered_hash_map);
+
+	assert!(other_ordered_hash_map.is_empty());
+	assert_eq!(expected_hash_map, ordered_hash_map);
+}

@@ -126,10 +126,10 @@ impl OverviewPage {
 					cache_future_tasks(task_id, task);
 				}
 				for (task_id, task) in project.source_code_todos.iter() {
-					cache_overdue_tasks(*task_id, task);
-					cache_today_tasks(*task_id, task);
-					cache_tomorrow_tasks(*task_id, task);
-					cache_future_tasks(*task_id, task);
+					cache_overdue_tasks(task_id, task);
+					cache_today_tasks(task_id, task);
+					cache_tomorrow_tasks(task_id, task);
+					cache_future_tasks(task_id, task);
 				}
 			}
 
