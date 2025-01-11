@@ -1273,3 +1273,9 @@ pub fn retry_synchronization_button() -> Element<'static, Message> {
 	.style(tooltip_container_style)
 	.into()
 }
+
+pub fn select_synchronization_filepath_button() -> Button<'static, Message> {
+	icon_label_button("Select", Bootstrap::Folder)
+		.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
+		.style(dangerous_button_style)
+}

@@ -4,6 +4,7 @@ use crate::project_tracker::Message;
 use crate::styles::{text_input_style_default, SPACING_AMOUNT};
 use crate::synchronization::{
 	BaseSynchronization, BaseSynchronizationError, Synchronization, SynchronizationMessage,
+	SynchronizationOutput,
 };
 use async_tungstenite::tungstenite;
 use iced::alignment::Vertical;
@@ -78,11 +79,16 @@ impl From<ServerSynchronization> for Synchronization {
 impl BaseSynchronization for ServerSynchronization {
 	type Message = ServerSynchronizationMessage;
 
-	fn synchronize(&mut self, database: &Database) -> Task<Message> {
+	fn synchronize(&mut self, database: Option<&Database>) -> Task<Message> {
 		match &mut self.request_sender {
 			Some(request_sender) => {
-				self.database_to_sync = Some(database.clone());
-				let _ = request_sender.send(Request::GetModifiedDate);
+				if let Some(database) = database {
+					self.database_to_sync = Some(database.clone());
+					let _ = request_sender.send(Request::GetModifiedDate);
+				} else {
+					self.database_to_sync = None;
+					let _ = request_sender.send(Request::DownloadDatabase);
+				}
 			}
 			None => warn!("tried to synchronize but no request sender set yet!"),
 		}
@@ -232,15 +238,19 @@ impl ServerSynchronization {
 					.unwrap_or(true);
 
 				if server_is_more_up_to_date {
-					Task::done(Message::LoadedDatabase(Ok(Database::from_serialized(
-						database,
-						last_modified_time,
-					))))
+					Task::done(Message::SyncedDatabase(Ok(
+						SynchronizationOutput::DatabaseLoaded(Database::from_serialized(
+							database,
+							last_modified_time,
+						)),
+					)))
 				} else {
 					Task::none()
 				}
 			}
-			EncryptedResponse::DatabaseUpdated => Task::done(Message::SyncedDatabase(Ok(()))),
+			EncryptedResponse::DatabaseUpdated => Task::done(Message::SyncedDatabase(Ok(
+				SynchronizationOutput::DatabaseSaved,
+			))),
 			EncryptedResponse::ModifiedDate(server_modified_date) => {
 				if let Some(request_sender) = &mut self.request_sender {
 					let server_is_more_up_to_date = self

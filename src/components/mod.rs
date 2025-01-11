@@ -16,12 +16,13 @@ pub use buttons::{
 	open_in_code_editor_button, open_project_button, open_task_by_name_link_button,
 	overview_button, overview_time_section_button, pause_timer_button, project_context_menu_button,
 	reimport_source_code_todos_button, resume_timer_button, retry_loading_database_button,
-	retry_synchronization_button, search_tasks_button, settings_button, settings_tab_button,
-	show_done_tasks_button, show_error_popup_button, show_password_button,
-	show_source_code_todos_button, sort_dropdown_button, start_task_timer_button,
-	stop_timer_button, stopwatch_button, synchronization_settings_button, take_break_button,
-	task_tag_button, task_tag_name_button, theme_mode_button, toggle_sidebar_button,
-	toggle_view_edit_task_description_button, track_time_button, ICON_BUTTON_WIDTH, ICON_FONT_SIZE,
+	retry_synchronization_button, search_tasks_button, select_synchronization_filepath_button,
+	settings_button, settings_tab_button, show_done_tasks_button, show_error_popup_button,
+	show_password_button, show_source_code_todos_button, sort_dropdown_button,
+	start_task_timer_button, stop_timer_button, stopwatch_button, synchronization_settings_button,
+	take_break_button, task_tag_button, task_tag_name_button, theme_mode_button,
+	toggle_sidebar_button, toggle_view_edit_task_description_button, track_time_button,
+	ICON_BUTTON_WIDTH, ICON_FONT_SIZE,
 };
 
 mod task_list;

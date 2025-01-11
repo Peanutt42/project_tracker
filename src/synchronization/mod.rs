@@ -3,7 +3,7 @@ use crate::{
 	project_tracker::Message,
 	styles::{danger_text_style, SPACING_AMOUNT},
 };
-use filesystem::FilesystemSynchronizationError;
+use filesystem::{FilesystemSynchronizationError, FilesystemSynchronizationMessage};
 use iced::{
 	widget::{container, row, text},
 	Alignment, Element,
@@ -31,7 +31,7 @@ pub trait BaseSynchronization: Clone + Serialize + DeserializeOwned {
 	type Message;
 
 	/// Will update app with 'Message::SyncedDatabase' when synchronized
-	fn synchronize(&mut self, database: &Database) -> iced::Task<Message>;
+	fn synchronize(&mut self, database: Option<&Database>) -> iced::Task<Message>;
 
 	fn update(&mut self, _message: Self::Message) -> iced::Task<Message> {
 		iced::Task::none()
@@ -49,6 +49,7 @@ pub trait BaseSynchronizationError: Debug + Error {
 #[derive(Debug, Clone)]
 pub enum SynchronizationMessage {
 	ServerSynchronizationMessage(ServerSynchronizationMessage),
+	FilesystemSynchronizationMessage(FilesystemSynchronizationMessage),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,7 +61,7 @@ pub enum Synchronization {
 impl BaseSynchronization for Synchronization {
 	type Message = SynchronizationMessage;
 
-	fn synchronize(&mut self, database: &Database) -> iced::Task<Message> {
+	fn synchronize(&mut self, database: Option<&Database>) -> iced::Task<Message> {
 		match self {
 			Self::FilesystemSynchronization(filesystem_synchronization) => {
 				filesystem_synchronization.synchronize(database)
@@ -74,8 +75,14 @@ impl BaseSynchronization for Synchronization {
 	fn update(&mut self, message: Self::Message) -> iced::Task<Message> {
 		match message {
 			SynchronizationMessage::ServerSynchronizationMessage(msg) => match self {
-				Synchronization::ServerSynchronization(server_synchronization) => {
+				Self::ServerSynchronization(server_synchronization) => {
 					server_synchronization.update(msg)
+				}
+				_ => iced::Task::none(),
+			},
+			SynchronizationMessage::FilesystemSynchronizationMessage(msg) => match self {
+				Self::FilesystemSynchronization(filesystem_synchronization) => {
+					filesystem_synchronization.update(msg)
 				}
 				_ => iced::Task::none(),
 			},
@@ -120,6 +127,12 @@ impl Synchronization {
 			_ => None,
 		}
 	}
+}
+
+#[derive(Debug, Clone)]
+pub enum SynchronizationOutput {
+	DatabaseSaved,
+	DatabaseLoaded(Database),
 }
 
 #[derive(Debug, Error)]

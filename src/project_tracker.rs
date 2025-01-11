@@ -1,4 +1,4 @@
-use crate::synchronization::{SynchronizationError, SynchronizationMessage};
+use crate::synchronization::{SynchronizationError, SynchronizationMessage, SynchronizationOutput};
 use crate::{
 	components::{
 		create_empty_database_button, generate_task_description_markdown, import_database_button,
@@ -169,7 +169,7 @@ pub enum Message {
 	ImportDatabaseDialogCanceled,
 	RequestAdminInfos,
 	SyncDatabase,
-	SyncedDatabase(Result<(), Arc<SynchronizationError>>),
+	SyncedDatabase(Result<SynchronizationOutput, Arc<SynchronizationError>>),
 	SynchronizationMessage(SynchronizationMessage),
 	LoadDatabase,
 	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
@@ -226,7 +226,7 @@ impl ProjectTrackerApp {
 	}
 
 	fn has_unsynched_changes(&self) -> bool {
-		match self.last_sync_start_time {
+		match self.last_sync_finish_time {
 			Some(last_sync_time) => match &self.database {
 				DatabaseState::Loaded(database) => {
 					match (Utc::now() - database.last_changed_time()).abs().to_std() {
@@ -754,24 +754,36 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::SyncDatabase => {
-				if let DatabaseState::Loaded(database) = &self.database {
-					if let Some(synchronization) = &mut self.synchronization {
-						self.last_sync_start_time = Some(Instant::now());
-						return synchronization.synchronize(database);
+				if let Some(synchronization) = &mut self.synchronization {
+					match &self.database {
+						DatabaseState::Loaded(database) => {
+							self.last_sync_start_time = Some(Instant::now());
+							return synchronization.synchronize(Some(database));
+						}
+						DatabaseState::NotLoaded => {
+							self.last_sync_start_time = Some(Instant::now());
+							return synchronization.synchronize(None);
+						}
+						_ => {}
 					}
 				}
 				Task::none()
 			}
 			Message::SyncedDatabase(synchronization_result) => {
 				self.last_sync_finish_time = Some(Instant::now());
-				self.sidebar_page.synchronization_error = match synchronization_result {
-					Ok(()) => None,
+				self.sidebar_page.synchronization_error = match &synchronization_result {
+					Ok(_) => None,
 					Err(e) => {
 						error!("failed to synchronize: {e}");
-						Some(e)
+						Some(e.clone())
 					}
 				};
-				Task::none()
+				match synchronization_result {
+					Ok(SynchronizationOutput::DatabaseLoaded(database)) => {
+						self.update(Message::LoadedDatabase(Ok(database)))
+					}
+					_ => Task::none(),
+				}
 			}
 			Message::SynchronizationMessage(message) => {
 				if let Some(synchronization) = &mut self.synchronization {
@@ -804,6 +816,11 @@ impl ProjectTrackerApp {
 						Task::batch([
 							self.update(Message::SavePreferences),
 							self.perform_content_page_action(content_page_action),
+							if self.synchronization.is_some() {
+								self.update(Message::SyncDatabase)
+							} else {
+								Task::none()
+							},
 						])
 					}
 					Err(error) => match error.as_ref() {
@@ -940,16 +957,25 @@ impl ProjectTrackerApp {
 				_ => Task::none(),
 			},
 			Message::PreferenceMessage(preference_message) => {
-				if let PreferenceMessage::SetSynchronization(new_synchronization) =
-					preference_message.clone()
-				{
-					self.synchronization = new_synchronization;
-				}
+				let changed_synchronization = match preference_message.clone() {
+					PreferenceMessage::SetSynchronization(new_synchronization) => {
+						self.synchronization = new_synchronization;
+						true
+					}
+					_ => false,
+				};
 				let action = match &mut self.preferences {
 					Some(preferences) => preferences.update(preference_message),
 					None => PreferenceAction::None,
 				};
-				self.perform_preference_action(action)
+				Task::batch([
+					self.perform_preference_action(action),
+					if changed_synchronization {
+						self.update(Message::SyncDatabase)
+					} else {
+						Task::none()
+					},
+				])
 			}
 			Message::SwitchToLowerProject => {
 				if let DatabaseState::Loaded(database) = &self.database {
