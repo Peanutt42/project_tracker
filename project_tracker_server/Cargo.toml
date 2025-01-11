@@ -30,10 +30,6 @@ futures-util = { version = "0.3", default-features = false, features = [
 warp = { version = "0.3.7", features = ["websocket", "tls"] }
 systemstat = "0.2.4"
 
-[features]
-default = ["web_server"]
-web_server = []
-
 [package.metadata.deb]
 assets = [
 	{ source = "target/release/project_tracker_server", dest = "/usr/bin/project_tracker_server", mode = "755" },

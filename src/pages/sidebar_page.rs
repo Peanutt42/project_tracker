@@ -4,9 +4,9 @@ use crate::components::{
 	LARGE_LOADING_SPINNER_SIZE,
 };
 use crate::core::{IcedColorConversion, ProjectUiIdMap, TaskUiIdMap};
-use crate::integrations::ServerConnectionStatus;
 use crate::project_tracker::ProjectTrackerApp;
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT};
+use crate::synchronization::SynchronizationError;
 use crate::DatabaseState;
 use crate::{
 	components::{
@@ -38,7 +38,7 @@ use project_tracker_core::{
 	Database, DatabaseMessage, OrderedHashMap, Project, ProjectId, SerializableColor, SortMode,
 	TaskId,
 };
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 
 static SCROLLABLE_ID: LazyLock<scrollable::Id> = LazyLock::new(scrollable::Id::unique);
 static TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
@@ -150,7 +150,7 @@ pub struct SidebarPage {
 	start_dragging_point: Option<Point>,
 	just_minimal_dragging: bool,
 	pub pressed_project_id: Option<ProjectId>,
-	pub server_connection_status: Option<ServerConnectionStatus>,
+	pub synchronization_error: Option<Arc<SynchronizationError>>,
 }
 
 impl SidebarPage {
@@ -165,7 +165,7 @@ impl SidebarPage {
 			start_dragging_point: None,
 			just_minimal_dragging: true,
 			pressed_project_id: None,
-			server_connection_status: None,
+			synchronization_error: None,
 		}
 	}
 
@@ -602,6 +602,11 @@ impl SidebarPage {
 				.into(),
 		};
 
+		let synchronization_error_view = match &self.synchronization_error {
+			Some(error) => error.view(),
+			None => Space::new(Fill, 0.0).into(),
+		};
+
 		column![
 			column![
 				row![
@@ -632,11 +637,7 @@ impl SidebarPage {
 			list,
 			row![
 				settings_button(),
-				container(match &self.server_connection_status {
-					Some(server_connection_status) => server_connection_status.view(),
-					None => Element::new(Space::new(0.0, 0.0)),
-				})
-				.center_x(Fill),
+				synchronization_error_view,
 				create_new_project_button(self.create_new_project_name.is_none())
 			]
 			.align_y(Alignment::Center)

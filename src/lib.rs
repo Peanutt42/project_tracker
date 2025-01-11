@@ -14,7 +14,6 @@ mod project_tracker;
 pub use preferences::{
 	DateFormatting, LoadPreferencesError, LoadPreferencesResult, OptionalPreference,
 	PreferenceAction, PreferenceMessage, Preferences, SerializedContentPage, StopwatchProgress,
-	SynchronizationSetting,
 };
 pub use project_tracker::{AppFlags, DatabaseState, ProjectTrackerApp};
 mod already_opened_app;
@@ -22,6 +21,7 @@ pub use already_opened_app::run_already_opened_application;
 pub mod icons;
 pub mod integrations;
 pub mod styles;
+pub mod synchronization;
 pub mod theme_mode;
 
 pub fn run_project_tracker_app(flags: AppFlags) -> iced::Result {

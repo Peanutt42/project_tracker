@@ -27,7 +27,7 @@ use crate::{
 		SPACING_AMOUNT,
 	},
 	theme_mode::ThemeMode,
-	DateFormatting, PreferenceMessage, SynchronizationSetting,
+	DateFormatting, PreferenceMessage,
 };
 use iced::{
 	alignment::{Horizontal, Vertical},
@@ -330,12 +330,6 @@ pub fn stopwatch_button(
 pub fn settings_button() -> Button<'static, Message> {
 	large_icon_button(Bootstrap::Gear)
 		.on_press(SettingsModalMessage::Open.into())
-		.style(secondary_button_style_default)
-}
-
-pub fn select_synchronization_filepath_button() -> Button<'static, Message> {
-	icon_label_button("Select file", Bootstrap::Folder)
-		.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
 		.style(secondary_button_style_default)
 }
 
@@ -881,31 +875,6 @@ pub fn sort_dropdown_button(opened: bool, sort_mode: SortMode) -> Element<'stati
 	.into()
 }
 
-pub fn synchronization_type_button(
-	synchronization_setting: SynchronizationSetting,
-	selected_setting: &SynchronizationSetting,
-	round_left: bool,
-	round_right: bool,
-) -> Button<'static, Message> {
-	let selected = synchronization_setting.is_same_type(selected_setting);
-	let name: &'static str = synchronization_setting.as_str();
-
-	button(text(name).align_x(Horizontal::Center))
-		.style(move |t, s| {
-			selection_list_button_style(
-				t,
-				s,
-				selected,
-				round_left,
-				round_right,
-				round_left,
-				round_right,
-			)
-		})
-		.width(90.0)
-		.on_press(PreferenceMessage::SetSynchronization(Some(synchronization_setting)).into())
-}
-
 pub fn show_password_button() -> Element<'static, Message> {
 	tooltip(
 		icon_button(Bootstrap::EyeFill)
@@ -1045,39 +1014,6 @@ pub fn overview_time_section_button(
 		Some(on_toggle_collabsed)
 	})
 	.style(hidden_secondary_button_style)
-}
-
-pub fn show_error_popup_button(error_msg: String) -> Element<'static, Message> {
-	tooltip(
-		button(
-			icon_to_text(Bootstrap::Bug)
-				.style(danger_text_style)
-				.size(ICON_FONT_SIZE)
-				.align_x(Horizontal::Center)
-				.align_y(Vertical::Center),
-		)
-		.width(ICON_BUTTON_WIDTH)
-		.on_press(ErrorMsgModalMessage::open(error_msg))
-		.style(secondary_button_style_default),
-		text("Show full error popup").size(SMALL_TEXT_SIZE),
-		tooltip::Position::Top,
-	)
-	.gap(GAP)
-	.style(tooltip_container_style)
-	.into()
-}
-
-pub fn retry_connecting_to_server_button() -> Element<'static, Message> {
-	tooltip(
-		icon_button(Bootstrap::ArrowClockwise)
-			.on_press(Message::ConnectToServer)
-			.style(secondary_button_style_default),
-		text("Reconnect").size(SMALL_TEXT_SIZE),
-		tooltip::Position::Top,
-	)
-	.gap(GAP)
-	.style(tooltip_container_style)
-	.into()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1282,8 +1218,58 @@ pub fn retry_loading_database_button() -> Button<'static, Message> {
 		.on_press(Message::LoadDatabase)
 }
 
-pub fn download_database_from_server_button() -> Button<'static, Message> {
-	icon_label_button("Download from server", Bootstrap::Download)
-		.on_press(Message::DownloadDatabaseFromServer)
-		.style(dangerous_button_style)
+pub fn synchronization_settings_button(
+	label: &'static str,
+	selected: bool,
+	on_press: Message,
+	round_left: bool,
+	round_right: bool,
+) -> Button<'static, Message> {
+	button(text(label).align_x(Horizontal::Center))
+		.style(move |t, s| {
+			selection_list_button_style(
+				t,
+				s,
+				selected,
+				round_left,
+				round_right,
+				round_left,
+				round_right,
+			)
+		})
+		.width(100.0)
+		.on_press(on_press)
+}
+
+pub fn show_error_popup_button(error_msg: String) -> Element<'static, Message> {
+	tooltip(
+		button(
+			icon_to_text(Bootstrap::Bug)
+				.style(danger_text_style)
+				.size(ICON_FONT_SIZE)
+				.align_x(Horizontal::Center)
+				.align_y(Vertical::Center),
+		)
+		.width(ICON_BUTTON_WIDTH)
+		.on_press(ErrorMsgModalMessage::open(error_msg))
+		.style(secondary_button_style_default),
+		text("Show full error popup").size(SMALL_TEXT_SIZE),
+		tooltip::Position::Top,
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
+}
+
+pub fn retry_synchronization_button() -> Element<'static, Message> {
+	tooltip(
+		icon_button(Bootstrap::ArrowClockwise)
+			.on_press(Message::SyncDatabase)
+			.style(secondary_button_style_default),
+		text("Retry").size(SMALL_TEXT_SIZE),
+		tooltip::Position::Top,
+	)
+	.gap(GAP)
+	.style(tooltip_container_style)
+	.into()
 }

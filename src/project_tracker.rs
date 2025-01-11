@@ -1,17 +1,13 @@
+use crate::synchronization::{SynchronizationError, SynchronizationMessage};
 use crate::{
 	components::{
-		create_empty_database_button, download_database_from_server_button,
-		generate_task_description_markdown, import_database_button, markdown,
-		retry_loading_database_button, settings_button, toggle_sidebar_button, ScalarAnimation,
-		ICON_BUTTON_WIDTH,
+		create_empty_database_button, generate_task_description_markdown, import_database_button,
+		markdown, retry_loading_database_button, settings_button, toggle_sidebar_button,
+		ScalarAnimation, ICON_BUTTON_WIDTH,
 	},
 	core::{
 		export_database_as_json_file_dialog, export_database_file_dialog, formatted_date_time,
 		import_database_file_dialog, import_json_database_file_dialog, ProjectUiIdMap, TaskUiIdMap,
-	},
-	integrations::{
-		connect_ws, ServerConfig, ServerConnectionStatus, ServerWsError, ServerWsEvent,
-		ServerWsMessage, ServerWsMessageSender,
 	},
 	modals::{
 		ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction,
@@ -29,11 +25,11 @@ use crate::{
 		sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT,
 		MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT,
 	},
+	synchronization::{BaseSynchronization, Synchronization},
 	theme_mode::{get_theme, is_system_theme_dark, system_theme_subscription, ThemeMode},
 };
 use crate::{
 	LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences,
-	SynchronizationSetting,
 };
 use chrono::Utc;
 use iced::{
@@ -49,13 +45,10 @@ use iced::{
 	Padding, Point, Rectangle, Subscription, Task, Theme,
 };
 use project_tracker_core::{
-	Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, SyncDatabaseResult,
-	TaskId,
+	Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, TaskId,
 };
-use project_tracker_server::{AdminInfos, EncryptedResponse, Request, Response};
 use std::{
 	collections::HashMap,
-	hash::{DefaultHasher, Hash, Hasher},
 	path::PathBuf,
 	rc::Rc,
 	sync::Arc,
@@ -124,8 +117,7 @@ pub struct ProjectTrackerApp {
 	pub exporting_database: bool,
 	pub last_sync_start_time: Option<Instant>,
 	pub last_sync_finish_time: Option<Instant>,
-	pub latest_admin_infos: Option<AdminInfos>,
-	pub server_ws_message_sender: Option<ServerWsMessageSender>,
+	pub synchronization: Option<Synchronization>,
 	pub preferences: Option<Preferences>,
 	pub confirm_modal: Option<ConfirmModal>,
 	pub error_msg_modal: ErrorMsgModal,
@@ -175,22 +167,14 @@ pub enum Message {
 	ImportDatabaseDialog,
 	ImportJsonDatabaseDialog,
 	ImportDatabaseDialogCanceled,
+	RequestAdminInfos,
 	SyncDatabase,
-	SyncDatabaseFilepath(PathBuf),
-	SyncDatabaseFilepathUpload(PathBuf),
-	SyncDatabaseFilepathUploaded,
-	SyncDatabaseFilepathDownload(PathBuf),
-	SyncDatabaseFilepathDownloaded(Result<Database, Arc<LoadDatabaseError>>),
-	SyncDatabaseFilepathFailed(String), // error_msg
+	SyncedDatabase(Result<(), Arc<SynchronizationError>>),
+	SynchronizationMessage(SynchronizationMessage),
 	LoadDatabase,
 	LoadedDatabase(Result<Database, Arc<LoadDatabaseError>>),
 	SavePreferences,
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
-	SyncDatabaseFromServer,
-	RequestAdminInfos,
-	DownloadDatabaseFromServer,
-	ServerWsEvent(Result<ServerWsEvent, ServerWsError>),
-	ConnectToServer,
 	DatabaseMessage(DatabaseMessage),
 	PreferenceMessage(PreferenceMessage),
 	SwitchToUpperProject, // switches to upper project when using shortcuts
@@ -241,7 +225,7 @@ impl ProjectTrackerApp {
 		self.update(ErrorMsgModalMessage::open_error(error))
 	}
 
-	fn has_unsynced_changes(&self) -> bool {
+	fn has_unsynched_changes(&self) -> bool {
 		match self.last_sync_start_time {
 			Some(last_sync_time) => match &self.database {
 				DatabaseState::Loaded(database) => {
@@ -289,8 +273,7 @@ impl ProjectTrackerApp {
 				exporting_database: false,
 				last_sync_start_time: None,
 				last_sync_finish_time: None,
-				latest_admin_infos: None,
-				server_ws_message_sender: None,
+				synchronization: None,
 				preferences: None,
 				confirm_modal: None,
 				error_msg_modal: ErrorMsgModal::Closed,
@@ -312,11 +295,11 @@ impl ProjectTrackerApp {
 							Message::LoadedPreferences(result.map_err(Arc::new))
 						})
 					}
-					None => Task::perform(async move {}, |_| {
-						ErrorMsgModalMessage::open("failed to get preferences filepath".to_string())
-					}),
+					None => Task::done(ErrorMsgModalMessage::open(
+						"failed to get preferences filepath".to_string(),
+					)),
 				},
-				Task::perform(async move {}, |_| Message::LoadDatabase),
+				Task::done(Message::LoadDatabase),
 			]),
 		)
 	}
@@ -346,7 +329,7 @@ impl ProjectTrackerApp {
 			title += " - Importing...";
 		}
 		if let Some(last_finish_time) = &self.last_sync_finish_time {
-			if Instant::now().duration_since(*last_finish_time) <= Duration::from_millis(500) {
+			if Instant::now().duration_since(*last_finish_time) <= Duration::from_millis(250) {
 				title += " - Synced";
 			} else if let Some(last_start_time) = &self.last_sync_start_time {
 				if *last_start_time > *last_finish_time {
@@ -370,21 +353,6 @@ impl ProjectTrackerApp {
 	}
 
 	pub fn subscription(&self) -> Subscription<Message> {
-		let server_config = match self.preferences.synchronization() {
-			Some(SynchronizationSetting::Server(server_config)) => server_config.clone(),
-			_ => ServerConfig {
-				hostname: String::new(),
-				port: 0,
-				password: String::new(),
-			},
-		};
-		// to identify websocket subscriptions with different server configs
-		let server_config_hash = {
-			let mut hasher = DefaultHasher::default();
-			server_config.hash(&mut hasher);
-			hasher.finish()
-		};
-
 		Subscription::batch([
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
 				keyboard::Key::Character("b") if modifiers.command() => {
@@ -431,9 +399,12 @@ impl ProjectTrackerApp {
 				.subscription()
 				.map(Message::ContentPageMessage),
 			self.settings_modal.subscription(),
+			self.synchronization
+				.as_ref()
+				.map(Synchronization::subscription)
+				.unwrap_or(Subscription::none()),
 			time::every(Duration::from_secs(1)).map(|_| Message::SaveChangedFiles),
 			time::every(Duration::from_secs(1)).map(|_| Message::SyncIfChanged),
-			Subscription::run_with_id(server_config_hash, connect_ws()).map(Message::ServerWsEvent),
 			system_theme_subscription(),
 		])
 	}
@@ -530,7 +501,7 @@ impl ProjectTrackerApp {
 				Task::batch(tasks)
 			}
 			Message::SyncIfChanged => {
-				if self.has_unsynced_changes() &&
+				if self.has_unsynched_changes() &&
 					matches!(self.error_msg_modal, ErrorMsgModal::Closed) && // dont auto sync when an error happened
 					self.confirm_modal.is_none() && // dont auto sync while user needs to confirm something
 					matches!(self.settings_modal, SettingsModal::Closed)
@@ -603,27 +574,6 @@ impl ProjectTrackerApp {
 			Message::DatabaseSaved(saved_time) => {
 				if let DatabaseState::Loaded(database) = &mut self.database {
 					database.saved(saved_time);
-				}
-				Task::none()
-			}
-			Message::SyncDatabase => {
-				if let Some(preferences) = &self.preferences {
-					if let Some(synchronization_settings) = preferences.synchronization() {
-						info!("syncing database");
-						self.last_sync_start_time = Some(Instant::now());
-
-						return match synchronization_settings {
-							SynchronizationSetting::Server(_) => {
-								self.update(Message::SyncDatabaseFromServer)
-							}
-							SynchronizationSetting::Filepath { filepath } => match filepath {
-								Some(filepath) => {
-									self.update(Message::SyncDatabaseFilepath(filepath.clone()))
-								}
-								None => Task::none(),
-							},
-						};
-					}
 				}
 				Task::none()
 			}
@@ -725,54 +675,6 @@ impl ProjectTrackerApp {
 			Message::DatabaseImported(result) => self
 				.update(Message::LoadedDatabase(result))
 				.chain(self.update(Message::SaveDatabase)),
-			Message::SyncDatabaseFilepath(filepath) => match &self.database {
-				DatabaseState::Loaded(database) => Task::perform(
-					Database::sync(filepath.clone(), *database.last_changed_time()),
-					move |result| match result {
-						SyncDatabaseResult::InvalidSynchronizationFilepath => {
-							Message::SyncDatabaseFilepathFailed(format!(
-								"Failed to open synchronization file in\n\"{}\"",
-								filepath.display()
-							))
-						}
-						SyncDatabaseResult::Upload => {
-							Message::SyncDatabaseFilepathUpload(filepath.clone())
-						}
-						SyncDatabaseResult::Download => {
-							Message::SyncDatabaseFilepathDownload(filepath.clone())
-						}
-					},
-				),
-				_ => Task::none(),
-			},
-			Message::SyncDatabaseFilepathUpload(filepath) => match &self.database {
-				DatabaseState::Loaded(database) => {
-					match database.clone().to_binary() {
-						Some(database_binary) => Task::perform(Database::save(filepath, database_binary), |_| {
-							Message::SyncDatabaseFilepathUploaded
-						}),
-						None => self.show_error_msg("failed to serialize database to binary in order to upload it to the server".to_string()),
-					}
-				}
-				_ => Task::none(),
-			}
-			Message::SyncDatabaseFilepathUploaded => {
-				self.last_sync_finish_time = Some(Instant::now());
-				Task::none()
-			}
-			Message::SyncDatabaseFilepathDownload(filepath) => {
-				Task::perform(Database::load(filepath), |result| {
-					Message::SyncDatabaseFilepathDownloaded(result.map_err(Arc::new))
-				})
-			}
-			Message::SyncDatabaseFilepathDownloaded(result) => match result {
-				Ok(database) => {
-					self.last_sync_finish_time = Some(Instant::now());
-					self.update(Message::DatabaseImported(Ok(database)))
-				}
-				Err(e) => self.update(Message::DatabaseImported(Err(e))),
-			},
-			Message::SyncDatabaseFilepathFailed(error_msg) => self.show_error_msg(error_msg),
 			Message::LoadDatabase => match self.flags.get_database_filepath() {
 				Some(database_filepath) => {
 					Task::perform(Database::load(database_filepath), |result| {
@@ -843,6 +745,41 @@ impl ProjectTrackerApp {
 					},
 				}
 			}
+			Message::RequestAdminInfos => {
+				if let Some(Synchronization::ServerSynchronization(server_synchronization)) =
+					&mut self.synchronization
+				{
+					server_synchronization.request_admin_infos();
+				}
+				Task::none()
+			}
+			Message::SyncDatabase => {
+				if let DatabaseState::Loaded(database) = &self.database {
+					if let Some(synchronization) = &mut self.synchronization {
+						self.last_sync_start_time = Some(Instant::now());
+						return synchronization.synchronize(database);
+					}
+				}
+				Task::none()
+			}
+			Message::SyncedDatabase(synchronization_result) => {
+				self.last_sync_finish_time = Some(Instant::now());
+				self.sidebar_page.synchronization_error = match synchronization_result {
+					Ok(()) => None,
+					Err(e) => {
+						error!("failed to synchronize: {e}");
+						Some(e)
+					}
+				};
+				Task::none()
+			}
+			Message::SynchronizationMessage(message) => {
+				if let Some(synchronization) = &mut self.synchronization {
+					synchronization.update(message)
+				} else {
+					Task::none()
+				}
+			}
 			Message::SavePreferences => match &mut self.preferences {
 				Some(preferences) => match self.flags.get_preferences_filepath() {
 					Some(preferences_filepath) => {
@@ -850,24 +787,17 @@ impl ProjectTrackerApp {
 							preferences.update(PreferenceMessage::Save(preferences_filepath));
 						self.perform_preference_action(action)
 					}
-					None => Task::perform(async move {}, |_| {
-						ErrorMsgModalMessage::open("failed to get preferences filepath".to_string())
-					}),
+					None => Task::done(ErrorMsgModalMessage::open(
+						"failed to get preferences filepath".to_string(),
+					)),
 				},
 				None => Task::none(),
 			},
 			Message::LoadedPreferences(load_preferences_result) => {
 				match load_preferences_result {
 					Ok(preferences) => {
+						self.synchronization = preferences.synchronization().clone();
 						self.preferences = Some(preferences);
-						if let Some(message_sender) = &mut self.server_ws_message_sender {
-							if let Some(SynchronizationSetting::Server(server_config)) =
-								self.preferences.synchronization()
-							{
-								let _ = message_sender
-									.send(ServerWsMessage::Connect(server_config.clone()));
-							}
-						}
 						let content_page_action = self
 							.content_page
 							.restore_from_serialized(self.database.ok(), &mut self.preferences);
@@ -904,7 +834,7 @@ impl ProjectTrackerApp {
 										);
 									}
 								}
-								None => error!("failed to save copy of corrupted preferences!")
+								None => error!("failed to save copy of corrupted preferences!"),
 							}
 
 							if self.preferences.is_none() {
@@ -917,88 +847,6 @@ impl ProjectTrackerApp {
 						}
 					},
 				}
-			}
-			Message::SyncDatabaseFromServer => {
-				if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
-					let _ = server_ws_message_sender
-						.send(ServerWsMessage::Request(Request::GetModifiedDate));
-				}
-				Task::none()
-			}
-			Message::DownloadDatabaseFromServer => {
-				if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
-					self.last_sync_start_time = Some(Instant::now());
-
-					let _ = server_ws_message_sender
-						.send(ServerWsMessage::Request(Request::DownloadDatabase));
-				}
-				Task::none()
-			}
-			Message::RequestAdminInfos => {
-				if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
-					info!("requesting admin infos...");
-					let _ = server_ws_message_sender
-						.send(ServerWsMessage::Request(Request::AdminInfos));
-				}
-				Task::none()
-			}
-			Message::ServerWsEvent(event_result) => match event_result {
-				Ok(event) => match event {
-					ServerWsEvent::MessageSender(mut message_sender) => {
-						if let Some(SynchronizationSetting::Server(server_config)) =
-							self.preferences.synchronization()
-						{
-							let _ = message_sender
-								.send(ServerWsMessage::Connect(server_config.clone()));
-							self.sidebar_page.server_connection_status =
-								Some(ServerConnectionStatus::Connecting);
-						}
-						self.server_ws_message_sender = Some(message_sender);
-						Task::none()
-					}
-					ServerWsEvent::Connected => {
-						info!("ws connected");
-						if matches!(self.settings_modal, SettingsModal::Closed) {
-							if let Some(message_sender) = &mut self.server_ws_message_sender {
-								let _ = message_sender
-									.send(ServerWsMessage::Request(Request::GetModifiedDate));
-							}
-						}
-						self.sidebar_page.server_connection_status =
-							Some(ServerConnectionStatus::Connected);
-						Task::none()
-					}
-					ServerWsEvent::Disconnected => {
-						info!("ws disconnected");
-						self.sidebar_page.server_connection_status =
-							Some(ServerConnectionStatus::Disconected);
-						Task::none()
-					}
-					ServerWsEvent::Response { response, password } => {
-						self.handle_server_response(response, password)
-					}
-				},
-				Err(e) => {
-					let error_str = format!("{e}");
-					error!("{error_str}");
-					self.sidebar_page.server_connection_status =
-						Some(ServerConnectionStatus::Error(error_str));
-					Task::none()
-				}
-			},
-			Message::ConnectToServer => {
-				if let Some(SynchronizationSetting::Server(server_config)) =
-					self.preferences.synchronization()
-				{
-					info!("connecting to server...");
-					if let Some(message_sender) = &mut self.server_ws_message_sender {
-						let _ =
-							message_sender.send(ServerWsMessage::Connect(server_config.clone()));
-						self.sidebar_page.server_connection_status =
-							Some(ServerConnectionStatus::Connecting);
-					}
-				}
-				Task::none()
 			}
 			Message::DatabaseMessage(database_message) => match &mut self.database {
 				DatabaseState::Loaded(database) => {
@@ -1090,26 +938,17 @@ impl ProjectTrackerApp {
 					Task::batch(tasks)
 				}
 				_ => Task::none(),
-			}
+			},
 			Message::PreferenceMessage(preference_message) => {
-				let server_config_changed = matches!(
-					preference_message,
-					PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Server(_)))
-				);
+				if let PreferenceMessage::SetSynchronization(new_synchronization) =
+					preference_message.clone()
+				{
+					self.synchronization = new_synchronization;
+				}
 				let action = match &mut self.preferences {
 					Some(preferences) => preferences.update(preference_message),
 					None => PreferenceAction::None,
 				};
-				if server_config_changed {
-					if let Some(message_sender) = &mut self.server_ws_message_sender {
-						if let Some(SynchronizationSetting::Server(server_config)) =
-							self.preferences.synchronization()
-						{
-							let _ = message_sender
-								.send(ServerWsMessage::Connect(server_config.clone()));
-						}
-					}
-				}
 				self.perform_preference_action(action)
 			}
 			Message::SwitchToLowerProject => {
@@ -1158,7 +997,9 @@ impl ProjectTrackerApp {
 					let sidebar_snap_command = self.sidebar_page.snap_to_project(order, database);
 					return Task::batch([
 						match switched_project_id {
-							Some(project_id) => self.update(ContentPageMessage::OpenProjectPage(*project_id).into()),
+							Some(project_id) => {
+								self.update(ContentPageMessage::OpenProjectPage(*project_id).into())
+							}
 							None => Task::none(),
 						},
 						sidebar_snap_command,
@@ -1209,7 +1050,7 @@ impl ProjectTrackerApp {
 							self.just_minimal_dragging =
 								start_dragging_point.distance(point) < MINIMAL_DRAG_DISTANCE;
 						}
-					},
+					}
 					None => {
 						self.start_dragging_point = Some(point);
 						self.just_minimal_dragging = true;
@@ -1303,39 +1144,39 @@ impl ProjectTrackerApp {
 				let action = self.settings_modal.update(message, &mut self.preferences);
 				self.perform_preference_action(action)
 			}
-			Message::ManageTaskTagsModalMessage(message) => {
-				match &mut self.manage_tags_modal {
-					Some(manage_tags_modal) => {
-						let deleted_task_tag_id = match &message {
-							ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) => Some(*task_tag_id),
-							_ => None,
-						};
+			Message::ManageTaskTagsModalMessage(message) => match &mut self.manage_tags_modal {
+				Some(manage_tags_modal) => {
+					let deleted_task_tag_id = match &message {
+						ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) => {
+							Some(*task_tag_id)
+						}
+						_ => None,
+					};
 
-						let manage_task_tag_modal_action =
-							manage_tags_modal.update(message, self.database.ok());
+					let manage_task_tag_modal_action =
+						manage_tags_modal.update(message, self.database.ok());
 
-						Task::batch([
-							self.perform_manage_task_tags_modal_action(manage_task_tag_modal_action),
-							deleted_task_tag_id
-								.and_then(|deleted_task_tag_id| {
-									let action =
-										self.content_page.project_page.as_mut().map(|project_page| {
-											project_page.update(
-												ProjectPageMessage::UnsetFilterTaskTag(
-													deleted_task_tag_id,
-												),
-												self.database.ok(),
-												&self.preferences,
-											)
-										});
-									action.map(|action| self.perform_content_page_action(action))
-								})
-								.unwrap_or(Task::none()),
-						])
-					}
-					None => Task::none(),
+					Task::batch([
+						self.perform_manage_task_tags_modal_action(manage_task_tag_modal_action),
+						deleted_task_tag_id
+							.and_then(|deleted_task_tag_id| {
+								let action =
+									self.content_page.project_page.as_mut().map(|project_page| {
+										project_page.update(
+											ProjectPageMessage::UnsetFilterTaskTag(
+												deleted_task_tag_id,
+											),
+											self.database.ok(),
+											&self.preferences,
+										)
+									});
+								action.map(|action| self.perform_content_page_action(action))
+							})
+							.unwrap_or(Task::none()),
+					])
 				}
-			}
+				None => Task::none(),
+			},
 			Message::OpenManageTaskTagsModal(project_id) => {
 				self.manage_tags_modal = Some(ManageTaskTagsModal::new(project_id));
 				Task::none()
@@ -1345,11 +1186,11 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::CreateTaskModalMessage(message) => match &mut self.create_task_modal {
-				Some(create_task_modal) => match create_task_modal.update(message, &self.preferences) {
+				Some(create_task_modal) => match create_task_modal
+					.update(message, &self.preferences)
+				{
 					CreateTaskModalAction::None => Task::none(),
-					CreateTaskModalAction::Task(task) => {
-						task.map(Message::CreateTaskModalMessage)
-					}
+					CreateTaskModalAction::Task(task) => task.map(Message::CreateTaskModalMessage),
 					CreateTaskModalAction::CreateTask {
 						project_id,
 						task_id,
@@ -1383,7 +1224,7 @@ impl ProjectTrackerApp {
 					}
 				},
 				None => Task::none(),
-			}
+			},
 			Message::OpenCreateTaskModalCurrent => match self
 				.content_page
 				.project_page
@@ -1392,7 +1233,7 @@ impl ProjectTrackerApp {
 			{
 				Some(project_id) => self.update(Message::OpenCreateTaskModal(project_id)),
 				None => Task::none(),
-			}
+			},
 			Message::OpenCreateTaskModal(project_id) => {
 				self.create_task_modal = Some(CreateTaskModal::new(project_id));
 				Task::none()
@@ -1543,91 +1384,6 @@ impl ProjectTrackerApp {
 		}
 	}
 
-	fn handle_server_response(&mut self, response: Response, password: String) -> Task<Message> {
-		match response.0 {
-			Ok(encrypted_response) => {
-				match EncryptedResponse::decrypt(encrypted_response, &password) {
-					Ok(encrypted_response) => {
-						self.handle_encrypted_server_response(encrypted_response)
-					}
-					Err(e) => {
-						self.sidebar_page.server_connection_status =
-							Some(ServerConnectionStatus::Error(format!("{e}")));
-						Task::none()
-					}
-				}
-			}
-			Err(e) => {
-				let formatted_error = format!("Server error:\n{e}");
-				self.sidebar_page.server_connection_status =
-					Some(ServerConnectionStatus::Error(formatted_error.clone()));
-				if !self.database.is_loaded() && !self.database.error_loading() {
-					self.show_error_msg(formatted_error)
-				} else {
-					Task::none()
-				}
-			}
-		}
-	}
-
-	fn handle_encrypted_server_response(
-		&mut self,
-		encrypted_response: EncryptedResponse,
-	) -> Task<Message> {
-		match encrypted_response {
-			EncryptedResponse::Database {
-				database,
-				last_modified_time,
-			} => {
-				let server_is_more_up_to_date = self
-					.database
-					.ok()
-					.map(|db| last_modified_time > *db.last_changed_time())
-					.unwrap_or(true);
-
-				if server_is_more_up_to_date {
-					self.last_sync_finish_time = Some(Instant::now());
-					self.update(Message::LoadedDatabase(Ok(Database::from_serialized(
-						database,
-						last_modified_time,
-					))))
-				} else {
-					Task::none()
-				}
-			}
-			EncryptedResponse::DatabaseUpdated => {
-				self.last_sync_finish_time = Some(Instant::now());
-				Task::none()
-			}
-			EncryptedResponse::ModifiedDate(server_modified_date) => {
-				if let Some(server_ws_message_sender) = &mut self.server_ws_message_sender {
-					let server_is_more_up_to_date = self
-						.database
-						.ok()
-						.map(|db| server_modified_date > *db.last_changed_time())
-						.unwrap_or(true);
-
-					if server_is_more_up_to_date {
-						let _ = server_ws_message_sender
-							.send(ServerWsMessage::Request(Request::DownloadDatabase));
-					} else if let DatabaseState::Loaded(database) = &self.database {
-						let _ = server_ws_message_sender.send(ServerWsMessage::Request(
-							Request::UpdateDatabase {
-								database: database.serialized().clone(),
-								last_modified_time: *database.last_changed_time(),
-							},
-						));
-					}
-				}
-				Task::none()
-			}
-			EncryptedResponse::AdminInfos(admin_infos) => {
-				self.latest_admin_infos = Some(admin_infos);
-				Task::none()
-			}
-		}
-	}
-
 	fn modal<Message: 'static + Clone>(
 		content: Option<Element<Message>>,
 		on_close: Message,
@@ -1710,24 +1466,8 @@ impl ProjectTrackerApp {
 							create_empty_database_button(),
 							import_database_button(self.importing_database),
 						]
-						.push_maybe(
-							if matches!(
-								self.preferences.synchronization(),
-								Some(SynchronizationSetting::Server(_))
-							) {
-								Some(download_database_from_server_button())
-							} else {
-								None
-							}
-						)
 						.spacing(LARGE_SPACING_AMOUNT)
 					]
-					.push_maybe(
-						self.sidebar_page
-							.server_connection_status
-							.as_ref()
-							.map(ServerConnectionStatus::view),
-					)
 					.spacing(LARGE_SPACING_AMOUNT * 2)
 					.align_x(Horizontal::Center),
 				)

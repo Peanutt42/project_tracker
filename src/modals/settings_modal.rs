@@ -1,12 +1,12 @@
+use std::time::Duration;
+
 use crate::components::{
-	code_editor_dropdown_button, export_as_json_database_button, hide_password_button,
-	horizontal_seperator_padded, import_json_database_button, loading_screen, show_password_button,
-	synchronization_type_button, vertical_scrollable, vertical_scrollable_no_padding,
-	LARGE_LOADING_SPINNER_SIZE,
+	code_editor_dropdown_button, export_as_json_database_button, horizontal_seperator_padded,
+	import_json_database_button, loading_screen, synchronization_settings_button,
+	vertical_scrollable, vertical_scrollable_no_padding, LARGE_LOADING_SPINNER_SIZE,
 };
-use crate::core::export_database_file_dialog;
 use crate::icons::{icon_to_text, Bootstrap};
-use crate::integrations::{CodeEditor, ServerConfig};
+use crate::integrations::CodeEditor;
 use crate::project_tracker::{Message, ProjectTrackerApp};
 use crate::styles::{
 	command_background_container_style, grey_text_style, link_color, logs_scrollable_style,
@@ -15,36 +15,37 @@ use crate::styles::{
 	SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE,
 	SPACING_AMOUNT,
 };
+use crate::synchronization::{
+	browse_filesystem_synchronization_filepath_dialog, BaseSynchronization,
+};
+use crate::synchronization::{ServerConfig, ServerSynchronization, Synchronization};
 use crate::{
 	components::{
-		dangerous_button, export_database_button, file_location, filepath_widget,
-		import_database_button, import_google_tasks_button, select_synchronization_filepath_button,
-		settings_tab_button, vertical_seperator, HORIZONTAL_SCROLLABLE_PADDING, ICON_FONT_SIZE,
+		dangerous_button, export_database_button, file_location, import_database_button,
+		import_google_tasks_button, settings_tab_button, vertical_seperator,
+		HORIZONTAL_SCROLLABLE_PADDING, ICON_FONT_SIZE,
 	},
 	integrations::import_google_tasks_dialog,
 	modals::ErrorMsgModalMessage,
 	styles::{card_style, PADDING_AMOUNT},
-	DateFormatting, PreferenceAction, PreferenceMessage, Preferences, SynchronizationSetting,
+	DateFormatting, PreferenceAction, PreferenceMessage, Preferences,
 };
-use iced::advanced::graphics::futures::backend::default::time;
 use iced::alignment::Vertical;
 use iced::widget::scrollable::{Direction, Scrollbar};
 use iced::widget::text::Span;
-use iced::widget::{rich_text, text_input, toggler, tooltip};
+use iced::widget::{rich_text, scrollable, text_input, tooltip};
 use iced::{
 	alignment::Horizontal,
 	keyboard,
-	widget::{column, container, row, scrollable, text, Column, Space},
+	widget::{column, container, row, text, Column, Space},
 	Alignment, Element,
 	Length::Fill,
 	Padding, Subscription, Task,
 };
-use iced::{Color, Length};
+use iced::{time, Color, Length};
 use iced_aw::card;
 use project_tracker_core::DatabaseMessage;
-use project_tracker_server::{AdminInfos, DEFAULT_PASSWORD};
-use std::str::FromStr;
-use std::time::Duration;
+use project_tracker_server::AdminInfos;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {
@@ -61,14 +62,12 @@ pub enum SettingsModalMessage {
 
 	SetDateFormatting(DateFormatting),
 
-	BrowseSynchronizationFilepath,
-	BrowseSynchronizationFilepathCanceled,
-
 	ImportGoogleTasksFileDialog,
 	ImportGoogleTasksFileDialogCanceled,
 
-	EnableSynchronization,
-	DisableSynchronization,
+	BrowseSynchronizationFilepath,
+	BrowseSynchronizationFilepathCanceled,
+
 	SetServerHostname(String),
 	SetServerPort(usize),
 	SetServerPassword(String),
@@ -130,7 +129,6 @@ impl SettingTab {
 		preferences: &'a Preferences,
 		show_password: bool,
 		code_editor_dropdown_expanded: bool,
-		latest_admin_infos: &'a Option<AdminInfos>,
 	) -> Element<'a, Message> {
 		match self {
 			SettingTab::General => vertical_scrollable(preferences.view(&app.flags)).into(),
@@ -146,7 +144,11 @@ impl SettingTab {
 			.into(),
 			// no 'vertical_scrollable': loading_screen has 'Fill' height
 			// --> 'admin_infos_settings_tab_view' calls 'vertical_scrollable' internally
-			SettingTab::AdminInfos => admin_infos_settings_tab_view(latest_admin_infos),
+			SettingTab::AdminInfos => admin_infos_settings_tab_view(
+				app.synchronization
+					.as_ref()
+					.and_then(Synchronization::latest_admin_infos),
+			),
 			SettingTab::About => vertical_scrollable(about_settings_tab_view(app)).into(),
 		}
 	}
@@ -276,31 +278,30 @@ impl SettingsModal {
 				PreferenceAction::None
 			}
 
-			SettingsModalMessage::BrowseSynchronizationFilepath => {
-				Task::perform(export_database_file_dialog(), |filepath| match filepath {
-					Some(filepath) => PreferenceMessage::SetSynchronization(Some(
-						SynchronizationSetting::Filepath {
-							filepath: Some(filepath),
-						},
-					))
-					.into(),
-					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
-				})
-				.into()
-			}
-			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => PreferenceAction::None,
-
 			SettingsModalMessage::ImportGoogleTasksFileDialog => {
 				Task::perform(import_google_tasks_dialog(), move |result| match result {
 					Some(result) => match result {
 						Ok(projects) => DatabaseMessage::ImportProjects(projects).into(),
 						Err(import_error) => ErrorMsgModalMessage::open_error(import_error),
 					},
-					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
+					None => SettingsModalMessage::ImportGoogleTasksFileDialogCanceled.into(),
 				})
 				.into()
 			}
 			SettingsModalMessage::ImportGoogleTasksFileDialogCanceled => PreferenceAction::None,
+
+			SettingsModalMessage::BrowseSynchronizationFilepath => Task::perform(
+				browse_filesystem_synchronization_filepath_dialog(),
+				|file_synchronization| match file_synchronization {
+					Some(file_synchronization) => {
+						PreferenceMessage::SetSynchronization(Some(file_synchronization.into()))
+							.into()
+					}
+					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
+				},
+			)
+			.into(),
+			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => PreferenceAction::None,
 
 			SettingsModalMessage::SetDateFormatting(date_formatting) => match preferences {
 				Some(preferences) => {
@@ -309,25 +310,18 @@ impl SettingsModal {
 				None => PreferenceAction::None,
 			},
 
-			SettingsModalMessage::EnableSynchronization => {
-				PreferenceMessage::SetSynchronization(Some(SynchronizationSetting::Filepath {
-					filepath: None,
-				}))
-				.into()
-			}
-			SettingsModalMessage::DisableSynchronization => {
-				PreferenceMessage::SetSynchronization(None).into()
-			}
 			SettingsModalMessage::SetServerHostname(new_hostname) => {
 				if let Some(preferences) = preferences {
-					if let Some(SynchronizationSetting::Server(config)) =
+					if let Some(Synchronization::ServerSynchronization(server_synchronization)) =
 						preferences.synchronization()
 					{
 						return PreferenceMessage::SetSynchronization(Some(
-							SynchronizationSetting::Server(ServerConfig {
-								hostname: new_hostname,
-								..config.clone()
-							}),
+							Synchronization::ServerSynchronization(ServerSynchronization::new(
+								ServerConfig {
+									hostname: new_hostname,
+									..server_synchronization.config.clone()
+								},
+							)),
 						))
 						.into();
 					}
@@ -336,14 +330,16 @@ impl SettingsModal {
 			}
 			SettingsModalMessage::SetServerPort(new_port) => {
 				if let Some(preferences) = preferences {
-					if let Some(SynchronizationSetting::Server(config)) =
+					if let Some(Synchronization::ServerSynchronization(server_synchronization)) =
 						preferences.synchronization()
 					{
 						return PreferenceMessage::SetSynchronization(Some(
-							SynchronizationSetting::Server(ServerConfig {
-								port: new_port,
-								..config.clone()
-							}),
+							Synchronization::ServerSynchronization(ServerSynchronization::new(
+								ServerConfig {
+									port: new_port,
+									..server_synchronization.config.clone()
+								},
+							)),
 						))
 						.into();
 					}
@@ -352,14 +348,16 @@ impl SettingsModal {
 			}
 			SettingsModalMessage::SetServerPassword(new_password) => {
 				if let Some(preferences) = preferences {
-					if let Some(SynchronizationSetting::Server(config)) =
+					if let Some(Synchronization::ServerSynchronization(server_synchronization)) =
 						preferences.synchronization()
 					{
 						return PreferenceMessage::SetSynchronization(Some(
-							SynchronizationSetting::Server(ServerConfig {
-								password: new_password,
-								..config.clone()
-							}),
+							Synchronization::ServerSynchronization(ServerSynchronization::new(
+								ServerConfig {
+									password: new_password,
+									..server_synchronization.config.clone()
+								},
+							)),
 						))
 						.into();
 					}
@@ -378,23 +376,9 @@ impl SettingsModal {
 				show_password,
 				code_editor_dropdown_expanded,
 			} => app.preferences.as_ref().map(|preferences| {
-				let server_configs_provided = matches!(
-					preferences.synchronization(),
-					&Some(SynchronizationSetting::Server(_))
-				);
-
 				let tabs: Vec<Element<Message>> = SettingTab::ALL
 					.iter()
-					.filter_map(|tab| match tab {
-						SettingTab::AdminInfos => {
-							if server_configs_provided {
-								Some(settings_tab_button(*tab, *selected_tab).into())
-							} else {
-								None
-							}
-						}
-						_ => Some(settings_tab_button(*tab, *selected_tab).into()),
-					})
+					.map(|tab| settings_tab_button(*tab, *selected_tab).into())
 					.collect();
 
 				card(
@@ -410,8 +394,7 @@ impl SettingsModal {
 							app,
 							preferences,
 							*show_password,
-							*code_editor_dropdown_expanded,
-							&app.latest_admin_infos,
+							*code_editor_dropdown_expanded
 						)
 					]
 					.spacing(SPACING_AMOUNT),
@@ -432,6 +415,16 @@ fn database_settings_tab_view<'a>(
 	preferences: &'a Preferences,
 	show_password: bool,
 ) -> Element<'a, Message> {
+	let synchronization = preferences.synchronization();
+	let filesystem_synchronization_enabled = synchronization
+		.as_ref()
+		.map(Synchronization::is_filesystem)
+		.unwrap_or(false);
+	let server_synchronization_enabled = synchronization
+		.as_ref()
+		.map(Synchronization::is_server)
+		.unwrap_or(false);
+
 	column![
 		row![
 			container("Database file location: ").padding(HORIZONTAL_SCROLLABLE_PADDING),
@@ -476,14 +469,29 @@ fn database_settings_tab_view<'a>(
 				text("Synchronization:"),
 
 				container(
-					toggler(preferences.synchronization().is_some())
-						.size(27.5)
-						.on_toggle(|enable| if enable {
-							SettingsModalMessage::EnableSynchronization.into()
-						}
-						else {
-							SettingsModalMessage::DisableSynchronization.into()
-						})
+					row![
+						synchronization_settings_button(
+							"Off",
+							synchronization.is_none(),
+							PreferenceMessage::SetSynchronization(None).into(),
+							true,
+							false
+						),
+						synchronization_settings_button(
+							"Filesystem",
+							filesystem_synchronization_enabled,
+							SettingsModalMessage::BrowseSynchronizationFilepath.into(),
+							false,
+							false
+						),
+						synchronization_settings_button(
+							"Server",
+							server_synchronization_enabled,
+							PreferenceMessage::SetSynchronization(Some(ServerSynchronization::default().into())).into(),
+							false,
+							true
+						)
+					]
 				)
 				.width(Fill)
 				.align_x(Horizontal::Right)
@@ -491,138 +499,7 @@ fn database_settings_tab_view<'a>(
 			.spacing(SPACING_AMOUNT)
 			.align_y(Alignment::Center)
 		]
-		.push_maybe(
-			preferences.synchronization().as_ref().map(|synchronization_setting| {
-				column![
-					row![
-						text("Type: "),
-						tooltip(
-							icon_to_text(Bootstrap::QuestionCircleFill).size(ICON_FONT_SIZE),
-							text("Either a filepath or a server
-Filepath: select a file on a different drive, a network shared drive or your own cloud like onedrive, google drive, etc.
-Server: your own hosted ProjectTracker-server"
-							)
-							.size(SMALL_TEXT_SIZE),
-							tooltip::Position::Bottom,
-						)
-						.gap(GAP)
-						.style(tooltip_container_style),
-						container(
-							row![
-								synchronization_type_button(
-									SynchronizationSetting::Filepath{ filepath: None },
-									synchronization_setting,
-									true,
-									false
-								),
-								synchronization_type_button(
-									SynchronizationSetting::Server(ServerConfig::default()),
-									synchronization_setting,
-									false,
-									true
-								),
-							]
-						)
-						.width(Fill)
-						.align_x(Horizontal::Right),
-					]
-					.align_y(Alignment::Center),
-
-					match synchronization_setting {
-						SynchronizationSetting::Filepath{ filepath } => {
-							let horizontal_scrollable_padding = if filepath.is_some() {
-								HORIZONTAL_SCROLLABLE_PADDING
-							}
-							else {
-								Padding::ZERO
-							};
-
-							row![
-								match filepath {
-									Some(filepath) => filepath_widget(filepath.clone())
-										.width(Fill)
-										.into(),
-									None => Element::new(text("Filepath not specified!")),
-								},
-
-								container(select_synchronization_filepath_button())
-									.padding(horizontal_scrollable_padding),
-							]
-							.spacing(SPACING_AMOUNT)
-							.align_y(Alignment::Center)
-						},
-						SynchronizationSetting::Server(server_config) => {
-							row![
-								column![
-									row![
-										container("Hostname: ")
-											.width(100.0),
-
-										text_input("ex. 127.0.0.1 or raspberrypi.local", &server_config.hostname)
-											.on_input(|hostname| SettingsModalMessage::SetServerHostname(hostname).into())
-											.style(text_input_style_default),
-									]
-									.align_y(Vertical::Center),
-
-									row![
-										container("Port: ")
-											.width(100.0),
-
-										text_input("ex. 8080", &format!("{}", server_config.port))
-											.on_input(|input| {
-												let new_port = match usize::from_str(&input) {
-													Ok(new_port) => {
-														Some(new_port)
-													}
-													Err(_) => {
-														if input.is_empty() {
-															Some(8080)
-														} else {
-															None
-														}
-													}
-												};
-												match new_port {
-													Some(new_port) => SettingsModalMessage::SetServerPort(new_port).into(),
-													None => SettingsModalMessage::InvalidPortInput.into(),
-												}
-											})
-											.style(text_input_style_default)
-											.width(55.0),
-									]
-									.align_y(Vertical::Center),
-
-									row![
-										container("Password: ")
-											.width(100.0),
-
-										if show_password {
-											row![
-												text_input(format!("default: {}", DEFAULT_PASSWORD).as_str(), &server_config.password)
-													.on_input(|password| SettingsModalMessage::SetServerPassword(password).into())
-													.style(text_input_style_default),
-
-												hide_password_button(),
-											]
-											.align_y(Vertical::Center)
-											.spacing(SPACING_AMOUNT)
-											.into()
-										}
-										else {
-											show_password_button()
-										},
-									]
-									.align_y(Vertical::Center),
-								]
-								.spacing(SPACING_AMOUNT)
-							]
-							.spacing(SPACING_AMOUNT)
-						},
-					}
-				]
-				.spacing(SPACING_AMOUNT)
-			})
-		)
+		.push_maybe(synchronization.as_ref().map(|synchronization| synchronization.view(show_password)))
 		.spacing(SPACING_AMOUNT),
 
 		horizontal_seperator_padded(),
@@ -765,7 +642,7 @@ fn code_editor_settings_tab_view(
 	.into()
 }
 
-fn admin_infos_settings_tab_view(admin_infos: &Option<AdminInfos>) -> Element<Message> {
+fn admin_infos_settings_tab_view(admin_infos: Option<&AdminInfos>) -> Element<Message> {
 	match admin_infos {
 		Some(admin_infos) => vertical_scrollable(
 			column![

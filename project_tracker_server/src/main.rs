@@ -13,7 +13,6 @@ use tracing::warn;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
 
-#[cfg(feature = "web_server")]
 mod web_server;
 
 #[tokio::main]
@@ -82,53 +81,49 @@ async fn main() {
 
 	let connected_clients = Arc::new(RwLock::new(HashSet::<ConnectedClient>::new()));
 
-	#[allow(unused)]
 	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
 
-	#[cfg(feature = "web_server")]
-	{
-		let password_clone = password.clone();
-		let log_filepath_clone = log_filepath.clone();
-		let shared_database_clone = shared_database.clone();
-		let connected_clients_clone = connected_clients.clone();
-		let cpu_usage_avg_clone = cpu_usage_avg.clone();
-		let opt_custom_cert_pem_filepath = server_data_directory.join("cert.pem");
-		let opt_custom_key_pem_filepath = server_data_directory.join("key.pem");
-		let custom_cert_pem = tokio::fs::read(opt_custom_cert_pem_filepath).await.ok();
-		let custom_key_pem = tokio::fs::read(opt_custom_key_pem_filepath).await.ok();
-		let custom_cert_and_key_pem = match (custom_cert_pem, custom_key_pem) {
-			(Some(_), None) => {
-				warn!("only the custom cert.pem file is present, no key.pem found --> ignoring custom certificate!");
-				None
-			}
-			(None, Some(_)) => {
-				warn!("only the custom key.pem file is present, no cert.pem found --> ignoring custom certificate!");
-				None
-			}
-			(None, None) => None,
-			(Some(cert_pem), Some(key_pem)) => Some((cert_pem, key_pem)),
-		};
+	let password_clone = password.clone();
+	let log_filepath_clone = log_filepath.clone();
+	let shared_database_clone = shared_database.clone();
+	let connected_clients_clone = connected_clients.clone();
+	let cpu_usage_avg_clone = cpu_usage_avg.clone();
+	let opt_custom_cert_pem_filepath = server_data_directory.join("cert.pem");
+	let opt_custom_key_pem_filepath = server_data_directory.join("key.pem");
+	let custom_cert_pem = tokio::fs::read(opt_custom_cert_pem_filepath).await.ok();
+	let custom_key_pem = tokio::fs::read(opt_custom_key_pem_filepath).await.ok();
+	let custom_cert_and_key_pem = match (custom_cert_pem, custom_key_pem) {
+		(Some(_), None) => {
+			warn!("only the custom cert.pem file is present, no key.pem found --> ignoring custom certificate!");
+			None
+		}
+		(None, Some(_)) => {
+			warn!("only the custom key.pem file is present, no cert.pem found --> ignoring custom certificate!");
+			None
+		}
+		(None, None) => None,
+		(Some(cert_pem), Some(key_pem)) => Some((cert_pem, key_pem)),
+	};
 
-		std::thread::Builder::new()
-			.name("Web Server".to_string())
-			.spawn(move || {
-				let rt = tokio::runtime::Runtime::new().unwrap();
+	std::thread::Builder::new()
+		.name("Web Server".to_string())
+		.spawn(move || {
+			let rt = tokio::runtime::Runtime::new().unwrap();
 
-				rt.block_on(async {
-					web_server::run_web_server(
-						password_clone,
-						modified_receiver,
-						shared_database_clone,
-						connected_clients_clone,
-						cpu_usage_avg_clone,
-						log_filepath_clone,
-						custom_cert_and_key_pem,
-					)
-					.await;
-				});
-			})
-			.expect("failed to start web server thread");
-	}
+			rt.block_on(async {
+				web_server::run_web_server(
+					password_clone,
+					modified_receiver,
+					shared_database_clone,
+					connected_clients_clone,
+					cpu_usage_avg_clone,
+					log_filepath_clone,
+					custom_cert_and_key_pem,
+				)
+				.await;
+			});
+		})
+		.expect("failed to start web server thread");
 
 	project_tracker_server::run_server(
 		DEFAULT_PORT,

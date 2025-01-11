@@ -1,6 +1,7 @@
 use crate::icons::Bootstrap;
-use crate::integrations::{CodeEditor, ServerConfig};
+use crate::integrations::CodeEditor;
 use crate::project_tracker::AppFlags;
+use crate::synchronization::Synchronization;
 use crate::{
 	components::{
 		dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded,
@@ -40,33 +41,6 @@ fn default_play_timer_notification_sound() -> bool {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum SynchronizationSetting {
-	// needs to be a { fileapth: .. } because 'Filepath(Option<_>)' doesnt work with toml serde serialization
-	Filepath { filepath: Option<PathBuf> },
-	Server(ServerConfig),
-}
-
-impl SynchronizationSetting {
-	pub fn as_str(&self) -> &'static str {
-		match self {
-			SynchronizationSetting::Filepath { .. } => "Filepath",
-			SynchronizationSetting::Server(_) => "Server",
-		}
-	}
-
-	pub fn is_same_type(&self, other: &Self) -> bool {
-		match self {
-			SynchronizationSetting::Filepath { .. } => {
-				matches!(other, SynchronizationSetting::Filepath { .. })
-			}
-			SynchronizationSetting::Server(_) => {
-				matches!(other, SynchronizationSetting::Server(_))
-			}
-		}
-	}
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
 	theme_mode: ThemeMode,
 
@@ -88,9 +62,9 @@ pub struct Preferences {
 
 	stopwatch_progress: Option<StopwatchProgress>,
 
-	synchronization: Option<SynchronizationSetting>,
-
 	code_editor: Option<CodeEditor>,
+
+	synchronization: Option<Synchronization>,
 
 	#[serde(skip, default = "Instant::now")]
 	last_changed_time: Instant,
@@ -110,8 +84,8 @@ impl Default for Preferences {
 			play_timer_notification_sound: default_play_timer_notification_sound(),
 			selected_content_page: SerializedContentPage::default(),
 			stopwatch_progress: None,
-			synchronization: None,
 			code_editor: None,
+			synchronization: None,
 			last_changed_time: Instant::now(),
 			last_saved_time: Instant::now(),
 		}
@@ -159,11 +133,12 @@ pub enum PreferenceMessage {
 	SetThemeMode(ThemeMode),
 	ToggleShowSidebar,
 	SetContentPage(SerializedContentPage),
-	SetSynchronization(Option<SynchronizationSetting>),
 	SetDateFormatting(DateFormatting),
 	SetCreateNewTaskAtTop(bool),
 	SetSortUnspecifiedTasksAtBottom(bool),
 	SetPlayTimerNotificationSound(bool),
+
+	SetSynchronization(Option<Synchronization>),
 }
 
 impl From<PreferenceMessage> for Message {
@@ -222,11 +197,11 @@ pub type SavePreferencesResult<T> = Result<T, SavePreferencesError>;
 impl Preferences {
 	pub const FILE_NAME: &'static str = "preferences.toml";
 
-	pub fn synchronization(&self) -> &Option<SynchronizationSetting> {
+	pub fn synchronization(&self) -> &Option<Synchronization> {
 		&self.synchronization
 	}
-	pub fn set_synchronization(&mut self, setting: Option<SynchronizationSetting>) {
-		self.modify(|pref| pref.synchronization = setting);
+	pub fn set_synchronization(&mut self, synchronization: Option<Synchronization>) {
+		self.modify(|pref| pref.synchronization = synchronization);
 	}
 	pub fn theme_mode(&self) -> &ThemeMode {
 		&self.theme_mode
@@ -333,11 +308,6 @@ impl Preferences {
 				PreferenceAction::None
 			}
 
-			PreferenceMessage::SetSynchronization(setting) => {
-				self.set_synchronization(setting);
-				PreferenceAction::None
-			}
-
 			PreferenceMessage::SetDateFormatting(date_formatting) => {
 				self.modify(|pref| pref.date_formatting = date_formatting);
 				PreferenceAction::None
@@ -359,6 +329,11 @@ impl Preferences {
 
 			PreferenceMessage::SetPlayTimerNotificationSound(play_sound) => {
 				self.modify(|pref| pref.play_timer_notification_sound = play_sound);
+				PreferenceAction::None
+			}
+
+			PreferenceMessage::SetSynchronization(synchronization) => {
+				self.modify(|pref| pref.synchronization = synchronization);
 				PreferenceAction::None
 			}
 		}
@@ -568,7 +543,7 @@ pub trait OptionalPreference {
 	fn date_formatting(&self) -> DateFormatting;
 	fn create_new_tasks_at_top(&self) -> bool;
 	fn sort_unspecified_tasks_at_bottom(&self) -> bool;
-	fn synchronization(&self) -> Option<&SynchronizationSetting>;
+	fn synchronization(&self) -> Option<&Synchronization>;
 	fn play_timer_notification_sound(&self) -> bool;
 	fn code_editor(&self) -> Option<&CodeEditor>;
 }
@@ -598,7 +573,7 @@ impl OptionalPreference for Option<Preferences> {
 			None => default_sort_unspecified_tasks_at_bottom(),
 		}
 	}
-	fn synchronization(&self) -> Option<&SynchronizationSetting> {
+	fn synchronization(&self) -> Option<&Synchronization> {
 		self.as_ref()
 			.and_then(|preferences| preferences.synchronization.as_ref())
 	}

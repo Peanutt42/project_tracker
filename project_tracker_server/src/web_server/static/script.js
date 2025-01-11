@@ -14,7 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	const stored_password = localStorage.getItem("password");
 	if (stored_password) {
-		const last_loaded_database = localStorage.getItem("last_loaded_database");
+		const last_loaded_database = JSON.parse(
+			localStorage.getItem("last_loaded_database"),
+		);
 		if (last_loaded_database) {
 			populate_dom_from_database(last_loaded_database);
 		}
@@ -42,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (response.ok) {
 				const database = await response.json();
 				localStorage.setItem("password", password);
-				localStorage.setItem("last_loaded_database", database);
+				localStorage.setItem("last_loaded_database", JSON.stringify(database));
 				populate_dom_from_database(database);
 			} else if (response.status === 401) {
 				console.error("invalid password, unauthorized!");
@@ -70,8 +72,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	function populate_dom_from_database(database) {
 		database_list.innerHTML = "";
-		for (const project_id in database.projects) {
-			const project = database.projects[project_id];
+		for (const project_id in database) {
+			const project = database[project_id];
 
 			const project_div = document.createElement("div");
 			project_div.className = "project";
@@ -121,8 +123,11 @@ document.addEventListener("DOMContentLoaded", () => {
 			done_task_list_section.appendChild(show_done_tasks_summary);
 			const done_task_list = document.createElement("ul");
 			done_task_list.className = "task_list";
-			sort_project_tasks(project.sort_mode, project.done_tasks);
-			for (const task_with_id of project.done_tasks) {
+			const sorted_done_tasks = field_ordered_tasklist_to_array(
+				project.done_tasks,
+			);
+			sort_project_tasks(project.sort_mode, sorted_done_tasks);
+			for (const task_with_id of sorted_done_tasks) {
 				populate_dom_with_task(
 					done_task_list,
 					task_with_id[1],
