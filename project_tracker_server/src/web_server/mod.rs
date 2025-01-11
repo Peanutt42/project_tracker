@@ -1,9 +1,9 @@
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
 use project_tracker_server::{AdminInfos, ConnectedClient, ModifiedEvent};
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
-	convert::Infallible,
 	net::SocketAddr,
 	path::PathBuf,
 	sync::{Arc, RwLock},
@@ -12,19 +12,10 @@ use tokio::sync::broadcast::Receiver;
 use tracing::{error, info};
 use warp::{
 	body,
-	filters::{
-		body::BodyDeserializeError, cors::CorsForbidden, ext::MissingExtension,
-		ws::MissingConnectionUpgrade,
-	},
 	http::StatusCode,
 	path,
 	path::end,
-	post,
-	reject::{
-		InvalidHeader, InvalidQuery, LengthRequired, MethodNotAllowed, MissingCookie,
-		MissingHeader, PayloadTooLarge, Rejection, UnsupportedMediaType,
-	},
-	reply,
+	post, reply,
 	reply::{html, with_header, with_status, Reply, Response},
 	serve, ws,
 	ws::{Message, WebSocket, Ws},
@@ -60,10 +51,6 @@ const LOGIN_SCRIPT_JS: &str = include_str!("static/login/script.js");
 const ADMIN_INDEX_HTML: &str = include_str!("static/admin/index.html");
 const ADMIN_STYLE_CSS: &str = include_str!("static/admin/style.css");
 const ADMIN_SCRIPT_JS: &str = include_str!("static/admin/script.js");
-
-#[derive(Debug)]
-struct InvalidPassword;
-impl warp::reject::Reject for InvalidPassword {}
 
 pub async fn run_web_server(
 	password: String,
@@ -126,35 +113,29 @@ pub async fn run_web_server(
 
 	let modified_ws_route = path("modified")
 		.and(ws())
-		.and(path::param())
 		.and(warp::addr::remote())
 		.and(modified_receiver)
 		.and(connected_clients_clone)
 		.and(password_clone)
-		.and_then(
+		.then(
 			move |ws: Ws,
-			      client_password: String,
 			      client_addr: Option<SocketAddr>,
 			      modified_receiver: Arc<RwLock<Receiver<ModifiedEvent>>>,
 			      connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
 			      password: String| {
 				async move {
-					if client_password == password {
-						Ok(ws.on_upgrade(move |socket| {
-							on_upgrade_modified_ws(
-								socket,
-								client_addr,
-								modified_receiver.read().unwrap().resubscribe(),
-								connected_clients,
-							)
-						}))
-					} else {
-						Err(warp::reject::custom(InvalidPassword))
-					}
+					ws.on_upgrade(move |socket| {
+						on_upgrade_modified_ws(
+							socket,
+							password,
+							client_addr,
+							modified_receiver.read().unwrap().resubscribe(),
+							connected_clients,
+						)
+					})
 				}
 			},
-		)
-		.recover(recover_rejection);
+		);
 
 	let static_path = path("static");
 
@@ -338,11 +319,43 @@ fn get_admin_infos(
 }
 
 async fn on_upgrade_modified_ws(
-	ws: WebSocket,
+	mut ws: WebSocket,
+	password: String,
 	client_addr: Option<SocketAddr>,
 	modified_receiver: Receiver<ModifiedEvent>,
 	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
 ) {
+	#[derive(Deserialize)]
+	struct AuthenticateJson {
+		password: String,
+	}
+
+	#[derive(Serialize)]
+	struct AuthenticationResponse {
+		successfull: bool,
+	}
+
+	// wait until client sends the correct password
+	loop {
+		if let Some(Ok(message)) = ws.next().await {
+			if let Ok(msg_text) = message.to_str() {
+				if let Ok(json_msg) = serde_json::from_str::<AuthenticateJson>(msg_text) {
+					let successfull = json_msg.password == password;
+					let _ = ws
+						.send(Message::text(
+							serde_json::to_string(&AuthenticationResponse { successfull }).unwrap(),
+						))
+						.await;
+					if successfull {
+						break;
+					} else {
+						info!("invalid password, refusing modified ws access");
+					}
+				}
+			}
+		}
+	}
+
 	let connected_client = client_addr.map(ConnectedClient::Web);
 
 	if let Some(connected_client) = connected_client {
@@ -392,85 +405,4 @@ async fn handle_modified_ws(ws: WebSocket, mut modified_receiver: Receiver<Modif
 			},
 		};
 	}
-}
-
-async fn recover_rejection(rejection: Rejection) -> Result<impl Reply, Infallible> {
-	let code;
-	let message;
-
-	if rejection.is_not_found() {
-		code = StatusCode::NOT_FOUND;
-		message = String::new();
-	} else if let Some(InvalidPassword) = rejection.find() {
-		code = StatusCode::UNAUTHORIZED;
-		message = "Invalid Password!".to_string();
-	} else if rejection.find::<MethodNotAllowed>().is_some() {
-		code = StatusCode::METHOD_NOT_ALLOWED;
-		message = String::new();
-	} else if let Some(e) = rejection.find::<InvalidHeader>() {
-		code = StatusCode::BAD_REQUEST;
-		message = e.to_string();
-	} else if let Some(e) = rejection.find::<MissingHeader>() {
-		code = StatusCode::BAD_REQUEST;
-		message = e.to_string();
-	} else if let Some(e) = rejection.find::<MissingCookie>() {
-		code = StatusCode::BAD_REQUEST;
-		message = e.to_string();
-	} else if rejection.find::<InvalidQuery>().is_some()
-		|| rejection.find::<MissingConnectionUpgrade>().is_some()
-		|| rejection.find::<LengthRequired>().is_some()
-	{
-		code = StatusCode::BAD_REQUEST;
-		message = String::new();
-	} else if let Some(e) = rejection.find::<BodyDeserializeError>() {
-		code = StatusCode::BAD_REQUEST;
-		message = e.to_string();
-	} else if rejection.find::<PayloadTooLarge>().is_some() {
-		code = StatusCode::PAYLOAD_TOO_LARGE;
-		message = String::new();
-	} else if rejection.find::<UnsupportedMediaType>().is_some() {
-		code = StatusCode::UNSUPPORTED_MEDIA_TYPE;
-		message = String::new();
-	} else if let Some(e) = rejection.find::<CorsForbidden>() {
-		code = StatusCode::FORBIDDEN;
-		message = e.to_string();
-	} else if rejection.find::<MissingExtension>().is_some() {
-		code = StatusCode::INTERNAL_SERVER_ERROR;
-		message = String::new();
-	} else {
-		error!("unhandled web rejection: {rejection:?}");
-		code = StatusCode::INTERNAL_SERVER_ERROR;
-		message = "Unhandled Rejection".to_string();
-	}
-
-	let json = warp::reply::html(format!(
-		"<!DOCTYPE html>
-<head>
-	<meta charset=\"UTF-8\" />
-	<meta name=\"viewport\" content=\"width=device-width\" />
-	<link rel=\"icon\" type=\"image/x-icon\" href=\"/static/favicon.ico\">
-	<link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/static/icon_180x180.png\">
-	<title>{code}</title>
-	<style>
-		body {{
-			background-color: #1f1f1f;
-			color: #e0e0e0;
-			font-family: Arial, sans-serif;
-			font-size: 30px;
-			font-weight: bold;
-			line-height: 1.6;
-			height: 100vh;
-			margin: 0 auto;
-			padding: 15px;
-		}}
-	</style>
-</head>
-<body>
-	<div>{code}\n{message}</div>
-</body>
-</html>
-"
-	));
-
-	Ok(warp::reply::with_status(json, code))
 }

@@ -832,7 +832,7 @@ fn timer_notification(summary: String, body: String) {
 	notification
 		.summary(&summary)
 		.body(&body)
-		.appname("Project Tracker") // only used to display app name text inside the notification, nothing else
+		.appname("project_tracker") // only used to display app name text inside the notification, nothing else
 		.icon("project_tracker") // will resolve into 'project_tracker.png'
 		.timeout(Timeout::Never);
 

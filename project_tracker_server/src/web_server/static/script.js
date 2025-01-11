@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	const logout_button = document.getElementById("logout_button");
 
 	let ws = null;
+	let ws_authenticated = false;
 	let reconnect_attempts = 0;
 
 	admin_dashboard_button.addEventListener("click", open_admin_page);
@@ -23,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		login(stored_password);
 
-		connect_ws(stored_password);
+		connect_ws();
 	} else {
 		window.location.href = "/login";
 	}
@@ -268,16 +269,25 @@ document.addEventListener("DOMContentLoaded", () => {
 		task_list.appendChild(task_div);
 	}
 
-	function connect_ws(password) {
+	function connect_ws() {
 		console.log("connecting to modifed ws endpoint...");
-		ws = new WebSocket("wss://" + location.host + "/modified/" + password);
+		ws = new WebSocket("wss://" + location.host + "/modified/");
 		ws.onopen = on_ws_open;
 		ws.onclose = on_ws_close;
 		ws.onmessage = on_ws_message;
+		ws_authenticated = false;
 	}
 
 	function on_ws_open(event) {
 		reconnect_attempts = 0;
+		const password = localStorage.getItem("password");
+		if (password) {
+			ws.send(
+				JSON.stringify({
+					password: password,
+				}),
+			);
+		}
 	}
 
 	function on_ws_close(event) {
@@ -297,6 +307,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// fetch updated database
 	function on_ws_message(msg) {
-		populate_dom_from_database(JSON.parse(msg.data));
+		if (ws_authenticated) {
+			populate_dom_from_database(JSON.parse(msg.data));
+		} else {
+			const authentication_response = JSON.parse(msg.data);
+			if (authentication_response.successfull) {
+				ws_authenticated = true;
+			} else {
+				logout();
+			}
+		}
 	}
 });
