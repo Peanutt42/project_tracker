@@ -254,6 +254,7 @@ impl CreateTaskModal {
 				task_description_editor(
 					&self.task_description,
 					|action| { CreateTaskModalMessage::TaskDescriptionAction(action).into() },
+					None,
 					CreateTaskModalMessage::UnindentDescription.into()
 				),
 				Space::new(0.0, LARGE_SPACING_AMOUNT),

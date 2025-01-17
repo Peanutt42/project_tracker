@@ -2,6 +2,7 @@ use crate::{
 	components::markdown::{
 		advanced_parse, markdown_with_jetbrainsmono_font, Item, MarkdownMessage,
 	},
+	components::unfocusable,
 	project_tracker::Message,
 	styles::{
 		description_text_editor_style, markdown_background_container_style, markdown_style,
@@ -14,7 +15,6 @@ use iced::{
 	widget::{
 		container, markdown, text, text_editor,
 		text_editor::{Action, Content},
-		TextEditor,
 	},
 	Element,
 	Length::Fill,
@@ -65,13 +65,19 @@ pub fn task_description<'a>(
 pub fn task_description_editor<'a>(
 	task_description_content: &'a Content,
 	on_action: impl Fn(Action) -> Message + 'a,
+	on_exit_editor: Option<Message>,
 	unindent_message: Message,
-) -> TextEditor<'a, highlighter::Highlighter, Message> {
-	text_editor(task_description_content)
+) -> Element<'a, Message> {
+	let text_editor = text_editor(task_description_content)
 		.on_action(on_action)
 		.wrapping(text::Wrapping::Word)
 		.font(JET_BRAINS_MONO_FONT)
 		.highlight("markdown", highlighter::Theme::Base16Eighties)
 		.style(description_text_editor_style)
-		.key_binding(move |key_press| text_editor_keybindings(key_press, unindent_message.clone()))
+		.key_binding(move |key_press| text_editor_keybindings(key_press, unindent_message.clone()));
+
+	match on_exit_editor {
+		Some(on_exit_editor) => unfocusable(text_editor, on_exit_editor).into(),
+		None => text_editor.into(),
+	}
 }

@@ -292,11 +292,12 @@ impl TaskModal {
 
 						let description_text: Element<'a, Message> =
 							if let Some(new_description) = &self.new_description {
-								task_description_editor(
+								container(task_description_editor(
 									new_description,
 									|action| TaskModalMessage::EditDescriptionAction(action).into(),
+									Some(TaskModalMessage::ViewDescription.into()),
 									TaskModalMessage::UnindentDescription.into(),
-								)
+								))
 								.padding(PADDING_AMOUNT)
 								.into()
 							} else {
