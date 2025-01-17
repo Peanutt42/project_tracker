@@ -1,5 +1,5 @@
 use chrono::{Datelike, Local, Timelike};
-use iced_aw::date_picker::Date;
+use iced_date_picker::Date;
 use project_tracker_core::SerializableDate;
 
 use crate::DateFormatting;

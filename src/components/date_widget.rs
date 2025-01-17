@@ -11,7 +11,7 @@ use iced::{
 	widget::{container, text, Text},
 	Element,
 };
-use iced_aw::date_picker::Date;
+use iced_date_picker::Date;
 use project_tracker_core::SerializableDate;
 
 pub fn date_text(date: &SerializableDate, formatting: DateFormatting) -> Text<'static> {

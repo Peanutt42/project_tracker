@@ -21,7 +21,7 @@ use iced::{
 	Length::{Fill, Fixed},
 	Padding,
 };
-use iced_aw::date_picker::Date;
+use iced_date_picker::Date;
 use project_tracker_core::{Database, ProjectId, SerializableDate, SortMode, Task, TaskId};
 use std::{
 	collections::{BTreeMap, HashMap},

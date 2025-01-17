@@ -1,0 +1,9 @@
+[package]
+name = "iced_date_picker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+iced = { workspace = true }
+iced_fonts = { workspace = true }
+chrono = { workspace = true }

@@ -39,10 +39,8 @@ use iced::{
 	Alignment, Color, Element,
 	Length::{self, Fill, Fixed},
 };
-use iced_aw::{
-	date_picker, date_picker::Date, drop_down, drop_down::Offset, quad::Quad, widgets::InnerBounds,
-	DropDown, Spinner,
-};
+use iced_aw::{drop_down, drop_down::Offset, quad::Quad, widgets::InnerBounds, DropDown, Spinner};
+use iced_date_picker::{date_picker, Date};
 use project_tracker_core::{
 	Database, DatabaseMessage, ProjectId, SerializableDate, SortMode, TaskId, TaskTag, TaskTagId,
 };
@@ -1073,10 +1071,10 @@ pub fn due_date_button<Message: 'static + Clone>(
 			true,
 			due_date
 				.map(|due_date| due_date.to_iced_date())
-				.unwrap_or(date_picker::Date::today()),
+				.unwrap_or(Date::today()),
 			add_due_date_button,
-			stop_editing,
 			on_submit,
+			stop_editing,
 		)
 		.into()
 	} else {
