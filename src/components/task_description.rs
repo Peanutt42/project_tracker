@@ -1,5 +1,7 @@
 use crate::{
-	components::markdown::{advanced_parse, markdown_with_jetbrainsmono_font, Item},
+	components::markdown::{
+		advanced_parse, markdown_with_jetbrainsmono_font, Item, MarkdownMessage,
+	},
 	project_tracker::Message,
 	styles::{
 		description_text_editor_style, markdown_background_container_style, markdown_style,
@@ -18,12 +20,15 @@ use iced::{
 	Length::Fill,
 	Pixels,
 };
+use project_tracker_core::{ProjectId, TaskId};
 
 pub fn generate_task_description_markdown(description: &str) -> Vec<Item> {
 	advanced_parse(description).collect()
 }
 
 pub fn task_description<'a>(
+	project_id: ProjectId,
+	task_id: TaskId,
 	task_description_markdown_items: Option<&'a Vec<Item>>,
 	app: &'a ProjectTrackerApp,
 ) -> Element<'a, Message> {
@@ -38,7 +43,17 @@ pub fn task_description<'a>(
 				},
 				markdown_style(app),
 			)
-			.map(|markdown_url| Message::OpenUrl(markdown_url.to_string()))
+			.map(move |markdown_message| match markdown_message {
+				MarkdownMessage::OpenUrl(url) => Message::OpenUrl(url),
+				MarkdownMessage::ToggleCheckbox { checked, range } => {
+					Message::ToggleTaskDescriptionMarkdownCheckbox {
+						project_id,
+						task_id,
+						checked,
+						range,
+					}
+				}
+			})
 		}
 		_ => text("No description").width(Fill).into(),
 	})

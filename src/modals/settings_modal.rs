@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::components::{
 	code_editor_dropdown_button, export_as_json_database_button, horizontal_seperator_padded,
 	import_json_database_button, loading_screen, synchronization_settings_button,
@@ -46,6 +44,7 @@ use iced::{time, Color, Length};
 use iced_aw::card;
 use project_tracker_core::DatabaseMessage;
 use project_tracker_server::AdminInfos;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub enum SettingsModalMessage {

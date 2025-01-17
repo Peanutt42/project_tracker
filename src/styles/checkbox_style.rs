@@ -15,7 +15,7 @@ pub fn checkbox_style(theme: &Theme, status: Status) -> Style {
 			icon_color: theme.extended_palette().success.base.text,
 			text_color: None,
 			border: Border {
-				radius: 2.0.into(),
+				radius: 3.0.into(),
 				width: 1.0,
 				color: if is_checked {
 					theme.extended_palette().primary.base.color
@@ -37,7 +37,7 @@ pub fn checkbox_style(theme: &Theme, status: Status) -> Style {
 			icon_color: theme.extended_palette().success.base.text,
 			text_color: None,
 			border: Border {
-				radius: 2.0.into(),
+				radius: 3.0.into(),
 				width: 1.0,
 				color: if is_checked {
 					color_average(

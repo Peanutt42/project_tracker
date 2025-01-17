@@ -301,6 +301,8 @@ impl TaskModal {
 								.into()
 							} else {
 								task_description(
+									self.project_id,
+									self.task_id,
 									app.task_description_markdown_items.get(&self.task_id),
 									app,
 								)

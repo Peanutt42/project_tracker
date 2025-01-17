@@ -866,10 +866,14 @@ fn task_info<'a>(
 				open_task_by_name_link_button(*project_id, task_id, &task.name)
 			}))
 			.push_maybe(task.due_date.map(|date| days_left_widget(date, false)))
-			.push(task_description(
-				app.task_description_markdown_items.get(&task_id),
-				app,
-			))
+			.push_maybe(project.as_ref().map(|(project_id, _project)| {
+				task_description(
+					*project_id,
+					task_id,
+					app.task_description_markdown_items.get(&task_id),
+					app,
+				)
+			}))
 			.push_maybe(project.map(|(project_id, project)| {
 				row![
 					container(open_project_button(

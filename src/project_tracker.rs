@@ -47,6 +47,7 @@ use iced::{
 use project_tracker_core::{
 	Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, TaskId,
 };
+use std::ops::Range;
 use std::{
 	collections::HashMap,
 	path::PathBuf,
@@ -176,6 +177,12 @@ pub enum Message {
 	SavePreferences,
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	DatabaseMessage(DatabaseMessage),
+	ToggleTaskDescriptionMarkdownCheckbox {
+		project_id: ProjectId,
+		task_id: TaskId,
+		checked: bool,
+		range: Range<usize>,
+	},
 	PreferenceMessage(PreferenceMessage),
 	SwitchToUpperProject, // switches to upper project when using shortcuts
 	SwitchToLowerProject, // switches to lower project when using shortcuts
@@ -956,6 +963,33 @@ impl ProjectTrackerApp {
 				}
 				_ => Task::none(),
 			},
+			Message::ToggleTaskDescriptionMarkdownCheckbox {
+				project_id,
+				task_id,
+				checked,
+				range,
+			} => {
+				if let DatabaseState::Loaded(database) = &mut self.database {
+					let new_task_description = database.modify(|projects| {
+						projects.get_mut(&project_id).and_then(|project| {
+							project.get_task_mut(&task_id).map(|task| {
+								task.description
+									.replace_range(range, if checked { "[X]" } else { "[ ]" });
+								task.description.clone()
+							})
+						})
+					});
+
+					if let Some(new_task_description) = new_task_description {
+						self.task_description_markdown_items.insert(
+							task_id,
+							generate_task_description_markdown(&new_task_description),
+						);
+					}
+				}
+
+				Task::none()
+			}
 			Message::PreferenceMessage(preference_message) => {
 				let changed_synchronization = match preference_message.clone() {
 					PreferenceMessage::SetSynchronization(new_synchronization) => {

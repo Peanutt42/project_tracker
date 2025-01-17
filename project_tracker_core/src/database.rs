@@ -244,9 +244,10 @@ impl Database {
 		&self.last_saved_time
 	}
 
-	pub fn modify(&mut self, f: impl FnOnce(&mut OrderedHashMap<ProjectId, Project>)) {
-		f(&mut self.projects);
+	pub fn modify<O>(&mut self, f: impl FnOnce(&mut OrderedHashMap<ProjectId, Project>) -> O) -> O {
+		let output = f(&mut self.projects);
 		self.modified();
+		output
 	}
 
 	fn modified(&mut self) {

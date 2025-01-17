@@ -1,5 +1,6 @@
 use std::{
 	cell::{Cell, RefCell},
+	ops::Range,
 	sync::Arc,
 };
 
@@ -9,6 +10,12 @@ use iced::{
 	widget::{checkbox, column, container, markdown, rich_text, row, scrollable, span, text},
 	Color, Element, Font, Length, Pixels,
 };
+
+#[derive(Debug, Clone)]
+pub enum MarkdownMessage {
+	OpenUrl(String),
+	ToggleCheckbox { checked: bool, range: Range<usize> },
+}
 
 // copied from iced_widget-0.13.4/src/markdown.rs:66..84
 // TODO: specify modifications
@@ -53,6 +60,7 @@ pub enum ListItemBeginner {
 	Default,
 	Checkbox {
 		checked: bool,
+		range: Range<usize>,
 	},
 }
 
@@ -62,7 +70,7 @@ pub enum ListItemBeginner {
 pub struct Text {
 	spans: Vec<Span>,
 	last_style: Cell<Option<markdown::Style>>,
-	last_styled_spans: RefCell<Arc<[text::Span<'static, markdown::Url>]>>,
+	last_styled_spans: RefCell<Arc<[text::Span<'static, MarkdownMessage>]>>,
 }
 
 impl Text {
@@ -78,7 +86,7 @@ impl Text {
 	///
 	/// This method performs caching for you. It will only reallocate if the [`Style`]
 	/// provided changes.
-	pub fn spans(&self, style: markdown::Style) -> Arc<[text::Span<'static, markdown::Url>]> {
+	pub fn spans(&self, style: markdown::Style) -> Arc<[text::Span<'static, MarkdownMessage>]> {
 		if Some(style) != self.last_style.get() {
 			*self.last_styled_spans.borrow_mut() =
 				self.spans.iter().map(|span| span.view(&style)).collect();
@@ -108,7 +116,7 @@ enum Span {
 }
 
 impl Span {
-	fn view(&self, style: &markdown::Style) -> text::Span<'static, markdown::Url> {
+	fn view(&self, style: &markdown::Style) -> text::Span<'static, MarkdownMessage> {
 		match self {
 			Span::Standard {
 				text,
@@ -145,7 +153,8 @@ impl Span {
 				};
 
 				let span = if let Some(link) = link.as_ref() {
-					span.color(style.link_color).link(link.clone())
+					span.color(style.link_color)
+						.link(MarkdownMessage::OpenUrl(link.to_string()))
 				} else {
 					span
 				};
@@ -159,8 +168,14 @@ impl Span {
 	}
 }
 
-fn markdown_task_checkbox<'a>(checked: bool) -> Element<'a, markdown::Url> {
-	checkbox("", checked).style(checkbox_style).into()
+fn markdown_task_checkbox<'a>(checked: bool, range: Range<usize>) -> Element<'a, MarkdownMessage> {
+	checkbox("", checked)
+		.style(checkbox_style)
+		.on_toggle(move |new_checked| MarkdownMessage::ToggleCheckbox {
+			checked: new_checked,
+			range: range.clone(),
+		})
+		.into()
 }
 
 // copied from iced_widget-0.13.4/src/markdown.rs:616..702
@@ -169,7 +184,7 @@ pub fn markdown_with_jetbrainsmono_font<'a>(
 	items: impl IntoIterator<Item = &'a Item>,
 	settings: markdown::Settings,
 	style: markdown::Style,
-) -> Element<'a, markdown::Url> {
+) -> Element<'a, MarkdownMessage> {
 	let markdown::Settings {
 		text_size,
 		h1_size,
@@ -211,7 +226,8 @@ pub fn markdown_with_jetbrainsmono_font<'a>(
 				match &items.beginner {
 					ListItemBeginner::Default =>
 						text("•").font(JET_BRAINS_MONO_FONT).size(text_size).into(),
-					ListItemBeginner::Checkbox { checked } => markdown_task_checkbox(*checked),
+					ListItemBeginner::Checkbox { checked, range } =>
+						markdown_task_checkbox(*checked, range.clone()),
 				},
 				markdown_with_jetbrainsmono_font(&items.items, settings, style)
 			]
@@ -230,7 +246,8 @@ pub fn markdown_with_jetbrainsmono_font<'a>(
 						.size(text_size)
 						.font(JET_BRAINS_MONO_FONT)
 						.into(),
-					ListItemBeginner::Checkbox { checked } => markdown_task_checkbox(*checked),
+					ListItemBeginner::Checkbox { checked, range } =>
+						markdown_task_checkbox(*checked, range.clone()),
 				},
 				markdown_with_jetbrainsmono_font(&items.items, settings, style)
 			]
@@ -312,209 +329,214 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 
 	// We want to keep the `spans` capacity
 	#[allow(clippy::drain_collect)]
-	parser.filter_map(move |event| match event {
-		pulldown_cmark::Event::Start(tag) => match tag {
-			pulldown_cmark::Tag::Strong if !metadata && !table => {
-				strong = true;
-				None
-			}
-			pulldown_cmark::Tag::Emphasis if !metadata && !table => {
-				emphasis = true;
-				None
-			}
-			pulldown_cmark::Tag::Strikethrough if !metadata && !table => {
-				strikethrough = true;
-				None
-			}
-			pulldown_cmark::Tag::Link { dest_url, .. } if !metadata && !table => {
-				match markdown::Url::parse(&dest_url) {
-					Ok(url) if url.scheme() == "http" || url.scheme() == "https" => {
-						link = Some(url);
-					}
-					_ => {}
-				}
-
-				None
-			}
-			pulldown_cmark::Tag::List(first_item) if !metadata && !table => {
-				lists.push(List {
-					start: first_item,
-					items: Vec::new(),
-				});
-
-				None
-			}
-			pulldown_cmark::Tag::Item => {
-				lists
-					.last_mut()
-					.expect("list context")
-					.items
-					.push(ListItems::new(Vec::new()));
-				None
-			}
-			pulldown_cmark::Tag::CodeBlock(pulldown_cmark::CodeBlockKind::Fenced(_language))
-				if !metadata && !table =>
-			{
-				{
-					use iced::highlighter::Highlighter;
-					use text::Highlighter as _;
-
-					highlighter = Some(Highlighter::new(&iced::highlighter::Settings {
-						theme: iced::highlighter::Theme::Base16Ocean,
-						token: _language.to_string(),
-					}));
-				}
-
-				None
-			}
-			pulldown_cmark::Tag::MetadataBlock(_) => {
-				metadata = true;
-				None
-			}
-			pulldown_cmark::Tag::Table(_) => {
-				table = true;
-				None
-			}
-			_ => None,
-		},
-		pulldown_cmark::Event::End(tag) => match tag {
-			pulldown_cmark::TagEnd::Heading(level) if !metadata && !table => produce(
-				&mut lists,
-				Item::Heading(level, Text::new(spans.drain(..).collect())),
-			),
-			pulldown_cmark::TagEnd::Strong if !metadata && !table => {
-				strong = false;
-				None
-			}
-			pulldown_cmark::TagEnd::Emphasis if !metadata && !table => {
-				emphasis = false;
-				None
-			}
-			pulldown_cmark::TagEnd::Strikethrough if !metadata && !table => {
-				strikethrough = false;
-				None
-			}
-			pulldown_cmark::TagEnd::Link if !metadata && !table => {
-				link = None;
-				None
-			}
-			pulldown_cmark::TagEnd::Paragraph if !metadata && !table => produce(
-				&mut lists,
-				Item::Paragraph(Text::new(spans.drain(..).collect())),
-			),
-			pulldown_cmark::TagEnd::Item if !metadata && !table => {
-				if spans.is_empty() {
+	parser
+		.into_offset_iter()
+		.filter_map(move |(event, range)| match event {
+			pulldown_cmark::Event::Start(tag) => match tag {
+				pulldown_cmark::Tag::Strong if !metadata && !table => {
+					strong = true;
 					None
-				} else {
+				}
+				pulldown_cmark::Tag::Emphasis if !metadata && !table => {
+					emphasis = true;
+					None
+				}
+				pulldown_cmark::Tag::Strikethrough if !metadata && !table => {
+					strikethrough = true;
+					None
+				}
+				pulldown_cmark::Tag::Link { dest_url, .. } if !metadata && !table => {
+					match markdown::Url::parse(&dest_url) {
+						Ok(url) if url.scheme() == "http" || url.scheme() == "https" => {
+							link = Some(url);
+						}
+						_ => {}
+					}
+
+					None
+				}
+				pulldown_cmark::Tag::List(first_item) if !metadata && !table => {
+					lists.push(List {
+						start: first_item,
+						items: Vec::new(),
+					});
+
+					None
+				}
+				pulldown_cmark::Tag::Item => {
+					lists
+						.last_mut()
+						.expect("list context")
+						.items
+						.push(ListItems::new(Vec::new()));
+					None
+				}
+				pulldown_cmark::Tag::CodeBlock(pulldown_cmark::CodeBlockKind::Fenced(
+					_language,
+				)) if !metadata && !table => {
+					{
+						use iced::highlighter::Highlighter;
+						use text::Highlighter as _;
+
+						highlighter = Some(Highlighter::new(&iced::highlighter::Settings {
+							theme: iced::highlighter::Theme::Base16Ocean,
+							token: _language.to_string(),
+						}));
+					}
+
+					None
+				}
+				pulldown_cmark::Tag::MetadataBlock(_) => {
+					metadata = true;
+					None
+				}
+				pulldown_cmark::Tag::Table(_) => {
+					table = true;
+					None
+				}
+				_ => None,
+			},
+			pulldown_cmark::Event::End(tag) => match tag {
+				pulldown_cmark::TagEnd::Heading(level) if !metadata && !table => produce(
+					&mut lists,
+					Item::Heading(level, Text::new(spans.drain(..).collect())),
+				),
+				pulldown_cmark::TagEnd::Strong if !metadata && !table => {
+					strong = false;
+					None
+				}
+				pulldown_cmark::TagEnd::Emphasis if !metadata && !table => {
+					emphasis = false;
+					None
+				}
+				pulldown_cmark::TagEnd::Strikethrough if !metadata && !table => {
+					strikethrough = false;
+					None
+				}
+				pulldown_cmark::TagEnd::Link if !metadata && !table => {
+					link = None;
+					None
+				}
+				pulldown_cmark::TagEnd::Paragraph if !metadata && !table => produce(
+					&mut lists,
+					Item::Paragraph(Text::new(spans.drain(..).collect())),
+				),
+				pulldown_cmark::TagEnd::Item if !metadata && !table => {
+					if spans.is_empty() {
+						None
+					} else {
+						produce(
+							&mut lists,
+							Item::Paragraph(Text::new(spans.drain(..).collect())),
+						)
+					}
+				}
+				pulldown_cmark::TagEnd::List(_) if !metadata && !table => {
+					let list = lists.pop().expect("list context");
+
 					produce(
 						&mut lists,
-						Item::Paragraph(Text::new(spans.drain(..).collect())),
+						Item::List {
+							start: list.start,
+							items: list.items,
+						},
 					)
 				}
-			}
-			pulldown_cmark::TagEnd::List(_) if !metadata && !table => {
-				let list = lists.pop().expect("list context");
+				pulldown_cmark::TagEnd::CodeBlock if !metadata && !table => {
+					highlighter = None;
 
-				produce(
-					&mut lists,
-					Item::List {
-						start: list.start,
-						items: list.items,
-					},
-				)
-			}
-			pulldown_cmark::TagEnd::CodeBlock if !metadata && !table => {
-				highlighter = None;
+					produce(
+						&mut lists,
+						Item::CodeBlock(Text::new(spans.drain(..).collect())),
+					)
+				}
+				pulldown_cmark::TagEnd::MetadataBlock(_) => {
+					metadata = false;
+					None
+				}
+				pulldown_cmark::TagEnd::Table => {
+					table = false;
+					None
+				}
+				_ => None,
+			},
+			pulldown_cmark::Event::Text(text) if !metadata && !table => {
+				if let Some(highlighter) = &mut highlighter {
+					use text::Highlighter as _;
 
-				produce(
-					&mut lists,
-					Item::CodeBlock(Text::new(spans.drain(..).collect())),
-				)
-			}
-			pulldown_cmark::TagEnd::MetadataBlock(_) => {
-				metadata = false;
+					for (range, highlight) in highlighter.highlight_line(text.as_ref()) {
+						let span = Span::Highlight {
+							text: text[range].to_owned(),
+							color: highlight.color(),
+							font: highlight.font(),
+						};
+
+						spans.push(span);
+					}
+
+					return None;
+				}
+
+				let span = Span::Standard {
+					text: text.into_string(),
+					strong,
+					emphasis,
+					strikethrough,
+					link: link.clone(),
+					code: false,
+				};
+
+				spans.push(span);
+
 				None
 			}
-			pulldown_cmark::TagEnd::Table => {
-				table = false;
+			pulldown_cmark::Event::Code(code) if !metadata && !table => {
+				let span = Span::Standard {
+					text: code.into_string(),
+					strong,
+					emphasis,
+					strikethrough,
+					link: link.clone(),
+					code: true,
+				};
+
+				spans.push(span);
+				None
+			}
+			pulldown_cmark::Event::SoftBreak if !metadata && !table => {
+				spans.push(Span::Standard {
+					text: String::from(" "),
+					strikethrough,
+					strong,
+					emphasis,
+					link: link.clone(),
+					code: false,
+				});
+				None
+			}
+			pulldown_cmark::Event::HardBreak if !metadata && !table => {
+				spans.push(Span::Standard {
+					text: String::from("\n"),
+					strikethrough,
+					strong,
+					emphasis,
+					link: link.clone(),
+					code: false,
+				});
+				None
+			}
+			pulldown_cmark::Event::TaskListMarker(checked) if !metadata && !table => {
+				if let Some(last_list) = lists.last_mut() {
+					if let Some(last_item_list) = last_list.items.last_mut() {
+						last_item_list.beginner = ListItemBeginner::Checkbox {
+							checked,
+							range: range.clone(),
+						};
+					}
+				}
+
 				None
 			}
 			_ => None,
-		},
-		pulldown_cmark::Event::Text(text) if !metadata && !table => {
-			if let Some(highlighter) = &mut highlighter {
-				use text::Highlighter as _;
-
-				for (range, highlight) in highlighter.highlight_line(text.as_ref()) {
-					let span = Span::Highlight {
-						text: text[range].to_owned(),
-						color: highlight.color(),
-						font: highlight.font(),
-					};
-
-					spans.push(span);
-				}
-
-				return None;
-			}
-
-			let span = Span::Standard {
-				text: text.into_string(),
-				strong,
-				emphasis,
-				strikethrough,
-				link: link.clone(),
-				code: false,
-			};
-
-			spans.push(span);
-
-			None
-		}
-		pulldown_cmark::Event::Code(code) if !metadata && !table => {
-			let span = Span::Standard {
-				text: code.into_string(),
-				strong,
-				emphasis,
-				strikethrough,
-				link: link.clone(),
-				code: true,
-			};
-
-			spans.push(span);
-			None
-		}
-		pulldown_cmark::Event::SoftBreak if !metadata && !table => {
-			spans.push(Span::Standard {
-				text: String::from(" "),
-				strikethrough,
-				strong,
-				emphasis,
-				link: link.clone(),
-				code: false,
-			});
-			None
-		}
-		pulldown_cmark::Event::HardBreak if !metadata && !table => {
-			spans.push(Span::Standard {
-				text: String::from("\n"),
-				strikethrough,
-				strong,
-				emphasis,
-				link: link.clone(),
-				code: false,
-			});
-			None
-		}
-		pulldown_cmark::Event::TaskListMarker(checked) if !metadata && !table => {
-			if let Some(last_list) = lists.last_mut() {
-				if let Some(last_item_list) = last_list.items.last_mut() {
-					last_item_list.beginner = ListItemBeginner::Checkbox { checked };
-				}
-			}
-
-			None
-		}
-		_ => None,
-	})
+		})
 }
