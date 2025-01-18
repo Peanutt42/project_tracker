@@ -7,7 +7,7 @@ use crate::{
 		dangerous_button, date_formatting_button, file_location, horizontal_seperator_padded,
 		theme_mode_button, HORIZONTAL_SCROLLABLE_PADDING,
 	},
-	modals::ErrorMsgModalMessage,
+	modals::error_msg_modal,
 	project_tracker::Message,
 	styles::SPACING_AMOUNT,
 	theme_mode::ThemeMode,
@@ -257,7 +257,7 @@ impl Preferences {
 					Self::save(filepath, serialized_str),
 					|result| match result {
 						Ok(begin_time) => PreferenceMessage::Saved(begin_time).into(),
-						Err(error) => ErrorMsgModalMessage::open_error(error),
+						Err(error) => error_msg_modal::Message::open_error(error),
 					},
 				)),
 				Err(e) => PreferenceAction::FailedToSerializePreferences(e),
@@ -276,7 +276,7 @@ impl Preferences {
 					Self::export_file_dialog(serialized_str),
 					|result| match result {
 						Ok(_) => PreferenceMessage::Exported.into(),
-						Err(error) => ErrorMsgModalMessage::open_error(error),
+						Err(error) => error_msg_modal::Message::open_error(error),
 					},
 				)),
 				Err(e) => PreferenceAction::FailedToSerializePreferences(e),

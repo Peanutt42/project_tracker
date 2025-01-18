@@ -9,8 +9,7 @@ use crate::{
 		open_project_button, overview_time_section_button, task_widget, vertical_scrollable,
 	},
 	core::{IcedColorConversion, SerializableDateConversion, TASK_TAG_QUAD_HEIGHT},
-	pages::ContentPageMessage,
-	project_tracker::Message,
+	pages, project_tracker,
 	styles::{PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT},
 	OptionalPreference, Preferences, ProjectTrackerApp,
 };
@@ -32,7 +31,7 @@ use tracing::error;
 const DATE_WIDGET_WIDTH: f32 = 90.0;
 
 #[derive(Debug, Clone)]
-pub struct OverviewPage {
+pub struct Page {
 	overdue_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>, // sorted by due date, then by project
 	today_tasks: HashMap<ProjectId, Vec<TaskId>>, // sorted by est. needed time
 	tomorrow_tasks: HashMap<ProjectId, Vec<TaskId>>, // sorted by est. needed time
@@ -45,7 +44,7 @@ pub struct OverviewPage {
 }
 
 #[derive(Debug, Clone)]
-pub enum OverviewPageMessage {
+pub enum Message {
 	RefreshCachedTaskList,
 	ToggleShowOverdueTasks,
 	ToggleShowTodayTasks,
@@ -53,13 +52,13 @@ pub enum OverviewPageMessage {
 	ToggleShowFutureTasks,
 }
 
-impl From<OverviewPageMessage> for Message {
-	fn from(value: OverviewPageMessage) -> Self {
-		ContentPageMessage::OverviewPageMessage(value).into()
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		pages::Message::OverviewPage(value).into()
 	}
 }
 
-impl OverviewPage {
+impl Page {
 	pub fn new(database: Option<&Database>, preferences: &Option<Preferences>) -> Self {
 		let mut overdue_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>> =
 			BTreeMap::new();
@@ -161,12 +160,12 @@ impl OverviewPage {
 
 	pub fn update(
 		&mut self,
-		message: OverviewPageMessage,
+		message: Message,
 		database: Option<&Database>,
 		preferences: &Option<Preferences>,
 	) {
 		match message {
-			OverviewPageMessage::RefreshCachedTaskList => {
+			Message::RefreshCachedTaskList => {
 				if let Some(database_ref) = database {
 					let cache_date_time: DateTime<Utc> = self.cache_time.into();
 					if cache_date_time < *database_ref.last_changed_time() {
@@ -174,22 +173,16 @@ impl OverviewPage {
 					}
 				}
 			}
-			OverviewPageMessage::ToggleShowOverdueTasks => {
-				self.show_overdue_tasks = !self.show_overdue_tasks
-			}
-			OverviewPageMessage::ToggleShowTodayTasks => {
-				self.show_today_tasks = !self.show_today_tasks
-			}
-			OverviewPageMessage::ToggleShowTomorrowTasks => {
+			Message::ToggleShowOverdueTasks => self.show_overdue_tasks = !self.show_overdue_tasks,
+			Message::ToggleShowTodayTasks => self.show_today_tasks = !self.show_today_tasks,
+			Message::ToggleShowTomorrowTasks => {
 				self.show_tomorrow_tasks = !self.show_tomorrow_tasks
 			}
-			OverviewPageMessage::ToggleShowFutureTasks => {
-				self.show_future_tasks = !self.show_future_tasks
-			}
+			Message::ToggleShowFutureTasks => self.show_future_tasks = !self.show_future_tasks,
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, project_tracker::Message> {
 		let overdue_tasks_len: usize = self
 			.overdue_tasks
 			.values()
@@ -212,7 +205,7 @@ impl OverviewPage {
 					"Overdue",
 					&self.overdue_tasks,
 					!self.show_overdue_tasks,
-					OverviewPageMessage::ToggleShowOverdueTasks.into(),
+					Message::ToggleShowOverdueTasks,
 					overdue_tasks_len,
 					app
 				),
@@ -220,7 +213,7 @@ impl OverviewPage {
 					"Today",
 					today_tasks_len,
 					!self.show_today_tasks,
-					OverviewPageMessage::ToggleShowTodayTasks.into(),
+					Message::ToggleShowTodayTasks,
 					&self.today_tasks,
 					app
 				),
@@ -228,7 +221,7 @@ impl OverviewPage {
 					"Tomorrow",
 					tomorrow_tasks_len,
 					!self.show_tomorrow_tasks,
-					OverviewPageMessage::ToggleShowTomorrowTasks.into(),
+					Message::ToggleShowTomorrowTasks,
 					&self.tomorrow_tasks,
 					app
 				),
@@ -236,7 +229,7 @@ impl OverviewPage {
 					"Future",
 					&self.future_tasks,
 					!self.show_future_tasks,
-					OverviewPageMessage::ToggleShowFutureTasks.into(),
+					Message::ToggleShowFutureTasks,
 					future_tasks_len,
 					app
 				),
@@ -257,13 +250,13 @@ impl OverviewPage {
 		on_toggle_collabsed: Message,
 		tasks_len: usize,
 		app: &'a ProjectTrackerApp,
-	) -> Element<'a, Message> {
+	) -> Element<'a, project_tracker::Message> {
 		Column::new()
 			.push(overview_time_section_button(
 				label,
 				tasks_len,
 				collapsed,
-				on_toggle_collabsed,
+				on_toggle_collabsed.into(),
 			))
 			.push_maybe(if tasks.is_empty() || collapsed {
 				None
@@ -321,13 +314,13 @@ impl OverviewPage {
 		on_toggle_collabsed: Message,
 		tasks: &'a HashMap<ProjectId, Vec<TaskId>>,
 		app: &'a ProjectTrackerApp,
-	) -> Element<'a, Message> {
+	) -> Element<'a, project_tracker::Message> {
 		Column::new()
 			.push(overview_time_section_button(
 				time_label,
 				task_count,
 				collapsed,
-				on_toggle_collabsed,
+				on_toggle_collabsed.into(),
 			))
 			.push_maybe(if tasks.is_empty() || collapsed {
 				None
@@ -344,7 +337,7 @@ impl OverviewPage {
 	fn view_tasks<'a>(
 		tasks: &'a HashMap<ProjectId, Vec<TaskId>>,
 		app: &'a ProjectTrackerApp,
-	) -> Element<'a, Message> {
+	) -> Element<'a, project_tracker::Message> {
 		Column::with_children(tasks.iter().map(|(project_id, tasks)| {
 			match app.database.ok().and_then(|db| db.get_project(project_id)) {
 				Some(project) => {

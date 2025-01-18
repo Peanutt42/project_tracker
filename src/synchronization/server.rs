@@ -1,5 +1,5 @@
 use crate::components::{hide_password_button, show_password_button};
-use crate::modals::SettingsModalMessage;
+use crate::modals::settings_modal;
 use crate::project_tracker::Message;
 use crate::styles::{text_input_style_default, SPACING_AMOUNT};
 use crate::synchronization::{
@@ -159,7 +159,9 @@ impl BaseSynchronization for ServerSynchronization {
 			row![
 				container("Hostname: ").width(100.0),
 				text_input("ex. 127.0.0.1 or raspberrypi.local", &self.config.hostname)
-					.on_input(|hostname| SettingsModalMessage::SetServerHostname(hostname).into())
+					.on_input(
+						|hostname| settings_modal::Message::SetServerHostname(hostname).into()
+					)
 					.style(text_input_style_default),
 			]
 			.align_y(Vertical::Center),
@@ -178,8 +180,10 @@ impl BaseSynchronization for ServerSynchronization {
 							}
 						};
 						match new_port {
-							Some(new_port) => SettingsModalMessage::SetServerPort(new_port).into(),
-							None => SettingsModalMessage::InvalidPortInput.into(),
+							Some(new_port) => {
+								settings_modal::Message::SetServerPort(new_port).into()
+							}
+							None => settings_modal::Message::InvalidPortInput.into(),
 						}
 					})
 					.style(text_input_style_default)
@@ -195,7 +199,7 @@ impl BaseSynchronization for ServerSynchronization {
 							&self.config.password
 						)
 						.on_input(
-							|password| SettingsModalMessage::SetServerPassword(password).into()
+							|password| settings_modal::Message::SetServerPassword(password).into()
 						)
 						.style(text_input_style_default),
 						hide_password_button(),

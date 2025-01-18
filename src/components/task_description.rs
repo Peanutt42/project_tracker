@@ -62,7 +62,7 @@ pub fn task_description<'a>(
 	.into()
 }
 
-pub fn task_description_editor<'a>(
+pub fn task_description_editor<'a, Message: 'a + Clone>(
 	task_description_content: &'a Content,
 	on_action: impl Fn(Action) -> Message + 'a,
 	on_exit_editor: Option<Message>,

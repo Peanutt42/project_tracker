@@ -6,7 +6,7 @@ use crate::{
 	core::{View, TASK_TAG_QUAD_HEIGHT},
 	icons::{icon_to_text, Bootstrap},
 	integrations::CodeEditor,
-	pages::SidebarPageMessage,
+	pages::sidebar_page,
 	project_tracker::Message,
 	styles::{
 		checkbox_style, default_text_style, grey_text_style, rounded_container_style,
@@ -245,7 +245,7 @@ pub fn task_widget<'a>(
 			),
 			hover(
 				droppable(inner(false))
-					.on_drop(move |point, rect| SidebarPageMessage::DropTask {
+					.on_drop(move |point, rect| sidebar_page::Message::DropTask {
 						project_id,
 						task_id,
 						point,

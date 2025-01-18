@@ -1,6 +1,6 @@
 use crate::{
 	components::{force_close_anyways_button, loading_screen, SMALL_LOADING_SPINNER_SIZE},
-	project_tracker::Message,
+	project_tracker,
 	styles::card_style,
 };
 use iced::{
@@ -13,44 +13,42 @@ use iced::{
 use iced_aw::card;
 
 #[derive(Clone, Debug)]
-pub enum WaitClosingModalMessage {
+pub enum Message {
 	Open { waiting_reason: &'static str },
 	Close,
 	ForceCloseAnyways,
 }
 
-impl From<WaitClosingModalMessage> for Message {
-	fn from(value: WaitClosingModalMessage) -> Self {
-		Message::WaitClosingModalMessage(value)
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		project_tracker::Message::WaitClosingModalMessage(value)
 	}
 }
 
-pub enum WaitClosingModal {
+pub enum Modal {
 	Opened { waiting_reason: &'static str },
 	Closed,
 }
 
-impl WaitClosingModal {
-	pub fn update(&mut self, message: WaitClosingModalMessage) -> Task<WaitClosingModalMessage> {
+impl Modal {
+	pub fn update(&mut self, message: Message) -> Task<Message> {
 		match message {
-			WaitClosingModalMessage::Open { waiting_reason } => {
-				*self = WaitClosingModal::Opened { waiting_reason };
+			Message::Open { waiting_reason } => {
+				*self = Modal::Opened { waiting_reason };
 				Task::none()
 			}
-			WaitClosingModalMessage::Close => {
-				*self = WaitClosingModal::Closed;
+			Message::Close => {
+				*self = Modal::Closed;
 				Task::none()
 			}
-			WaitClosingModalMessage::ForceCloseAnyways => {
-				window::get_latest().and_then(window::close)
-			}
+			Message::ForceCloseAnyways => window::get_latest().and_then(window::close),
 		}
 	}
 
-	pub fn view(&self) -> Option<Element<WaitClosingModalMessage>> {
+	pub fn view(&self) -> Option<Element<Message>> {
 		match self {
-			WaitClosingModal::Closed => None,
-			WaitClosingModal::Opened { waiting_reason } => Some(
+			Modal::Closed => None,
+			Modal::Opened { waiting_reason } => Some(
 				card(
 					text(format!("{waiting_reason}...")),
 					row![

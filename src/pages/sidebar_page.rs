@@ -4,7 +4,6 @@ use crate::components::{
 	LARGE_LOADING_SPINNER_SIZE,
 };
 use crate::core::{IcedColorConversion, ProjectUiIdMap, TaskUiIdMap};
-use crate::project_tracker::ProjectTrackerApp;
 use crate::styles::{LARGE_TEXT_SIZE, SPACING_AMOUNT};
 use crate::synchronization::SynchronizationError;
 use crate::DatabaseState;
@@ -13,8 +12,8 @@ use crate::{
 		horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable,
 		COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE,
 	},
-	pages::StopwatchPageMessage,
-	project_tracker::Message,
+	pages::stopwatch_page,
+	project_tracker::{self, ProjectTrackerApp},
 	styles::{
 		text_input_style_default, MINIMAL_DRAG_DISTANCE, PADDING_AMOUNT, SMALL_SPACING_AMOUNT,
 	},
@@ -49,7 +48,7 @@ pub static STOPWATCH_TASK_DROPZONE_ID: LazyLock<container::Id> =
 	LazyLock::new(container::Id::unique);
 
 #[derive(Clone, Debug)]
-pub enum SidebarPageMessage {
+pub enum Message {
 	OpenCreateNewProject,
 	CloseCreateNewProject,
 	ChangeCreateNewProjectName(String),
@@ -102,34 +101,34 @@ pub enum SidebarPageMessage {
 	LeftClickReleased,
 }
 
-impl From<SidebarPageMessage> for Message {
-	fn from(value: SidebarPageMessage) -> Self {
-		Message::SidebarPageMessage(value)
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		project_tracker::Message::SidebarPageMessage(value)
 	}
 }
 
-pub enum SidebarPageAction {
+pub enum Action {
 	None,
-	Actions(Vec<SidebarPageAction>),
+	Actions(Vec<Action>),
 	Task(Task<Message>),
 	DatabaseMessage(DatabaseMessage),
-	StopwatchPageMessage(StopwatchPageMessage),
+	StopwatchPageMessage(stopwatch_page::Message),
 	SelectProject(ProjectId),
 }
 
-impl From<Task<Message>> for SidebarPageAction {
+impl From<Task<Message>> for Action {
 	fn from(value: Task<Message>) -> Self {
-		SidebarPageAction::Task(value)
+		Action::Task(value)
 	}
 }
-impl From<DatabaseMessage> for SidebarPageAction {
+impl From<DatabaseMessage> for Action {
 	fn from(value: DatabaseMessage) -> Self {
-		SidebarPageAction::DatabaseMessage(value)
+		Action::DatabaseMessage(value)
 	}
 }
-impl From<StopwatchPageMessage> for SidebarPageAction {
-	fn from(value: StopwatchPageMessage) -> Self {
-		SidebarPageAction::StopwatchPageMessage(value)
+impl From<stopwatch_page::Message> for Action {
+	fn from(value: stopwatch_page::Message) -> Self {
+		Action::StopwatchPageMessage(value)
 	}
 }
 
@@ -142,7 +141,7 @@ fn get_new_project_color(is_theme_dark: bool) -> Color {
 }
 
 #[derive(Clone)]
-pub struct SidebarPage {
+pub struct Page {
 	create_new_project_name: Option<String>,
 	pub project_dropzone_hovered: Option<ProjectDropzone>,
 	pub task_dropzone_hovered: Option<TaskDropzone>,
@@ -153,7 +152,7 @@ pub struct SidebarPage {
 	pub synchronization_error: Option<Arc<SynchronizationError>>,
 }
 
-impl SidebarPage {
+impl Page {
 	pub const SPLIT_LAYOUT_PERCENTAGE: f32 = 0.3;
 
 	pub fn new() -> Self {
@@ -194,11 +193,11 @@ impl SidebarPage {
 		project_id_to_select
 	}
 
-	pub fn subscription(&self) -> Subscription<SidebarPageMessage> {
+	pub fn subscription(&self) -> Subscription<Message> {
 		let left_released_subscription =
 			iced::event::listen_with(move |event, _status, _id| match event {
 				Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) => {
-					Some(SidebarPageMessage::LeftClickReleased)
+					Some(Message::LeftClickReleased)
 				}
 				_ => None,
 			});
@@ -206,7 +205,7 @@ impl SidebarPage {
 		let create_new_project_shorcut_subscription =
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
 				keyboard::Key::Character("n") if modifiers.command() && modifiers.shift() => {
-					Some(SidebarPageMessage::OpenCreateNewProject)
+					Some(Message::OpenCreateNewProject)
 				}
 				_ => None,
 			});
@@ -220,14 +219,14 @@ impl SidebarPage {
 	#[must_use]
 	pub fn update(
 		&mut self,
-		message: SidebarPageMessage,
+		message: Message,
 		database: Option<&Database>,
 		project_ui_ids: &mut ProjectUiIdMap,
 		task_ui_ids: &mut TaskUiIdMap,
 		is_theme_dark: bool,
-	) -> SidebarPageAction {
+	) -> Action {
 		match message {
-			SidebarPageMessage::OpenCreateNewProject => {
+			Message::OpenCreateNewProject => {
 				self.create_new_project_name = Some(String::new());
 				Task::batch([
 					text_input::focus(TEXT_INPUT_ID.clone()),
@@ -235,32 +234,30 @@ impl SidebarPage {
 				])
 				.into()
 			}
-			SidebarPageMessage::CloseCreateNewProject => {
+			Message::CloseCreateNewProject => {
 				self.create_new_project_name = None;
-				SidebarPageAction::None
+				Action::None
 			}
-			SidebarPageMessage::ChangeCreateNewProjectName(new_project_name) => {
+			Message::ChangeCreateNewProjectName(new_project_name) => {
 				self.create_new_project_name = Some(new_project_name);
-				SidebarPageAction::None
+				Action::None
 			}
-			SidebarPageMessage::CreateNewProject(project_id) => {
-				match self.create_new_project_name.take() {
-					Some(create_new_project_name) => SidebarPageAction::Actions(vec![
-						DatabaseMessage::CreateProject {
-							project_id,
-							name: create_new_project_name,
-							color: SerializableColor::from_iced_color(get_new_project_color(
-								is_theme_dark,
-							)),
-						}
-						.into(),
-						SidebarPageAction::SelectProject(project_id),
-					]),
-					None => SidebarPageAction::None,
-				}
-			}
+			Message::CreateNewProject(project_id) => match self.create_new_project_name.take() {
+				Some(create_new_project_name) => Action::Actions(vec![
+					DatabaseMessage::CreateProject {
+						project_id,
+						name: create_new_project_name,
+						color: SerializableColor::from_iced_color(get_new_project_color(
+							is_theme_dark,
+						)),
+					}
+					.into(),
+					Action::SelectProject(project_id),
+				]),
+				None => Action::None,
+			},
 
-			SidebarPageMessage::DropTask {
+			Message::DropTask {
 				project_id,
 				task_id,
 				..
@@ -290,20 +287,20 @@ impl SidebarPage {
 						}
 						.into(),
 
-						TaskDropzone::Stopwatch => StopwatchPageMessage::StopTask {
+						TaskDropzone::Stopwatch => stopwatch_page::Message::StopTask {
 							project_id,
 							task_id,
 						}
 						.into(),
 					}
 				}
-				None => SidebarPageAction::None,
+				None => Action::None,
 			},
-			SidebarPageMessage::CancelDragTask => {
+			Message::CancelDragTask => {
 				self.task_dropzone_hovered = None;
-				SidebarPageAction::None
+				Action::None
 			}
-			SidebarPageMessage::HandleProjectZonesForTasks { zones, .. } => {
+			Message::HandleProjectZonesForTasks { zones, .. } => {
 				self.task_dropzone_hovered = None;
 				if let Some(projects) = database.as_ref().map(|db| db.projects()) {
 					for (id, _bounds) in zones.iter() {
@@ -323,9 +320,9 @@ impl SidebarPage {
 						}
 					}
 				}
-				SidebarPageAction::None
+				Action::None
 			}
-			SidebarPageMessage::HandleTaskZones {
+			Message::HandleTaskZones {
 				zones, project_id, ..
 			} => {
 				if !zones.is_empty()
@@ -357,9 +354,9 @@ impl SidebarPage {
 						}
 					}
 				}
-				SidebarPageAction::None
+				Action::None
 			}
-			SidebarPageMessage::DragTask {
+			Message::DragTask {
 				project_id,
 				task_id,
 				task_is_todo,
@@ -370,13 +367,10 @@ impl SidebarPage {
 				let project_options =
 					Self::project_dropzones_for_tasks_options(database, project_id, project_ui_ids);
 				let mut commands = vec![zones_on_point(
-					move |zones| {
-						SidebarPageMessage::HandleProjectZonesForTasks {
-							project_id,
-							task_id,
-							zones,
-						}
-						.into()
+					move |zones| Message::HandleProjectZonesForTasks {
+						project_id,
+						task_id,
+						zones,
 					},
 					point,
 					project_options,
@@ -386,13 +380,10 @@ impl SidebarPage {
 					let task_options =
 						Self::task_dropzone_options(database, project_id, task_id, task_ui_ids);
 					commands.push(find_zones(
-						move |zones| {
-							SidebarPageMessage::HandleTaskZones {
-								project_id,
-								task_id,
-								zones,
-							}
-							.into()
+						move |zones| Message::HandleTaskZones {
+							project_id,
+							task_id,
+							zones,
 						},
 						move |zone_bounds| zone_bounds.intersects(&rect),
 						task_options,
@@ -402,7 +393,7 @@ impl SidebarPage {
 				Task::batch(commands).into()
 			}
 
-			SidebarPageMessage::DropProject { .. } => {
+			Message::DropProject { .. } => {
 				if let Some(dragged_project_id) = self.dragged_project_id {
 					// self.dragged_project_id = None; gets called after LeftClickReleased
 					if let Some(project_dropzone_hovered) = self.project_dropzone_hovered {
@@ -422,9 +413,9 @@ impl SidebarPage {
 						};
 					}
 				}
-				SidebarPageAction::None
+				Action::None
 			}
-			SidebarPageMessage::DragProject {
+			Message::DragProject {
 				project_id,
 				point,
 				rect,
@@ -444,16 +435,14 @@ impl SidebarPage {
 				}
 				let options = Self::project_dropzone_options(database, project_id, project_ui_ids);
 				find_zones(
-					move |zones| {
-						SidebarPageMessage::HandleProjectZones { project_id, zones }.into()
-					},
+					move |zones| Message::HandleProjectZones { project_id, zones },
 					move |zone_bounds| zone_bounds.intersects(&rect),
 					options,
 					None,
 				)
 				.into()
 			}
-			SidebarPageMessage::HandleProjectZones { zones, .. } => {
+			Message::HandleProjectZones { zones, .. } => {
 				self.project_dropzone_hovered = None;
 				if self.dragged_project_id.is_some() {
 					if let Some(projects) = database.as_ref().map(|db| db.projects()) {
@@ -479,25 +468,25 @@ impl SidebarPage {
 						}
 					}
 				}
-				SidebarPageAction::None
+				Action::None
 			}
-			SidebarPageMessage::ClickProject(project_id) => {
+			Message::ClickProject(project_id) => {
 				self.pressed_project_id = Some(project_id);
-				SidebarPageAction::None
+				Action::None
 			}
-			SidebarPageMessage::CancelDragProject => {
+			Message::CancelDragProject => {
 				self.dragged_project_id = None;
 				self.start_dragging_point = None;
 				self.just_minimal_dragging = true;
 				self.pressed_project_id = None;
 				self.project_dropzone_hovered = None;
-				SidebarPageAction::None
+				Action::None
 			}
 
-			SidebarPageMessage::LeftClickReleased => self
+			Message::LeftClickReleased => self
 				.should_select_project()
-				.map(SidebarPageAction::SelectProject)
-				.unwrap_or(SidebarPageAction::None),
+				.map(Action::SelectProject)
+				.unwrap_or(Action::None),
 		}
 	}
 
@@ -505,8 +494,8 @@ impl SidebarPage {
 		&'a self,
 		projects: &'a OrderedHashMap<ProjectId, Project>,
 		app: &'a ProjectTrackerApp,
-	) -> Element<'a, Message> {
-		let mut list: Vec<Element<Message>> = projects
+	) -> Element<'a, project_tracker::Message> {
+		let mut list: Vec<Element<project_tracker::Message>> = projects
 			.iter()
 			.map(|(project_id, project)| {
 				let selected = match &app.content_page.project_page {
@@ -563,10 +552,10 @@ impl SidebarPage {
 				text_input("New project name", create_new_project_name)
 					.id(TEXT_INPUT_ID.clone())
 					.size(LARGE_TEXT_SIZE)
-					.on_input(|input| SidebarPageMessage::ChangeCreateNewProjectName(input).into())
-					.on_submit(SidebarPageMessage::CreateNewProject(ProjectId::generate()).into())
+					.on_input(|input| Message::ChangeCreateNewProjectName(input).into())
+					.on_submit(Message::CreateNewProject(ProjectId::generate()).into())
 					.style(text_input_style_default),
-				SidebarPageMessage::CloseCreateNewProject.into(),
+				Message::CloseCreateNewProject.into(),
 			))
 			.width(Fill)
 			.align_x(Horizontal::Center)
@@ -594,8 +583,8 @@ impl SidebarPage {
 			.into()
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
-		let list: Element<Message> = match &app.database {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, project_tracker::Message> {
+		let list: Element<project_tracker::Message> = match &app.database {
 			DatabaseState::Loaded(database) => self.project_preview_list(database.projects(), app),
 			_ => container(loading_screen(LARGE_LOADING_SPINNER_SIZE))
 				.center(Fill)
@@ -766,7 +755,7 @@ impl SidebarPage {
 	}
 }
 
-impl Default for SidebarPage {
+impl Default for Page {
 	fn default() -> Self {
 		Self::new()
 	}

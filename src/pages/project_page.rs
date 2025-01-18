@@ -8,8 +8,8 @@ use crate::{
 	},
 	core::{import_source_code_todos, IcedColorConversion, SortModeUI},
 	icons::{icon_to_char, Bootstrap, BOOTSTRAP_FONT},
-	pages::{ContentPageAction, ContentPageMessage},
-	project_tracker::{Message, ProjectTrackerApp},
+	pages,
+	project_tracker::{self, ProjectTrackerApp},
 	styles::{
 		text_input_style_borderless, text_input_style_only_round_left, PADDING_AMOUNT,
 		SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TITLE_TEXT_SIZE,
@@ -38,7 +38,7 @@ static PROJECT_NAME_TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text
 static SEARCH_TASKS_TEXT_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 
 #[derive(Clone, Debug)]
-pub enum ProjectPageMessage {
+pub enum Message {
 	RefreshCachedTaskList,
 
 	OpenSortModeDropdown,
@@ -77,9 +77,15 @@ pub enum ProjectPageMessage {
 	AnimateProgressbar,
 }
 
-impl From<ProjectPageMessage> for Message {
-	fn from(value: ProjectPageMessage) -> Self {
-		ContentPageMessage::ProjectPageMessage(value).into()
+impl From<Message> for pages::Message {
+	fn from(value: Message) -> Self {
+		pages::Message::ProjectPage(value)
+	}
+}
+
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		pages::Message::ProjectPage(value).into()
 	}
 }
 
@@ -201,7 +207,7 @@ impl CachedTaskList {
 }
 
 #[derive(Debug, Clone)]
-pub struct ProjectPage {
+pub struct Page {
 	pub project_id: ProjectId,
 	pub cached_task_list: CachedTaskList,
 	show_done_tasks: bool,
@@ -216,7 +222,7 @@ pub struct ProjectPage {
 	pub importing_source_code_todos: bool,
 }
 
-impl ProjectPage {
+impl Page {
 	pub fn new(
 		project_id: ProjectId,
 		project: &Project,
@@ -256,22 +262,22 @@ impl ProjectPage {
 
 	pub fn update(
 		&mut self,
-		message: ProjectPageMessage,
+		message: Message,
 		database: Option<&Database>,
 		preferences: &Option<Preferences>,
-	) -> ContentPageAction {
+	) -> pages::Action {
 		let command = match message {
-			ProjectPageMessage::RefreshCachedTaskList => ContentPageAction::None,
+			Message::RefreshCachedTaskList => pages::Action::None,
 
-			ProjectPageMessage::OpenSortModeDropdown => {
+			Message::OpenSortModeDropdown => {
 				self.show_sort_mode_dropdown = true;
-				ContentPageAction::None
+				pages::Action::None
 			}
-			ProjectPageMessage::CloseSortModeDropdown => {
+			Message::CloseSortModeDropdown => {
 				self.show_sort_mode_dropdown = false;
-				ContentPageAction::None
+				pages::Action::None
 			}
-			ProjectPageMessage::SetSortMode(new_sort_mode) => {
+			Message::SetSortMode(new_sort_mode) => {
 				self.show_sort_mode_dropdown = false;
 				DatabaseMessage::ChangeProjectSortMode {
 					project_id: self.project_id,
@@ -280,64 +286,64 @@ impl ProjectPage {
 				.into()
 			}
 
-			ProjectPageMessage::ShowContextMenu => {
+			Message::ShowContextMenu => {
 				self.show_context_menu = true;
-				ContentPageAction::None
+				pages::Action::None
 			}
-			ProjectPageMessage::HideContextMenu => {
+			Message::HideContextMenu => {
 				self.show_context_menu = false;
-				ContentPageAction::None
+				pages::Action::None
 			}
-			ProjectPageMessage::OpenManageTaskTagsModal => {
+			Message::OpenManageTaskTagsModal => {
 				self.show_context_menu = false;
-				ContentPageAction::OpenManageTaskTagsModal(self.project_id)
+				pages::Action::OpenManageTaskTagsModal(self.project_id)
 			}
 
-			ProjectPageMessage::OpenSearchTasks => {
+			Message::OpenSearchTasks => {
 				self.search_tasks_filter = Some(String::new());
 				if let Some(database) = database {
 					self.generate_cached_task_list(database, preferences);
 				}
 				text_input::focus(SEARCH_TASKS_TEXT_INPUT_ID.clone()).into()
 			}
-			ProjectPageMessage::CloseSearchTasks => {
+			Message::CloseSearchTasks => {
 				self.search_tasks_filter = None;
 				if let Some(database) = database {
 					self.generate_cached_task_list(database, preferences);
 				}
-				ContentPageAction::None
+				pages::Action::None
 			}
-			ProjectPageMessage::ChangeSearchTasksFilter(new_filter) => {
+			Message::ChangeSearchTasksFilter(new_filter) => {
 				self.search_tasks_filter = Some(new_filter);
 				if let Some(database) = database {
 					self.generate_cached_task_list(database, preferences);
 				}
-				ContentPageAction::None
+				pages::Action::None
 			}
 
-			ProjectPageMessage::ImportSourceCodeTodosDialog => {
+			Message::ImportSourceCodeTodosDialog => {
 				self.show_context_menu = false;
 				self.importing_source_code_todos = true;
 				iced::Task::perform(
 					Self::pick_todo_source_code_folder_dialog(),
 					|source_code_todos| match source_code_todos {
 						Some((source_code_directory, source_code_todos)) => {
-							ProjectPageMessage::ImportSourceCodeTodos {
+							Message::ImportSourceCodeTodos {
 								source_code_directory,
 								source_code_todos,
 							}
 							.into()
 						}
-						None => ProjectPageMessage::ImportSourceCodeTodosDialogCanceled.into(),
+						None => Message::ImportSourceCodeTodosDialogCanceled.into(),
 					},
 				)
 				.into()
 			}
-			ProjectPageMessage::ImportSourceCodeTodosDialogCanceled => {
+			Message::ImportSourceCodeTodosDialogCanceled => {
 				self.importing_source_code_todos = false;
-				ContentPageAction::None
+				pages::Action::None
 			}
-			ProjectPageMessage::ImportSourceCodeTodos {
+			Message::ImportSourceCodeTodos {
 				source_code_directory,
 				source_code_todos,
 			} => {
@@ -349,7 +355,7 @@ impl ProjectPage {
 				}
 				.into()
 			}
-			ProjectPageMessage::ReimportSourceCodeTodos => {
+			Message::ReimportSourceCodeTodos => {
 				match database
 					.and_then(|db| db.get_project(&self.project_id))
 					.and_then(|project| project.source_code_directory.clone())
@@ -361,7 +367,7 @@ impl ProjectPage {
 						iced::Task::perform(
 							async move { import_source_code_todos(source_code_directory_clone) },
 							move |source_code_todos| {
-								ProjectPageMessage::ImportSourceCodeTodos {
+								Message::ImportSourceCodeTodos {
 									source_code_directory: source_code_directory.clone(),
 									source_code_todos,
 								}
@@ -370,25 +376,23 @@ impl ProjectPage {
 						)
 						.into()
 					}
-					None => self.update(
-						ProjectPageMessage::ImportSourceCodeTodosDialog,
-						database,
-						preferences,
-					),
+					None => {
+						self.update(Message::ImportSourceCodeTodosDialog, database, preferences)
+					}
 				}
 			}
 
-			ProjectPageMessage::ShowSourceCodeTodos(show) => {
+			Message::ShowSourceCodeTodos(show) => {
 				self.show_source_code_todos = show;
-				ContentPageAction::None
+				pages::Action::None
 			}
 
-			ProjectPageMessage::ShowDoneTasks(show) => {
+			Message::ShowDoneTasks(show) => {
 				self.show_done_tasks = show;
-				ContentPageAction::None
+				pages::Action::None
 			}
 
-			ProjectPageMessage::ToggleFilterTaskTag(task_tag_id) => {
+			Message::ToggleFilterTaskTag(task_tag_id) => {
 				if self.filter_task_tags.contains(&task_tag_id) {
 					self.filter_task_tags.remove(&task_tag_id);
 				} else {
@@ -397,25 +401,25 @@ impl ProjectPage {
 				if let Some(database) = database {
 					self.generate_cached_task_list(database, preferences);
 				}
-				ContentPageAction::None
+				pages::Action::None
 			}
-			ProjectPageMessage::UnsetFilterTaskTag(task_tag_id) => {
+			Message::UnsetFilterTaskTag(task_tag_id) => {
 				self.filter_task_tags.remove(&task_tag_id);
 				if let Some(database) = database {
 					self.generate_cached_task_list(database, preferences);
 				}
-				ContentPageAction::None
+				pages::Action::None
 			}
 
-			ProjectPageMessage::ShowColorPicker => {
+			Message::ShowColorPicker => {
 				self.show_color_picker = true;
-				ContentPageAction::None
+				pages::Action::None
 			}
-			ProjectPageMessage::HideColorPicker => {
+			Message::HideColorPicker => {
 				self.show_color_picker = false;
-				ContentPageAction::None
+				pages::Action::None
 			}
-			ProjectPageMessage::ChangeProjectColor(new_color) => {
+			Message::ChangeProjectColor(new_color) => {
 				self.show_color_picker = false;
 				DatabaseMessage::ChangeProjectColor {
 					project_id: self.project_id,
@@ -424,7 +428,7 @@ impl ProjectPage {
 				.into()
 			}
 
-			ProjectPageMessage::ConfirmDeleteProject => {
+			Message::ConfirmDeleteProject => {
 				self.show_context_menu = false;
 
 				let project_name = database
@@ -438,15 +442,15 @@ impl ProjectPage {
 						"<invalid project id>".to_string()
 					});
 
-				ContentPageAction::ConfirmDeleteProject {
+				pages::Action::ConfirmDeleteProject {
 					project_id: self.project_id,
 					project_name,
 				}
 			}
 
-			ProjectPageMessage::AnimateProgressbar => {
+			Message::AnimateProgressbar => {
 				self.progressbar_animation.update();
-				ContentPageAction::None
+				pages::Action::None
 			}
 		};
 
@@ -460,21 +464,21 @@ impl ProjectPage {
 		command
 	}
 
-	pub fn subscription(&self) -> Subscription<ProjectPageMessage> {
+	pub fn subscription(&self) -> Subscription<Message> {
 		Subscription::batch([
 			self.progressbar_animation
 				.subscription()
-				.map(|_| ProjectPageMessage::AnimateProgressbar),
+				.map(|_| Message::AnimateProgressbar),
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
 				keyboard::Key::Character("f") if modifiers.command() => {
-					Some(ProjectPageMessage::OpenSearchTasks)
+					Some(Message::OpenSearchTasks)
 				}
 				_ => None,
 			}),
 		])
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, project_tracker::Message> {
 		match &app.database {
 			DatabaseState::Loaded(database) => {
 				match database.get_project(&self.project_id) {
@@ -511,76 +515,81 @@ impl ProjectPage {
 		}
 	}
 
-	fn project_details_view<'a>(&'a self, project: &'a Project) -> Element<'a, Message> {
-		let project_name: Element<Message> = text_input("New project name", &project.name)
-			.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
-			.size(TITLE_TEXT_SIZE)
-			.on_input(|edited_name| {
-				DatabaseMessage::ChangeProjectName {
-					project_id: self.project_id,
-					new_name: edited_name.clone(),
-				}
-				.into()
-			})
-			.style(|t, s| text_input_style_borderless(t, s, false))
-			.into(); //text_input_style_default),
+	fn project_details_view<'a>(
+		&'a self,
+		project: &'a Project,
+	) -> Element<'a, project_tracker::Message> {
+		let project_name: Element<project_tracker::Message> =
+			text_input("New project name", &project.name)
+				.id(PROJECT_NAME_TEXT_INPUT_ID.clone())
+				.size(TITLE_TEXT_SIZE)
+				.on_input(|edited_name| {
+					DatabaseMessage::ChangeProjectName {
+						project_id: self.project_id,
+						new_name: edited_name.clone(),
+					}
+					.into()
+				})
+				.style(|t, s| text_input_style_borderless(t, s, false))
+				.into(); //text_input_style_default),
 
 		let show_color_picker_button = edit_color_palette_button(
 			project.color.to_iced_color(),
 			self.show_color_picker,
 			if self.show_color_picker {
-				ProjectPageMessage::HideColorPicker.into()
+				Message::HideColorPicker.into()
 			} else {
-				ProjectPageMessage::ShowColorPicker.into()
+				Message::ShowColorPicker.into()
 			},
 		);
 
 		let color_picker = DropDown::new(
 			show_color_picker_button,
 			color_palette(project.color.to_iced_color(), |c| {
-				ProjectPageMessage::ChangeProjectColor(c).into()
+				Message::ChangeProjectColor(c).into()
 			}),
 			self.show_color_picker,
 		)
 		.width(Fill)
 		.alignment(drop_down::Alignment::End)
-		.on_dismiss(ProjectPageMessage::HideColorPicker.into());
+		.on_dismiss(Message::HideColorPicker.into());
 
-		let task_tags_list: Vec<Element<Message>> = project
+		let task_tags_list: Vec<Element<project_tracker::Message>> = project
 			.task_tags
 			.iter()
 			.map(|(tag_id, tag)| {
 				task_tag_button(tag, self.filter_task_tags.contains(&tag_id))
-					.on_press(ProjectPageMessage::ToggleFilterTaskTag(tag_id).into())
+					.on_press(Message::ToggleFilterTaskTag(tag_id).into())
 					.into()
 			})
 			.collect();
 
-		let search_tasks_element: Element<Message> = match &self.search_tasks_filter {
-			Some(search_tasks_filter) => row![
-				unfocusable(
-					text_input("Search tasks...", search_tasks_filter)
-						.id(SEARCH_TASKS_TEXT_INPUT_ID.clone())
-						.icon(text_input::Icon {
-							font: BOOTSTRAP_FONT,
-							code_point: icon_to_char(Bootstrap::Search),
-							size: None,
-							spacing: SMALL_SPACING_AMOUNT as f32,
-							side: text_input::Side::Left,
-						})
-						.on_input(|new_search_filter| {
-							ProjectPageMessage::ChangeSearchTasksFilter(new_search_filter).into()
-						})
-						.style(text_input_style_only_round_left),
-					ProjectPageMessage::CloseSearchTasks.into()
-				),
-				cancel_search_tasks_button(),
-			]
-			.into(),
-			None => search_tasks_button().into(),
-		};
+		let search_tasks_element: Element<project_tracker::Message> =
+			match &self.search_tasks_filter {
+				Some(search_tasks_filter) => row![
+					unfocusable(
+						text_input("Search tasks...", search_tasks_filter)
+							.id(SEARCH_TASKS_TEXT_INPUT_ID.clone())
+							.icon(text_input::Icon {
+								font: BOOTSTRAP_FONT,
+								code_point: icon_to_char(Bootstrap::Search),
+								size: None,
+								spacing: SMALL_SPACING_AMOUNT as f32,
+								side: text_input::Side::Left,
+							})
+							.on_input(|new_search_filter| {
+								Message::ChangeSearchTasksFilter(new_search_filter).into()
+							})
+							.style(text_input_style_only_round_left),
+						Message::CloseSearchTasks.into()
+					),
+					cancel_search_tasks_button(),
+				]
+				.into(),
+				None => search_tasks_button().into(),
+			};
 
-		let quick_actions: Element<Message> = row![
+		let quick_actions: Element<project_tracker::Message> = row![
 			search_tasks_element,
 			project_context_menu_button(self.show_context_menu),
 		]

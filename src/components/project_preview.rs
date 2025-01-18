@@ -5,8 +5,8 @@ use crate::styles::{
 	SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, TINY_SPACING_AMOUNT,
 };
 use crate::{
-	pages::SidebarPageMessage,
-	project_tracker::Message,
+	pages::sidebar_page::Message,
+	project_tracker,
 	styles::{dropzone_container_style, project_preview_style},
 };
 use iced::{
@@ -24,7 +24,7 @@ use project_tracker_core::{Project, ProjectId};
 pub const PROJECT_COLOR_BLOCK_WIDTH: f32 = 5.0;
 const PROJECT_COLOR_BLOCK_HEIGHT: f32 = 35.0;
 
-pub fn project_color_block(color: Color) -> Element<'static, Message> {
+pub fn project_color_block(color: Color) -> Element<'static, project_tracker::Message> {
 	Quad {
 		width: Length::Fixed(PROJECT_COLOR_BLOCK_WIDTH),
 		height: Length::Fixed(PROJECT_COLOR_BLOCK_HEIGHT),
@@ -47,7 +47,7 @@ pub fn project_preview(
 	task_dropzone_highlight: bool,
 	dragging: bool,
 	just_minimal_dragging: bool,
-) -> Element<Message> {
+) -> Element<project_tracker::Message> {
 	let inner_text_element = text(&project.name).size(LARGE_TEXT_SIZE).into();
 
 	custom_project_preview(
@@ -74,14 +74,14 @@ pub fn custom_project_preview(
 	project_color: Color,
 	tasks_done: usize,
 	task_len: usize,
-	inner_text_element: Element<Message>,
+	inner_text_element: Element<project_tracker::Message>,
 	selected: bool,
 	project_dropzone_highlight: bool,
 	task_dropzone_highlight: bool,
 	dragging: bool,
 	just_minimal_dragging: bool,
-) -> Element<Message> {
-	let inner = container(
+) -> Element<project_tracker::Message> {
+	let inner: Element<project_tracker::Message> = container(
 		row![
 			if selected && project_id.is_some() {
 				Space::new(PROJECT_COLOR_BLOCK_WIDTH, PROJECT_COLOR_BLOCK_HEIGHT).into()
@@ -115,7 +115,8 @@ pub fn custom_project_preview(
 			..Padding::ZERO
 		}),
 	)
-	.style(move |t| project_preview_background_container_style(t, dragging));
+	.style(move |t| project_preview_background_container_style(t, dragging))
+	.into();
 
 	match project_id {
 		Some(project_id) => column![
@@ -128,20 +129,20 @@ pub fn custom_project_preview(
 					.id(task_dropzone_id.unwrap_or(container::Id::unique()))
 					.style(move |t| dropzone_container_style(t, task_dropzone_highlight))
 			)
-			.on_drop(move |point, rect| SidebarPageMessage::DropProject {
+			.on_drop(move |point, rect| Message::DropProject {
 				project_id,
 				point,
 				rect
 			}
 			.into())
-			.on_drag(move |point, rect| SidebarPageMessage::DragProject {
+			.on_drag(move |point, rect| Message::DragProject {
 				project_id,
 				point,
 				rect
 			}
 			.into())
-			.on_click(SidebarPageMessage::ClickProject(project_id).into())
-			.on_cancel(SidebarPageMessage::CancelDragProject.into())
+			.on_click(Message::ClickProject(project_id).into())
+			.on_cancel(Message::CancelDragProject.into())
 			.drag_overlay(!just_minimal_dragging)
 			.drag_hide(!just_minimal_dragging)
 			.drag_mode(false, true)

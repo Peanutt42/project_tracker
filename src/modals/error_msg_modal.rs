@@ -1,6 +1,6 @@
 use crate::{
 	components::{copy_to_clipboard_button, error_msg_ok_button},
-	project_tracker::Message,
+	project_tracker,
 	styles::card_style,
 };
 use iced::{
@@ -10,49 +10,49 @@ use iced::{
 use iced_aw::card;
 use tracing::error;
 
-pub enum ErrorMsgModal {
+pub enum Modal {
 	Open { error_msg: String },
 	Closed,
 }
 
 #[derive(Clone, Debug)]
-pub enum ErrorMsgModalMessage {
+pub enum Message {
 	Open(String),
 	Close,
 }
 
-impl ErrorMsgModalMessage {
-	pub fn open(error_msg: String) -> Message {
+impl Message {
+	pub fn open(error_msg: String) -> project_tracker::Message {
 		Self::Open(error_msg).into()
 	}
 
-	pub fn open_error<E: std::error::Error>(error: E) -> Message {
+	pub fn open_error<E: std::error::Error>(error: E) -> project_tracker::Message {
 		Self::Open(format!("{error}")).into()
 	}
 }
 
-impl From<ErrorMsgModalMessage> for Message {
-	fn from(value: ErrorMsgModalMessage) -> Self {
-		Message::ErrorMsgModalMessage(value)
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		project_tracker::Message::ErrorMsgModalMessage(value)
 	}
 }
 
-impl ErrorMsgModal {
-	pub fn update(&mut self, message: ErrorMsgModalMessage) {
+impl Modal {
+	pub fn update(&mut self, message: Message) {
 		match message {
-			ErrorMsgModalMessage::Open(error_msg) => {
+			Message::Open(error_msg) => {
 				error!("{error_msg}");
-				*self = ErrorMsgModal::Open { error_msg };
+				*self = Modal::Open { error_msg };
 			}
-			ErrorMsgModalMessage::Close => {
-				*self = ErrorMsgModal::Closed;
+			Message::Close => {
+				*self = Modal::Closed;
 			}
 		}
 	}
 
-	pub fn view(&self) -> Option<Element<Message>> {
+	pub fn view(&self) -> Option<Element<project_tracker::Message>> {
 		match self {
-			ErrorMsgModal::Open { error_msg } => Some(
+			Modal::Open { error_msg } => Some(
 				card(
 					text(error_msg),
 					row![
@@ -64,7 +64,7 @@ impl ErrorMsgModal {
 				.style(card_style)
 				.into(),
 			),
-			ErrorMsgModal::Closed => None,
+			Modal::Closed => None,
 		}
 	}
 }

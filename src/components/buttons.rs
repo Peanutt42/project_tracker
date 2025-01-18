@@ -4,13 +4,12 @@ use crate::{
 	icons::{icon_to_text, Bootstrap},
 	integrations::CodeEditor,
 	modals::{
-		ConfirmModalMessage, CreateTaskModalMessage, ErrorMsgModalMessage,
-		ManageTaskTagsModalMessage, SettingTab, SettingsModalMessage, TaskModalMessage,
-		WaitClosingModalMessage,
+		confirm_modal, create_task_modal, error_msg_modal, manage_task_tags_modal, settings_modal,
+		task_modal, wait_closing_modal,
 	},
 	pages::{
-		format_stopwatch_duration, ContentPageMessage, ProjectPageMessage, SidebarPageMessage,
-		StopwatchPage, StopwatchPageMessage, STOPWATCH_TASK_DROPZONE_ID,
+		self, format_stopwatch_duration, project_page, sidebar_page, stopwatch_page,
+		STOPWATCH_TASK_DROPZONE_ID,
 	},
 	project_tracker::Message,
 	styles::{
@@ -59,7 +58,7 @@ fn icon_button<Message>(icon: Bootstrap) -> Button<'static, Message> {
 	.width(ICON_BUTTON_WIDTH)
 }
 
-fn large_icon_button(icon: Bootstrap) -> Button<'static, Message> {
+fn large_icon_button<Message: 'static>(icon: Bootstrap) -> Button<'static, Message> {
 	button(
 		icon_to_text(icon)
 			.size(LARGE_TEXT_SIZE)
@@ -69,7 +68,7 @@ fn large_icon_button(icon: Bootstrap) -> Button<'static, Message> {
 	.width(LARGE_TEXT_SIZE * 1.8)
 }
 
-fn icon_label_button(
+fn icon_label_button<Message: 'static>(
 	label: impl text::IntoFragment<'static>,
 	icon: Bootstrap,
 ) -> Button<'static, Message> {
@@ -83,7 +82,7 @@ fn icon_label_button(
 pub fn create_new_project_button(enabled: bool) -> Button<'static, Message> {
 	large_icon_button(Bootstrap::PlusLg)
 		.on_press_maybe(if enabled {
-			Some(SidebarPageMessage::OpenCreateNewProject.into())
+			Some(sidebar_page::Message::OpenCreateNewProject.into())
 		} else {
 			None
 		})
@@ -98,7 +97,7 @@ pub fn open_create_task_modal_button() -> Button<'static, Message> {
 
 pub fn create_new_task_modal_button() -> Button<'static, Message> {
 	button(text("Create").align_x(Horizontal::Center))
-		.on_press(CreateTaskModalMessage::CreateTask.into())
+		.on_press(create_task_modal::Message::CreateTask.into())
 		.style(primary_button_style)
 }
 
@@ -110,14 +109,14 @@ pub fn close_create_new_task_modal_button() -> Button<'static, Message> {
 
 pub fn cancel_create_project_button() -> Button<'static, Message> {
 	icon_button(Bootstrap::XLg)
-		.on_press(SidebarPageMessage::CloseCreateNewProject.into())
+		.on_press(sidebar_page::Message::CloseCreateNewProject.into())
 		.style(secondary_button_style_default)
 }
 
 fn delete_project_button() -> Button<'static, Message> {
 	icon_label_button("Delete", Bootstrap::Trash)
 		.width(Fill)
-		.on_press(ProjectPageMessage::ConfirmDeleteProject.into())
+		.on_press(project_page::Message::ConfirmDeleteProject.into())
 		.style(move |t, s| delete_button_style(t, s, false, false, true, true))
 }
 
@@ -125,9 +124,9 @@ pub fn project_context_menu_button(opened: bool) -> Element<'static, Message> {
 	DropDown::new(
 		icon_button(Bootstrap::ThreeDotsVertical)
 			.on_press(if opened {
-				ProjectPageMessage::HideContextMenu.into()
+				project_page::Message::HideContextMenu.into()
 			} else {
-				ProjectPageMessage::ShowContextMenu.into()
+				project_page::Message::ShowContextMenu.into()
 			})
 			.style(secondary_button_style_default),
 		container(
@@ -144,7 +143,7 @@ pub fn project_context_menu_button(opened: bool) -> Element<'static, Message> {
 	.width(Fill)
 	.alignment(drop_down::Alignment::BottomStart)
 	.offset(Offset::new(-ICON_BUTTON_WIDTH, ICON_BUTTON_WIDTH))
-	.on_dismiss(ProjectPageMessage::HideContextMenu.into())
+	.on_dismiss(project_page::Message::HideContextMenu.into())
 	.into()
 }
 
@@ -153,11 +152,11 @@ pub fn toggle_view_edit_task_description_button(viewing: bool) -> Element<'stati
 	tooltip(
 		if viewing {
 			icon_button(Bootstrap::Pencil)
-				.on_press(TaskModalMessage::EditDescription.into())
+				.on_press(task_modal::Message::EditDescription.into())
 				.style(primary_button_style)
 		} else {
 			icon_button(Bootstrap::Book)
-				.on_press(TaskModalMessage::ViewDescription.into())
+				.on_press(task_modal::Message::ViewDescription.into())
 				.style(primary_button_style)
 		},
 		if viewing {
@@ -174,7 +173,7 @@ pub fn toggle_view_edit_task_description_button(viewing: bool) -> Element<'stati
 
 pub fn delete_task_button() -> Button<'static, Message> {
 	icon_label_button("Delete", Bootstrap::Trash)
-		.on_press(TaskModalMessage::DeleteTask.into())
+		.on_press(task_modal::Message::DeleteTask.into())
 		.style(move |t, s| delete_button_style(t, s, true, true, true, true))
 }
 
@@ -186,7 +185,7 @@ pub fn delete_all_done_tasks_button(
 		row![icon_to_text(Bootstrap::Trash), text("Delete done tasks")]
 			.spacing(SMALL_SPACING_AMOUNT),
 	)
-	.on_press(ConfirmModalMessage::open(
+	.on_press(confirm_modal::Message::open(
 		format!("Delete all done tasks of project '{project_name}'?"),
 		DatabaseMessage::DeleteDoneTasks(project_id),
 	))
@@ -205,7 +204,7 @@ pub fn show_done_tasks_button(show: bool, done_task_len: usize) -> Button<'stati
 			Bootstrap::CaretRightFill
 		},
 	)
-	.on_press(ProjectPageMessage::ShowDoneTasks(!show).into())
+	.on_press(project_page::Message::ShowDoneTasks(!show).into())
 	.style(secondary_button_style_default)
 }
 
@@ -218,7 +217,7 @@ pub fn dangerous_button(
 	icon_label_button(text, icon)
 		.style(dangerous_button_style)
 		.on_press(match confirm_label {
-			Some(label) => ConfirmModalMessage::open(label, on_press),
+			Some(label) => confirm_modal::Message::open(label, on_press),
 			None => on_press.into(),
 		})
 }
@@ -256,19 +255,19 @@ pub fn overview_button(selected: bool) -> Button<'static, Message> {
 		.align_y(Alignment::Center),
 	)
 	.width(Fill)
-	.on_press(ContentPageMessage::OpenOverview.into())
+	.on_press(pages::Message::OpenOverview.into())
 	.style(move |t, s| overview_button_style(t, s, selected))
 }
 
 pub fn stopwatch_button(
-	stopwatch_page: &StopwatchPage,
+	stopwatch_page: &stopwatch_page::Page,
 	selected: bool,
 	dropzone_highlight: bool,
 	database: Option<&Database>,
 ) -> Element<'static, Message> {
 	let stopwatch_label = match stopwatch_page {
-		StopwatchPage::TakingBreak { clock, .. } => Some(clock.label().to_string()),
-		StopwatchPage::StopTaskTime {
+		stopwatch_page::Page::TakingBreak { clock, .. } => Some(clock.label().to_string()),
+		stopwatch_page::Page::StopTaskTime {
 			clock,
 			project_id,
 			task_id,
@@ -276,23 +275,23 @@ pub fn stopwatch_button(
 		} => Some(match clock {
 			Some(clock) => clock.label().to_string(),
 			None => format_stopwatch_duration(
-				StopwatchPage::get_spend_seconds(*project_id, *task_id, database)
+				stopwatch_page::Page::get_spend_seconds(*project_id, *task_id, database)
 					.unwrap_or(0.0)
 					.round_ties_even() as i64,
 			),
 		}),
-		StopwatchPage::TrackTime { elapsed_time, .. } => Some(format_stopwatch_duration(
+		stopwatch_page::Page::TrackTime { elapsed_time, .. } => Some(format_stopwatch_duration(
 			elapsed_time.as_secs_f64().round_ties_even() as i64,
 		)),
-		StopwatchPage::Idle => None,
+		stopwatch_page::Page::Idle => None,
 	};
 
 	// TODO: different colors for break, task, tracking time
-	let stopwatch_ticking = !matches!(stopwatch_page, StopwatchPage::Idle);
+	let stopwatch_ticking = !matches!(stopwatch_page, stopwatch_page::Page::Idle);
 
 	let stopwatch_icon = match stopwatch_page {
-		StopwatchPage::TakingBreak { .. } => Bootstrap::CupHot,
-		StopwatchPage::StopTaskTime { .. } => Bootstrap::HourglassSplit,
+		stopwatch_page::Page::TakingBreak { .. } => Bootstrap::CupHot,
+		stopwatch_page::Page::StopTaskTime { .. } => Bootstrap::HourglassSplit,
 		_ => Bootstrap::Stopwatch,
 	};
 
@@ -316,7 +315,7 @@ pub fn stopwatch_button(
 			.align_y(Alignment::Center),
 		)
 		.width(Fill)
-		.on_press(ContentPageMessage::OpenStopwatch.into())
+		.on_press(pages::Message::OpenStopwatch.into())
 		.style(move |t, s| {
 			stopwatch_page_button_style(t, s, selected, stopwatch_ticking, dropzone_highlight)
 		}),
@@ -327,7 +326,7 @@ pub fn stopwatch_button(
 
 pub fn settings_button() -> Button<'static, Message> {
 	large_icon_button(Bootstrap::Gear)
-		.on_press(SettingsModalMessage::Open.into())
+		.on_press(settings_modal::Message::Open.into())
 		.style(secondary_button_style_default)
 }
 
@@ -338,7 +337,7 @@ pub fn date_formatting_button<'a>(
 ) -> Button<'a, Message> {
 	button(text(format.as_str()).align_x(Horizontal::Center))
 		.width(120.0)
-		.on_press(SettingsModalMessage::SetDateFormatting(*format).into())
+		.on_press(settings_modal::Message::SetDateFormatting(*format).into())
 		.style(move |t, s| {
 			selection_list_button_style(
 				t,
@@ -521,7 +520,7 @@ fn manage_task_tags_button() -> Element<'static, Message> {
 	tooltip(
 		icon_label_button("Manage Tags", Bootstrap::Bookmark)
 			.width(Fill)
-			.on_press(ProjectPageMessage::OpenManageTaskTagsModal.into())
+			.on_press(project_page::Message::OpenManageTaskTagsModal.into())
 			.style(secondary_button_style_only_round_top),
 		text("Manage tags").size(SMALL_TEXT_SIZE),
 		tooltip::Position::Bottom,
@@ -531,21 +530,23 @@ fn manage_task_tags_button() -> Element<'static, Message> {
 	.into()
 }
 
-pub fn create_new_task_tags_button() -> Button<'static, Message> {
+pub fn create_new_task_tags_button() -> Button<'static, manage_task_tags_modal::Message> {
 	icon_label_button("Create new", Bootstrap::BookmarkPlusFill)
-		.on_press(ManageTaskTagsModalMessage::OpenCreateNewTaskTag.into())
+		.on_press(manage_task_tags_modal::Message::OpenCreateNewTaskTag)
 		.style(primary_button_style)
 }
 
-pub fn cancel_create_new_task_tag_button() -> Button<'static, Message> {
+pub fn cancel_create_new_task_tag_button() -> Button<'static, manage_task_tags_modal::Message> {
 	icon_button(Bootstrap::XLg)
-		.on_press(ManageTaskTagsModalMessage::CloseCreateNewTaskTag.into())
+		.on_press(manage_task_tags_modal::Message::CloseCreateNewTaskTag)
 		.style(secondary_button_style_only_round_right)
 }
 
-pub fn delete_task_tag_button(task_tag_id: TaskTagId) -> Button<'static, Message> {
+pub fn delete_task_tag_button(
+	task_tag_id: TaskTagId,
+) -> Button<'static, manage_task_tags_modal::Message> {
 	icon_button(Bootstrap::Trash)
-		.on_press(ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id).into())
+		.on_press(manage_task_tags_modal::Message::DeleteTaskTag(task_tag_id))
 		.style(move |t, s| delete_button_style(t, s, true, true, true, true))
 }
 
@@ -601,7 +602,7 @@ pub fn edit_color_palette_button(
 	.into()
 }
 
-pub fn color_palette_item_button(
+pub fn color_palette_item_button<Message: 'static>(
 	color: Color,
 	selected: bool,
 	round_left_top: bool,
@@ -650,32 +651,35 @@ pub fn confirm_cancel_button(custom_label: Option<&'static str>) -> Button<'stat
 	button(text(custom_label.unwrap_or("Cancel")).align_x(Horizontal::Center))
 		.width(Fill)
 		.style(secondary_button_style_default)
-		.on_press(ConfirmModalMessage::Close.into())
+		.on_press(confirm_modal::Message::Close.into())
 }
 
 pub fn search_tasks_button() -> Button<'static, Message> {
 	icon_button(Bootstrap::Search)
 		.style(secondary_button_style_default)
-		.on_press(ProjectPageMessage::OpenSearchTasks.into())
+		.on_press(project_page::Message::OpenSearchTasks.into())
 }
 
 pub fn cancel_search_tasks_button() -> Button<'static, Message> {
 	icon_button(Bootstrap::XLg)
 		.style(secondary_button_style_only_round_right)
-		.on_press(ProjectPageMessage::CloseSearchTasks.into())
+		.on_press(project_page::Message::CloseSearchTasks.into())
 }
 
-pub fn settings_tab_button(tab: SettingTab, selected_tab: SettingTab) -> Button<'static, Message> {
+pub fn settings_tab_button(
+	tab: settings_modal::SettingTab,
+	selected_tab: settings_modal::SettingTab,
+) -> Button<'static, Message> {
 	icon_label_button(tab.label(), tab.icon())
 		.width(Fill)
 		.style(move |t, s| settings_tab_button_style(t, s, tab == selected_tab))
-		.on_press(SettingsModalMessage::OpenTab(tab).into())
+		.on_press(settings_modal::Message::OpenTab(tab).into())
 }
 
 fn import_source_code_todos_button() -> Button<'static, Message> {
 	icon_label_button("Import Todos", Bootstrap::FileEarmarkCode)
 		.width(Fill)
-		.on_press(ProjectPageMessage::ImportSourceCodeTodosDialog.into())
+		.on_press(project_page::Message::ImportSourceCodeTodosDialog.into())
 		.style(secondary_button_style_no_rounding)
 }
 
@@ -707,9 +711,9 @@ pub fn reimport_source_code_todos_button(
 		.align_y(Alignment::Center),
 	)
 	.on_press(if reimport_possible {
-		ProjectPageMessage::ReimportSourceCodeTodos.into()
+		project_page::Message::ReimportSourceCodeTodos.into()
 	} else {
-		ProjectPageMessage::ImportSourceCodeTodosDialog.into()
+		project_page::Message::ImportSourceCodeTodosDialog.into()
 	})
 	.style(secondary_button_style_default)
 }
@@ -729,7 +733,7 @@ pub fn show_source_code_todos_button(
 			Bootstrap::CaretRightFill
 		},
 	)
-	.on_press(ProjectPageMessage::ShowSourceCodeTodos(!show).into())
+	.on_press(project_page::Message::ShowSourceCodeTodos(!show).into())
 	.style(secondary_button_style_default)
 }
 
@@ -742,7 +746,7 @@ pub fn track_time_button() -> Button<'static, Message> {
 	)
 	.width(Length::Fixed(1.75 * 45.0))
 	.height(Length::Fixed(1.75 * 45.0))
-	.on_press(StopwatchPageMessage::StartTrackingTime.into())
+	.on_press(stopwatch_page::Message::StartTrackingTime.into())
 	.style(move |t, s| timer_button_style(t, s, false))
 }
 
@@ -755,7 +759,7 @@ pub fn stop_timer_button() -> Button<'static, Message> {
 	)
 	.width(Length::Fixed(1.75 * 45.0))
 	.height(Length::Fixed(1.75 * 45.0))
-	.on_press(StopwatchPageMessage::Stop.into())
+	.on_press(stopwatch_page::Message::Stop.into())
 	.style(move |t, s| timer_button_style(t, s, true))
 }
 
@@ -768,7 +772,7 @@ pub fn resume_timer_button() -> Button<'static, Message> {
 	)
 	.width(Length::Fixed(1.75 * 45.0))
 	.height(Length::Fixed(1.75 * 45.0))
-	.on_press(StopwatchPageMessage::Resume.into())
+	.on_press(stopwatch_page::Message::Resume.into())
 	.style(move |t, s| timer_button_style(t, s, true))
 }
 
@@ -781,7 +785,7 @@ pub fn pause_timer_button() -> Button<'static, Message> {
 	)
 	.width(Length::Fixed(1.75 * 45.0))
 	.height(Length::Fixed(1.75 * 45.0))
-	.on_press(StopwatchPageMessage::Pause.into())
+	.on_press(stopwatch_page::Message::Pause.into())
 	.style(move |t, s| timer_button_style(t, s, true))
 }
 
@@ -794,7 +798,7 @@ pub fn complete_task_timer_button() -> Button<'static, Message> {
 	)
 	.width(Length::Fixed(1.75 * 45.0))
 	.height(Length::Fixed(1.75 * 45.0))
-	.on_press(StopwatchPageMessage::CompleteTask.into())
+	.on_press(stopwatch_page::Message::CompleteTask.into())
 	.style(move |t, s| timer_button_style(t, s, true))
 }
 
@@ -802,7 +806,7 @@ pub fn start_task_timer_button<'a>(project_id: ProjectId, task_id: TaskId) -> El
 	tooltip(
 		icon_button(Bootstrap::Stopwatch)
 			.on_press(
-				StopwatchPageMessage::StopTask {
+				stopwatch_page::Message::StopTask {
 					project_id,
 					task_id,
 				}
@@ -819,7 +823,7 @@ pub fn start_task_timer_button<'a>(project_id: ProjectId, task_id: TaskId) -> El
 
 pub fn import_google_tasks_button() -> Button<'static, Message> {
 	button("Import")
-		.on_press(SettingsModalMessage::ImportGoogleTasksFileDialog.into())
+		.on_press(settings_modal::Message::ImportGoogleTasksFileDialog.into())
 		.style(dangerous_button_style)
 }
 
@@ -841,9 +845,9 @@ pub fn sort_dropdown_button(opened: bool, sort_mode: SortMode) -> Element<'stati
 			.align_y(Vertical::Center),
 		)
 		.on_press(if opened {
-			ProjectPageMessage::CloseSortModeDropdown.into()
+			project_page::Message::CloseSortModeDropdown.into()
 		} else {
-			ProjectPageMessage::OpenSortModeDropdown.into()
+			project_page::Message::OpenSortModeDropdown.into()
 		})
 		.style(secondary_button_style_default),
 		container(Column::with_children(SortMode::ALL.iter().enumerate().map(
@@ -859,7 +863,7 @@ pub fn sort_dropdown_button(opened: bool, sort_mode: SortMode) -> Element<'stati
 							i == SortMode::ALL.len() - 1,
 						)
 					})
-					.on_press(ProjectPageMessage::SetSortMode(*mode).into())
+					.on_press(project_page::Message::SetSortMode(*mode).into())
 					.into()
 			},
 		)))
@@ -869,14 +873,14 @@ pub fn sort_dropdown_button(opened: bool, sort_mode: SortMode) -> Element<'stati
 	.width(Fixed(140.0))
 	.alignment(drop_down::Alignment::Bottom)
 	.offset(0.0)
-	.on_dismiss(ProjectPageMessage::CloseSortModeDropdown.into())
+	.on_dismiss(project_page::Message::CloseSortModeDropdown.into())
 	.into()
 }
 
 pub fn show_password_button() -> Element<'static, Message> {
 	tooltip(
 		icon_button(Bootstrap::EyeFill)
-			.on_press(SettingsModalMessage::ShowPassword.into())
+			.on_press(settings_modal::Message::ShowPassword.into())
 			.style(secondary_button_style_default),
 		text("Show password").size(SMALL_TEXT_SIZE),
 		tooltip::Position::Bottom,
@@ -889,7 +893,7 @@ pub fn show_password_button() -> Element<'static, Message> {
 pub fn hide_password_button() -> Element<'static, Message> {
 	tooltip(
 		icon_button(Bootstrap::EyeSlashFill)
-			.on_press(SettingsModalMessage::HidePassword.into())
+			.on_press(settings_modal::Message::HidePassword.into())
 			.style(secondary_button_style_default),
 		text("Hide password").size(SMALL_TEXT_SIZE),
 		tooltip::Position::Bottom,
@@ -901,7 +905,7 @@ pub fn hide_password_button() -> Element<'static, Message> {
 
 pub fn take_break_button(minutes: usize) -> Button<'static, Message> {
 	button(text(format!("{minutes} min")).size(HEADING_TEXT_SIZE))
-		.on_press(StopwatchPageMessage::TakeBreak(minutes).into())
+		.on_press(stopwatch_page::Message::TakeBreak(minutes).into())
 		.style(move |t, s| timer_button_style(t, s, false))
 }
 
@@ -926,18 +930,23 @@ pub fn error_msg_ok_button() -> Button<'static, Message> {
 	button(text("Ok").align_x(Horizontal::Center).width(Fill))
 		.width(Fill)
 		.style(dangerous_button_style)
-		.on_press(ErrorMsgModalMessage::Close.into())
+		.on_press(error_msg_modal::Message::Close.into())
 }
 
-pub fn task_tag_name_button(task_tag_id: TaskTagId, task_tag_name: &str) -> Button<Message> {
+pub fn task_tag_name_button(
+	task_tag_id: TaskTagId,
+	task_tag_name: &str,
+) -> Button<manage_task_tags_modal::Message> {
 	button(text(task_tag_name).width(Fill))
-		.on_press(ManageTaskTagsModalMessage::EditTaskTagName(task_tag_id).into())
+		.on_press(manage_task_tags_modal::Message::EditTaskTagName(
+			task_tag_id,
+		))
 		.style(hidden_secondary_button_style)
 }
 
-pub fn force_close_anyways_button() -> Button<'static, WaitClosingModalMessage> {
+pub fn force_close_anyways_button() -> Button<'static, wait_closing_modal::Message> {
 	button(text("Close anyways"))
-		.on_press(WaitClosingModalMessage::ForceCloseAnyways)
+		.on_press(wait_closing_modal::Message::ForceCloseAnyways)
 		.style(dangerous_button_style)
 }
 
@@ -948,14 +957,14 @@ pub fn open_project_button(
 ) -> Button<Message> {
 	let project_link_text = Span::new(format!("{project_name}:"))
 		.link(Message::ContentPageMessage(
-			ContentPageMessage::OpenProjectPage(project_id),
+			pages::Message::OpenProjectPage(project_id),
 		))
 		.underline(true)
 		.color(project_color);
 
 	button(rich_text![project_link_text])
 		.style(hidden_secondary_button_style)
-		.on_press(ContentPageMessage::OpenProjectPage(project_id).into())
+		.on_press(pages::Message::OpenProjectPage(project_id).into())
 }
 
 pub fn open_task_by_name_link_button(
@@ -980,7 +989,7 @@ pub fn open_task_by_name_link_button(
 		})
 }
 
-pub fn overview_time_section_button(
+pub fn overview_time_section_button<Message: 'static>(
 	label: &'static str,
 	task_count: usize,
 	mut collapsed: bool,
@@ -1134,7 +1143,7 @@ pub fn code_editor_dropdown_button(
 			.align_y(Vertical::Center),
 		)
 		.width(Length::Fixed(130.0))
-		.on_press(SettingsModalMessage::ToggleCodeEditorDropdownExpanded.into())
+		.on_press(settings_modal::Message::ToggleCodeEditorDropdownExpanded.into())
 		.style(secondary_button_style_default),
 		container(
 			column![
@@ -1156,7 +1165,7 @@ pub fn code_editor_dropdown_button(
 	.width(Fixed(130.0))
 	.alignment(drop_down::Alignment::Bottom)
 	.offset(0.0)
-	.on_dismiss(SettingsModalMessage::CollapseCodeEditorDropdown.into())
+	.on_dismiss(settings_modal::Message::CollapseCodeEditorDropdown.into())
 	.into()
 }
 
@@ -1195,7 +1204,7 @@ fn code_editor_button(
 		.spacing(SPACING_AMOUNT)
 		.align_y(Vertical::Center),
 	)
-	.on_press(SettingsModalMessage::SetCodeEditor(code_editor).into())
+	.on_press(settings_modal::Message::SetCodeEditor(code_editor).into())
 	.width(Fill)
 	.style(move |t, s| {
 		selection_list_button_style(
@@ -1249,7 +1258,7 @@ pub fn show_error_popup_button(error_msg: String) -> Element<'static, Message> {
 				.align_y(Vertical::Center),
 		)
 		.width(ICON_BUTTON_WIDTH)
-		.on_press(ErrorMsgModalMessage::open(error_msg))
+		.on_press(error_msg_modal::Message::open(error_msg))
 		.style(secondary_button_style_default),
 		text("Show full error popup").size(SMALL_TEXT_SIZE),
 		tooltip::Position::Top,
@@ -1274,6 +1283,6 @@ pub fn retry_synchronization_button() -> Element<'static, Message> {
 
 pub fn select_synchronization_filepath_button() -> Button<'static, Message> {
 	icon_label_button("Select", Bootstrap::Folder)
-		.on_press(SettingsModalMessage::BrowseSynchronizationFilepath.into())
+		.on_press(settings_modal::Message::BrowseSynchronizationFilepath.into())
 		.style(dangerous_button_style)
 }

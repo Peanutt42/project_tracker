@@ -1,22 +1,13 @@
-mod error_msg_modal;
-pub use error_msg_modal::{ErrorMsgModal, ErrorMsgModalMessage};
+pub mod error_msg_modal;
 
-mod confirm_modal;
-pub use confirm_modal::{ConfirmModal, ConfirmModalMessage};
+pub mod confirm_modal;
 
-mod settings_modal;
-pub use settings_modal::{SettingTab, SettingsModal, SettingsModalMessage};
+pub mod settings_modal;
 
-mod manage_task_tags_modal;
-pub use manage_task_tags_modal::{
-	ManageTaskTagsModal, ManageTaskTagsModalAction, ManageTaskTagsModalMessage,
-};
+pub mod manage_task_tags_modal;
 
-mod task_modal;
-pub use task_modal::{TaskModal, TaskModalAction, TaskModalMessage};
+pub mod task_modal;
 
-mod create_task_modal;
-pub use create_task_modal::{CreateTaskModal, CreateTaskModalAction, CreateTaskModalMessage};
+pub mod create_task_modal;
 
-mod wait_closing_modal;
-pub use wait_closing_modal::{WaitClosingModal, WaitClosingModalMessage};
+pub mod wait_closing_modal;

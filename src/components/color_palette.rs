@@ -1,6 +1,5 @@
 use crate::{
 	components::color_palette_item_button,
-	project_tracker::Message,
 	styles::{palette_container_style, GREY},
 };
 use iced::{
@@ -22,7 +21,7 @@ pub const COLOR_PALETTE_WHITE: Color = Color {
 	a: 1.0,
 };
 
-pub fn color_palette(
+pub fn color_palette<Message: 'static + Clone>(
 	selected_color: Color,
 	on_submit: impl Fn(Color) -> Message,
 ) -> Element<'static, Message> {

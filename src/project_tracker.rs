@@ -10,16 +10,10 @@ use crate::{
 		import_database_file_dialog, import_json_database_file_dialog, ProjectUiIdMap, TaskUiIdMap,
 	},
 	modals::{
-		ConfirmModal, ConfirmModalMessage, CreateTaskModal, CreateTaskModalAction,
-		CreateTaskModalMessage, ErrorMsgModal, ErrorMsgModalMessage, ManageTaskTagsModal,
-		ManageTaskTagsModalAction, ManageTaskTagsModalMessage, SettingsModal, SettingsModalMessage,
-		TaskModal, TaskModalAction, TaskModalMessage, WaitClosingModal, WaitClosingModalMessage,
+		confirm_modal, create_task_modal, error_msg_modal, manage_task_tags_modal, settings_modal,
+		task_modal, wait_closing_modal,
 	},
-	pages::{
-		ContentPage, ContentPageAction, ContentPageMessage, OverviewPageMessage, ProjectPage,
-		ProjectPageMessage, SidebarPage, SidebarPageAction, SidebarPageMessage,
-		StopwatchPageMessage,
-	},
+	pages::{self, overview_page, project_page, sidebar_page, stopwatch_page},
 	styles::{
 		default_background_container_style, modal_background_container_style,
 		sidebar_background_container_style, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT,
@@ -106,9 +100,9 @@ impl AppFlags {
 
 pub struct ProjectTrackerApp {
 	pub flags: AppFlags,
-	pub sidebar_page: SidebarPage,
+	pub sidebar_page: sidebar_page::Page,
 	pub sidebar_animation: ScalarAnimation,
-	pub content_page: ContentPage,
+	pub content_page: pages::Page,
 	pub database: DatabaseState,
 	pub project_ui_id_map: ProjectUiIdMap,
 	pub task_ui_id_map: TaskUiIdMap,
@@ -120,13 +114,13 @@ pub struct ProjectTrackerApp {
 	pub last_sync_finish_time: Option<Instant>,
 	pub synchronization: Option<Synchronization>,
 	pub preferences: Option<Preferences>,
-	pub confirm_modal: Option<ConfirmModal>,
-	pub error_msg_modal: ErrorMsgModal,
-	pub wait_closing_modal: WaitClosingModal,
-	pub settings_modal: SettingsModal,
-	pub manage_tags_modal: Option<ManageTaskTagsModal>,
-	pub create_task_modal: Option<CreateTaskModal>,
-	pub task_modal: Option<TaskModal>,
+	pub confirm_modal: Option<confirm_modal::Modal>,
+	pub error_msg_modal: error_msg_modal::Modal,
+	pub wait_closing_modal: wait_closing_modal::Modal,
+	pub settings_modal: settings_modal::Modal,
+	pub manage_tags_modal: Option<manage_task_tags_modal::Modal>,
+	pub create_task_modal: Option<create_task_modal::Modal>,
+	pub task_modal: Option<task_modal::Modal>,
 	pub pressed_task: Option<(ProjectId, TaskId)>,
 	pub dragged_task: Option<TaskId>,
 	pub start_dragging_point: Option<Point>,
@@ -149,10 +143,10 @@ pub enum Message {
 	SystemTheme {
 		is_dark: bool,
 	},
-	ConfirmModalMessage(ConfirmModalMessage),
+	ConfirmModalMessage(confirm_modal::Message),
 	ConfirmModalConfirmed(Box<Message>),
-	ErrorMsgModalMessage(ErrorMsgModalMessage),
-	WaitClosingModalMessage(WaitClosingModalMessage),
+	ErrorMsgModalMessage(error_msg_modal::Message),
+	WaitClosingModalMessage(wait_closing_modal::Message),
 	SaveDatabase,
 	DatabaseSaved(SystemTime), // begin_time since saving
 	ExportDatabase(PathBuf),
@@ -203,33 +197,33 @@ pub enum Message {
 	},
 	CancelDragTask,
 	LeftClickReleased,
-	ContentPageMessage(ContentPageMessage),
-	SidebarPageMessage(SidebarPageMessage),
+	ContentPageMessage(pages::Message),
+	SidebarPageMessage(sidebar_page::Message),
 	ToggleSidebar,
 	AnimateSidebar,
-	SettingsModalMessage(SettingsModalMessage),
+	SettingsModalMessage(settings_modal::Message),
 	OpenCreateTaskModal(ProjectId),
 	OpenCreateTaskModalCurrent,
 	CloseCreateTaskModal,
-	CreateTaskModalMessage(CreateTaskModalMessage),
+	CreateTaskModalMessage(create_task_modal::Message),
 	OpenTaskModal {
 		project_id: ProjectId,
 		task_id: TaskId,
 	},
-	TaskModalMessage(TaskModalMessage),
+	TaskModalMessage(task_modal::Message),
 	CloseTaskModal,
-	ManageTaskTagsModalMessage(ManageTaskTagsModalMessage),
+	ManageTaskTagsModalMessage(manage_task_tags_modal::Message),
 	OpenManageTaskTagsModal(ProjectId),
 	CloseManageTaskTagsModal,
 }
 
 impl ProjectTrackerApp {
 	fn show_error_msg(&mut self, error_msg: impl Into<String>) -> Task<Message> {
-		self.update(ErrorMsgModalMessage::open(error_msg.into()))
+		self.update(error_msg_modal::Message::open(error_msg.into()))
 	}
 
 	fn show_error<E: std::error::Error>(&mut self, error: E) -> Task<Message> {
-		self.update(ErrorMsgModalMessage::open_error(error))
+		self.update(error_msg_modal::Message::open_error(error))
 	}
 
 	fn has_unsynched_changes(&self) -> bool {
@@ -268,9 +262,9 @@ impl ProjectTrackerApp {
 		(
 			Self {
 				flags: flags.clone(),
-				sidebar_page: SidebarPage::new(),
+				sidebar_page: sidebar_page::Page::new(),
 				sidebar_animation: ScalarAnimation::Idle,
-				content_page: ContentPage::new(None, &None),
+				content_page: pages::Page::new(None, &None),
 				database: DatabaseState::NotLoaded,
 				project_ui_id_map: ProjectUiIdMap::default(),
 				task_ui_id_map: TaskUiIdMap::default(),
@@ -283,9 +277,9 @@ impl ProjectTrackerApp {
 				synchronization: None,
 				preferences: None,
 				confirm_modal: None,
-				error_msg_modal: ErrorMsgModal::Closed,
-				wait_closing_modal: WaitClosingModal::Closed,
-				settings_modal: SettingsModal::Closed,
+				error_msg_modal: error_msg_modal::Modal::Closed,
+				wait_closing_modal: wait_closing_modal::Modal::Closed,
+				settings_modal: settings_modal::Modal::Closed,
 				manage_tags_modal: None,
 				create_task_modal: None,
 				task_modal: None,
@@ -302,7 +296,7 @@ impl ProjectTrackerApp {
 							Message::LoadedPreferences(result.map_err(Arc::new))
 						})
 					}
-					None => Task::done(ErrorMsgModalMessage::open(
+					None => Task::done(error_msg_modal::Message::open(
 						"failed to get preferences filepath".to_string(),
 					)),
 				},
@@ -366,7 +360,7 @@ impl ProjectTrackerApp {
 					Some(Message::ToggleSidebar)
 				}
 				keyboard::Key::Character("h") if modifiers.command() => {
-					Some(ContentPageMessage::OpenOverview.into())
+					Some(pages::Message::OpenOverview.into())
 				}
 				keyboard::Key::Named(keyboard::key::Named::Escape) => Some(Message::EscapePressed),
 				keyboard::Key::Named(keyboard::key::Named::Enter) => Some(Message::EnterPressed),
@@ -427,12 +421,12 @@ impl ProjectTrackerApp {
 					} else {
 						"UNREACHABLE"
 					};
-					self.wait_closing_modal = WaitClosingModal::Opened { waiting_reason };
+					self.wait_closing_modal = wait_closing_modal::Modal::Opened { waiting_reason };
 					Task::none()
 				} else {
 					match self.flags.get_preferences_filepath() {
 						Some(preferences_filepath) => self
-							.update(StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing.into())
+							.update(stopwatch_page::Message::SaveTaskTimeSpendBeforeClosing.into())
 							.chain(self.update(Message::SaveDatabase))
 							.chain(
 								self.update(PreferenceMessage::Save(preferences_filepath).into()),
@@ -443,14 +437,14 @@ impl ProjectTrackerApp {
 				}
 			}
 			Message::EscapePressed => {
-				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
-					return self.update(ErrorMsgModalMessage::Close.into());
+				if matches!(self.error_msg_modal, error_msg_modal::Modal::Open { .. }) {
+					return self.update(error_msg_modal::Message::Close.into());
 				}
 				if self.confirm_modal.is_some() {
-					return self.update(ConfirmModalMessage::Close.into());
+					return self.update(confirm_modal::Message::Close.into());
 				}
-				if matches!(self.settings_modal, SettingsModal::Opened { .. }) {
-					return self.update(SettingsModalMessage::Close.into());
+				if matches!(self.settings_modal, settings_modal::Modal::Opened { .. }) {
+					return self.update(settings_modal::Message::Close.into());
 				}
 				if self.manage_tags_modal.is_some() {
 					return self.update(Message::CloseManageTaskTagsModal);
@@ -462,14 +456,14 @@ impl ProjectTrackerApp {
 					return self.update(Message::CloseTaskModal);
 				}
 				if self.content_page.is_project_page_opened() {
-					self.update(ProjectPageMessage::HideColorPicker.into())
+					self.update(project_page::Message::HideColorPicker.into())
 				} else {
-					self.update(StopwatchPageMessage::Stop.into())
+					self.update(stopwatch_page::Message::Stop.into())
 				}
 			}
 			Message::EnterPressed => {
-				if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
-					self.error_msg_modal = ErrorMsgModal::Closed;
+				if matches!(self.error_msg_modal, error_msg_modal::Modal::Open { .. }) {
+					self.error_msg_modal = error_msg_modal::Modal::Closed;
 					Task::none()
 				} else {
 					match &self.confirm_modal {
@@ -509,9 +503,9 @@ impl ProjectTrackerApp {
 			}
 			Message::SyncIfChanged => {
 				if self.has_unsynched_changes() &&
-					matches!(self.error_msg_modal, ErrorMsgModal::Closed) && // dont auto sync when an error happened
+					matches!(self.error_msg_modal, error_msg_modal::Modal::Closed) && // dont auto sync when an error happened
 					self.confirm_modal.is_none() && // dont auto sync while user needs to confirm something
-					matches!(self.settings_modal, SettingsModal::Closed)
+					matches!(self.settings_modal, settings_modal::Modal::Closed)
 				// or user is configuring the sync options
 				{
 					self.update(Message::SyncDatabase)
@@ -529,24 +523,24 @@ impl ProjectTrackerApp {
 			}
 			Message::ConfirmModalConfirmed(message) => Task::batch([
 				self.update(*message),
-				self.update(ConfirmModalMessage::Close.into()),
+				self.update(confirm_modal::Message::Close.into()),
 			]),
 			Message::ConfirmModalMessage(message) => {
 				match message {
-					ConfirmModalMessage::Open {
+					confirm_modal::Message::Open {
 						title,
 						on_confirmed,
 						custom_ok_label,
 						custom_cancel_label,
 					} => {
-						self.confirm_modal = Some(ConfirmModal::new(
+						self.confirm_modal = Some(confirm_modal::Modal::new(
 							title,
 							*on_confirmed,
 							custom_ok_label,
 							custom_cancel_label,
 						))
 					}
-					ConfirmModalMessage::Close => self.confirm_modal = None,
+					confirm_modal::Message::Close => self.confirm_modal = None,
 				}
 				Task::none()
 			}
@@ -567,7 +561,7 @@ impl ProjectTrackerApp {
 								Database::save(database_filepath, database_binary),
 								|result| match result {
 									Ok(begin_time) => Message::DatabaseSaved(begin_time),
-									Err(error) => ErrorMsgModalMessage::open_error(error),
+									Err(error) => error_msg_modal::Message::open_error(error),
 								},
 							)
 						} else {
@@ -806,7 +800,7 @@ impl ProjectTrackerApp {
 							preferences.update(PreferenceMessage::Save(preferences_filepath));
 						self.perform_preference_action(action)
 					}
-					None => Task::done(ErrorMsgModalMessage::open(
+					None => Task::done(error_msg_modal::Message::open(
 						"failed to get preferences filepath".to_string(),
 					)),
 				},
@@ -921,7 +915,7 @@ impl ProjectTrackerApp {
 					database.update(database_message);
 					if let Some(overview_page) = &mut self.content_page.overview_page {
 						overview_page.update(
-							OverviewPageMessage::RefreshCachedTaskList,
+							overview_page::Message::RefreshCachedTaskList,
 							Some(database),
 							&self.preferences,
 						);
@@ -943,7 +937,7 @@ impl ProjectTrackerApp {
 						Some(project_page)
 							if database.get_project(&project_page.project_id).is_none() =>
 						{
-							self.update(ContentPageMessage::OpenOverview.into())
+							self.update(pages::Message::OpenOverview.into())
 						}
 						Some(project_page) => {
 							project_page.generate_cached_task_list(database, &self.preferences);
@@ -1058,11 +1052,11 @@ impl ProjectTrackerApp {
 					return Task::batch([
 						match switched_project_id {
 							Some(project_id) => {
-								self.update(ContentPageMessage::OpenProjectPage(*project_id).into())
+								self.update(pages::Message::OpenProjectPage(*project_id).into())
 							}
 							None => Task::none(),
 						},
-						sidebar_snap_command,
+						sidebar_snap_command.map(Message::SidebarPageMessage),
 					]);
 				}
 				Task::none()
@@ -1071,7 +1065,7 @@ impl ProjectTrackerApp {
 				if let Some(project_page) = &self.content_page.project_page {
 					if let DatabaseState::Loaded(database) = &self.database {
 						if let Some(project) = database.get_project(&project_page.project_id) {
-							return self.update(ConfirmModalMessage::open(
+							return self.update(confirm_modal::Message::open(
 								format!("Delete Project '{}'?", project.name),
 								DatabaseMessage::DeleteProject(project_page.project_id),
 							));
@@ -1100,7 +1094,7 @@ impl ProjectTrackerApp {
 					.content_page
 					.project_page
 					.as_ref()
-					.map(ProjectPage::filtering_tasks)
+					.map(project_page::Page::filtering_tasks)
 					.unwrap_or(false);
 
 				self.dragged_task = Some(task_id);
@@ -1118,7 +1112,7 @@ impl ProjectTrackerApp {
 				}
 
 				let action = self.sidebar_page.update(
-					SidebarPageMessage::DragTask {
+					sidebar_page::Message::DragTask {
 						project_id,
 						task_id,
 						task_is_todo,
@@ -1142,7 +1136,7 @@ impl ProjectTrackerApp {
 				self.just_minimal_dragging = true;
 
 				let action = self.sidebar_page.update(
-					SidebarPageMessage::CancelDragTask,
+					sidebar_page::Message::CancelDragTask,
 					self.database.ok(),
 					&mut self.project_ui_id_map,
 					&mut self.task_ui_id_map,
@@ -1155,7 +1149,7 @@ impl ProjectTrackerApp {
 				let task = if self.just_minimal_dragging {
 					match &self.pressed_task {
 						Some((project_id, task_id)) => {
-							let (task_modal, task) = TaskModal::new(*project_id, *task_id);
+							let (task_modal, task) = task_modal::Modal::new(*project_id, *task_id);
 							self.task_modal = Some(task_modal);
 							task
 						}
@@ -1189,9 +1183,9 @@ impl ProjectTrackerApp {
 			}
 			Message::ToggleSidebar => {
 				self.sidebar_animation = if self.preferences.show_sidebar() {
-					ScalarAnimation::start(SidebarPage::SPLIT_LAYOUT_PERCENTAGE, 0.0, 0.15)
+					ScalarAnimation::start(sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE, 0.0, 0.15)
 				} else {
-					ScalarAnimation::start(0.0, SidebarPage::SPLIT_LAYOUT_PERCENTAGE, 0.15)
+					ScalarAnimation::start(0.0, sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE, 0.15)
 				};
 
 				self.update(PreferenceMessage::ToggleShowSidebar.into())
@@ -1207,7 +1201,7 @@ impl ProjectTrackerApp {
 			Message::ManageTaskTagsModalMessage(message) => match &mut self.manage_tags_modal {
 				Some(manage_tags_modal) => {
 					let deleted_task_tag_id = match &message {
-						ManageTaskTagsModalMessage::DeleteTaskTag(task_tag_id) => {
+						manage_task_tags_modal::Message::DeleteTaskTag(task_tag_id) => {
 							Some(*task_tag_id)
 						}
 						_ => None,
@@ -1223,7 +1217,7 @@ impl ProjectTrackerApp {
 								let action =
 									self.content_page.project_page.as_mut().map(|project_page| {
 										project_page.update(
-											ProjectPageMessage::UnsetFilterTaskTag(
+											project_page::Message::UnsetFilterTaskTag(
 												deleted_task_tag_id,
 											),
 											self.database.ok(),
@@ -1238,7 +1232,7 @@ impl ProjectTrackerApp {
 				None => Task::none(),
 			},
 			Message::OpenManageTaskTagsModal(project_id) => {
-				self.manage_tags_modal = Some(ManageTaskTagsModal::new(project_id));
+				self.manage_tags_modal = Some(manage_task_tags_modal::Modal::new(project_id));
 				Task::none()
 			}
 			Message::CloseManageTaskTagsModal => {
@@ -1246,43 +1240,45 @@ impl ProjectTrackerApp {
 				Task::none()
 			}
 			Message::CreateTaskModalMessage(message) => match &mut self.create_task_modal {
-				Some(create_task_modal) => match create_task_modal
-					.update(message, &self.preferences)
-				{
-					CreateTaskModalAction::None => Task::none(),
-					CreateTaskModalAction::Task(task) => task.map(Message::CreateTaskModalMessage),
-					CreateTaskModalAction::CreateTask {
-						project_id,
-						task_id,
-						task_name,
-						task_description,
-						task_tags,
-						due_date,
-						needed_time_minutes,
-						time_spend,
-						create_at_top,
-					} => {
-						self.create_task_modal = None;
-						Task::batch([
-							self.update(
-								DatabaseMessage::CreateTask {
-									project_id,
-									task_id,
-									task_name,
-									task_description,
-									task_tags,
-									due_date,
-									needed_time_minutes,
-									time_spend,
-									create_at_top,
-								}
-								.into(),
-							),
-							self.update(ProjectPageMessage::RefreshCachedTaskList.into()),
-							self.update(OverviewPageMessage::RefreshCachedTaskList.into()),
-						])
+				Some(create_task_modal) => {
+					match create_task_modal.update(message, &self.preferences) {
+						create_task_modal::Action::None => Task::none(),
+						create_task_modal::Action::Task(task) => {
+							task.map(Message::CreateTaskModalMessage)
+						}
+						create_task_modal::Action::CreateTask {
+							project_id,
+							task_id,
+							task_name,
+							task_description,
+							task_tags,
+							due_date,
+							needed_time_minutes,
+							time_spend,
+							create_at_top,
+						} => {
+							self.create_task_modal = None;
+							Task::batch([
+								self.update(
+									DatabaseMessage::CreateTask {
+										project_id,
+										task_id,
+										task_name,
+										task_description,
+										task_tags,
+										due_date,
+										needed_time_minutes,
+										time_spend,
+										create_at_top,
+									}
+									.into(),
+								),
+								self.update(project_page::Message::RefreshCachedTaskList.into()),
+								self.update(overview_page::Message::RefreshCachedTaskList.into()),
+							])
+						}
 					}
-				},
+				}
 				None => Task::none(),
 			},
 			Message::OpenCreateTaskModalCurrent => match self
@@ -1295,7 +1291,7 @@ impl ProjectTrackerApp {
 				None => Task::none(),
 			},
 			Message::OpenCreateTaskModal(project_id) => {
-				self.create_task_modal = Some(CreateTaskModal::new(project_id));
+				self.create_task_modal = Some(create_task_modal::Modal::new(project_id));
 				Task::none()
 			}
 			Message::CloseCreateTaskModal => {
@@ -1304,9 +1300,9 @@ impl ProjectTrackerApp {
 			}
 			Message::TaskModalMessage(message) => match &mut self.task_modal {
 				Some(task_modal) => match task_modal.update(message, self.database.ok()) {
-					TaskModalAction::None => Task::none(),
-					TaskModalAction::Task(task) => task.map(Message::TaskModalMessage),
-					TaskModalAction::DatabaseMessage(message) => {
+					task_modal::Action::None => Task::none(),
+					task_modal::Action::Task(task) => task.map(Message::TaskModalMessage),
+					task_modal::Action::DatabaseMessage(message) => {
 						if let DatabaseMessage::DeleteTask { .. } = &message {
 							self.task_modal = None;
 						}
@@ -1319,7 +1315,7 @@ impl ProjectTrackerApp {
 				project_id,
 				task_id,
 			} => {
-				let (task_modal, task) = TaskModal::new(project_id, task_id);
+				let (task_modal, task) = task_modal::Modal::new(project_id, task_id);
 				self.task_modal = Some(task_modal);
 				task
 			}
@@ -1329,32 +1325,34 @@ impl ProjectTrackerApp {
 			}
 		};
 
-		if matches!(self.wait_closing_modal, WaitClosingModal::Opened { .. })
-			&& matches!(self.error_msg_modal, ErrorMsgModal::Closed)
+		if matches!(
+			self.wait_closing_modal,
+			wait_closing_modal::Modal::Opened { .. }
+		) && matches!(self.error_msg_modal, error_msg_modal::Modal::Closed)
 			&& !self.exporting_database
 			&& !self.importing_database
 		{
-			self.wait_closing_modal = WaitClosingModal::Closed;
+			self.wait_closing_modal = wait_closing_modal::Modal::Closed;
 			task = Task::batch([task, self.update(Message::TryClosing)]);
 		}
 
-		if matches!(self.error_msg_modal, ErrorMsgModal::Open { .. }) {
-			self.wait_closing_modal = WaitClosingModal::Closed;
+		if matches!(self.error_msg_modal, error_msg_modal::Modal::Open { .. }) {
+			self.wait_closing_modal = wait_closing_modal::Modal::Closed;
 		}
 
 		task
 	}
 
-	fn perform_content_page_action(&mut self, action: ContentPageAction) -> Task<Message> {
+	fn perform_content_page_action(&mut self, action: pages::Action) -> Task<Message> {
 		match action {
-			ContentPageAction::None => Task::none(),
-			ContentPageAction::Actions(actions) => Task::batch(
+			pages::Action::None => Task::none(),
+			pages::Action::Actions(actions) => Task::batch(
 				actions
 					.into_iter()
 					.map(|action| self.perform_content_page_action(action)),
 			),
-			ContentPageAction::Task(task) => task,
-			ContentPageAction::DatabaseMessage(message) => {
+			pages::Action::Task(task) => task.map(Message::ContentPageMessage),
+			pages::Action::DatabaseMessage(message) => {
 				if let DatabaseMessage::DeleteTask {
 					project_id,
 					task_id,
@@ -1369,46 +1367,44 @@ impl ProjectTrackerApp {
 
 				self.update(message.into())
 			}
-			ContentPageAction::OpenManageTaskTagsModal(project_id) => {
+			pages::Action::OpenManageTaskTagsModal(project_id) => {
 				self.update(Message::OpenManageTaskTagsModal(project_id))
 			}
-			ContentPageAction::ConfirmDeleteProject {
+			pages::Action::ConfirmDeleteProject {
 				project_id,
 				project_name,
-			} => self.update(ConfirmModalMessage::open(
+			} => self.update(confirm_modal::Message::open(
 				format!("Delete Project '{project_name}'?"),
 				DatabaseMessage::DeleteProject(project_id),
 			)),
-			ContentPageAction::OpenTaskModal {
+			pages::Action::OpenTaskModal {
 				project_id,
 				task_id,
 			} => self.update(Message::OpenTaskModal {
 				project_id,
 				task_id,
 			}),
-			ContentPageAction::CloseTaskModal => {
+			pages::Action::CloseTaskModal => {
 				self.task_modal = None;
 				Task::none()
 			}
-			ContentPageAction::OpenStopwatch => {
-				self.update(ContentPageMessage::OpenStopwatch.into())
-			}
+			pages::Action::OpenStopwatch => self.update(pages::Message::OpenStopwatch.into()),
 		}
 	}
 
-	fn perform_sidebar_action(&mut self, action: SidebarPageAction) -> Task<Message> {
+	fn perform_sidebar_action(&mut self, action: sidebar_page::Action) -> Task<Message> {
 		match action {
-			SidebarPageAction::None => Task::none(),
-			SidebarPageAction::Actions(actions) => Task::batch(
+			sidebar_page::Action::None => Task::none(),
+			sidebar_page::Action::Actions(actions) => Task::batch(
 				actions
 					.into_iter()
 					.map(|action| self.perform_sidebar_action(action)),
 			),
-			SidebarPageAction::Task(task) => task,
-			SidebarPageAction::DatabaseMessage(message) => self.update(message.into()),
-			SidebarPageAction::StopwatchPageMessage(message) => self.update(message.into()),
-			SidebarPageAction::SelectProject(project_id) => {
-				self.update(ContentPageMessage::OpenProjectPage(project_id).into())
+			sidebar_page::Action::Task(task) => task.map(Message::SidebarPageMessage),
+			sidebar_page::Action::DatabaseMessage(message) => self.update(message.into()),
+			sidebar_page::Action::StopwatchPageMessage(message) => self.update(message.into()),
+			sidebar_page::Action::SelectProject(project_id) => {
+				self.update(pages::Message::OpenProjectPage(project_id).into())
 			}
 		}
 	}
@@ -1435,12 +1431,14 @@ impl ProjectTrackerApp {
 
 	fn perform_manage_task_tags_modal_action(
 		&mut self,
-		action: ManageTaskTagsModalAction,
+		action: manage_task_tags_modal::Action,
 	) -> Task<Message> {
 		match action {
-			ManageTaskTagsModalAction::None => Task::none(),
-			ManageTaskTagsModalAction::Task(task) => task,
-			ManageTaskTagsModalAction::DatabaseMessage(message) => self.update(message.into()),
+			manage_task_tags_modal::Action::None => Task::none(),
+			manage_task_tags_modal::Action::Task(task) => {
+				task.map(Message::ManageTaskTagsModalMessage)
+			}
+			manage_task_tags_modal::Action::DatabaseMessage(message) => self.update(message.into()),
 		}
 	}
 
@@ -1465,11 +1463,11 @@ impl ProjectTrackerApp {
 		let sidebar_animation_value = self.sidebar_animation.get_value();
 		// 0.0..1.0
 		let sidebar_animation_percentage = sidebar_animation_value
-			.map(|value| (1.0 - value / SidebarPage::SPLIT_LAYOUT_PERCENTAGE));
+			.map(|value| (1.0 - value / sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE));
 
 		let underlay: Element<Message> = if self.database.is_loaded() || self.loading_database {
 			let sidebar_layout_percentage = sidebar_animation_value.unwrap_or(if show_sidebar {
-				SidebarPage::SPLIT_LAYOUT_PERCENTAGE
+				sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE
 			} else {
 				0.0
 			});
@@ -1487,10 +1485,9 @@ impl ProjectTrackerApp {
 				{
 					container(arc_self.sidebar_page.view(*arc_self))
 						.width(Fill)
-						.padding(
-							Padding::default()
-								.right(size.width * (1.0 - SidebarPage::SPLIT_LAYOUT_PERCENTAGE)),
-						)
+						.padding(Padding::default().right(
+							size.width * (1.0 - sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE),
+						))
 						.style(sidebar_background_container_style)
 						.into()
 				} else {
@@ -1578,22 +1575,22 @@ impl ProjectTrackerApp {
 			))
 			.push_maybe(Self::modal(
 				self.settings_modal.view(self),
-				SettingsModalMessage::Close.into(),
+				settings_modal::Message::Close.into(),
 			))
 			.push_maybe(Self::modal(
-				self.confirm_modal.as_ref().map(ConfirmModal::view),
-				ConfirmModalMessage::Close.into(),
+				self.confirm_modal.as_ref().map(confirm_modal::Modal::view),
+				confirm_modal::Message::Close.into(),
 			))
 			.push_maybe(
 				Self::modal(
 					self.wait_closing_modal.view(),
-					WaitClosingModalMessage::Close,
+					wait_closing_modal::Message::Close,
 				)
 				.map(|element| element.map(Message::WaitClosingModalMessage)),
 			)
 			.push_maybe(Self::modal(
 				self.error_msg_modal.view(),
-				ErrorMsgModalMessage::Close.into(),
+				error_msg_modal::Message::Close.into(),
 			))
 			.into()
 	}

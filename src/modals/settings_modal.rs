@@ -5,7 +5,7 @@ use crate::components::{
 };
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::CodeEditor;
-use crate::project_tracker::{Message, ProjectTrackerApp};
+use crate::project_tracker::{self, ProjectTrackerApp};
 use crate::styles::{
 	command_background_container_style, grey_text_style, link_color, logs_scrollable_style,
 	markdown_background_container_style, rounded_container_style, text_input_style_default,
@@ -24,7 +24,7 @@ use crate::{
 		HORIZONTAL_SCROLLABLE_PADDING, ICON_FONT_SIZE,
 	},
 	integrations::import_google_tasks_dialog,
-	modals::ErrorMsgModalMessage,
+	modals::error_msg_modal,
 	styles::{card_style, PADDING_AMOUNT},
 	DateFormatting, PreferenceAction, PreferenceMessage, Preferences,
 };
@@ -47,7 +47,7 @@ use project_tracker_server::AdminInfos;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
-pub enum SettingsModalMessage {
+pub enum Message {
 	Open,
 	Close,
 	OpenTab(SettingTab),
@@ -73,9 +73,9 @@ pub enum SettingsModalMessage {
 	InvalidPortInput,
 }
 
-impl From<SettingsModalMessage> for Message {
-	fn from(value: SettingsModalMessage) -> Self {
-		Message::SettingsModalMessage(value)
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		project_tracker::Message::SettingsModalMessage(value)
 	}
 }
 
@@ -128,7 +128,7 @@ impl SettingTab {
 		preferences: &'a Preferences,
 		show_password: bool,
 		code_editor_dropdown_expanded: bool,
-	) -> Element<'a, Message> {
+	) -> Element<'a, project_tracker::Message> {
 		match self {
 			SettingTab::General => vertical_scrollable(preferences.view(&app.flags)).into(),
 			SettingTab::Database => {
@@ -154,7 +154,7 @@ impl SettingTab {
 }
 
 #[derive(Debug, Clone, Default)]
-pub enum SettingsModal {
+pub enum Modal {
 	Opened {
 		selected_tab: SettingTab,
 		show_password: bool,
@@ -164,17 +164,15 @@ pub enum SettingsModal {
 	Closed,
 }
 
-impl SettingsModal {
+impl Modal {
 	pub fn is_open(&self) -> bool {
-		matches!(self, SettingsModal::Opened { .. })
+		matches!(self, Modal::Opened { .. })
 	}
 
-	pub fn subscription(&self) -> Subscription<Message> {
+	pub fn subscription(&self) -> Subscription<project_tracker::Message> {
 		let listen_open_shortcut_subscription =
 			keyboard::on_key_press(|key, modifiers| match key.as_ref() {
-				keyboard::Key::Character(",") if modifiers.command() => {
-					Some(SettingsModalMessage::Open.into())
-				}
+				keyboard::Key::Character(",") if modifiers.command() => Some(Message::Open.into()),
 				_ => None,
 			});
 
@@ -182,13 +180,15 @@ impl SettingsModal {
 
 		if matches!(
 			self,
-			SettingsModal::Opened {
+			Modal::Opened {
 				selected_tab: SettingTab::AdminInfos,
 				..
 			}
 		) {
-			subscriptions
-				.push(time::every(Duration::from_secs(2)).map(|_| Message::RequestAdminInfos));
+			subscriptions.push(
+				time::every(Duration::from_secs(2))
+					.map(|_| project_tracker::Message::RequestAdminInfos),
+			);
 		}
 
 		Subscription::batch(subscriptions)
@@ -196,24 +196,24 @@ impl SettingsModal {
 
 	pub fn update(
 		&mut self,
-		message: SettingsModalMessage,
+		message: Message,
 		preferences: &mut Option<Preferences>,
 	) -> PreferenceAction {
 		match message {
-			SettingsModalMessage::Open => {
-				*self = SettingsModal::Opened {
+			Message::Open => {
+				*self = Modal::Opened {
 					selected_tab: SettingTab::default(),
 					show_password: false,
 					code_editor_dropdown_expanded: false,
 				};
 				PreferenceAction::None
 			}
-			SettingsModalMessage::Close => {
-				*self = SettingsModal::Closed;
+			Message::Close => {
+				*self = Modal::Closed;
 				PreferenceAction::None
 			}
-			SettingsModalMessage::OpenTab(tab) => {
-				if let SettingsModal::Opened {
+			Message::OpenTab(tab) => {
+				if let Modal::Opened {
 					selected_tab,
 					show_password,
 					code_editor_dropdown_expanded,
@@ -230,21 +230,21 @@ impl SettingsModal {
 				}
 			}
 
-			SettingsModalMessage::ShowPassword => {
-				if let SettingsModal::Opened { show_password, .. } = self {
+			Message::ShowPassword => {
+				if let Modal::Opened { show_password, .. } = self {
 					*show_password = true;
 				}
 				PreferenceAction::None
 			}
-			SettingsModalMessage::HidePassword => {
-				if let SettingsModal::Opened { show_password, .. } = self {
+			Message::HidePassword => {
+				if let Modal::Opened { show_password, .. } = self {
 					*show_password = false;
 				}
 				PreferenceAction::None
 			}
 
-			SettingsModalMessage::ToggleCodeEditorDropdownExpanded => {
-				if let SettingsModal::Opened {
+			Message::ToggleCodeEditorDropdownExpanded => {
+				if let Modal::Opened {
 					code_editor_dropdown_expanded,
 					..
 				} = self
@@ -253,8 +253,8 @@ impl SettingsModal {
 				}
 				PreferenceAction::None
 			}
-			SettingsModalMessage::CollapseCodeEditorDropdown => {
-				if let SettingsModal::Opened {
+			Message::CollapseCodeEditorDropdown => {
+				if let Modal::Opened {
 					code_editor_dropdown_expanded,
 					..
 				} = self
@@ -263,11 +263,11 @@ impl SettingsModal {
 				}
 				PreferenceAction::None
 			}
-			SettingsModalMessage::SetCodeEditor(code_editor) => {
+			Message::SetCodeEditor(code_editor) => {
 				if let Some(preferences) = preferences {
 					preferences.set_code_editor(code_editor);
 				}
-				if let SettingsModal::Opened {
+				if let Modal::Opened {
 					code_editor_dropdown_expanded,
 					..
 				} = self
@@ -277,39 +277,39 @@ impl SettingsModal {
 				PreferenceAction::None
 			}
 
-			SettingsModalMessage::ImportGoogleTasksFileDialog => {
+			Message::ImportGoogleTasksFileDialog => {
 				Task::perform(import_google_tasks_dialog(), move |result| match result {
 					Some(result) => match result {
 						Ok(projects) => DatabaseMessage::ImportProjects(projects).into(),
-						Err(import_error) => ErrorMsgModalMessage::open_error(import_error),
+						Err(import_error) => error_msg_modal::Message::open_error(import_error),
 					},
-					None => SettingsModalMessage::ImportGoogleTasksFileDialogCanceled.into(),
+					None => Message::ImportGoogleTasksFileDialogCanceled.into(),
 				})
 				.into()
 			}
-			SettingsModalMessage::ImportGoogleTasksFileDialogCanceled => PreferenceAction::None,
+			Message::ImportGoogleTasksFileDialogCanceled => PreferenceAction::None,
 
-			SettingsModalMessage::BrowseSynchronizationFilepath => Task::perform(
+			Message::BrowseSynchronizationFilepath => Task::perform(
 				browse_filesystem_synchronization_filepath_dialog(),
 				|file_synchronization| match file_synchronization {
 					Some(file_synchronization) => {
 						PreferenceMessage::SetSynchronization(Some(file_synchronization.into()))
 							.into()
 					}
-					None => SettingsModalMessage::BrowseSynchronizationFilepathCanceled.into(),
+					None => Message::BrowseSynchronizationFilepathCanceled.into(),
 				},
 			)
 			.into(),
-			SettingsModalMessage::BrowseSynchronizationFilepathCanceled => PreferenceAction::None,
+			Message::BrowseSynchronizationFilepathCanceled => PreferenceAction::None,
 
-			SettingsModalMessage::SetDateFormatting(date_formatting) => match preferences {
+			Message::SetDateFormatting(date_formatting) => match preferences {
 				Some(preferences) => {
 					preferences.update(PreferenceMessage::SetDateFormatting(date_formatting))
 				}
 				None => PreferenceAction::None,
 			},
 
-			SettingsModalMessage::SetServerHostname(new_hostname) => {
+			Message::SetServerHostname(new_hostname) => {
 				if let Some(preferences) = preferences {
 					if let Some(Synchronization::ServerSynchronization(server_synchronization)) =
 						preferences.synchronization()
@@ -327,7 +327,7 @@ impl SettingsModal {
 				}
 				PreferenceAction::None
 			}
-			SettingsModalMessage::SetServerPort(new_port) => {
+			Message::SetServerPort(new_port) => {
 				if let Some(preferences) = preferences {
 					if let Some(Synchronization::ServerSynchronization(server_synchronization)) =
 						preferences.synchronization()
@@ -345,7 +345,7 @@ impl SettingsModal {
 				}
 				PreferenceAction::None
 			}
-			SettingsModalMessage::SetServerPassword(new_password) => {
+			Message::SetServerPassword(new_password) => {
 				if let Some(preferences) = preferences {
 					if let Some(Synchronization::ServerSynchronization(server_synchronization)) =
 						preferences.synchronization()
@@ -363,19 +363,22 @@ impl SettingsModal {
 				}
 				PreferenceAction::None
 			}
-			SettingsModalMessage::InvalidPortInput => PreferenceAction::None,
+			Message::InvalidPortInput => PreferenceAction::None,
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Option<Element<'a, Message>> {
+	pub fn view<'a>(
+		&'a self,
+		app: &'a ProjectTrackerApp,
+	) -> Option<Element<'a, project_tracker::Message>> {
 		match self {
-			SettingsModal::Closed => None,
-			SettingsModal::Opened {
+			Modal::Closed => None,
+			Modal::Opened {
 				selected_tab,
 				show_password,
 				code_editor_dropdown_expanded,
 			} => app.preferences.as_ref().map(|preferences| {
-				let tabs: Vec<Element<Message>> = SettingTab::ALL
+				let tabs: Vec<Element<project_tracker::Message>> = SettingTab::ALL
 					.iter()
 					.map(|tab| settings_tab_button(*tab, *selected_tab).into())
 					.collect();
@@ -401,7 +404,7 @@ impl SettingsModal {
 				.max_width(900.0)
 				.max_height(550.0)
 				.close_size(LARGE_TEXT_SIZE)
-				.on_close(SettingsModalMessage::Close.into())
+				.on_close(Message::Close.into())
 				.style(card_style)
 				.into()
 			}),
@@ -413,7 +416,7 @@ fn database_settings_tab_view<'a>(
 	app: &'a ProjectTrackerApp,
 	preferences: &'a Preferences,
 	show_password: bool,
-) -> Element<'a, Message> {
+) -> Element<'a, project_tracker::Message> {
 	let synchronization = preferences.synchronization();
 	let filesystem_synchronization_enabled = synchronization
 		.as_ref()
@@ -479,7 +482,7 @@ fn database_settings_tab_view<'a>(
 						synchronization_settings_button(
 							"Filesystem",
 							filesystem_synchronization_enabled,
-							SettingsModalMessage::BrowseSynchronizationFilepath.into(),
+							Message::BrowseSynchronizationFilepath.into(),
 							false,
 							false
 						),
@@ -521,7 +524,7 @@ fn database_settings_tab_view<'a>(
 					Span::new("Go to "),
 					Span::new("https://myaccount.google.com/dashboard")
 						.color(link_color(app.is_theme_dark()))
-						.link(Message::OpenUrl("https://myaccount.google.com/dashboard".to_string())),
+						.link(project_tracker::Message::OpenUrl("https://myaccount.google.com/dashboard".to_string())),
 					Span::new(" and download the Tasks data.\nThen extract the Takeout.zip and import the \"Tasks.json\" file inside under the \"Tasks\" folder.")
 				]
 				.style(grey_text_style)
@@ -534,7 +537,7 @@ fn database_settings_tab_view<'a>(
 	.into()
 }
 
-fn shortcuts_settings_tab_view() -> Element<'static, Message> {
+fn shortcuts_settings_tab_view() -> Element<'static, project_tracker::Message> {
 	let shortcut = |name, shortcut| {
 		row![
 			text(name),
@@ -565,7 +568,7 @@ fn shortcuts_settings_tab_view() -> Element<'static, Message> {
 fn code_editor_settings_tab_view(
 	preferences: &Preferences,
 	dropdown_expanded: bool,
-) -> Element<Message> {
+) -> Element<project_tracker::Message> {
 	column![item(
 		"Code Editor:",
 		code_editor_dropdown_button(preferences.code_editor().as_ref(), dropdown_expanded),
@@ -580,7 +583,7 @@ fn code_editor_settings_tab_view(
 							"Custom Editor Name:",
 							text_input("Custom Editor name", name.as_str())
 								.width(Length::Fixed(350.0))
-								.on_input(|new_name| SettingsModalMessage::SetCodeEditor(Some(
+								.on_input(|new_name| Message::SetCodeEditor(Some(
 									CodeEditor::Custom {
 										name: new_name,
 										command: command.clone(),
@@ -604,7 +607,7 @@ fn code_editor_settings_tab_view(
 							.spacing(SPACING_AMOUNT),
 							text_input("custom_editor --open", command.as_str())
 								.width(Length::Fixed(350.0))
-								.on_input(|new_command| SettingsModalMessage::SetCodeEditor(Some(
+								.on_input(|new_command| Message::SetCodeEditor(Some(
 									CodeEditor::Custom {
 										name: name.clone(),
 										command: new_command,
@@ -641,7 +644,9 @@ fn code_editor_settings_tab_view(
 	.into()
 }
 
-fn admin_infos_settings_tab_view(admin_infos: Option<&AdminInfos>) -> Element<Message> {
+fn admin_infos_settings_tab_view(
+	admin_infos: Option<&AdminInfos>,
+) -> Element<project_tracker::Message> {
 	match admin_infos {
 		Some(admin_infos) => vertical_scrollable(
 			column![
@@ -710,7 +715,7 @@ fn admin_infos_settings_tab_view(admin_infos: Option<&AdminInfos>) -> Element<Me
 	}
 }
 
-fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
+fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<project_tracker::Message> {
 	let repository = env!("CARGO_PKG_REPOSITORY");
 
 	let author_link = "https://github.com/Peanutt42";
@@ -724,14 +729,14 @@ fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
 			"Author:",
 			rich_text![Span::new(author_link)
 				.color(link_color(app.is_theme_dark()))
-				.link(Message::OpenUrl(author_link.to_string()))]
+				.link(project_tracker::Message::OpenUrl(author_link.to_string()))]
 		),
 		item("Version:", text(env!("CARGO_PKG_VERSION"))),
 		item(
 			"Repository:",
 			rich_text![Span::new(repository)
 				.color(link_color(app.is_theme_dark()))
-				.link(Message::OpenUrl(repository.to_string()))]
+				.link(project_tracker::Message::OpenUrl(repository.to_string()))]
 		),
 	]
 	.spacing(SPACING_AMOUNT)
@@ -740,9 +745,9 @@ fn about_settings_tab_view(app: &ProjectTrackerApp) -> Element<Message> {
 }
 
 fn item<'a>(
-	label: impl Into<Element<'a, Message>>,
-	content: impl Into<Element<'a, Message>>,
-) -> Element<'a, Message> {
+	label: impl Into<Element<'a, project_tracker::Message>>,
+	content: impl Into<Element<'a, project_tracker::Message>>,
+) -> Element<'a, project_tracker::Message> {
 	row![label.into(), Space::new(Fill, 0.0), content.into(),]
 		.spacing(SMALL_SPACING_AMOUNT)
 		.align_y(Vertical::Center)

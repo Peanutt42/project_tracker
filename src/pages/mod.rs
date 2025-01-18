@@ -1,51 +1,47 @@
-use crate::{project_tracker::Message, Preferences, ProjectTrackerApp, SerializedContentPage};
+use crate::{project_tracker, Preferences, ProjectTrackerApp, SerializedContentPage};
 use iced::{Element, Subscription};
 use project_tracker_core::{Database, DatabaseMessage, ProjectId, TaskId};
 
-mod sidebar_page;
-pub use sidebar_page::{
-	SidebarPage, SidebarPageAction, SidebarPageMessage, TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID,
-	STOPWATCH_TASK_DROPZONE_ID,
-};
+pub mod sidebar_page;
+pub use sidebar_page::{TaskDropzone, BOTTOM_TODO_TASK_DROPZONE_ID, STOPWATCH_TASK_DROPZONE_ID};
 
-mod project_page;
-pub use project_page::{CachedTaskList, ProjectPage, ProjectPageMessage};
+pub mod project_page;
+pub use project_page::CachedTaskList;
 
-mod stopwatch_page;
-pub use stopwatch_page::{format_stopwatch_duration, StopwatchPage, StopwatchPageMessage};
+pub mod stopwatch_page;
+pub use stopwatch_page::format_stopwatch_duration;
 
-mod overview_page;
-pub use overview_page::{OverviewPage, OverviewPageMessage};
+pub mod overview_page;
 
 #[derive(Debug)]
-pub struct ContentPage {
-	pub overview_page: Option<OverviewPage>,
-	pub stopwatch_page: StopwatchPage,
-	pub project_page: Option<ProjectPage>,
+pub struct Page {
+	pub overview_page: Option<overview_page::Page>,
+	pub stopwatch_page: stopwatch_page::Page,
+	pub project_page: Option<project_page::Page>,
 }
 
 #[derive(Debug, Clone)]
-pub enum ContentPageMessage {
-	StopwatchPageMessage(StopwatchPageMessage),
-	ProjectPageMessage(ProjectPageMessage),
-	OverviewPageMessage(OverviewPageMessage),
+pub enum Message {
+	StopwatchPage(stopwatch_page::Message),
+	ProjectPage(project_page::Message),
+	OverviewPage(overview_page::Message),
 	OpenOverview,
 	OpenProjectPage(ProjectId),
 	OpenStopwatch,
 }
 
-impl From<ContentPageMessage> for Message {
-	fn from(value: ContentPageMessage) -> Self {
-		Message::ContentPageMessage(value)
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		project_tracker::Message::ContentPageMessage(value)
 	}
 }
 
 #[must_use]
 #[derive(Default)]
-pub enum ContentPageAction {
+pub enum Action {
 	#[default]
 	None,
-	Actions(Vec<ContentPageAction>),
+	Actions(Vec<Action>),
 	Task(iced::Task<Message>),
 	DatabaseMessage(DatabaseMessage),
 	OpenManageTaskTagsModal(ProjectId),
@@ -61,23 +57,23 @@ pub enum ContentPageAction {
 	OpenStopwatch,
 }
 
-impl From<iced::Task<Message>> for ContentPageAction {
+impl From<iced::Task<Message>> for Action {
 	fn from(value: iced::Task<Message>) -> Self {
-		ContentPageAction::Task(value)
+		Action::Task(value)
 	}
 }
 
-impl From<DatabaseMessage> for ContentPageAction {
+impl From<DatabaseMessage> for Action {
 	fn from(value: DatabaseMessage) -> Self {
-		ContentPageAction::DatabaseMessage(value)
+		Action::DatabaseMessage(value)
 	}
 }
 
-impl ContentPage {
+impl Page {
 	pub fn new(database: Option<&Database>, preferences: &Option<Preferences>) -> Self {
 		Self {
-			overview_page: Some(OverviewPage::new(database, preferences)),
-			stopwatch_page: StopwatchPage::default(),
+			overview_page: Some(overview_page::Page::new(database, preferences)),
+			stopwatch_page: stopwatch_page::Page::default(),
 			project_page: None,
 		}
 	}
@@ -86,17 +82,17 @@ impl ContentPage {
 		&mut self,
 		database: Option<&Database>,
 		preferences: &mut Option<Preferences>,
-	) -> ContentPageAction {
+	) -> Action {
 		match preferences {
 			Some(ref_preferences) => {
 				let action = match ref_preferences.stopwatch_progress() {
 					Some(stopwatch_progress) => {
 						let (stopwatch_page, action) =
-							StopwatchPage::startup_again(*stopwatch_progress, database);
+							stopwatch_page::Page::startup_again(*stopwatch_progress, database);
 						self.stopwatch_page = stopwatch_page;
 						action
 					}
-					None => ContentPageAction::None,
+					None => Action::None,
 				};
 
 				match ref_preferences.selected_content_page() {
@@ -113,7 +109,7 @@ impl ContentPage {
 
 				action
 			}
-			None => ContentPageAction::None,
+			None => Action::None,
 		}
 	}
 
@@ -129,15 +125,13 @@ impl ContentPage {
 		self.overview_page.is_none() && self.project_page.is_none()
 	}
 
-	pub fn subscription(&self) -> Subscription<ContentPageMessage> {
+	pub fn subscription(&self) -> Subscription<Message> {
 		Subscription::batch([
 			self.stopwatch_page
 				.subscription(self.project_page.is_none())
-				.map(ContentPageMessage::StopwatchPageMessage),
+				.map(Message::StopwatchPage),
 			match &self.project_page {
-				Some(project_page) => project_page
-					.subscription()
-					.map(ContentPageMessage::ProjectPageMessage),
+				Some(project_page) => project_page.subscription().map(Message::ProjectPage),
 				None => Subscription::none(),
 			},
 		])
@@ -145,19 +139,19 @@ impl ContentPage {
 
 	pub fn update(
 		&mut self,
-		message: ContentPageMessage,
+		message: Message,
 		database: Option<&Database>,
 		preferences: &mut Option<Preferences>,
-	) -> ContentPageAction {
+	) -> Action {
 		match message {
-			ContentPageMessage::ProjectPageMessage(message) => match &mut self.project_page {
+			Message::ProjectPage(message) => match &mut self.project_page {
 				Some(project_page) => project_page.update(message, database, preferences),
-				None => ContentPageAction::None,
+				None => Action::None,
 			},
-			ContentPageMessage::StopwatchPageMessage(message) => {
+			Message::StopwatchPage(message) => {
 				let mut actions = Vec::new();
-				if matches!(message, StopwatchPageMessage::StopTask { .. }) {
-					actions.push(ContentPageAction::CloseTaskModal);
+				if matches!(message, stopwatch_page::Message::StopTask { .. }) {
+					actions.push(Action::CloseTaskModal);
 				};
 				actions.push(self.stopwatch_page.update(
 					message,
@@ -165,25 +159,25 @@ impl ContentPage {
 					preferences,
 					self.is_stopwatch_page_opened(),
 				));
-				ContentPageAction::Actions(actions)
+				Action::Actions(actions)
 			}
-			ContentPageMessage::OverviewPageMessage(message) => {
+			Message::OverviewPage(message) => {
 				if let Some(overview_page) = &mut self.overview_page {
 					overview_page.update(message, database, preferences);
 				}
-				ContentPageAction::None
+				Action::None
 			}
-			ContentPageMessage::OpenOverview => {
+			Message::OpenOverview => {
 				self.open_overview(database, preferences);
-				ContentPageAction::None
+				Action::None
 			}
-			ContentPageMessage::OpenProjectPage(project_id) => {
+			Message::OpenProjectPage(project_id) => {
 				self.open_project_page(project_id, database, preferences);
-				ContentPageAction::None
+				Action::None
 			}
-			ContentPageMessage::OpenStopwatch => {
+			Message::OpenStopwatch => {
 				self.open_stopwatch(preferences);
-				ContentPageAction::None
+				Action::None
 			}
 		}
 	}
@@ -194,7 +188,7 @@ impl ContentPage {
 		preferences: &mut Option<Preferences>,
 	) {
 		self.project_page = None;
-		self.overview_page = Some(OverviewPage::new(database, preferences));
+		self.overview_page = Some(overview_page::Page::new(database, preferences));
 		if let Some(preferences) = preferences {
 			preferences.set_selected_content_page(SerializedContentPage::Overview);
 		}
@@ -214,7 +208,7 @@ impl ContentPage {
 		});
 		match open_project_info {
 			Some((project_id, project)) => {
-				self.project_page = Some(ProjectPage::new(project_id, project, preferences));
+				self.project_page = Some(project_page::Page::new(project_id, project, preferences));
 				if let Some(preferences) = preferences {
 					preferences
 						.set_selected_content_page(SerializedContentPage::Project(project_id));
@@ -237,7 +231,7 @@ impl ContentPage {
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, project_tracker::Message> {
 		match &self.project_page {
 			Some(project_page) => project_page.view(app),
 			None => match &self.overview_page {

@@ -7,7 +7,7 @@ use crate::{
 		SCROLLBAR_WIDTH,
 	},
 	core::SerializableDateConversion,
-	project_tracker::Message,
+	project_tracker,
 	styles::{
 		card_style, markdown_background_container_style, text_input_style_borderless,
 		unindent_text, BOLD_FONT, HEADING_TEXT_SIZE, LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE,
@@ -32,7 +32,7 @@ static TASK_NAME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::
 static EDIT_NEEDED_TIME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 
 #[derive(Debug, Clone)]
-pub enum TaskModalMessage {
+pub enum Message {
 	EditDescription,
 	ViewDescription,
 	EditDescriptionAction(text_editor::Action),
@@ -52,30 +52,30 @@ pub enum TaskModalMessage {
 	DeleteTask,
 }
 
-impl From<TaskModalMessage> for Message {
-	fn from(value: TaskModalMessage) -> Self {
-		Message::TaskModalMessage(value)
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		project_tracker::Message::TaskModalMessage(value)
 	}
 }
 
-pub enum TaskModalAction {
+pub enum Action {
 	None,
-	Task(iced::Task<TaskModalMessage>),
+	Task(iced::Task<Message>),
 	DatabaseMessage(DatabaseMessage),
 }
 
-impl From<iced::Task<TaskModalMessage>> for TaskModalAction {
-	fn from(value: iced::Task<TaskModalMessage>) -> Self {
-		TaskModalAction::Task(value)
+impl From<iced::Task<Message>> for Action {
+	fn from(value: iced::Task<Message>) -> Self {
+		Action::Task(value)
 	}
 }
-impl From<DatabaseMessage> for TaskModalAction {
+impl From<DatabaseMessage> for Action {
 	fn from(value: DatabaseMessage) -> Self {
-		TaskModalAction::DatabaseMessage(value)
+		Action::DatabaseMessage(value)
 	}
 }
 
-pub struct TaskModal {
+pub struct Modal {
 	pub project_id: ProjectId,
 	pub task_id: TaskId,
 	new_description: Option<text_editor::Content>,
@@ -83,8 +83,11 @@ pub struct TaskModal {
 	new_needed_time_minutes: Option<String>,
 }
 
-impl TaskModal {
-	pub fn new(project_id: ProjectId, task_id: TaskId) -> (Self, iced::Task<Message>) {
+impl Modal {
+	pub fn new(
+		project_id: ProjectId,
+		task_id: TaskId,
+	) -> (Self, iced::Task<project_tracker::Message>) {
 		(
 			Self {
 				project_id,
@@ -97,24 +100,20 @@ impl TaskModal {
 		)
 	}
 
-	pub fn update<'a>(
-		&'a mut self,
-		message: TaskModalMessage,
-		database: Option<&'a Database>,
-	) -> TaskModalAction {
+	pub fn update<'a>(&'a mut self, message: Message, database: Option<&'a Database>) -> Action {
 		match message {
-			TaskModalMessage::EditDescription => {
+			Message::EditDescription => {
 				self.new_description = database.as_ref().and_then(|db| {
 					db.get_task(&self.project_id, &self.task_id)
 						.map(|task| text_editor::Content::with_text(&task.description))
 				});
-				TaskModalAction::None
+				Action::None
 			}
-			TaskModalMessage::ViewDescription => {
+			Message::ViewDescription => {
 				self.new_description = None;
-				TaskModalAction::None
+				Action::None
 			}
-			TaskModalMessage::EditDescriptionAction(action) => match &mut self.new_description {
+			Message::EditDescriptionAction(action) => match &mut self.new_description {
 				Some(new_description) => {
 					let is_action_edit = action.is_edit();
 					new_description.perform(action);
@@ -126,12 +125,12 @@ impl TaskModal {
 						}
 						.into()
 					} else {
-						TaskModalAction::None
+						Action::None
 					}
 				}
-				None => TaskModalAction::None,
+				None => Action::None,
 			},
-			TaskModalMessage::UnindentDescription => match &mut self.new_description {
+			Message::UnindentDescription => match &mut self.new_description {
 				Some(new_description) => {
 					unindent_text(new_description);
 					DatabaseMessage::ChangeTaskDescription {
@@ -141,18 +140,18 @@ impl TaskModal {
 					}
 					.into()
 				}
-				None => TaskModalAction::None,
+				None => Action::None,
 			},
 
-			TaskModalMessage::EditDueDate => {
+			Message::EditDueDate => {
 				self.edit_due_date = true;
-				TaskModalAction::None
+				Action::None
 			}
-			TaskModalMessage::StopEditingDueDate => {
+			Message::StopEditingDueDate => {
 				self.edit_due_date = false;
-				TaskModalAction::None
+				Action::None
 			}
-			TaskModalMessage::ChangeDueDate(new_due_date) => {
+			Message::ChangeDueDate(new_due_date) => {
 				self.edit_due_date = false;
 				DatabaseMessage::ChangeTaskDueDate {
 					project_id: self.project_id,
@@ -162,7 +161,7 @@ impl TaskModal {
 				.into()
 			}
 
-			TaskModalMessage::EditNeededTime => {
+			Message::EditNeededTime => {
 				let previous_task_needed_minutes = database.as_ref().and_then(|db| {
 					db.get_task(&self.project_id, &self.task_id)
 						.and_then(|task| task.needed_time_minutes)
@@ -174,15 +173,15 @@ impl TaskModal {
 				);
 				text_input::focus(EDIT_NEEDED_TIME_INPUT_ID.clone()).into()
 			}
-			TaskModalMessage::StopEditingNeededTime => {
+			Message::StopEditingNeededTime => {
 				self.new_needed_time_minutes = None;
-				TaskModalAction::None
+				Action::None
 			}
-			TaskModalMessage::ChangeNeededTimeInput(new_edited_needed_time_minutes) => {
+			Message::ChangeNeededTimeInput(new_edited_needed_time_minutes) => {
 				self.new_needed_time_minutes = Some(new_edited_needed_time_minutes);
-				TaskModalAction::None
+				Action::None
 			}
-			TaskModalMessage::ChangeNeededTime => {
+			Message::ChangeNeededTime => {
 				if let Some(new_needed_time_minutes_clone) = self.new_needed_time_minutes.clone() {
 					self.new_needed_time_minutes = None;
 					return DatabaseMessage::ChangeTaskNeededTime {
@@ -195,9 +194,9 @@ impl TaskModal {
 					}
 					.into();
 				}
-				TaskModalAction::None
+				Action::None
 			}
-			TaskModalMessage::ClearTaskNeededTime => {
+			Message::ClearTaskNeededTime => {
 				self.new_needed_time_minutes = None;
 				DatabaseMessage::ChangeTaskNeededTime {
 					project_id: self.project_id,
@@ -206,8 +205,8 @@ impl TaskModal {
 				}
 				.into()
 			}
-			TaskModalMessage::InvalidNeededTimeInput => TaskModalAction::None,
-			TaskModalMessage::DeleteTask => DatabaseMessage::DeleteTask {
+			Message::InvalidNeededTimeInput => Action::None,
+			Message::DeleteTask => DatabaseMessage::DeleteTask {
 				project_id: self.project_id,
 				task_id: self.task_id,
 			}
@@ -215,7 +214,7 @@ impl TaskModal {
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, project_tracker::Message> {
 		card(
 			Space::new(0.0, 0.0),
 			match app
@@ -225,7 +224,7 @@ impl TaskModal {
 			{
 				Some(project) => match project.get_task(&self.task_id) {
 					Some(task) => {
-						let task_tags_list: Vec<Element<Message>> = project
+						let task_tags_list: Vec<Element<project_tracker::Message>> = project
 							.task_tags
 							.iter()
 							.map(|(task_tag_id, task_tag)| {
@@ -245,11 +244,11 @@ impl TaskModal {
 						let edit_needed_time_view = edit_needed_time_button(
 							task.needed_time_minutes,
 							&self.new_needed_time_minutes,
-							TaskModalMessage::EditNeededTime.into(),
-							move |input| TaskModalMessage::ChangeNeededTimeInput(input).into(),
-							Some(TaskModalMessage::ChangeNeededTime.into()),
-							TaskModalMessage::StopEditingNeededTime.into(),
-							TaskModalMessage::ClearTaskNeededTime.into(),
+							Message::EditNeededTime.into(),
+							move |input| Message::ChangeNeededTimeInput(input).into(),
+							Some(Message::ChangeNeededTime.into()),
+							Message::StopEditingNeededTime.into(),
+							Message::ClearTaskNeededTime.into(),
 							EDIT_NEEDED_TIME_INPUT_ID.clone(),
 						);
 
@@ -264,13 +263,11 @@ impl TaskModal {
 							self.edit_due_date,
 							&task.due_date,
 							app.preferences.date_formatting(),
-							TaskModalMessage::EditDueDate.into(),
-							TaskModalMessage::StopEditingDueDate.into(),
+							Message::EditDueDate.into(),
+							Message::StopEditingDueDate.into(),
 							move |date| {
-								TaskModalMessage::ChangeDueDate(SerializableDate::from_iced_date(
-									date,
-								))
-								.into()
+								Message::ChangeDueDate(SerializableDate::from_iced_date(date))
+									.into()
 							},
 							DatabaseMessage::ChangeTaskDueDate {
 								project_id: self.project_id,
@@ -281,22 +278,23 @@ impl TaskModal {
 						);
 
 						let viewing_description = self.new_description.is_none();
-						let description_hover_button: Element<'a, Message> = container(
-							toggle_view_edit_task_description_button(viewing_description),
-						)
-						.width(Fill)
-						.height(Fill)
-						.align_x(Horizontal::Right)
-						.align_y(Vertical::Top)
-						.into();
+						let description_hover_button: Element<'a, project_tracker::Message> =
+							container(toggle_view_edit_task_description_button(
+								viewing_description,
+							))
+							.width(Fill)
+							.height(Fill)
+							.align_x(Horizontal::Right)
+							.align_y(Vertical::Top)
+							.into();
 
-						let description_text: Element<'a, Message> =
+						let description_text: Element<'a, project_tracker::Message> =
 							if let Some(new_description) = &self.new_description {
 								container(task_description_editor(
 									new_description,
-									|action| TaskModalMessage::EditDescriptionAction(action).into(),
-									Some(TaskModalMessage::ViewDescription.into()),
-									TaskModalMessage::UnindentDescription.into(),
+									|action| Message::EditDescriptionAction(action).into(),
+									Some(Message::ViewDescription.into()),
+									Message::UnindentDescription.into(),
 								))
 								.padding(PADDING_AMOUNT)
 								.into()
@@ -309,7 +307,7 @@ impl TaskModal {
 								)
 							};
 
-						let name_text: Element<'a, Message> =
+						let name_text: Element<'a, project_tracker::Message> =
 							text_input("Input task name", &task.name)
 								.id(TASK_NAME_INPUT_ID.clone())
 								.on_input(|new_task_name| {
@@ -369,7 +367,7 @@ impl TaskModal {
 		)
 		.max_width(600.0)
 		.close_size(LARGE_TEXT_SIZE)
-		.on_close(Message::CloseTaskModal)
+		.on_close(project_tracker::Message::CloseTaskModal)
 		.style(card_style)
 		.into()
 	}

@@ -7,8 +7,7 @@ use crate::{
 		LARGE_LOADING_SPINNER_SIZE,
 	},
 	core::IcedColorConversion,
-	pages::{ContentPageAction, ContentPageMessage},
-	project_tracker::Message,
+	pages, project_tracker,
 	styles::{
 		task_tag_container_style, JET_BRAINS_MONO_FONT, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT,
 		PADDING_AMOUNT, SMALL_PADDING_AMOUNT, SPACING_AMOUNT,
@@ -28,7 +27,7 @@ use std::time::{Duration, Instant};
 use tracing::error;
 
 #[derive(Debug, Default)]
-pub enum StopwatchPage {
+pub enum Page {
 	#[default]
 	Idle,
 	TrackTime {
@@ -54,7 +53,7 @@ pub enum StopwatchPage {
 }
 
 #[derive(Clone, Debug)]
-pub enum StopwatchPageMessage {
+pub enum Message {
 	StartTrackingTime,
 	StopTask {
 		project_id: ProjectId,
@@ -71,28 +70,28 @@ pub enum StopwatchPageMessage {
 	SaveTaskTimeSpendBeforeClosing,
 }
 
-impl From<StopwatchPageMessage> for Message {
-	fn from(value: StopwatchPageMessage) -> Self {
-		ContentPageMessage::StopwatchPageMessage(value).into()
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		pages::Message::StopwatchPage(value).into()
 	}
 }
 
-impl StopwatchPage {
+impl Page {
 	pub fn startup_again(
 		stopwatch_progress: StopwatchProgress,
 		database: Option<&Database>,
-	) -> (Self, ContentPageAction) {
+	) -> (Self, pages::Action) {
 		match stopwatch_progress {
 			StopwatchProgress::TrackTime {
 				elapsed_time_seconds,
 				paused,
 			} => (
-				StopwatchPage::TrackTime {
+				Page::TrackTime {
 					elapsed_time: Duration::from_secs(elapsed_time_seconds),
 					paused,
 					last_update: Instant::now(),
 				},
-				ContentPageAction::None,
+				pages::Action::None,
 			),
 			StopwatchProgress::Task {
 				project_id,
@@ -105,7 +104,7 @@ impl StopwatchPage {
 				let needed_seconds = Self::get_needed_seconds(project_id, task_id, database);
 
 				(
-					StopwatchPage::StopTaskTime {
+					Page::StopTaskTime {
 						project_id,
 						task_id,
 						paused,
@@ -119,7 +118,7 @@ impl StopwatchPage {
 						}),
 					},
 					if paused {
-						ContentPageAction::None
+						pages::Action::None
 					} else {
 						DatabaseMessage::StartTaskTimeSpend {
 							project_id,
@@ -138,7 +137,7 @@ impl StopwatchPage {
 				let duration_seconds = break_duration_minutes as f32 * 60.0;
 
 				(
-					StopwatchPage::TakingBreak {
+					Page::TakingBreak {
 						elapsed_time: Duration::from_secs(elapsed_time_seconds),
 						last_update: Instant::now(),
 						paused,
@@ -150,32 +149,30 @@ impl StopwatchPage {
 							None,
 						),
 					},
-					ContentPageAction::None,
+					pages::Action::None,
 				)
 			}
 		}
 	}
 
-	pub fn subscription(&self, opened: bool) -> Subscription<StopwatchPageMessage> {
+	pub fn subscription(&self, opened: bool) -> Subscription<Message> {
 		let redraw_subscription = match self {
-			StopwatchPage::Idle => Subscription::none(),
-			StopwatchPage::StopTaskTime { .. } | StopwatchPage::TakingBreak { .. } => {
+			Page::Idle => Subscription::none(),
+			Page::StopTaskTime { .. } | Page::TakingBreak { .. } => {
 				if opened {
-					window::frames().map(|_| StopwatchPageMessage::Update)
+					window::frames().map(|_| Message::Update)
 				} else {
-					time::every(Duration::from_secs(1)).map(|_| StopwatchPageMessage::Update)
+					time::every(Duration::from_secs(1)).map(|_| Message::Update)
 				}
 			}
-			StopwatchPage::TrackTime { .. } => {
-				time::every(Duration::from_secs(1)).map(|_| StopwatchPageMessage::Update)
-			}
+			Page::TrackTime { .. } => time::every(Duration::from_secs(1)).map(|_| Message::Update),
 		};
 
 		let toggle_subscription = keyboard::on_key_press(|key, modifiers| match key.as_ref() {
 			keyboard::Key::Named(keyboard::key::Named::Space)
 				if !modifiers.command() && !modifiers.shift() =>
 			{
-				Some(StopwatchPageMessage::Toggle)
+				Some(Message::Toggle)
 			}
 			_ => None,
 		});
@@ -213,26 +210,26 @@ impl StopwatchPage {
 
 	pub fn update(
 		&mut self,
-		message: StopwatchPageMessage,
+		message: Message,
 		database: Option<&Database>,
 		preferences: &mut Option<Preferences>,
 		opened: bool,
-	) -> ContentPageAction {
+	) -> pages::Action {
 		match message {
-			StopwatchPageMessage::StartTrackingTime => {
-				*self = StopwatchPage::TrackTime {
+			Message::StartTrackingTime => {
+				*self = Page::TrackTime {
 					elapsed_time: Duration::from_secs(0),
 					last_update: Instant::now(),
 					paused: false,
 				};
 				self.set_stopwatch_progress(preferences);
-				ContentPageAction::None
+				pages::Action::None
 			}
-			StopwatchPageMessage::StopTask {
+			Message::StopTask {
 				project_id,
 				task_id,
 			} => {
-				*self = StopwatchPage::StopTaskTime {
+				*self = Page::StopTaskTime {
 					paused: false,
 					project_id,
 					task_id,
@@ -244,8 +241,8 @@ impl StopwatchPage {
 					finished_notification_sent: false,
 				};
 				self.set_stopwatch_progress(preferences);
-				ContentPageAction::Actions(vec![
-					ContentPageAction::OpenStopwatch,
+				pages::Action::Actions(vec![
+					pages::Action::OpenStopwatch,
 					DatabaseMessage::StartTaskTimeSpend {
 						project_id,
 						task_id,
@@ -253,10 +250,10 @@ impl StopwatchPage {
 					.into(),
 				])
 			}
-			StopwatchPageMessage::TakeBreak(minutes) => {
+			Message::TakeBreak(minutes) => {
 				let duration_seconds = minutes as f32 * 60.0;
 
-				*self = StopwatchPage::TakingBreak {
+				*self = Page::TakingBreak {
 					elapsed_time: Duration::from_secs(0),
 					last_update: Instant::now(),
 					paused: false,
@@ -265,22 +262,21 @@ impl StopwatchPage {
 					clock: StopwatchClock::new(0.0, duration_seconds, None),
 				};
 				self.set_stopwatch_progress(preferences);
-				ContentPageAction::None
+				pages::Action::None
 			}
-			StopwatchPageMessage::StartupAgain(progress) => {
+			Message::StartupAgain(progress) => {
 				let (new_self, action) = Self::startup_again(progress, database);
 				*self = new_self;
 				action
 			}
-			StopwatchPageMessage::Stop => self.stop(preferences),
-			StopwatchPageMessage::Resume => match self {
-				StopwatchPage::TrackTime { paused, .. }
-				| StopwatchPage::TakingBreak { paused, .. } => {
+			Message::Stop => self.stop(preferences),
+			Message::Resume => match self {
+				Page::TrackTime { paused, .. } | Page::TakingBreak { paused, .. } => {
 					*paused = false;
 					self.set_stopwatch_progress(preferences);
-					ContentPageAction::None
+					pages::Action::None
 				}
-				StopwatchPage::StopTaskTime {
+				Page::StopTaskTime {
 					project_id,
 					task_id,
 					paused,
@@ -297,16 +293,15 @@ impl StopwatchPage {
 					}
 					.into()
 				}
-				StopwatchPage::Idle => ContentPageAction::None,
+				Page::Idle => pages::Action::None,
 			},
-			StopwatchPageMessage::Pause => match self {
-				StopwatchPage::TrackTime { paused, .. }
-				| StopwatchPage::TakingBreak { paused, .. } => {
+			Message::Pause => match self {
+				Page::TrackTime { paused, .. } | Page::TakingBreak { paused, .. } => {
 					*paused = true;
 					self.set_stopwatch_progress(preferences);
-					ContentPageAction::None
+					pages::Action::None
 				}
-				StopwatchPage::StopTaskTime {
+				Page::StopTaskTime {
 					project_id,
 					task_id,
 					paused,
@@ -323,18 +318,17 @@ impl StopwatchPage {
 					}
 					.into()
 				}
-				StopwatchPage::Idle => ContentPageAction::None,
+				Page::Idle => pages::Action::None,
 			},
-			StopwatchPageMessage::Toggle => {
+			Message::Toggle => {
 				if opened {
 					match self {
-						StopwatchPage::TrackTime { paused, .. }
-						| StopwatchPage::TakingBreak { paused, .. } => {
+						Page::TrackTime { paused, .. } | Page::TakingBreak { paused, .. } => {
 							*paused = !*paused;
 							self.set_stopwatch_progress(preferences);
-							ContentPageAction::None
+							pages::Action::None
 						}
-						StopwatchPage::StopTaskTime {
+						Page::StopTaskTime {
 							paused,
 							project_id,
 							task_id,
@@ -359,20 +353,17 @@ impl StopwatchPage {
 							self.set_stopwatch_progress(preferences);
 							action
 						}
-						StopwatchPage::Idle => self.update(
-							StopwatchPageMessage::StartTrackingTime,
-							database,
-							preferences,
-							opened,
-						),
+						Page::Idle => {
+							self.update(Message::StartTrackingTime, database, preferences, opened)
+						}
 					}
 				} else {
-					ContentPageAction::None
+					pages::Action::None
 				}
 			}
-			StopwatchPageMessage::CompleteTask => {
+			Message::CompleteTask => {
 				let set_task_done_action = match self {
-					StopwatchPage::StopTaskTime {
+					Page::StopTaskTime {
 						project_id,
 						task_id,
 						..
@@ -381,21 +372,21 @@ impl StopwatchPage {
 						task_id: *task_id,
 					}
 					.into(),
-					_ => ContentPageAction::None,
+					_ => pages::Action::None,
 				};
-				ContentPageAction::Actions(vec![set_task_done_action, self.stop(preferences)])
+				pages::Action::Actions(vec![set_task_done_action, self.stop(preferences)])
 			}
-			StopwatchPageMessage::Update => {
+			Message::Update => {
 				// advance time
 				match self {
 					// stop_task_time stores the start time to get the elapsed time
-					StopwatchPage::Idle | StopwatchPage::StopTaskTime { .. } => {}
-					StopwatchPage::TrackTime {
+					Page::Idle | Page::StopTaskTime { .. } => {}
+					Page::TrackTime {
 						elapsed_time,
 						last_update,
 						paused,
 					}
-					| StopwatchPage::TakingBreak {
+					| Page::TakingBreak {
 						elapsed_time,
 						last_update,
 						paused,
@@ -410,7 +401,7 @@ impl StopwatchPage {
 
 				// check if timer is finished
 				match self {
-					StopwatchPage::StopTaskTime {
+					Page::StopTaskTime {
 						project_id,
 						task_id,
 						clock,
@@ -424,7 +415,7 @@ impl StopwatchPage {
 						match task_and_type {
 							Some((task, task_type)) => {
 								if matches!(task_type, TaskType::Done) {
-									*self = StopwatchPage::Idle;
+									*self = Page::Idle;
 								} else {
 									match task.needed_time_minutes {
 										Some(needed_minutes) => {
@@ -471,10 +462,10 @@ impl StopwatchPage {
 									}
 								}
 							}
-							None => *self = StopwatchPage::Idle,
+							None => *self = Page::Idle,
 						}
 					}
-					StopwatchPage::TakingBreak {
+					Page::TakingBreak {
 						elapsed_time,
 						break_duration_minutes,
 						break_over_notification_sent,
@@ -505,10 +496,10 @@ impl StopwatchPage {
 
 				self.set_stopwatch_progress(preferences);
 
-				ContentPageAction::None
+				pages::Action::None
 			}
-			StopwatchPageMessage::SaveTaskTimeSpendBeforeClosing => match self {
-				StopwatchPage::StopTaskTime {
+			Message::SaveTaskTimeSpendBeforeClosing => match self {
+				Page::StopTaskTime {
 					project_id,
 					task_id,
 					..
@@ -517,14 +508,14 @@ impl StopwatchPage {
 					task_id: *task_id,
 				}
 				.into(),
-				_ => ContentPageAction::None,
+				_ => pages::Action::None,
 			},
 		}
 	}
 
-	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, Message> {
+	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, project_tracker::Message> {
 		container(match self {
-			StopwatchPage::Idle => Element::new(responsive(move |size| {
+			Page::Idle => Element::new(responsive(move |size| {
 				let track_time = column![text("Track time:").size(45), track_time_button()]
 					.align_x(Alignment::Center)
 					.spacing(LARGE_SPACING_AMOUNT);
@@ -541,7 +532,8 @@ impl StopwatchPage {
 				.align_x(Alignment::Center)
 				.spacing(LARGE_SPACING_AMOUNT);
 
-				let page_view: Element<Message> = if size.width > size.height * 2.0 {
+				let page_view: Element<project_tracker::Message> = if size.width > size.height * 2.0
+				{
 					row![track_time, take_break]
 						.spacing(LARGE_SPACING_AMOUNT * 3)
 						.into()
@@ -555,7 +547,7 @@ impl StopwatchPage {
 				container(page_view).center(Fill).into()
 			})),
 
-			StopwatchPage::TrackTime {
+			Page::TrackTime {
 				elapsed_time,
 				paused,
 				..
@@ -582,7 +574,7 @@ impl StopwatchPage {
 			.width(Fill)
 			.into(),
 
-			StopwatchPage::TakingBreak {
+			Page::TakingBreak {
 				break_duration_minutes,
 				paused,
 				clock,
@@ -607,7 +599,7 @@ impl StopwatchPage {
 				.align_x(Alignment::Center)
 				.spacing(LARGE_SPACING_AMOUNT);
 
-				let page_view: Element<Message> = if size.width > size.height {
+				let page_view: Element<project_tracker::Message> = if size.width > size.height {
 					row![clock, controls]
 						.spacing(LARGE_SPACING_AMOUNT)
 						.align_y(Vertical::Center)
@@ -623,7 +615,7 @@ impl StopwatchPage {
 			})
 			.into(),
 
-			StopwatchPage::StopTaskTime {
+			Page::StopTaskTime {
 				project_id,
 				task_id,
 				clock,
@@ -639,8 +631,8 @@ impl StopwatchPage {
 					}
 				}
 
-				responsive(move |size| -> Element<Message> {
-					let clock: Element<Message> = if task_ref.is_some() {
+				responsive(move |size| -> Element<project_tracker::Message> {
+					let clock: Element<project_tracker::Message> = if task_ref.is_some() {
 						match clock {
 							Some(clock) => canvas(clock)
 								.width(Fixed(300.0))
@@ -678,7 +670,7 @@ impl StopwatchPage {
 					]
 					.spacing(LARGE_SPACING_AMOUNT);
 
-					let page_view: Element<Message> = match task_info(
+					let page_view: Element<project_tracker::Message> = match task_info(
 						task_ref,
 						*task_id,
 						project_ref.map(|project_ref| (*project_id, project_ref)),
@@ -725,9 +717,9 @@ impl StopwatchPage {
 		.into()
 	}
 
-	fn stop(&mut self, preferences: &mut Option<Preferences>) -> ContentPageAction {
+	fn stop(&mut self, preferences: &mut Option<Preferences>) -> pages::Action {
 		let action = match self {
-			StopwatchPage::StopTaskTime {
+			Page::StopTaskTime {
 				project_id,
 				task_id,
 				..
@@ -736,9 +728,9 @@ impl StopwatchPage {
 				task_id: *task_id,
 			}
 			.into(),
-			_ => ContentPageAction::None,
+			_ => pages::Action::None,
 		};
-		*self = StopwatchPage::Idle;
+		*self = Page::Idle;
 		self.set_stopwatch_progress(preferences);
 		action
 	}
@@ -746,8 +738,8 @@ impl StopwatchPage {
 	fn set_stopwatch_progress(&self, preferences: &mut Option<Preferences>) {
 		if let Some(preferences) = preferences {
 			let progress = match self {
-				StopwatchPage::Idle => None,
-				StopwatchPage::StopTaskTime {
+				Page::Idle => None,
+				Page::StopTaskTime {
 					paused,
 					project_id,
 					task_id,
@@ -759,7 +751,7 @@ impl StopwatchPage {
 					paused: *paused,
 					finished_notification_sent: *finished_notification_sent,
 				}),
-				StopwatchPage::TrackTime {
+				Page::TrackTime {
 					elapsed_time,
 					paused,
 					..
@@ -767,7 +759,7 @@ impl StopwatchPage {
 					elapsed_time_seconds: elapsed_time.as_secs(),
 					paused: *paused,
 				}),
-				StopwatchPage::TakingBreak {
+				Page::TakingBreak {
 					elapsed_time,
 					paused,
 					break_duration_minutes,
@@ -859,7 +851,7 @@ fn task_info<'a>(
 	task_id: TaskId,
 	project: Option<(ProjectId, &'a Project)>,
 	app: &'a ProjectTrackerApp,
-) -> Option<Element<'a, Message>> {
+) -> Option<Element<'a, project_tracker::Message>> {
 	task.map(|task| {
 		Column::new()
 			.push_maybe(project.as_ref().map(|(project_id, _project)| {

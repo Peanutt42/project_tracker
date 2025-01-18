@@ -6,7 +6,7 @@ use crate::{
 		SCROLLBAR_WIDTH,
 	},
 	core::SerializableDateConversion,
-	project_tracker::Message,
+	project_tracker,
 	styles::{
 		card_style, text_input_style_borderless, unindent_text, HEADING_TEXT_SIZE,
 		LARGE_SPACING_AMOUNT, LARGE_TEXT_SIZE, SMALL_PADDING_AMOUNT, SPACING_AMOUNT,
@@ -30,7 +30,7 @@ static TASK_NAME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::
 static EDIT_NEEDED_TIME_INPUT_ID: LazyLock<text_input::Id> = LazyLock::new(text_input::Id::unique);
 
 #[derive(Debug, Clone)]
-pub enum CreateTaskModalMessage {
+pub enum Message {
 	CreateTask,
 	ChangeTaskName(String),
 	TaskDescriptionAction(text_editor::Action),
@@ -46,15 +46,15 @@ pub enum CreateTaskModalMessage {
 	ClearDueDate,
 }
 
-impl From<CreateTaskModalMessage> for Message {
-	fn from(value: CreateTaskModalMessage) -> Self {
-		Message::CreateTaskModalMessage(value)
+impl From<Message> for project_tracker::Message {
+	fn from(value: Message) -> Self {
+		project_tracker::Message::CreateTaskModalMessage(value)
 	}
 }
 
-pub enum CreateTaskModalAction {
+pub enum Action {
 	None,
-	Task(iced::Task<CreateTaskModalMessage>),
+	Task(iced::Task<Message>),
 	CreateTask {
 		project_id: ProjectId,
 		task_id: TaskId,
@@ -68,13 +68,13 @@ pub enum CreateTaskModalAction {
 	},
 }
 
-impl From<iced::Task<CreateTaskModalMessage>> for CreateTaskModalAction {
-	fn from(value: iced::Task<CreateTaskModalMessage>) -> Self {
+impl From<iced::Task<Message>> for Action {
+	fn from(value: iced::Task<Message>) -> Self {
 		Self::Task(value)
 	}
 }
 
-pub struct CreateTaskModal {
+pub struct Modal {
 	project_id: ProjectId,
 	task_name: String,
 	task_description: text_editor::Content,
@@ -84,7 +84,7 @@ pub struct CreateTaskModal {
 	needed_time_minutes: Option<String>,
 }
 
-impl CreateTaskModal {
+impl Modal {
 	pub fn new(project_id: ProjectId) -> Self {
 		Self {
 			project_id,
@@ -98,13 +98,9 @@ impl CreateTaskModal {
 	}
 
 	#[must_use]
-	pub fn update(
-		&mut self,
-		message: CreateTaskModalMessage,
-		preferences: &Option<Preferences>,
-	) -> CreateTaskModalAction {
+	pub fn update(&mut self, message: Message, preferences: &Option<Preferences>) -> Action {
 		match message {
-			CreateTaskModalMessage::CreateTask => CreateTaskModalAction::CreateTask {
+			Message::CreateTask => Action::CreateTask {
 				project_id: self.project_id,
 				task_id: TaskId::generate(),
 				task_name: self.task_name.clone(),
@@ -117,55 +113,55 @@ impl CreateTaskModal {
 				time_spend: None,
 				create_at_top: preferences.create_new_tasks_at_top(),
 			},
-			CreateTaskModalMessage::ChangeTaskName(new_task_name) => {
+			Message::ChangeTaskName(new_task_name) => {
 				self.task_name = new_task_name;
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::TaskDescriptionAction(action) => {
+			Message::TaskDescriptionAction(action) => {
 				self.task_description.perform(action);
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::UnindentDescription => {
+			Message::UnindentDescription => {
 				unindent_text(&mut self.task_description);
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::ToggleTaskTag(task_tag_id) => {
+			Message::ToggleTaskTag(task_tag_id) => {
 				if self.task_tags.contains(&task_tag_id) {
 					self.task_tags.remove(&task_tag_id);
 				} else {
 					self.task_tags.insert(task_tag_id);
 				}
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::ChangeNeededTimeInput(new_input) => {
+			Message::ChangeNeededTimeInput(new_input) => {
 				self.needed_time_minutes = Some(new_input);
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::EditNeededTime => {
+			Message::EditNeededTime => {
 				self.needed_time_minutes = Some(String::new());
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::StopEditingNeededTime => {
+			Message::StopEditingNeededTime => {
 				self.needed_time_minutes = None;
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::InvalidNeededTimeInput => CreateTaskModalAction::None,
-			CreateTaskModalMessage::EditDueDate => {
+			Message::InvalidNeededTimeInput => Action::None,
+			Message::EditDueDate => {
 				self.edit_due_date = true;
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::StopEditingDueDate => {
+			Message::StopEditingDueDate => {
 				self.edit_due_date = false;
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::ChangeDueDate(new_due_date) => {
+			Message::ChangeDueDate(new_due_date) => {
 				self.due_date = Some(new_due_date);
 				self.edit_due_date = false;
-				CreateTaskModalAction::None
+				Action::None
 			}
-			CreateTaskModalMessage::ClearDueDate => {
+			Message::ClearDueDate => {
 				self.due_date = None;
-				CreateTaskModalAction::None
+				Action::None
 			}
 		}
 	}
@@ -174,30 +170,30 @@ impl CreateTaskModal {
 		&'a self,
 		database: Option<&'a Database>,
 		preferences: &'a Option<Preferences>,
-	) -> Element<'a, Message> {
-		let edit_needed_time_view = edit_needed_time_button(
+	) -> Element<'a, project_tracker::Message> {
+		let edit_needed_time_view: Element<project_tracker::Message> = edit_needed_time_button(
 			None,
 			&self.needed_time_minutes,
-			CreateTaskModalMessage::EditNeededTime.into(),
-			|input| CreateTaskModalMessage::ChangeNeededTimeInput(input).into(),
+			Message::EditNeededTime,
+			Message::ChangeNeededTimeInput,
 			None,
-			CreateTaskModalMessage::StopEditingNeededTime.into(),
-			CreateTaskModalMessage::StopEditingNeededTime.into(),
+			Message::StopEditingNeededTime,
+			Message::StopEditingNeededTime,
 			EDIT_NEEDED_TIME_INPUT_ID.clone(),
-		);
+		)
+		.map(project_tracker::Message::CreateTaskModalMessage);
 
 		let date_formatting = preferences.date_formatting();
-		let due_date_view = due_date_button(
+		let due_date_view: Element<project_tracker::Message> = due_date_button(
 			self.edit_due_date,
 			&self.due_date,
 			date_formatting,
-			CreateTaskModalMessage::EditDueDate.into(),
-			CreateTaskModalMessage::StopEditingDueDate.into(),
-			|date| {
-				CreateTaskModalMessage::ChangeDueDate(SerializableDate::from_iced_date(date)).into()
-			},
-			CreateTaskModalMessage::ClearDueDate.into(),
-		);
+			Message::EditDueDate,
+			Message::StopEditingDueDate,
+			|date| Message::ChangeDueDate(SerializableDate::from_iced_date(date)),
+			Message::ClearDueDate,
+		)
+		.map(project_tracker::Message::CreateTaskModalMessage);
 
 		card(
 			match database
@@ -214,12 +210,12 @@ impl CreateTaskModal {
 					.and_then(|db| db.get_project(&self.project_id))
 				{
 					Some(project) => {
-						let task_tags_list: Vec<Element<Message>> = project
+						let task_tags_list: Vec<Element<project_tracker::Message>> = project
 							.task_tags
 							.iter()
 							.map(|(tag_id, tag)| {
 								task_tag_button(tag, self.task_tags.contains(&tag_id))
-									.on_press(CreateTaskModalMessage::ToggleTaskTag(tag_id).into())
+									.on_press(Message::ToggleTaskTag(tag_id).into())
 									.into()
 							})
 							.collect();
@@ -241,8 +237,8 @@ impl CreateTaskModal {
 				},
 				text_input("task name", &self.task_name)
 					.id(TASK_NAME_INPUT_ID.clone())
-					.on_input(|name| CreateTaskModalMessage::ChangeTaskName(name).into())
-					.on_submit(CreateTaskModalMessage::CreateTask.into())
+					.on_input(|name| Message::ChangeTaskName(name).into())
+					.on_submit(Message::CreateTask.into())
 					.style(|t, s| text_input_style_borderless(t, s, true))
 					.size(HEADING_TEXT_SIZE)
 					.font(Font {
@@ -253,10 +249,11 @@ impl CreateTaskModal {
 				text("Description:"),
 				task_description_editor(
 					&self.task_description,
-					|action| { CreateTaskModalMessage::TaskDescriptionAction(action).into() },
+					|action| { Message::TaskDescriptionAction(action) },
 					None,
-					CreateTaskModalMessage::UnindentDescription.into()
-				),
+					Message::UnindentDescription
+				)
+				.map(project_tracker::Message::CreateTaskModalMessage),
 				Space::new(0.0, LARGE_SPACING_AMOUNT),
 				row![
 					edit_needed_time_view,
@@ -272,7 +269,7 @@ impl CreateTaskModal {
 		)
 		.max_width(600.0)
 		.close_size(LARGE_TEXT_SIZE)
-		.on_close(Message::CloseCreateTaskModal)
+		.on_close(project_tracker::Message::CloseCreateTaskModal)
 		.style(card_style)
 		.into()
 	}
