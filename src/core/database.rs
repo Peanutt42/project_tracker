@@ -50,3 +50,12 @@ pub async fn import_json_database_file_dialog() -> Option<PathBuf> {
 
 	file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
 }
+
+pub async fn export_database_as_markdown_file_dialog() -> Option<PathBuf> {
+	let file_dialog_result = rfd::AsyncFileDialog::new()
+		.set_title("Export ProjectTracker Database as Markdown")
+		.pick_folder()
+		.await;
+
+	file_dialog_result.map(|file_handle| file_handle.path().to_path_buf())
+}

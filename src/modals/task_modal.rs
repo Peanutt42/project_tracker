@@ -1,7 +1,6 @@
 use crate::{
 	components::{
-		delete_task_button, due_date_button, duration_str, duration_to_minutes,
-		edit_needed_time_button, horizontal_scrollable, parse_duration_from_str,
+		delete_task_button, due_date_button, edit_needed_time_button, horizontal_scrollable,
 		start_task_timer_button, task_description, task_description_editor, task_tag_button,
 		toggle_view_edit_task_description_button, vertical_scrollable, ICON_BUTTON_WIDTH,
 		SCROLLBAR_WIDTH,
@@ -23,7 +22,10 @@ use iced::{
 	Padding,
 };
 use iced_aw::card;
-use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializableDate, TaskId};
+use project_tracker_core::{
+	duration_str, duration_to_minutes, parse_duration_from_str, Database, DatabaseMessage,
+	ProjectId, SerializableDate, TaskId,
+};
 use std::sync::LazyLock;
 use std::time::Duration;
 use tracing::error;

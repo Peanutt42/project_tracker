@@ -12,8 +12,8 @@ pub use project::{IcedColorConversion, SortModeUI};
 
 mod database;
 pub use database::{
-	export_database_as_json_file_dialog, export_database_file_dialog, import_database_file_dialog,
-	import_json_database_file_dialog,
+	export_database_as_json_file_dialog, export_database_as_markdown_file_dialog,
+	export_database_file_dialog, import_database_file_dialog, import_json_database_file_dialog,
 };
 
 mod source_code_todo;

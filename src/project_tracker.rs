@@ -1,3 +1,4 @@
+use crate::core::export_database_as_markdown_file_dialog;
 use crate::synchronization::{SynchronizationError, SynchronizationMessage, SynchronizationOutput};
 use crate::{
 	components::{
@@ -151,8 +152,10 @@ pub enum Message {
 	DatabaseSaved(SystemTime), // begin_time since saving
 	ExportDatabase(PathBuf),
 	ExportDatabaseAsJson(PathBuf),
+	ExportDatabaseAsMarkdown(PathBuf),
 	ExportDatabaseDialog,
 	ExportDatabaseAsJsonDialog,
+	ExportDatabaseAsMarkdownDialog,
 	ExportDatabaseFailed(Arc<SaveDatabaseError>),
 	ExportDatabaseDialogCanceled,
 	DatabaseExported,
@@ -591,6 +594,13 @@ impl ProjectTrackerApp {
 					None => Message::ExportDatabaseDialogCanceled,
 				},
 			),
+			Message::ExportDatabaseAsMarkdownDialog => Task::perform(
+				export_database_as_markdown_file_dialog(),
+				|filepath| match filepath {
+					Some(filepath) => Message::ExportDatabaseAsMarkdown(filepath),
+					None => Message::ExportDatabaseDialogCanceled,
+				},
+			),
 			Message::ExportDatabaseDialogCanceled => {
 				self.exporting_database = false;
 				Task::none()
@@ -632,6 +642,21 @@ impl ProjectTrackerApp {
 							"failed to serialize database to json to export to file!".to_string(),
 						),
 					}
+				} else {
+					Task::none()
+				}
+			}
+			Message::ExportDatabaseAsMarkdown(folder_path) => {
+				if let DatabaseState::Loaded(database) = &self.database {
+					let serialized_database = database.clone().into_serialized();
+					self.exporting_database = true;
+					Task::perform(
+						Database::export_as_markdown(folder_path, serialized_database),
+						|result| match result {
+							Ok(_) => Message::DatabaseExported,
+							Err(e) => Message::ExportDatabaseFailed(Arc::new(e)),
+						},
+					)
 				} else {
 					Task::none()
 				}

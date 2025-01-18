@@ -1,4 +1,5 @@
 use crate::{SerializableDate, TaskTagId};
+use humantime::format_duration;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::{BTreeSet, HashSet},
@@ -134,4 +135,24 @@ impl Task {
 		}
 		true
 	}
+}
+
+pub fn round_duration_to_seconds(duration: Duration) -> Duration {
+	Duration::from_secs(duration.as_secs())
+}
+
+pub fn round_duration_to_minutes(duration: Duration) -> Duration {
+	Duration::from_secs(60 * (duration.as_secs() / 60))
+}
+
+pub fn duration_to_minutes(duration: Duration) -> usize {
+	duration.as_secs() as usize / 60
+}
+
+pub fn parse_duration_from_str(string: &str) -> Option<Duration> {
+	humantime::parse_duration(string).ok()
+}
+
+pub fn duration_str(duration: Duration) -> String {
+	format_duration(duration).to_string()
 }

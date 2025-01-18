@@ -1,7 +1,7 @@
 use crate::{
 	components::{
-		days_left_widget, duration_str, duration_widget, in_between_dropzone, markdown,
-		open_in_code_editor_button, round_duration_to_seconds,
+		days_left_widget, duration_widget, in_between_dropzone, markdown,
+		open_in_code_editor_button,
 	},
 	core::{View, TASK_TAG_QUAD_HEIGHT},
 	icons::{icon_to_text, Bootstrap},
@@ -24,7 +24,10 @@ use iced::{
 	Padding, Size,
 };
 use iced_drop::droppable;
-use project_tracker_core::{DatabaseMessage, Project, ProjectId, SortMode, Task, TaskId, TaskType};
+use project_tracker_core::{
+	duration_str, round_duration_to_seconds, DatabaseMessage, Project, ProjectId, SortMode, Task,
+	TaskId, TaskType,
+};
 use std::time::Duration;
 
 #[allow(clippy::too_many_arguments)]

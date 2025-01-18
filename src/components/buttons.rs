@@ -509,6 +509,35 @@ pub fn export_as_json_database_button(exporting_json: bool) -> Element<'static, 
 	.into()
 }
 
+pub fn export_database_as_markdown_button(exporting_json: bool) -> Element<'static, Message> {
+	button(
+		row![
+			if exporting_json {
+				Element::new(
+					Spinner::new()
+						.width(Length::Fixed(ICON_FONT_SIZE))
+						.height(Length::Fixed(ICON_FONT_SIZE))
+						.circle_radius(2.0),
+				)
+			} else {
+				icon_to_text(Bootstrap::FiletypeMd)
+					.align_y(Vertical::Center)
+					.into()
+			},
+			text("Export as Markdown")
+		]
+		.spacing(SMALL_SPACING_AMOUNT)
+		.align_y(Alignment::Center),
+	)
+	.on_press_maybe(if exporting_json {
+		None
+	} else {
+		Some(Message::ExportDatabaseAsMarkdownDialog)
+	})
+	.style(dangerous_button_style)
+	.into()
+}
+
 pub fn task_tag_button<Message>(task_tag: &TaskTag, toggled: bool) -> Button<Message> {
 	let button = button(text(&task_tag.name))
 		.style(move |t, s| task_tag_button_style(t, s, task_tag.color.to_iced_color(), toggled));

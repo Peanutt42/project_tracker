@@ -1,9 +1,8 @@
 use crate::{
 	components::{
 		close_create_new_task_modal_button, create_new_task_modal_button, due_date_button,
-		duration_to_minutes, edit_needed_time_button, horizontal_scrollable,
-		parse_duration_from_str, task_description_editor, task_tag_button, vertical_scrollable,
-		SCROLLBAR_WIDTH,
+		edit_needed_time_button, horizontal_scrollable, task_description_editor, task_tag_button,
+		vertical_scrollable, SCROLLBAR_WIDTH,
 	},
 	core::SerializableDateConversion,
 	project_tracker,
@@ -21,7 +20,10 @@ use iced::{
 	Padding,
 };
 use iced_aw::card;
-use project_tracker_core::{Database, ProjectId, SerializableDate, TaskId, TaskTagId, TimeSpend};
+use project_tracker_core::{
+	duration_to_minutes, parse_duration_from_str, Database, ProjectId, SerializableDate, TaskId,
+	TaskTagId, TimeSpend,
+};
 use std::collections::BTreeSet;
 use std::sync::LazyLock;
 use tracing::error;

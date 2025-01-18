@@ -1,13 +1,14 @@
 use crate::{
-	OrderedHashMap, Project, ProjectId, SerializableColor, SerializableDate, SortMode, Task,
-	TaskId, TaskTag, TaskTagId, TaskType, TimeSpend,
+	duration_str, round_duration_to_minutes, OrderedHashMap, Project, ProjectId, SerializableColor,
+	SerializableDate, SortMode, Task, TaskId, TaskTag, TaskTagId, TaskType, TimeSpend,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
+use std::fmt::Write;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use thiserror::Error;
 
 pub type SerializedDatabase = OrderedHashMap<ProjectId, Project>;
@@ -630,6 +631,87 @@ impl Database {
 		tokio::fs::write(filepath.as_path(), json)
 			.await
 			.map_err(|error| SaveDatabaseError::FailedToWriteToFile { filepath, error })
+	}
+
+	pub async fn export_as_markdown(
+		folder_path: PathBuf,
+		serialized_database: SerializedDatabase,
+	) -> SaveDatabaseResult<()> {
+		let folder_path_clone = folder_path.clone();
+		tokio::fs::remove_dir_all(&folder_path_clone)
+			.await
+			.map_err(move |error| SaveDatabaseError::FailedToWriteToFile {
+				filepath: folder_path_clone,
+				error,
+			})?;
+		let folder_path_clone = folder_path.clone();
+		tokio::fs::create_dir(&folder_path)
+			.await
+			.map_err(move |error| SaveDatabaseError::FailedToWriteToFile {
+				filepath: folder_path_clone,
+				error,
+			})?;
+
+		for (_project_id, project) in serialized_database.iter() {
+			let mut project_file_content = String::new();
+
+			for (_task_id, task, task_type) in project.iter() {
+				let task_type_checkbox_str = if task_type.is_done() { 'X' } else { ' ' };
+				let task_tags_str: String = task
+					.tags
+					.iter()
+					.filter_map(|task_tag_id| {
+						project
+							.task_tags
+							.get(task_tag_id)
+							.map(|task_tag| format!("#{} ", task_tag.name))
+					})
+					.collect();
+				let task_name_str = task.name.replace('<', " < ").replace('>', " > ");
+				let due_date_str = match &task.due_date {
+					Some(due_date) => {
+						format!(" 📅 {}-{}-{}", due_date.year, due_date.month, due_date.day)
+					}
+					None => String::new(),
+				};
+				let time_spend_str = match (&task.time_spend, &task.needed_time_minutes) {
+					(Some(time_spend), Some(needed_time_minutes)) => format!(
+						" {}/{}",
+						duration_str(round_duration_to_minutes(time_spend.get_duration())),
+						duration_str(Duration::from_secs(*needed_time_minutes as u64 * 60)),
+					),
+					(None, Some(needed_time_minutes)) => format!(
+						" time needed: {}",
+						duration_str(Duration::from_secs(*needed_time_minutes as u64 * 60))
+					),
+					(Some(time_spend), None) => format!(
+						" time spend: {}",
+						duration_str(round_duration_to_minutes(time_spend.get_duration())),
+					),
+					(None, None) => String::new(),
+				};
+				let task_description_prefix = if task.description.is_empty() {
+					""
+				} else {
+					"\n"
+				};
+				let task_description_str: String =
+					task.description
+						.lines()
+						.fold(String::new(), |mut output, line| {
+							let _ = writeln!(output, "\t{line}");
+							output
+						});
+				project_file_content.push_str(&format!(
+					"- [{task_type_checkbox_str}] {task_tags_str} {task_name_str}{due_date_str}{time_spend_str}{task_description_prefix}{task_description_str}\n"
+				));
+			}
+			let filepath = folder_path.join(format!("{}.md", project.name));
+			tokio::fs::write(&filepath, project_file_content)
+				.await
+				.map_err(move |error| SaveDatabaseError::FailedToWriteToFile { filepath, error })?;
+		}
+		Ok(())
 	}
 
 	pub async fn load(filepath: PathBuf) -> LoadDatabaseResult {

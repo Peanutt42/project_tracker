@@ -16,7 +16,10 @@ mod project;
 pub use project::{Project, ProjectId, SerializableColor, SortMode};
 
 mod task;
-pub use task::{Task, TaskId, TaskType, TimeSpend};
+pub use task::{
+	duration_str, duration_to_minutes, parse_duration_from_str, round_duration_to_minutes,
+	round_duration_to_seconds, Task, TaskId, TaskType, TimeSpend,
+};
 
 mod date;
 pub use date::SerializableDate;

@@ -1,7 +1,8 @@
 use crate::components::{
-	code_editor_dropdown_button, export_as_json_database_button, horizontal_seperator_padded,
-	import_json_database_button, loading_screen, synchronization_settings_button,
-	vertical_scrollable, vertical_scrollable_no_padding, LARGE_LOADING_SPINNER_SIZE,
+	code_editor_dropdown_button, export_as_json_database_button,
+	export_database_as_markdown_button, horizontal_seperator_padded, import_json_database_button,
+	loading_screen, synchronization_settings_button, vertical_scrollable,
+	vertical_scrollable_no_padding, LARGE_LOADING_SPINNER_SIZE,
 };
 use crate::icons::{icon_to_text, Bootstrap};
 use crate::integrations::CodeEditor;
@@ -440,7 +441,7 @@ fn database_settings_tab_view<'a>(
 		.align_y(Alignment::Center),
 
 		container(
-			column![
+			row![
 				row![
 					dangerous_button(
 						Bootstrap::Trash,
@@ -453,11 +454,18 @@ fn database_settings_tab_view<'a>(
 				]
 				.spacing(SPACING_AMOUNT),
 
-				row![
-					import_json_database_button(app.importing_database),
-					export_as_json_database_button(app.exporting_database),
+				Space::new(Fill, 0.0),
+
+				column![
+					row![
+						import_json_database_button(app.importing_database),
+						export_as_json_database_button(app.exporting_database),
+					]
+					.spacing(SPACING_AMOUNT),
+
+					export_database_as_markdown_button(app.exporting_database),
 				]
-				.spacing(SPACING_AMOUNT),
+				.spacing(SPACING_AMOUNT)
 			]
 			.spacing(SPACING_AMOUNT)
 		)
