@@ -2,10 +2,6 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
-	if std::env::var("CARGO_FEATURE_WEB_SERVER").is_err() {
-		return;
-	}
-
 	let certificates_output_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
 		.join("src")
 		.join("web_server")
