@@ -26,7 +26,7 @@ pub mod theme_mode;
 
 pub fn run_project_tracker_app(flags: AppFlags) -> iced::Result {
 	use crate::icons::{APP_ICON_BYTES, BOOTSTRAP_FONT_BYTES};
-	use crate::styles::{FIRA_SANS_FONT, FIRA_SANS_FONT_BYTES, JET_BRAINS_MONO_FONT_BYTES};
+	use crate::styles::{INTER_FONT, INTER_FONT_BYTES, JET_BRAINS_MONO_FONT_BYTES};
 	#[cfg(target_os = "linux")]
 	use iced::window::settings::PlatformSpecific;
 	use iced::{
@@ -45,8 +45,8 @@ pub fn run_project_tracker_app(flags: AppFlags) -> iced::Result {
 	.font(BOOTSTRAP_FONT_BYTES)
 	.font(REQUIRED_FONT_BYTES)
 	.font(JET_BRAINS_MONO_FONT_BYTES)
-	.font(FIRA_SANS_FONT_BYTES)
-	.default_font(FIRA_SANS_FONT)
+	.font(INTER_FONT_BYTES)
+	.default_font(INTER_FONT)
 	.antialiasing(true)
 	.window(window::Settings {
 		icon: icon::from_file_data(APP_ICON_BYTES, Some(image::ImageFormat::Png)).ok(),

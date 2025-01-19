@@ -1,7 +1,6 @@
 use crate::{
 	styles::{
-		dangerous_button_style, ProjectTrackerTheme, FIRA_SANS_FONT, FIRA_SANS_FONT_BYTES,
-		PADDING_AMOUNT,
+		dangerous_button_style, ProjectTrackerTheme, INTER_FONT, INTER_FONT_BYTES, PADDING_AMOUNT,
 	},
 	theme_mode::is_system_theme_dark,
 };
@@ -92,8 +91,8 @@ pub fn run_already_opened_application() -> Result {
 	.theme(AlreadyOpenedApp::theme)
 	.subscription(AlreadyOpenedApp::subscription)
 	.font(REQUIRED_FONT_BYTES)
-	.font(FIRA_SANS_FONT_BYTES)
-	.default_font(FIRA_SANS_FONT)
+	.font(INTER_FONT_BYTES)
+	.default_font(INTER_FONT)
 	.antialiasing(true)
 	.window(window::Settings {
 		icon: icon::from_file_data(
