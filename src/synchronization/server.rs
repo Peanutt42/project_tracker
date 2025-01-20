@@ -3,8 +3,8 @@ use crate::modals::settings_modal;
 use crate::project_tracker::Message;
 use crate::styles::{text_input_style_default, SPACING_AMOUNT};
 use crate::synchronization::{
-	BaseSynchronization, BaseSynchronizationError, Synchronization, SynchronizationMessage,
-	SynchronizationOutput,
+	BaseSynchronization, BaseSynchronizationError, OnUpdateSynchronization, Synchronization,
+	SynchronizationMessage, SynchronizationOutput,
 };
 use async_tungstenite::tungstenite;
 use iced::alignment::Vertical;
@@ -12,7 +12,7 @@ use iced::futures::channel::mpsc;
 use iced::futures::{self, SinkExt, Stream, StreamExt};
 use iced::widget::{column, container, row, text_input};
 use iced::{stream, Element, Subscription, Task};
-use project_tracker_core::Database;
+use project_tracker_core::{Database, DatabaseMessage};
 use project_tracker_server::{
 	AdminInfos, EncryptedResponse, Request, Response, DEFAULT_HOSTNAME, DEFAULT_PASSWORD,
 	DEFAULT_PORT,
@@ -76,24 +76,29 @@ impl From<ServerSynchronization> for Synchronization {
 	}
 }
 
-impl BaseSynchronization for ServerSynchronization {
-	type Message = ServerSynchronizationMessage;
-
-	fn synchronize(&mut self, database: Option<&Database>) -> Task<Message> {
+impl OnUpdateSynchronization for ServerSynchronization {
+	fn before_database_update(
+		&mut self,
+		database: &Database,
+		database_message: DatabaseMessage,
+	) -> iced::Task<Message> {
 		match &mut self.request_sender {
 			Some(request_sender) => {
-				if let Some(database) = database {
-					self.database_to_sync = Some(database.clone());
-					let _ = request_sender.send(Request::GetModifiedDate);
-				} else {
-					self.database_to_sync = None;
-					let _ = request_sender.send(Request::DownloadDatabase);
-				}
+				self.database_to_sync = Some(database.clone());
+				let database_before_update_checksum = database.checksum();
+				let _ = request_sender.send(Request::UpdateDatabase {
+					database_message,
+					database_before_update_checksum,
+				});
 			}
 			None => warn!("tried to synchronize but no request sender set yet!"),
 		}
 		Task::none()
 	}
+}
+
+impl BaseSynchronization for ServerSynchronization {
+	type Message = ServerSynchronizationMessage;
 
 	fn update(&mut self, message: ServerSynchronizationMessage) -> iced::Task<Message> {
 		match message {
@@ -104,8 +109,20 @@ impl BaseSynchronization for ServerSynchronization {
 				}
 				ServerSynchronizationEvent::Connected => {
 					info!("ws connected!");
-					if let Some(request_sender) = &mut self.request_sender {
-						let _ = request_sender.send(Request::GetModifiedDate);
+					match &mut self.request_sender {
+						Some(request_sender) => {
+							let _ =
+								request_sender.send(match &self.database_to_sync {
+									Some(database) => Request::CheckUpToDate {
+										database_checksum: database.checksum(),
+									},
+									None => {
+										warn!("no database set to sync -> requesting full db from server");
+										Request::GetFullDatabase
+									}
+								});
+						}
+						None => error!("no request sender set!"),
 					}
 					Task::none()
 				}
@@ -231,50 +248,42 @@ impl ServerSynchronization {
 		encrypted_response: EncryptedResponse,
 	) -> iced::Task<Message> {
 		match encrypted_response {
-			EncryptedResponse::Database {
+			EncryptedResponse::MoreUpToDateDatabase {
 				database,
 				last_modified_time,
-			} => {
-				let server_is_more_up_to_date = self
-					.database_to_sync
-					.as_ref()
-					.map(|db| last_modified_time > *db.last_changed_time())
-					.unwrap_or(true);
-
-				if server_is_more_up_to_date {
+			} => Task::done(Message::SyncedDatabase(Ok(
+				SynchronizationOutput::DatabaseLoaded(Database::from_serialized(
+					database,
+					last_modified_time,
+				)),
+			))),
+			EncryptedResponse::DatabaseChanged {
+				database_before_update_checksum,
+				database_message,
+			} => match &mut self.database_to_sync {
+				Some(database) if database.checksum() == database_before_update_checksum => {
+					database.update(database_message);
 					Task::done(Message::SyncedDatabase(Ok(
-						SynchronizationOutput::DatabaseLoaded(Database::from_serialized(
-							database,
-							last_modified_time,
-						)),
+						SynchronizationOutput::DatabaseLoaded(database.clone()),
 					)))
-				} else {
+				}
+				_ => {
+					warn!("db changed on server and we are not up to date -> requesting full db");
+					match &mut self.request_sender {
+						Some(request_sender) => {
+							let _ = request_sender.send(Request::GetFullDatabase);
+						}
+						None => error!("request sender not set!"),
+					}
 					Task::none()
 				}
-			}
+			},
 			EncryptedResponse::DatabaseUpdated => Task::done(Message::SyncedDatabase(Ok(
 				SynchronizationOutput::DatabaseSaved,
 			))),
-			EncryptedResponse::ModifiedDate(server_modified_date) => {
-				if let Some(request_sender) = &mut self.request_sender {
-					let server_is_more_up_to_date = self
-						.database_to_sync
-						.as_ref()
-						.map(|db| server_modified_date > *db.last_changed_time())
-						.unwrap_or(true);
-
-					if server_is_more_up_to_date {
-						let _ = request_sender.send(Request::DownloadDatabase);
-					} else if let Some(database) = self.database_to_sync.clone() {
-						let last_modified_time = *database.last_changed_time();
-						let _ = request_sender.send(Request::UpdateDatabase {
-							database: database.into_serialized(),
-							last_modified_time,
-						});
-					}
-				}
-				Task::none()
-			}
+			EncryptedResponse::DatabaseUpToDate => Task::done(Message::SyncedDatabase(Ok(
+				SynchronizationOutput::DatabaseUpToDate,
+			))),
 			EncryptedResponse::AdminInfos(admin_infos) => {
 				self.latest_admin_infos = Some(admin_infos);
 				Task::none()

@@ -1273,7 +1273,7 @@ pub fn synchronization_settings_button(
 				round_right,
 			)
 		})
-		.width(100.0)
+		.width(110.0)
 		.on_press(on_press)
 }
 

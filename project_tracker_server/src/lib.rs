@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use humantime::format_duration;
-use project_tracker_core::{get_last_modification_date_time, Database, SerializedDatabase};
+use project_tracker_core::{
+	get_last_modification_date_time, Database, DatabaseMessage, SerializedDatabase,
+};
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
@@ -38,11 +40,13 @@ pub type ServerResult<T> = Result<T, ServerError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Request {
-	GetModifiedDate,
-	DownloadDatabase,
+	CheckUpToDate {
+		database_checksum: u64,
+	},
+	GetFullDatabase,
 	UpdateDatabase {
-		database: SerializedDatabase,
-		last_modified_time: DateTime<Utc>,
+		database_message: DatabaseMessage,
+		database_before_update_checksum: u64,
 	},
 	AdminInfos,
 }
@@ -67,10 +71,14 @@ impl Request {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EncryptedResponse {
-	ModifiedDate(DateTime<Utc>),
-	Database {
+	DatabaseUpToDate,
+	MoreUpToDateDatabase {
 		database: SerializedDatabase,
 		last_modified_time: DateTime<Utc>,
+	},
+	DatabaseChanged {
+		database_before_update_checksum: u64,
+		database_message: DatabaseMessage,
 	},
 	DatabaseUpdated,
 	AdminInfos(AdminInfos),
@@ -205,13 +213,22 @@ impl AdminInfos {
 #[derive(Debug, Clone)]
 pub struct ModifiedEvent {
 	pub modified_database: Database,
+	pub database_checksum_before_modification: u64,
+	pub database_message: DatabaseMessage,
 	pub modified_sender_address: SocketAddr,
 }
 
 impl ModifiedEvent {
-	pub fn new(modified_database: Database, sender_addr: SocketAddr) -> Self {
+	pub fn new(
+		modified_database: Database,
+		database_checksum_before_modification: u64,
+		database_message: DatabaseMessage,
+		sender_addr: SocketAddr,
+	) -> Self {
 		Self {
 			modified_database,
+			database_checksum_before_modification,
+			database_message,
 			modified_sender_address: sender_addr,
 		}
 	}

@@ -12,7 +12,7 @@ use std::sync::{Arc, RwLock};
 use std::{collections::HashSet, net::SocketAddr};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast::{Receiver, Sender};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[allow(clippy::too_many_arguments)]
 pub async fn run_server(
@@ -188,12 +188,11 @@ async fn listen_client_thread(
 				// do not resend database updated msg to the sender that made that update
 				if modified_event.modified_sender_address != client_addr {
 					info!("sending database modified event in ws");
-					let last_modified_time = *modified_event.modified_database.last_changed_time();
 					let failed_to_send_msg = write
 						.send(Message::binary(
-							Response(Ok(EncryptedResponse::Database {
-								database: modified_event.modified_database.into_serialized(),
-								last_modified_time,
+							Response(Ok(EncryptedResponse::DatabaseChanged {
+								database_before_update_checksum: modified_event.database_checksum_before_modification,
+								database_message: modified_event.database_message
 							}
 							.encrypt(&password)
 							.unwrap()))
@@ -227,69 +226,71 @@ async fn respond_to_client_request(
 	password: &str,
 ) {
 	match request {
-		Request::GetModifiedDate => {
+		Request::CheckUpToDate { database_checksum } => {
 			info!("sending last modified date");
-			let response = Response(Ok(EncryptedResponse::ModifiedDate(
-				*shared_database.read().unwrap().last_changed_time(),
-			)
-			.encrypt(password)
-			.unwrap()))
-			.serialize()
-			.unwrap();
+			let is_up_to_date = database_checksum == shared_database.read().unwrap().checksum();
+			if is_up_to_date {
+				let encrypted_response_msg = EncryptedResponse::DatabaseUpToDate
+					.encrypt(password)
+					.unwrap();
+				let response = Response(Ok(encrypted_response_msg)).serialize().unwrap();
 
-			if let Err(e) = ws_write.send(Message::binary(response)).await {
-				error!("failed to respond to 'GetModifiedDate' request: {e}");
+				if let Err(e) = ws_write.send(Message::binary(response)).await {
+					error!("failed to respond to 'GetModifiedDate' request: {e}");
+				}
+			} else {
+				warn!("clients checksum doesnt match ours -> sending full db");
+				send_more_up_to_date_database(shared_database, ws_write, password).await;
 			}
 		}
 		Request::UpdateDatabase {
-			database,
-			last_modified_time,
+			database_message,
+			database_before_update_checksum,
 		} => {
-			let database = Database::from_serialized(database, last_modified_time);
-			let database_binary = database.clone().to_binary().unwrap();
-			let database_clone = {
-				let mut shared_data = shared_database.write().unwrap();
-				*shared_data = database;
-				shared_data.clone()
-			};
+			let database_synced =
+				database_before_update_checksum == shared_database.read().unwrap().checksum();
 
-			if let Err(e) = std::fs::write(database_filepath, database_binary) {
-				panic!(
-					"cant write to database file: {}, error: {e}",
-					database_filepath.display()
-				);
+			if database_synced {
+				let database = {
+					let mut shared_data = shared_database.write().unwrap();
+					shared_data.update(database_message.clone());
+					shared_data.clone()
+				};
+
+				let database_binary = database.to_binary().unwrap();
+
+				let _ = modified_sender.send(ModifiedEvent::new(
+					database,
+					database_before_update_checksum,
+					database_message,
+					client_addr,
+				));
+
+				let _ = ws_write
+					.send(Message::binary(
+						Response(Ok(EncryptedResponse::DatabaseUpdated
+							.encrypt(password)
+							.unwrap()))
+						.serialize()
+						.unwrap(),
+					))
+					.await;
+
+				if let Err(e) = tokio::fs::write(database_filepath, database_binary).await {
+					panic!(
+						"cant write to database file: {}, error: {e}",
+						database_filepath.display()
+					);
+				}
+
+				info!("updated database");
+			} else {
+				warn!("clients wanted to update db but checksum doesnt match ours -> sending full db instead");
+				send_more_up_to_date_database(shared_database, ws_write, password).await;
 			}
-
-			let _ = ws_write
-				.send(Message::binary(
-					Response(Ok(EncryptedResponse::DatabaseUpdated
-						.encrypt(password)
-						.unwrap()))
-					.serialize()
-					.unwrap(),
-				))
-				.await;
-
-			let _ = modified_sender.send(ModifiedEvent::new(database_clone, client_addr));
-
-			info!("updated database");
 		}
-		Request::DownloadDatabase => {
-			let shared_database_clone = shared_database.read().unwrap().clone();
-			let last_modified_time = *shared_database_clone.last_changed_time();
-			let response = Response(Ok(EncryptedResponse::Database {
-				database: shared_database_clone.into_serialized(),
-				last_modified_time,
-			}
-			.encrypt(password)
-			.unwrap()));
-			match ws_write
-				.send(Message::binary(response.serialize().unwrap()))
-				.await
-			{
-				Ok(_) => info!("sent database"),
-				Err(e) => error!("failed to send database to client: {e}"),
-			}
+		Request::GetFullDatabase => {
+			send_more_up_to_date_database(shared_database, ws_write, password).await;
 		}
 		Request::AdminInfos => {
 			let response = Response(Ok(EncryptedResponse::AdminInfos(AdminInfos::generate(
@@ -307,6 +308,33 @@ async fn respond_to_client_request(
 				Err(e) => error!("failed to send admin infos: {e}"),
 			}
 		}
+	}
+}
+
+async fn send_more_up_to_date_database(
+	shared_database: &Arc<RwLock<Database>>,
+	ws_write: &mut WsWriteSink,
+	password: &str,
+) {
+	let (database, last_modified_time) = {
+		let shared_database = shared_database.read().unwrap();
+		(
+			shared_database.serialized().clone(),
+			*shared_database.last_changed_time(),
+		)
+	};
+
+	let response = Response(Ok(EncryptedResponse::MoreUpToDateDatabase {
+		database,
+		last_modified_time,
+	}
+	.encrypt(password)
+	.unwrap()))
+	.serialize()
+	.unwrap();
+
+	if let Err(e) = ws_write.send(Message::binary(response)).await {
+		error!("failed to respond to 'GetModifiedDate' request: {e}");
 	}
 }
 

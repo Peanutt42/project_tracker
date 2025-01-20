@@ -3,8 +3,8 @@ use crate::{
 	project_tracker::Message,
 	styles::SPACING_AMOUNT,
 	synchronization::{
-		BaseSynchronization, Synchronization, SynchronizationError, SynchronizationMessage,
-		SynchronizationOutput,
+		BaseSynchronization, DelayedSynchronization, Synchronization, SynchronizationError,
+		SynchronizationMessage, SynchronizationOutput,
 	},
 };
 use async_watcher::{
@@ -139,9 +139,7 @@ impl FilesystemSynchronizationError {
 	}
 }
 
-impl BaseSynchronization for FilesystemSynchronization {
-	type Message = FilesystemSynchronizationMessage;
-
+impl DelayedSynchronization for FilesystemSynchronization {
 	fn synchronize(&mut self, database: Option<&Database>) -> iced::Task<Message> {
 		info!("synchronizing to {}", self.filepath.display());
 		let filepath = self.filepath.clone();
@@ -161,6 +159,10 @@ impl BaseSynchronization for FilesystemSynchronization {
 			},
 		)
 	}
+}
+
+impl BaseSynchronization for FilesystemSynchronization {
+	type Message = FilesystemSynchronizationMessage;
 
 	fn update(&mut self, message: Self::Message) -> iced::Task<Message> {
 		match message {

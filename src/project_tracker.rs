@@ -1,5 +1,8 @@
 use crate::core::export_database_as_markdown_file_dialog;
-use crate::synchronization::{SynchronizationError, SynchronizationMessage, SynchronizationOutput};
+use crate::synchronization::{
+	DelayedSynchronization, OnUpdateSynchronization, SynchronizationError, SynchronizationMessage,
+	SynchronizationOutput,
+};
 use crate::{
 	components::{
 		create_empty_database_button, generate_task_description_markdown, import_database_button,
@@ -325,6 +328,12 @@ impl ProjectTrackerApp {
 
 	pub fn title(&self) -> String {
 		let mut title = "Project Tracker".to_string();
+
+		title += match &self.synchronization {
+			Some(Synchronization::ServerSynchronization(_)) => " [Server]",
+			Some(Synchronization::FilesystemSynchronization(_)) => " [Filesync]",
+			None => " [Local]",
+		};
 
 		if self.exporting_database {
 			title += " - Exporting...";
@@ -937,6 +946,13 @@ impl ProjectTrackerApp {
 						}
 						_ => {}
 					}
+
+					let synchronization_task = match &mut self.synchronization {
+						Some(synchronization) => synchronization
+							.before_database_update(database, database_message.clone()),
+						None => Task::none(),
+					};
+
 					database.update(database_message);
 					if let Some(overview_page) = &mut self.content_page.overview_page {
 						overview_page.update(
@@ -951,12 +967,6 @@ impl ProjectTrackerApp {
 						.elapsed()
 						.map(|last_save_duration| last_save_duration >= Duration::from_secs(1))
 						.unwrap_or(false);
-					let should_sync = match self.last_sync_start_time {
-						Some(last_sync_time) => {
-							Instant::now().duration_since(last_sync_time) >= Duration::from_secs(1)
-						}
-						None => true,
-					};
 
 					let project_page_task = match &mut self.content_page.project_page {
 						Some(project_page)
@@ -971,12 +981,9 @@ impl ProjectTrackerApp {
 						_ => Task::none(),
 					};
 
-					let mut tasks = vec![project_page_task];
+					let mut tasks = vec![project_page_task, synchronization_task];
 					if should_save {
 						tasks.push(self.update(Message::SaveDatabase));
-					}
-					if should_sync {
-						tasks.push(self.update(Message::SyncDatabase));
 					}
 					Task::batch(tasks)
 				}

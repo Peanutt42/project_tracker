@@ -10,7 +10,7 @@ use iced::{
 	Length::Fill,
 	Subscription,
 };
-use project_tracker_core::Database;
+use project_tracker_core::{Database, DatabaseMessage};
 use project_tracker_server::AdminInfos;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -27,11 +27,23 @@ mod server;
 use crate::synchronization::server::{ServerSynchronizationError, ServerSynchronizationMessage};
 pub use server::{ServerConfig, ServerSynchronization};
 
+/// gets called immediatly before every change
+pub trait OnUpdateSynchronization {
+	/// Will update app with 'Message::SyncedDatabase' when synchronized
+	fn before_database_update(
+		&mut self,
+		database: &Database,
+		database_message: DatabaseMessage,
+	) -> iced::Task<Message>;
+}
+
+/// synchronize is delayed and rate limited to 1 times per second
+pub trait DelayedSynchronization {
+	fn synchronize(&mut self, database: Option<&Database>) -> iced::Task<Message>;
+}
+
 pub trait BaseSynchronization: Clone + Serialize + DeserializeOwned {
 	type Message;
-
-	/// Will update app with 'Message::SyncedDatabase' when synchronized
-	fn synchronize(&mut self, database: Option<&Database>) -> iced::Task<Message>;
 
 	fn update(&mut self, _message: Self::Message) -> iced::Task<Message> {
 		iced::Task::none()
@@ -60,17 +72,6 @@ pub enum Synchronization {
 
 impl BaseSynchronization for Synchronization {
 	type Message = SynchronizationMessage;
-
-	fn synchronize(&mut self, database: Option<&Database>) -> iced::Task<Message> {
-		match self {
-			Self::FilesystemSynchronization(filesystem_synchronization) => {
-				filesystem_synchronization.synchronize(database)
-			}
-			Self::ServerSynchronization(server_synchronization) => {
-				server_synchronization.synchronize(database)
-			}
-		}
-	}
 
 	fn update(&mut self, message: Self::Message) -> iced::Task<Message> {
 		match message {
@@ -112,6 +113,32 @@ impl BaseSynchronization for Synchronization {
 	}
 }
 
+impl OnUpdateSynchronization for Synchronization {
+	fn before_database_update(
+		&mut self,
+		database: &Database,
+		database_message: DatabaseMessage,
+	) -> iced::Task<Message> {
+		match self {
+			Self::FilesystemSynchronization(_filesystem_synchronization) => iced::Task::none(),
+			Self::ServerSynchronization(server_synchronization) => {
+				server_synchronization.before_database_update(database, database_message)
+			}
+		}
+	}
+}
+
+impl DelayedSynchronization for Synchronization {
+	fn synchronize(&mut self, database: Option<&Database>) -> iced::Task<Message> {
+		match self {
+			Self::FilesystemSynchronization(filesystem_synchronization) => {
+				filesystem_synchronization.synchronize(database)
+			}
+			Self::ServerSynchronization(_server_synchronization) => iced::Task::none(),
+		}
+	}
+}
+
 impl Synchronization {
 	pub fn is_filesystem(&self) -> bool {
 		matches!(self, Synchronization::FilesystemSynchronization(_))
@@ -133,6 +160,7 @@ impl Synchronization {
 pub enum SynchronizationOutput {
 	DatabaseSaved,
 	DatabaseLoaded(Database),
+	DatabaseUpToDate,
 }
 
 #[derive(Debug, Error)]
