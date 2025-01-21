@@ -1,7 +1,7 @@
 use crate::core::export_database_as_markdown_file_dialog;
 use crate::synchronization::{
-	DelayedSynchronization, OnUpdateSynchronization, SynchronizationError, SynchronizationMessage,
-	SynchronizationOutput,
+	DatabaseUpdateEvent, DelayedSynchronization, OnUpdateSynchronization, SynchronizationError,
+	SynchronizationMessage, SynchronizationOutput,
 };
 use crate::{
 	components::{
@@ -501,7 +501,7 @@ impl ProjectTrackerApp {
 			}
 			Message::SaveChangedFiles => {
 				let mut tasks = Vec::new();
-				if let DatabaseState::Loaded(database) = &mut self.database {
+				if let DatabaseState::Loaded(database) = &self.database {
 					if database.has_unsaved_changes() {
 						tasks.push(self.update(Message::SaveDatabase));
 					}
@@ -707,9 +707,22 @@ impl ProjectTrackerApp {
 					Message::DatabaseImported(result.map_err(Arc::new))
 				})
 			}
-			Message::DatabaseImported(result) => self
-				.update(Message::LoadedDatabase(result))
-				.chain(self.update(Message::SaveDatabase)),
+			Message::DatabaseImported(result) => {
+				let synchronization_task = match (result.as_ref(), self.synchronization.as_mut()) {
+					(Ok(database), Some(synchronization)) => synchronization
+						.before_database_update(
+							database,
+							DatabaseUpdateEvent::ImportDatabase(database.clone()),
+						),
+					_ => Task::none(),
+				};
+
+				Task::batch([
+					synchronization_task,
+					self.update(Message::LoadedDatabase(result))
+						.chain(self.update(Message::SaveDatabase)),
+				])
+			}
 			Message::LoadDatabase => match self.flags.get_database_filepath() {
 				Some(database_filepath) => {
 					Task::perform(Database::load(database_filepath), |result| {
@@ -948,8 +961,10 @@ impl ProjectTrackerApp {
 					}
 
 					let synchronization_task = match &mut self.synchronization {
-						Some(synchronization) => synchronization
-							.before_database_update(database, database_message.clone()),
+						Some(synchronization) => synchronization.before_database_update(
+							database,
+							DatabaseUpdateEvent::DatabaseMessage(database_message.clone()),
+						),
 						None => Task::none(),
 					};
 

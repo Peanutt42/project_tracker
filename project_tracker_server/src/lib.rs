@@ -48,6 +48,9 @@ pub enum Request {
 		database_message: DatabaseMessage,
 		database_before_update_checksum: u64,
 	},
+	ImportDatabase {
+		database: SerializedDatabase,
+	},
 	AdminInfos,
 }
 
@@ -211,24 +214,30 @@ impl AdminInfos {
 }
 
 #[derive(Debug, Clone)]
+pub enum DatabaseUpdateEvent {
+	DatabaseMessage {
+		database_message: DatabaseMessage,
+		before_modification_checksum: u64,
+	},
+	ImportDatabase,
+}
+
+#[derive(Debug, Clone)]
 pub struct ModifiedEvent {
 	pub modified_database: Database,
-	pub database_checksum_before_modification: u64,
-	pub database_message: DatabaseMessage,
+	pub database_update_event: DatabaseUpdateEvent,
 	pub modified_sender_address: SocketAddr,
 }
 
 impl ModifiedEvent {
 	pub fn new(
 		modified_database: Database,
-		database_checksum_before_modification: u64,
-		database_message: DatabaseMessage,
+		database_update_event: DatabaseUpdateEvent,
 		sender_addr: SocketAddr,
 	) -> Self {
 		Self {
 			modified_database,
-			database_checksum_before_modification,
-			database_message,
+			database_update_event,
 			modified_sender_address: sender_addr,
 		}
 	}

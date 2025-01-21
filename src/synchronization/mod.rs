@@ -27,13 +27,18 @@ mod server;
 use crate::synchronization::server::{ServerSynchronizationError, ServerSynchronizationMessage};
 pub use server::{ServerConfig, ServerSynchronization};
 
+pub enum DatabaseUpdateEvent {
+	DatabaseMessage(DatabaseMessage),
+	ImportDatabase(Database),
+}
+
 /// gets called immediatly before every change
 pub trait OnUpdateSynchronization {
 	/// Will update app with 'Message::SyncedDatabase' when synchronized
 	fn before_database_update(
 		&mut self,
 		database: &Database,
-		database_message: DatabaseMessage,
+		database_update_event: DatabaseUpdateEvent,
 	) -> iced::Task<Message>;
 }
 
@@ -117,12 +122,12 @@ impl OnUpdateSynchronization for Synchronization {
 	fn before_database_update(
 		&mut self,
 		database: &Database,
-		database_message: DatabaseMessage,
+		database_update_event: DatabaseUpdateEvent,
 	) -> iced::Task<Message> {
 		match self {
 			Self::FilesystemSynchronization(_filesystem_synchronization) => iced::Task::none(),
 			Self::ServerSynchronization(server_synchronization) => {
-				server_synchronization.before_database_update(database, database_message)
+				server_synchronization.before_database_update(database, database_update_event)
 			}
 		}
 	}

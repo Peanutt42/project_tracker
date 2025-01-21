@@ -43,9 +43,10 @@ impl PartialEq for TimeSpend {
 	}
 }
 impl Eq for TimeSpend {}
+/// we only hash with seconds as precision, since we only care about that level of precision when checking if a db has the same checksum
 impl Hash for TimeSpend {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-		self.get_duration().hash(state);
+		self.get_duration().as_secs().hash(state);
 	}
 }
 

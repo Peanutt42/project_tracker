@@ -3,8 +3,8 @@ use crate::modals::settings_modal;
 use crate::project_tracker::Message;
 use crate::styles::{text_input_style_default, SPACING_AMOUNT};
 use crate::synchronization::{
-	BaseSynchronization, BaseSynchronizationError, OnUpdateSynchronization, Synchronization,
-	SynchronizationMessage, SynchronizationOutput,
+	BaseSynchronization, BaseSynchronizationError, DatabaseUpdateEvent, OnUpdateSynchronization,
+	Synchronization, SynchronizationMessage, SynchronizationOutput,
 };
 use async_tungstenite::tungstenite;
 use iced::alignment::Vertical;
@@ -12,7 +12,7 @@ use iced::futures::channel::mpsc;
 use iced::futures::{self, SinkExt, Stream, StreamExt};
 use iced::widget::{column, container, row, text_input};
 use iced::{stream, Element, Subscription, Task};
-use project_tracker_core::{Database, DatabaseMessage};
+use project_tracker_core::Database;
 use project_tracker_server::{
 	AdminInfos, EncryptedResponse, Request, Response, DEFAULT_HOSTNAME, DEFAULT_PASSWORD,
 	DEFAULT_PORT,
@@ -80,16 +80,25 @@ impl OnUpdateSynchronization for ServerSynchronization {
 	fn before_database_update(
 		&mut self,
 		database: &Database,
-		database_message: DatabaseMessage,
+		database_update_event: DatabaseUpdateEvent,
 	) -> iced::Task<Message> {
 		match &mut self.request_sender {
 			Some(request_sender) => {
 				self.database_to_sync = Some(database.clone());
-				let database_before_update_checksum = database.checksum();
-				let _ = request_sender.send(Request::UpdateDatabase {
-					database_message,
-					database_before_update_checksum,
-				});
+				match database_update_event {
+					DatabaseUpdateEvent::DatabaseMessage(database_message) => {
+						let database_before_update_checksum = database.checksum();
+						let _ = request_sender.send(Request::UpdateDatabase {
+							database_message,
+							database_before_update_checksum,
+						});
+					}
+					DatabaseUpdateEvent::ImportDatabase(database) => {
+						let _ = request_sender.send(Request::ImportDatabase {
+							database: database.into_serialized(),
+						});
+					}
+				}
 			}
 			None => warn!("tried to synchronize but no request sender set yet!"),
 		}

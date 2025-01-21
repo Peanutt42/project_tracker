@@ -1,10 +1,12 @@
 use crate::{
-	AdminInfos, ConnectedClient, EncryptedResponse, ModifiedEvent, Request, Response, ServerError,
+	AdminInfos, ConnectedClient, DatabaseUpdateEvent, EncryptedResponse, ModifiedEvent, Request,
+	Response, ServerError,
 };
 use async_tungstenite::{
 	tokio::accept_async,
 	tungstenite::{self, Message},
 };
+use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
 use std::path::PathBuf;
@@ -188,16 +190,27 @@ async fn listen_client_thread(
 				// do not resend database updated msg to the sender that made that update
 				if modified_event.modified_sender_address != client_addr {
 					info!("sending database modified event in ws");
+					let database_modified_response = match modified_event.database_update_event {
+						DatabaseUpdateEvent::DatabaseMessage { database_message, before_modification_checksum } => {
+							EncryptedResponse::DatabaseChanged {
+								database_before_update_checksum: before_modification_checksum,
+								database_message,
+							}
+						},
+						DatabaseUpdateEvent::ImportDatabase => {
+							let last_modified_time = *modified_event.modified_database.last_changed_time();
+							EncryptedResponse::MoreUpToDateDatabase {
+								database: modified_event.modified_database.into_serialized(),
+								last_modified_time,
+							}
+						}
+					};
+
 					let failed_to_send_msg = write
 						.send(Message::binary(
-							Response(Ok(EncryptedResponse::DatabaseChanged {
-								database_before_update_checksum: modified_event.database_checksum_before_modification,
-								database_message: modified_event.database_message
-							}
-							.encrypt(&password)
-							.unwrap()))
-							.serialize()
-							.unwrap(),
+							Response(Ok(database_modified_response.encrypt(&password).unwrap()))
+								.serialize()
+								.unwrap(),
 						))
 						.await
 						.is_err();
@@ -261,8 +274,10 @@ async fn respond_to_client_request(
 
 				let _ = modified_sender.send(ModifiedEvent::new(
 					database,
-					database_before_update_checksum,
-					database_message,
+					DatabaseUpdateEvent::DatabaseMessage {
+						database_message,
+						before_modification_checksum: database_before_update_checksum,
+					},
 					client_addr,
 				));
 
@@ -288,6 +303,40 @@ async fn respond_to_client_request(
 				warn!("clients wanted to update db but checksum doesnt match ours -> sending full db instead");
 				send_more_up_to_date_database(shared_database, ws_write, password).await;
 			}
+		}
+		Request::ImportDatabase { database } => {
+			let database = {
+				let mut shared_data = shared_database.write().unwrap();
+				*shared_data = Database::from_serialized(database, Utc::now());
+				shared_data.clone()
+			};
+
+			let database_binary = database.to_binary().unwrap();
+
+			let _ = modified_sender.send(ModifiedEvent::new(
+				database,
+				DatabaseUpdateEvent::ImportDatabase,
+				client_addr,
+			));
+
+			let _ = ws_write
+				.send(Message::binary(
+					Response(Ok(EncryptedResponse::DatabaseUpdated
+						.encrypt(password)
+						.unwrap()))
+					.serialize()
+					.unwrap(),
+				))
+				.await;
+
+			if let Err(e) = tokio::fs::write(database_filepath, database_binary).await {
+				panic!(
+					"cant write to database file: {}, error: {e}",
+					database_filepath.display()
+				);
+			}
+
+			info!("imported database");
 		}
 		Request::GetFullDatabase => {
 			send_more_up_to_date_database(shared_database, ws_write, password).await;
