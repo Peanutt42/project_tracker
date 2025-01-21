@@ -1,6 +1,6 @@
 use crate::{
-	AdminInfos, ConnectedClient, DatabaseUpdateEvent, EncryptedResponse, ModifiedEvent, Request,
-	Response, ServerError,
+	AdminInfos, ConnectedClient, CpuUsageAverage, DatabaseUpdateEvent, EncryptedResponse,
+	ModifiedEvent, Request, Response, ServerError,
 };
 use async_tungstenite::{
 	tokio::accept_async,
@@ -25,7 +25,7 @@ pub async fn run_server(
 	modified_sender: Sender<ModifiedEvent>,
 	shared_database: Arc<RwLock<Database>>,
 	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
-	cpu_usage_avg: Arc<RwLock<f32>>,
+	cpu_usage_avg: Arc<CpuUsageAverage>,
 ) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port))
 		.await
@@ -76,7 +76,7 @@ pub async fn handle_client(
 	modified_receiver: Receiver<ModifiedEvent>,
 	shared_database: Arc<RwLock<Database>>,
 	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
-	cpu_usage_avg: Arc<RwLock<f32>>,
+	cpu_usage_avg: Arc<CpuUsageAverage>,
 ) {
 	let client_addr = match stream.peer_addr() {
 		Ok(client_addr) => client_addr,
@@ -100,7 +100,7 @@ pub async fn handle_client(
 		modified_receiver,
 		shared_database.clone(),
 		connected_clients.clone(),
-		cpu_usage_avg.clone(),
+		cpu_usage_avg,
 	)
 	.await;
 
@@ -118,7 +118,7 @@ async fn listen_client_thread(
 	mut modified_receiver: Receiver<ModifiedEvent>,
 	shared_database: Arc<RwLock<Database>>,
 	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
-	cpu_usage_avg: Arc<RwLock<f32>>,
+	cpu_usage_avg: Arc<CpuUsageAverage>,
 ) {
 	let ws_stream = match accept_async(stream).await {
 		Ok(ws) => {
@@ -231,7 +231,7 @@ async fn respond_to_client_request(
 	client_addr: SocketAddr,
 	shared_database: &Arc<RwLock<Database>>,
 	connected_clients: &Arc<RwLock<HashSet<ConnectedClient>>>,
-	cpu_usage_avg: &Arc<RwLock<f32>>,
+	cpu_usage_avg: &Arc<CpuUsageAverage>,
 	modified_sender: &Sender<ModifiedEvent>,
 	ws_write: &mut WsWriteSink,
 	database_filepath: &PathBuf,
@@ -344,7 +344,7 @@ async fn respond_to_client_request(
 		Request::AdminInfos => {
 			let response = Response(Ok(EncryptedResponse::AdminInfos(AdminInfos::generate(
 				connected_clients.clone(),
-				cpu_usage_avg.clone(),
+				cpu_usage_avg,
 				log_filepath,
 			))
 			.encrypt(password)

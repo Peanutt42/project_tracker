@@ -1,5 +1,7 @@
 use project_tracker::Database;
-use project_tracker_server::{messure_cpu_usage_avg_thread, DEFAULT_PASSWORD, DEFAULT_PORT};
+use project_tracker_server::{
+	messure_cpu_usage_avg_thread, CpuUsageAverage, DEFAULT_PASSWORD, DEFAULT_PORT,
+};
 use std::{
 	collections::HashSet,
 	fs::OpenOptions,
@@ -43,7 +45,7 @@ async fn main() {
 	let shared_database = Arc::new(RwLock::new(Database::default()));
 	let connected_clients = Arc::new(RwLock::new(HashSet::new()));
 	let (modified_sender, _modified_receiver) = tokio::sync::broadcast::channel(10);
-	let cpu_usage_avg = Arc::new(RwLock::new(0.0));
+	let cpu_usage_avg = Arc::new(CpuUsageAverage::new());
 	let cpu_usage_avg_clone = cpu_usage_avg.clone();
 	tokio::spawn(messure_cpu_usage_avg_thread(cpu_usage_avg_clone));
 

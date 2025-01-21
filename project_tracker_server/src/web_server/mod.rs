@@ -1,6 +1,6 @@
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
-use project_tracker_server::{AdminInfos, ConnectedClient, ModifiedEvent};
+use project_tracker_server::{AdminInfos, ConnectedClient, CpuUsageAverage, ModifiedEvent};
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
@@ -57,7 +57,7 @@ pub async fn run_web_server(
 	modified_receiver: Receiver<ModifiedEvent>,
 	shared_database: Arc<RwLock<Database>>,
 	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
-	cpu_usage_avg: Arc<RwLock<f32>>,
+	cpu_usage_avg: Arc<CpuUsageAverage>,
 	log_filepath: PathBuf,
 	custom_cert_and_key_pem: Option<(Vec<u8>, Vec<u8>)>,
 ) {
@@ -90,7 +90,7 @@ pub async fn run_web_server(
 		.map(
 			move |body: serde_json::Value,
 			      connected_clients_clone: Arc<RwLock<HashSet<ConnectedClient>>>,
-			      cpu_usage_avg: Arc<RwLock<f32>>,
+			      cpu_usage_avg: Arc<CpuUsageAverage>,
 			      log_filepath: PathBuf| {
 				get_admin_infos(
 					body,
@@ -301,14 +301,14 @@ fn get_admin_infos(
 	body: serde_json::Value,
 	password: String,
 	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
-	cpu_usage_avg: Arc<RwLock<f32>>,
+	cpu_usage_avg: Arc<CpuUsageAverage>,
 	log_filepath: &PathBuf,
 ) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
 		info!("sending admin infos");
 		reply::json(&AdminInfos::generate(
 			connected_clients,
-			cpu_usage_avg,
+			cpu_usage_avg.as_ref(),
 			log_filepath,
 		))
 		.into_response()

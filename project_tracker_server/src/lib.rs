@@ -8,7 +8,10 @@ use std::{
 	collections::HashSet,
 	net::SocketAddr,
 	path::PathBuf,
-	sync::{Arc, RwLock},
+	sync::{
+		atomic::{AtomicU32, Ordering},
+		Arc, RwLock,
+	},
 };
 use systemstat::{saturating_sub_bytes, Platform, System};
 use thiserror::Error;
@@ -163,7 +166,7 @@ pub struct AdminInfos {
 impl AdminInfos {
 	pub fn generate(
 		connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
-		cpu_usage_avg: Arc<RwLock<f32>>,
+		cpu_usage_avg: &CpuUsageAverage,
 		log_filepath: &PathBuf,
 	) -> Self {
 		let connected_clients = connected_clients.read().unwrap().clone();
@@ -204,7 +207,7 @@ impl AdminInfos {
 		AdminInfos {
 			connected_native_gui_clients,
 			connected_web_clients,
-			cpu_usage: *cpu_usage_avg.read().unwrap(),
+			cpu_usage: cpu_usage_avg.load(),
 			cpu_temp,
 			ram_info,
 			uptime,
@@ -264,13 +267,33 @@ pub fn load_database_from_file(filepath: PathBuf) -> Database {
 		.expect("Failed to parse database file content at startup!")
 }
 
-pub async fn messure_cpu_usage_avg_thread(cpu_usage_avg: Arc<RwLock<f32>>) {
+/// number is directly the usage percent number
+///
+/// `AtomicU32` is used to atomically store a f32 (`f32::as_bits`, `f32::to_bits`)
+#[derive(Debug, Default)]
+pub struct CpuUsageAverage(pub AtomicU32);
+
+impl CpuUsageAverage {
+	pub fn new() -> CpuUsageAverage {
+		Self(AtomicU32::new(0))
+	}
+
+	pub fn load(&self) -> f32 {
+		f32::from_bits(self.0.load(Ordering::Relaxed))
+	}
+
+	fn store(&self, percentage: f32) {
+		self.0.store(percentage.to_bits(), Ordering::Relaxed);
+	}
+}
+
+pub async fn messure_cpu_usage_avg_thread(cpu_usage_avg: Arc<CpuUsageAverage>) {
 	let sys = System::new();
 	loop {
 		if let Ok(cpu_load) = sys.cpu_load_aggregate() {
 			tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 			if let Ok(cpu_load) = cpu_load.done() {
-				*cpu_usage_avg.write().unwrap() = 1.0 - cpu_load.idle;
+				cpu_usage_avg.store(1.0 - cpu_load.idle);
 			}
 		}
 	}

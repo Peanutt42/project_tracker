@@ -1,7 +1,7 @@
 use project_tracker_core::Database;
 use project_tracker_server::{
-	load_database_from_file, messure_cpu_usage_avg_thread, ConnectedClient, DEFAULT_PASSWORD,
-	DEFAULT_PORT,
+	load_database_from_file, messure_cpu_usage_avg_thread, ConnectedClient, CpuUsageAverage,
+	DEFAULT_PASSWORD, DEFAULT_PORT,
 };
 use std::collections::HashSet;
 use std::fs::{read_to_string, OpenOptions};
@@ -75,9 +75,9 @@ async fn main() {
 	)
 	.unwrap();
 
-	let cpu_usage_avg = Arc::new(RwLock::new(0.0));
-
-	tokio::spawn(messure_cpu_usage_avg_thread(cpu_usage_avg.clone()));
+	let cpu_usage_avg = Arc::new(CpuUsageAverage::new());
+	let cpu_usage_avg_clone = cpu_usage_avg.clone();
+	tokio::spawn(messure_cpu_usage_avg_thread(cpu_usage_avg_clone));
 
 	let connected_clients = Arc::new(RwLock::new(HashSet::<ConnectedClient>::new()));
 
@@ -87,7 +87,6 @@ async fn main() {
 	let log_filepath_clone = log_filepath.clone();
 	let shared_database_clone = shared_database.clone();
 	let connected_clients_clone = connected_clients.clone();
-	let cpu_usage_avg_clone = cpu_usage_avg.clone();
 	let opt_custom_cert_pem_filepath = server_data_directory.join("cert.pem");
 	let opt_custom_key_pem_filepath = server_data_directory.join("key.pem");
 	let custom_cert_pem = tokio::fs::read(opt_custom_cert_pem_filepath).await.ok();
@@ -104,6 +103,7 @@ async fn main() {
 		(None, None) => None,
 		(Some(cert_pem), Some(key_pem)) => Some((cert_pem, key_pem)),
 	};
+	let cpu_usage_avg_clone = cpu_usage_avg.clone();
 
 	std::thread::Builder::new()
 		.name("Web Server".to_string())
