@@ -223,18 +223,25 @@ impl ServerConnectionState {
 		password: &str,
 		websocket: &mut WebSocketStream,
 	) -> (Option<ServerSubscriptionMessage>, Option<ServerConnection>) {
-		let request_bytes = SerializedRequest::encrypt(&request, password);
-		if websocket
-			.send(tungstenite::Message::Binary(request_bytes))
-			.await
-			.is_ok()
-		{
-			(None, None)
-		} else {
-			(
-				Some(Ok(ServerSynchronizationEvent::Disconnected)),
-				Some(ServerConnection::Disconnected),
-			)
+		match SerializedRequest::encrypt(&request, password) {
+			Ok(request_bytes) => {
+				if websocket
+					.send(tungstenite::Message::Binary(request_bytes))
+					.await
+					.is_ok()
+				{
+					(None, None)
+				} else {
+					(
+						Some(Ok(ServerSynchronizationEvent::Disconnected)),
+						Some(ServerConnection::Disconnected),
+					)
+				}
+			}
+			Err(e) => {
+				error!("failed to serialize request: {e}, cant send request to server");
+				(None, None)
+			}
 		}
 	}
 }

@@ -19,16 +19,17 @@ pub struct Encrypted<T: Serialize + DeserializeOwned> {
 }
 
 impl<T: Serialize + DeserializeOwned> Encrypted<T> {
-	pub fn encrypt(message: &T, password: &str) -> Self {
-		let plaintext = bincode::serialize(message).expect("failed to serialize message");
+	pub fn encrypt(message: &T, password: &str) -> ServerResult<Self> {
+		let plaintext =
+			bincode::serialize(message).map_err(|_| ServerError::FailedToSerializeToBinary)?;
 		let (encrypted_bytes, salt, nonce) =
-			encrypt(&plaintext, password).expect("failed to encrypt message");
-		Self {
+			encrypt(&plaintext, password).map_err(|_| ServerError::FailedToEncryptBinary)?;
+		Ok(Self {
 			encrypted_bytes,
 			salt,
 			nonce,
 			_phantom_data: PhantomData,
-		}
+		})
 	}
 
 	pub fn decrypt(&self, password: &str) -> ServerResult<T> {
@@ -50,9 +51,14 @@ pub enum EncryptionError {
 	AesGcm(#[from] aes_gcm::Error),
 	#[error("failed to hash password with argon2")]
 	Argon2(#[from] argon2::Error),
+	#[error("faield to encode salt")]
+	FailedToEncodeSalt(#[from] argon2::password_hash::Error),
 }
 
-fn derive_key(password: &str, salt: &[u8; SALT_LENGTH]) -> argon2::Result<[u8; KEY_LENGTH]> {
+fn derive_key(
+	password: &str,
+	salt: &[u8; SALT_LENGTH],
+) -> Result<[u8; KEY_LENGTH], EncryptionError> {
 	let mut output_key = [0u8; KEY_LENGTH];
 
 	// if this default value changes in the future --> rethink the 2 specified in the 'Params'
@@ -64,7 +70,7 @@ fn derive_key(password: &str, salt: &[u8; SALT_LENGTH]) -> argon2::Result<[u8; K
 		Params::new(Params::DEFAULT_M_COST, Params::DEFAULT_T_COST, 2, None)?,
 	);
 
-	let salt = SaltString::encode_b64(salt).unwrap();
+	let salt = SaltString::encode_b64(salt)?;
 
 	argon2.hash_password_into(
 		password.as_bytes(),
@@ -107,6 +113,7 @@ fn decrypt(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
 	use crate::DEFAULT_PASSWORD;
 
@@ -117,8 +124,9 @@ mod tests {
 	#[test]
 	fn test_encrypted_struct() {
 		let content = 42_i32;
-		let encrypted_as_binary =
-			bincode::serialize(&Encrypted::encrypt(&content, TEST_PASSWORD)).unwrap();
+		let encrypted_content: Encrypted<i32> =
+			Encrypted::encrypt(&content, TEST_PASSWORD).unwrap();
+		let encrypted_as_binary = bincode::serialize(&encrypted_content).unwrap();
 		assert_eq!(
 			content,
 			bincode::deserialize::<Encrypted<i32>>(&encrypted_as_binary)

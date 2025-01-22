@@ -47,14 +47,6 @@ async fn main() {
 		DEFAULT_PASSWORD.to_string()
 	};
 
-	let database = if database_filepath.exists() {
-		load_database_from_file(database_filepath.clone())
-	} else {
-		eprintln!("no previous database found -> creating a empty database!");
-		Database::default()
-	};
-	let shared_database = Arc::new(RwLock::new(database));
-
 	let stdout_layer = tracing_subscriber::fmt::layer()
 		.with_writer(std::io::stdout)
 		.with_filter(LevelFilter::INFO);
@@ -74,6 +66,17 @@ async fn main() {
 			.with(file_layer),
 	)
 	.unwrap();
+
+	let database = if database_filepath.exists() {
+		load_database_from_file(database_filepath.clone()).unwrap_or_else(|| {
+			eprintln!("failed to load database from file!");
+			exit(1);
+		})
+	} else {
+		eprintln!("no previous database found -> creating a empty database!");
+		Database::default()
+	};
+	let shared_database = Arc::new(RwLock::new(database));
 
 	let cpu_usage_avg = Arc::new(CpuUsageAverage::new());
 	let cpu_usage_avg_clone = cpu_usage_avg.clone();

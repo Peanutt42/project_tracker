@@ -2,6 +2,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![deny(unused_must_use)]
+#![deny(unsafe_code)]
 
 pub use project_tracker_core::*;
 

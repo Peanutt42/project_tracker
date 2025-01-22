@@ -13,6 +13,10 @@ pub enum ServerError {
 	ResponseParseError,
 	#[error("failed to parse encrypted content")]
 	EncryptedContentParseError,
+	#[error("failed to serialize to binary")]
+	FailedToSerializeToBinary,
+	#[error("failed to encrypt binary")]
+	FailedToEncryptBinary,
 }
 
 pub type ServerResult<T> = Result<T, ServerError>;

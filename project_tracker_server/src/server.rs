@@ -6,12 +6,12 @@ use async_tungstenite::{
 	tokio::accept_async,
 	tungstenite::{self, Message},
 };
-use chrono::Utc;
+use chrono::{Datelike, Local, Timelike, Utc};
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
-use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::{collections::HashSet, net::SocketAddr};
+use std::{path::PathBuf, process::exit};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast::{Receiver, Sender};
 use tracing::{error, info, warn};
@@ -34,7 +34,10 @@ pub async fn run_server(
 ) {
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port))
 		.await
-		.expect("failed to bind to port");
+		.unwrap_or_else(|e| {
+			error!("failed to bind to port {port}, error: {e}");
+			exit(1);
+		});
 
 	info!("native ws listening on port {}", port);
 
@@ -93,7 +96,12 @@ pub async fn handle_client(
 
 	let connected_client = ConnectedClient::NativeGUI(client_addr);
 
-	connected_clients.write().unwrap().insert(connected_client);
+	match connected_clients.write() {
+		Ok(mut connected_clients) => {
+			connected_clients.insert(connected_client);
+		},
+		Err(e) => error!("failed to write connected clients RwLock: {e}, connected client will not show up in connected clients set!"),
+	}
 
 	listen_client_thread(
 		stream,
@@ -109,7 +117,12 @@ pub async fn handle_client(
 	)
 	.await;
 
-	connected_clients.write().unwrap().remove(&connected_client);
+	match connected_clients.write() {
+		Ok(mut connected_clients) => {
+			connected_clients.remove(&connected_client);
+		},
+		Err(e) => error!("failed to write connected clients RwLock: {e}, connected client will not be removed from connected clients set!"),
+	}
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -234,7 +247,13 @@ async fn respond_to_client_request(
 	match request {
 		Request::CheckUpToDate { database_checksum } => {
 			info!("sending last modified date");
-			let is_up_to_date = database_checksum == shared_database.read().unwrap().checksum();
+			let is_up_to_date = match shared_database.read() {
+				Ok(shared_database) => database_checksum == shared_database.checksum(),
+				Err(e) => {
+					error!("failed to read shared database RwLock: {e}");
+					return;
+				}
+			};
 			if is_up_to_date {
 				send_response(&Response::DatabaseUpToDate, ws_write, password).await;
 			} else {
@@ -246,19 +265,31 @@ async fn respond_to_client_request(
 			database_message,
 			database_before_update_checksum,
 		} => {
-			let database_synced =
-				database_before_update_checksum == shared_database.read().unwrap().checksum();
+			let database_synced = match shared_database.read() {
+				Ok(shared_database) => {
+					database_before_update_checksum == shared_database.checksum()
+				}
+				Err(e) => {
+					error!("failed to read shared database RwLock: {e}");
+					return;
+				}
+			};
 
 			if database_synced {
 				info!("updating database");
 
-				let database = {
-					let mut shared_data = shared_database.write().unwrap();
-					shared_data.update(database_message.clone());
-					shared_data.clone()
+				let database = match shared_database.write() {
+					Ok(mut shared_database) => {
+						shared_database.update(database_message.clone());
+						shared_database.clone()
+					}
+					Err(e) => {
+						error!("failed to write shared database RwLock: {e}");
+						return;
+					}
 				};
 
-				let database_binary = database.to_binary().unwrap();
+				let database_binary = database.to_binary();
 
 				broadcast_modified_event(
 					DatabaseUpdateEvent::DatabaseMessage {
@@ -272,7 +303,14 @@ async fn respond_to_client_request(
 
 				send_response(&Response::DatabaseUpdated, ws_write, password).await;
 
-				save_database_to_file(database_filepath, &database_binary).await;
+				match database_binary {
+					Some(database_binary) => {
+						save_database_to_file(database_filepath, &database_binary).await
+					}
+					None => error!(
+						"failed to serialize database to binary -> cant save database to file"
+					),
+				}
 			} else {
 				warn!("clients wanted to update db but checksum doesnt match ours -> sending full db instead");
 				send_more_up_to_date_database(shared_database, ws_write, password).await;
@@ -281,13 +319,18 @@ async fn respond_to_client_request(
 		Request::ImportDatabase { database } => {
 			info!("importing database");
 
-			let database = {
-				let mut shared_data = shared_database.write().unwrap();
-				*shared_data = Database::from_serialized(database, Utc::now());
-				shared_data.clone()
+			let database = match shared_database.write() {
+				Ok(mut shared_data) => {
+					*shared_data = Database::from_serialized(database, Utc::now());
+					shared_data.clone()
+				}
+				Err(e) => {
+					error!("failed to write to shared database RwLock: {e}");
+					return;
+				}
 			};
 
-			let database_binary = database.to_binary().unwrap();
+			let database_binary = database.to_binary();
 
 			broadcast_modified_event(
 				DatabaseUpdateEvent::ImportDatabase,
@@ -298,7 +341,14 @@ async fn respond_to_client_request(
 
 			send_response(&Response::DatabaseUpdated, ws_write, password).await;
 
-			save_database_to_file(database_filepath, &database_binary).await;
+			match database_binary {
+				Some(database_binary) => {
+					save_database_to_file(database_filepath, &database_binary).await;
+				}
+				None => {
+					error!("failed to serialize database to binary -> cant save database to file");
+				}
+			}
 		}
 		Request::GetFullDatabase => {
 			send_more_up_to_date_database(shared_database, ws_write, password).await;
@@ -325,12 +375,15 @@ async fn send_more_up_to_date_database(
 	ws_write: &mut WsWriteSink,
 	password: &str,
 ) {
-	let (database, last_modified_time) = {
-		let shared_database = shared_database.read().unwrap();
-		(
+	let (database, last_modified_time) = match shared_database.read() {
+		Ok(shared_database) => (
 			shared_database.serialized().clone(),
 			*shared_database.last_changed_time(),
-		)
+		),
+		Err(e) => {
+			error!("failed to read shared database RwLock: {e}");
+			return;
+		}
 	};
 
 	send_response(
@@ -346,26 +399,34 @@ async fn send_more_up_to_date_database(
 
 /// returns wheter sending failed
 async fn send_response(response: &Response, ws_write: &mut WsWriteSink, password: &str) -> bool {
-	let response_bytes = SerializedResponse::ok(response, password);
-
-	match ws_write.send(Message::binary(response_bytes)).await {
-		Ok(_) => false,
+	match SerializedResponse::ok(response, password) {
+		Ok(response_bytes) => match ws_write.send(Message::binary(response_bytes)).await {
+			Ok(_) => false,
+			Err(e) => {
+				error!("failed to send response: {e},\nresponse was: {response:#?}");
+				true
+			}
+		},
 		Err(e) => {
-			error!("failed to send response: {e},\nresponse was: {response:#?}");
-			true
+			error!("failed to serialize response: {e}");
+			false
 		}
 	}
 }
 
 /// returns wheter sending failed
 async fn send_error_response(error: ServerError, ws_write: &mut WsWriteSink) -> bool {
-	let response_bytes = SerializedResponse::error(error);
-
-	match ws_write.send(Message::binary(response_bytes)).await {
-		Ok(_) => false,
+	match SerializedResponse::error(error) {
+		Ok(response_bytes) => match ws_write.send(Message::binary(response_bytes)).await {
+			Ok(_) => false,
+			Err(e) => {
+				error!("failed to send error response: {e}");
+				true
+			}
+		},
 		Err(e) => {
-			error!("failed to send response error: {e}");
-			true
+			error!("failed to serialize error response: {e}");
+			false
 		}
 	}
 }
@@ -381,9 +442,32 @@ fn broadcast_modified_event(
 
 async fn save_database_to_file(database_filepath: &PathBuf, database_binary: &[u8]) {
 	if let Err(e) = tokio::fs::write(database_filepath, database_binary).await {
-		panic!(
-			"cant write to database file: {}, error: {e}",
+		error!(
+			"cant write database to file: {}, error: {e}",
 			database_filepath.display()
 		);
+
+		// try to save database to a different filepath that contains the date, in order to not have a file names that could theoretically cause any problems
+		let mut tmp_backup_database_filepath = database_filepath.clone();
+		let now = Local::now();
+		let formatted_date_time = format!(
+			"{}_{}_{} - {}_{}_{}",
+			now.day(),
+			now.month(),
+			now.year(),
+			now.hour(),
+			now.minute(),
+			now.second()
+		);
+		tmp_backup_database_filepath.set_file_name(format!(
+			"tmp_backup_database_{formatted_date_time}.project_tracker"
+		));
+		if let Err(e) = tokio::fs::write(&tmp_backup_database_filepath, database_binary).await {
+			error!(
+				"failed to write database to tmp backup file ('{}') after already failing to save database to original filepath ('{}'): {e}",
+				tmp_backup_database_filepath.display(),
+				database_filepath.display()
+			);
+		}
 	}
 }

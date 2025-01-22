@@ -1,3 +1,9 @@
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
+#![deny(unused_must_use)]
+#![deny(unsafe_code)]
+
 use chrono::{DateTime, Utc};
 use project_tracker_core::{
 	get_last_modification_date_time, Database, DatabaseMessage, SerializedDatabase,
@@ -47,9 +53,9 @@ pub enum Request {
 pub struct SerializedRequest(pub Encrypted<Request>);
 
 impl SerializedRequest {
-	pub fn encrypt(request: &Request, password: &str) -> Vec<u8> {
-		let serialized_request = Self(Encrypted::encrypt(request, password));
-		bincode::serialize(&serialized_request).expect("failed to serialize response")
+	pub fn encrypt(request: &Request, password: &str) -> ServerResult<Vec<u8>> {
+		let serialized_request = Self(Encrypted::encrypt(request, password)?);
+		bincode::serialize(&serialized_request).map_err(|_| ServerError::FailedToSerializeToBinary)
 	}
 
 	pub fn decrypt(bytes: &[u8], password: &str) -> ServerResult<Request> {
@@ -78,13 +84,13 @@ pub enum Response {
 pub struct SerializedResponse(pub Result<Encrypted<Response>, ServerError>);
 
 impl SerializedResponse {
-	pub fn ok(response: &Response, password: &str) -> Vec<u8> {
-		bincode::serialize(&Self(Ok(Encrypted::encrypt(response, password))))
-			.expect("failed to serialize response")
+	pub fn ok(response: &Response, password: &str) -> ServerResult<Vec<u8>> {
+		bincode::serialize(&Self(Ok(Encrypted::encrypt(response, password)?)))
+			.map_err(|_| ServerError::FailedToSerializeToBinary)
 	}
 
-	pub fn error(error: ServerError) -> Vec<u8> {
-		bincode::serialize(&Self(Err(error))).expect("failed to serialize response")
+	pub fn error(error: ServerError) -> ServerResult<Vec<u8>> {
+		bincode::serialize(&Self(Err(error))).map_err(|_| ServerError::FailedToSerializeToBinary)
 	}
 
 	pub fn decrypt(bytes: &[u8], password: &str) -> ServerResult<Response> {
@@ -131,22 +137,16 @@ pub enum ConnectedClient {
 	Web(SocketAddr),
 }
 
-pub fn load_database_from_file(filepath: PathBuf) -> Database {
-	let last_modified_time = get_last_modification_date_time(
-		&filepath
-			.metadata()
-			.expect("Failed to get the last modified metadata of database file"),
-	)
-	.expect("Failed to get the last modified metadata of database file");
+pub fn load_database_from_file(filepath: PathBuf) -> Option<Database> {
+	let last_modified_time = get_last_modification_date_time(&filepath.metadata().ok()?)?;
 
-	let database_file_content =
-		std::fs::read(&filepath).expect("Failed to read database file at startup!");
+	let database_file_content = std::fs::read(&filepath).ok()?;
 
-	Database::from_binary(&database_file_content, last_modified_time)
-		.expect("Failed to parse database file content at startup!")
+	Database::from_binary(&database_file_content, last_modified_time).ok()
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
 	use crate::{
 		Request, Response, SerializedRequest, SerializedResponse, ServerError, DEFAULT_PASSWORD,
@@ -158,7 +158,7 @@ mod tests {
 	fn test_request_serialization() {
 		let request = Request::GetFullDatabase;
 
-		let request_bytes = SerializedRequest::encrypt(&request, TEST_PASSWORD);
+		let request_bytes = SerializedRequest::encrypt(&request, TEST_PASSWORD).unwrap();
 		assert_eq!(
 			SerializedRequest::decrypt(&request_bytes, TEST_PASSWORD).unwrap(),
 			request
@@ -169,14 +169,14 @@ mod tests {
 	fn test_response_serialization() {
 		let response = Response::DatabaseUpdated;
 
-		let response_bytes = SerializedResponse::ok(&response, TEST_PASSWORD);
+		let response_bytes = SerializedResponse::ok(&response, TEST_PASSWORD).unwrap();
 		assert_eq!(
 			SerializedResponse::decrypt(&response_bytes, TEST_PASSWORD).unwrap(),
 			response
 		);
 
 		let error_response = ServerError::InvalidPassword;
-		let error_response_bytes = SerializedResponse::error(error_response.clone());
+		let error_response_bytes = SerializedResponse::error(error_response.clone()).unwrap();
 		assert_eq!(
 			error_response,
 			SerializedResponse::decrypt(&error_response_bytes, TEST_PASSWORD).unwrap_err()
