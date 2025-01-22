@@ -20,7 +20,7 @@ use iced::{
 	Length::Fill,
 	Pixels,
 };
-use project_tracker_core::{ProjectId, TaskId};
+use project_tracker_core::{DatabaseMessage, ProjectId, TaskId};
 
 pub fn generate_task_description_markdown(description: &str) -> Vec<Item> {
 	advanced_parse(description).collect()
@@ -46,12 +46,13 @@ pub fn task_description<'a>(
 			.map(move |markdown_message| match markdown_message {
 				MarkdownMessage::OpenUrl(url) => Message::OpenUrl(url),
 				MarkdownMessage::ToggleCheckbox { checked, range } => {
-					Message::ToggleTaskDescriptionMarkdownCheckbox {
+					DatabaseMessage::ToggleTaskDescriptionMarkdownTask {
 						project_id,
 						task_id,
 						checked,
 						range,
 					}
+					.into()
 				}
 			})
 		}

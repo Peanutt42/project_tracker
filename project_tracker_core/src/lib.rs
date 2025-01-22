@@ -6,8 +6,9 @@
 
 mod database;
 pub use database::{
-	get_last_modification_date_time, Database, DatabaseMessage, LoadDatabaseError,
-	LoadDatabaseResult, SaveDatabaseError, SerializedDatabase, SyncDatabaseResult,
+	get_last_modification_date_time, toggle_task_description_markdown_task, Database,
+	DatabaseMessage, LoadDatabaseError, LoadDatabaseResult, SaveDatabaseError, SerializedDatabase,
+	SyncDatabaseResult,
 };
 
 mod ordered_hash_map;

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
+use std::ops::Range;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 use thiserror::Error;
@@ -89,6 +90,12 @@ pub enum DatabaseMessage {
 		project_id: ProjectId,
 		task_id: TaskId,
 		new_task_description: String,
+	},
+	ToggleTaskDescriptionMarkdownTask {
+		project_id: ProjectId,
+		task_id: TaskId,
+		range: Range<usize>,
+		checked: bool,
 	},
 	SetTaskTodo {
 		project_id: ProjectId,
@@ -449,6 +456,24 @@ impl Database {
 					project.set_task_description(task_id, new_task_description);
 				}
 			}),
+			DatabaseMessage::ToggleTaskDescriptionMarkdownTask {
+				project_id,
+				task_id,
+				range,
+				checked,
+			} => {
+				self.modify(|projects| {
+					projects.get_mut(&project_id).and_then(|project| {
+						project.get_task_mut(&task_id).map(|task| {
+							toggle_task_description_markdown_task(
+								&mut task.description,
+								checked,
+								range,
+							);
+						})
+					})
+				});
+			}
 			DatabaseMessage::SetTaskTodo {
 				project_id,
 				task_id,
@@ -814,6 +839,14 @@ impl Default for Database {
 	fn default() -> Self {
 		Self::new(OrderedHashMap::new(), Utc::now())
 	}
+}
+
+pub fn toggle_task_description_markdown_task(
+	task_description: &mut String,
+	checked: bool,
+	range: Range<usize>,
+) {
+	task_description.replace_range(range, if checked { "[X]" } else { "[ ]" });
 }
 
 pub fn get_last_modification_date_time(metadata: &std::fs::Metadata) -> Option<DateTime<Utc>> {

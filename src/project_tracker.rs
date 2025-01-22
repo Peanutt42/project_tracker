@@ -43,10 +43,10 @@ use iced::{
 	Padding, Point, Rectangle, Subscription, Task, Theme,
 };
 use project_tracker_core::{
-	Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, TaskId,
+	toggle_task_description_markdown_task, Database, DatabaseMessage, LoadDatabaseError, ProjectId,
+	SaveDatabaseError, TaskId,
 };
 use project_tracker_server::Request;
-use std::ops::Range;
 use std::{
 	collections::HashMap,
 	path::PathBuf,
@@ -178,12 +178,6 @@ pub enum Message {
 	SavePreferences,
 	LoadedPreferences(Result<Preferences, Arc<LoadPreferencesError>>),
 	DatabaseMessage(DatabaseMessage),
-	ToggleTaskDescriptionMarkdownCheckbox {
-		project_id: ProjectId,
-		task_id: TaskId,
-		checked: bool,
-		range: Range<usize>,
-	},
 	PreferenceMessage(PreferenceMessage),
 	SwitchToUpperProject, // switches to upper project when using shortcuts
 	SwitchToLowerProject, // switches to lower project when using shortcuts
@@ -937,6 +931,30 @@ impl ProjectTrackerApp {
 								generate_task_description_markdown(new_task_description),
 							);
 						}
+						DatabaseMessage::ToggleTaskDescriptionMarkdownTask {
+							project_id,
+							task_id,
+							range,
+							checked,
+						} => {
+							let new_task_description =
+								database.get_task(project_id, task_id).map(|task| {
+									let mut new_task_description = task.description.clone();
+									toggle_task_description_markdown_task(
+										&mut new_task_description,
+										*checked,
+										range.clone(),
+									);
+									new_task_description
+								});
+
+							if let Some(new_task_description) = new_task_description {
+								self.task_description_markdown_items.insert(
+									*task_id,
+									generate_task_description_markdown(&new_task_description),
+								);
+							}
+						}
 						DatabaseMessage::ImportProjects(projects) => {
 							for project in projects.iter() {
 								for (task_id, task, _task_type) in project.iter() {
@@ -1005,33 +1023,6 @@ impl ProjectTrackerApp {
 				}
 				_ => Task::none(),
 			},
-			Message::ToggleTaskDescriptionMarkdownCheckbox {
-				project_id,
-				task_id,
-				checked,
-				range,
-			} => {
-				if let DatabaseState::Loaded(database) = &mut self.database {
-					let new_task_description = database.modify(|projects| {
-						projects.get_mut(&project_id).and_then(|project| {
-							project.get_task_mut(&task_id).map(|task| {
-								task.description
-									.replace_range(range, if checked { "[X]" } else { "[ ]" });
-								task.description.clone()
-							})
-						})
-					});
-
-					if let Some(new_task_description) = new_task_description {
-						self.task_description_markdown_items.insert(
-							task_id,
-							generate_task_description_markdown(&new_task_description),
-						);
-					}
-				}
-
-				Task::none()
-			}
 			Message::PreferenceMessage(preference_message) => {
 				let changed_synchronization = match preference_message.clone() {
 					PreferenceMessage::SetSynchronization(new_synchronization) => {
