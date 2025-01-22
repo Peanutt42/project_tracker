@@ -1,26 +1,24 @@
 use chrono::{DateTime, Utc};
-use humantime::format_duration;
 use project_tracker_core::{
 	get_last_modification_date_time, Database, DatabaseMessage, SerializedDatabase,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-	collections::HashSet,
-	net::SocketAddr,
-	path::PathBuf,
-	sync::{
-		atomic::{AtomicU32, Ordering},
-		Arc, RwLock,
-	},
-};
-use systemstat::{saturating_sub_bytes, Platform, System};
-use thiserror::Error;
+use std::{net::SocketAddr, path::PathBuf};
+
+mod error;
+pub use error::{ServerError, ServerResult};
 
 mod server;
 pub use server::{handle_client, run_server};
 
+mod admin_infos;
+pub use admin_infos::AdminInfos;
+
+mod cpu_usage;
+pub use cpu_usage::{messure_cpu_usage_avg_thread, CpuUsageAverage};
+
 mod encryption;
-pub use encryption::{decrypt, encrypt, NONCE_LENGTH, SALT_LENGTH};
+pub use encryption::{Encrypted, EncryptionError};
 
 mod logs;
 pub use logs::get_logs_as_string;
@@ -29,19 +27,7 @@ pub const DEFAULT_HOSTNAME: &str = "127.0.0.1";
 pub const DEFAULT_PORT: usize = 8080;
 pub const DEFAULT_PASSWORD: &str = "1234";
 
-#[derive(Debug, Error)]
-pub enum ServerError {
-	#[error("connection failed with server: {0}")]
-	ConnectionError(#[from] std::io::Error),
-	#[error("invalid response from server")]
-	InvalidResponse,
-	#[error("{0}")]
-	ResponseError(#[from] ResponseError),
-}
-
-pub type ServerResult<T> = Result<T, ServerError>;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Request {
 	CheckUpToDate {
 		database_checksum: u64,
@@ -57,26 +43,24 @@ pub enum Request {
 	AdminInfos,
 }
 
-impl Request {
-	pub fn decrypt(binary: Vec<u8>, password: &str) -> ServerResult<Self> {
-		let encrypted_message: EncryptedMessage =
-			bincode::deserialize(&binary).map_err(|_| ResponseError::ParseError)?;
-		let request_binary = encrypted_message.decrypt(password)?;
-		Ok(bincode::deserialize(&request_binary).map_err(|_| ResponseError::ParseError)?)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SerializedRequest(pub Encrypted<Request>);
+
+impl SerializedRequest {
+	pub fn encrypt(request: &Request, password: &str) -> Vec<u8> {
+		let serialized_request = Self(Encrypted::encrypt(request, password));
+		bincode::serialize(&serialized_request).expect("failed to serialize response")
 	}
 
-	pub fn encrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
-		let request_binary = bincode::serialize(self).map_err(|_| ResponseError::ParseError)?;
-
-		Ok(
-			bincode::serialize(&EncryptedMessage::new(&request_binary, password)?)
-				.map_err(|_| ResponseError::ParseError)?,
-		)
+	pub fn decrypt(bytes: &[u8], password: &str) -> ServerResult<Request> {
+		let serialized_request: Self =
+			bincode::deserialize(bytes).map_err(|_| ServerError::RequestParseError)?;
+		serialized_request.0.decrypt(password)
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EncryptedResponse {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Response {
 	DatabaseUpToDate,
 	MoreUpToDateDatabase {
 		database: SerializedDatabase,
@@ -89,130 +73,25 @@ pub enum EncryptedResponse {
 	DatabaseUpdated,
 	AdminInfos(AdminInfos),
 }
-impl EncryptedResponse {
-	pub fn decrypt(encrypted: EncryptedMessage, password: &str) -> ServerResult<Self> {
-		let response_binary = encrypted.decrypt(password)?;
-		Ok(bincode::deserialize(&response_binary).map_err(|_| ResponseError::ParseError)?)
-	}
-
-	pub fn encrypt(&self, password: &str) -> ServerResult<EncryptedMessage> {
-		let response_binary = bincode::serialize(self).map_err(|_| ResponseError::ParseError)?;
-
-		EncryptedMessage::new(&response_binary, password)
-	}
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Error)]
-pub enum ResponseError {
-	#[error("invalid password")]
-	InvalidPassword,
-	#[error("invalid database binary format")]
-	InvalidDatabaseBinary,
-	#[error("failed to parse request")]
-	ParseError,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Response(pub Result<EncryptedMessage, ResponseError>);
+pub struct SerializedResponse(pub Result<Encrypted<Response>, ServerError>);
 
-impl Response {
-	pub fn serialize(&self) -> ServerResult<Vec<u8>> {
-		Ok(bincode::serialize(&self.0).map_err(|_| ResponseError::ParseError)?)
+impl SerializedResponse {
+	pub fn ok(response: &Response, password: &str) -> Vec<u8> {
+		bincode::serialize(&Self(Ok(Encrypted::encrypt(response, password))))
+			.expect("failed to serialize response")
 	}
 
-	pub fn deserialize(binary: Vec<u8>) -> ServerResult<Self> {
-		let result = bincode::deserialize(&binary).map_err(|_| ResponseError::ParseError)?;
-		Ok(Self(result))
-	}
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EncryptedMessage {
-	encrypted_message: Vec<u8>,
-	salt: [u8; SALT_LENGTH],
-	nonce: [u8; NONCE_LENGTH],
-}
-
-impl EncryptedMessage {
-	pub fn new(plaintext_message: &[u8], password: &str) -> ServerResult<Self> {
-		let (encrypted_message, salt, nonce) =
-			encrypt(plaintext_message, password).map_err(|_| ResponseError::InvalidPassword)?;
-
-		Ok(Self {
-			encrypted_message,
-			salt,
-			nonce,
-		})
+	pub fn error(error: ServerError) -> Vec<u8> {
+		bincode::serialize(&Self(Err(error))).expect("failed to serialize response")
 	}
 
-	pub fn decrypt(&self, password: &str) -> ServerResult<Vec<u8>> {
-		let bytes = decrypt(&self.encrypted_message, password, &self.salt, &self.nonce)
-			.map_err(|_| ResponseError::InvalidPassword)?;
-		Ok(bytes)
-	}
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AdminInfos {
-	pub connected_native_gui_clients: Vec<SocketAddr>,
-	pub connected_web_clients: Vec<SocketAddr>,
-	pub cpu_usage: f32,
-	pub cpu_temp: Option<f32>,
-	pub ram_info: String,
-	pub uptime: String,
-	pub latest_logs_of_the_day: String,
-}
-
-impl AdminInfos {
-	pub fn generate(
-		connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
-		cpu_usage_avg: &CpuUsageAverage,
-		log_filepath: &PathBuf,
-	) -> Self {
-		let connected_clients = connected_clients.read().unwrap().clone();
-
-		let mut connected_native_gui_clients = Vec::new();
-		let mut connected_web_clients = Vec::new();
-
-		for connected_client in connected_clients {
-			match connected_client {
-				ConnectedClient::NativeGUI(addr) => connected_native_gui_clients.push(addr),
-				ConnectedClient::Web(addr) => connected_web_clients.push(addr),
-			}
-		}
-
-		let sys = System::new();
-
-		let cpu_temp = sys.cpu_temp().ok();
-
-		let ram_info = match sys.memory() {
-			Ok(mem) => format!(
-				"{} / {}",
-				saturating_sub_bytes(mem.total, mem.free),
-				mem.total
-			),
-			Err(_) => "failed to get ram info".to_string(),
-		};
-
-		let uptime = match sys.uptime() {
-			Ok(uptime) => format_duration(uptime).to_string(),
-			Err(_) => "failed to get uptime".to_string(),
-		};
-
-		let latest_logs_of_the_day = match get_logs_as_string(log_filepath) {
-			Ok(logs) => logs,
-			Err(error_str) => error_str,
-		};
-
-		AdminInfos {
-			connected_native_gui_clients,
-			connected_web_clients,
-			cpu_usage: cpu_usage_avg.load(),
-			cpu_temp,
-			ram_info,
-			uptime,
-			latest_logs_of_the_day,
-		}
+	pub fn decrypt(bytes: &[u8], password: &str) -> ServerResult<Response> {
+		let serialized_response: Self =
+			bincode::deserialize(bytes).map_err(|_| ServerError::ResponseParseError)?;
+		let encrypted_response = serialized_response.0?;
+		encrypted_response.decrypt(password)
 	}
 }
 
@@ -267,34 +146,40 @@ pub fn load_database_from_file(filepath: PathBuf) -> Database {
 		.expect("Failed to parse database file content at startup!")
 }
 
-/// number is directly the usage percent number
-///
-/// `AtomicU32` is used to atomically store a f32 (`f32::as_bits`, `f32::to_bits`)
-#[derive(Debug, Default)]
-pub struct CpuUsageAverage(pub AtomicU32);
+#[cfg(test)]
+mod tests {
+	use crate::{
+		Request, Response, SerializedRequest, SerializedResponse, ServerError, DEFAULT_PASSWORD,
+	};
 
-impl CpuUsageAverage {
-	pub fn new() -> CpuUsageAverage {
-		Self(AtomicU32::new(0))
+	const TEST_PASSWORD: &str = DEFAULT_PASSWORD;
+
+	#[test]
+	fn test_request_serialization() {
+		let request = Request::GetFullDatabase;
+
+		let request_bytes = SerializedRequest::encrypt(&request, TEST_PASSWORD);
+		assert_eq!(
+			SerializedRequest::decrypt(&request_bytes, TEST_PASSWORD).unwrap(),
+			request
+		);
 	}
 
-	pub fn load(&self) -> f32 {
-		f32::from_bits(self.0.load(Ordering::Relaxed))
-	}
+	#[test]
+	fn test_response_serialization() {
+		let response = Response::DatabaseUpdated;
 
-	fn store(&self, percentage: f32) {
-		self.0.store(percentage.to_bits(), Ordering::Relaxed);
-	}
-}
+		let response_bytes = SerializedResponse::ok(&response, TEST_PASSWORD);
+		assert_eq!(
+			SerializedResponse::decrypt(&response_bytes, TEST_PASSWORD).unwrap(),
+			response
+		);
 
-pub async fn messure_cpu_usage_avg_thread(cpu_usage_avg: Arc<CpuUsageAverage>) {
-	let sys = System::new();
-	loop {
-		if let Ok(cpu_load) = sys.cpu_load_aggregate() {
-			tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-			if let Ok(cpu_load) = cpu_load.done() {
-				cpu_usage_avg.store(1.0 - cpu_load.idle);
-			}
-		}
+		let error_response = ServerError::InvalidPassword;
+		let error_response_bytes = SerializedResponse::error(error_response.clone());
+		assert_eq!(
+			error_response,
+			SerializedResponse::decrypt(&error_response_bytes, TEST_PASSWORD).unwrap_err()
+		);
 	}
 }

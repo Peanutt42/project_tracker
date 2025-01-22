@@ -24,7 +24,7 @@ pub use filesystem::{
 };
 
 mod server;
-use crate::synchronization::server::{ServerSynchronizationError, ServerSynchronizationMessage};
+use crate::synchronization::server::{ServerSubscriptionMessage, ServerSynchronizationError};
 pub use server::{ServerConfig, ServerSynchronization};
 
 pub enum DatabaseUpdateEvent {
@@ -65,7 +65,7 @@ pub trait BaseSynchronizationError: Debug + Error {
 
 #[derive(Debug, Clone)]
 pub enum SynchronizationMessage {
-	ServerSynchronizationMessage(ServerSynchronizationMessage),
+	ServerSynchronizationMessage(ServerSubscriptionMessage),
 	FilesystemSynchronizationMessage(FilesystemSynchronizationMessage),
 }
 

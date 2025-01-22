@@ -1,6 +1,6 @@
 use crate::{
-	AdminInfos, ConnectedClient, CpuUsageAverage, DatabaseUpdateEvent, EncryptedResponse,
-	ModifiedEvent, Request, Response, ServerError,
+	AdminInfos, ConnectedClient, CpuUsageAverage, DatabaseUpdateEvent, ModifiedEvent, Request,
+	Response, SerializedRequest, SerializedResponse, ServerError,
 };
 use async_tungstenite::{
 	tokio::accept_async,
@@ -15,6 +15,11 @@ use std::{collections::HashSet, net::SocketAddr};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast::{Receiver, Sender};
 use tracing::{error, info, warn};
+
+type WsWriteSink = futures_util::stream::SplitSink<
+	async_tungstenite::WebSocketStream<async_tungstenite::tokio::TokioAdapter<TcpStream>>,
+	Message,
+>;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn run_server(
@@ -137,7 +142,7 @@ async fn listen_client_thread(
 		tokio::select! {
 			ws_message = read.next() => match ws_message {
 				Some(Ok(tungstenite::Message::Binary(request_binary))) => {
-					match Request::decrypt(request_binary, &password) {
+					match SerializedRequest::decrypt(&request_binary, &password) {
 						Ok(request) => {
 							respond_to_client_request(
 								request,
@@ -153,14 +158,9 @@ async fn listen_client_thread(
 							)
 							.await
 						}
-						Err(e) => match e {
-							ServerError::ResponseError(e) => {
-								error!("{e}");
-								let _ = write
-									.send(Message::binary(Response(Err(e)).serialize().unwrap()))
-									.await;
-							}
-							_ => error!("failed to parse ws request: {e}"),
+						Err(e) => {
+							error!("{e}");
+							send_error_response(e, &mut write).await;
 						},
 					}
 				}
@@ -192,28 +192,21 @@ async fn listen_client_thread(
 					info!("sending database modified event in ws");
 					let database_modified_response = match modified_event.database_update_event {
 						DatabaseUpdateEvent::DatabaseMessage { database_message, before_modification_checksum } => {
-							EncryptedResponse::DatabaseChanged {
+							Response::DatabaseChanged {
 								database_before_update_checksum: before_modification_checksum,
 								database_message,
 							}
 						},
 						DatabaseUpdateEvent::ImportDatabase => {
 							let last_modified_time = *modified_event.modified_database.last_changed_time();
-							EncryptedResponse::MoreUpToDateDatabase {
+							Response::MoreUpToDateDatabase {
 								database: modified_event.modified_database.into_serialized(),
 								last_modified_time,
 							}
 						}
 					};
 
-					let failed_to_send_msg = write
-						.send(Message::binary(
-							Response(Ok(database_modified_response.encrypt(&password).unwrap()))
-								.serialize()
-								.unwrap(),
-						))
-						.await
-						.is_err();
+					let failed_to_send_msg = send_response(&database_modified_response, &mut write, &password).await;
 
 					if failed_to_send_msg {
 						error!("failed to send modified event in ws, closing connection");
@@ -243,14 +236,7 @@ async fn respond_to_client_request(
 			info!("sending last modified date");
 			let is_up_to_date = database_checksum == shared_database.read().unwrap().checksum();
 			if is_up_to_date {
-				let encrypted_response_msg = EncryptedResponse::DatabaseUpToDate
-					.encrypt(password)
-					.unwrap();
-				let response = Response(Ok(encrypted_response_msg)).serialize().unwrap();
-
-				if let Err(e) = ws_write.send(Message::binary(response)).await {
-					error!("failed to respond to 'GetModifiedDate' request: {e}");
-				}
+				send_response(&Response::DatabaseUpToDate, ws_write, password).await;
 			} else {
 				warn!("clients checksum doesnt match ours -> sending full db");
 				send_more_up_to_date_database(shared_database, ws_write, password).await;
@@ -264,6 +250,8 @@ async fn respond_to_client_request(
 				database_before_update_checksum == shared_database.read().unwrap().checksum();
 
 			if database_synced {
+				info!("updating database");
+
 				let database = {
 					let mut shared_data = shared_database.write().unwrap();
 					shared_data.update(database_message.clone());
@@ -272,39 +260,27 @@ async fn respond_to_client_request(
 
 				let database_binary = database.to_binary().unwrap();
 
-				let _ = modified_sender.send(ModifiedEvent::new(
-					database,
+				broadcast_modified_event(
 					DatabaseUpdateEvent::DatabaseMessage {
 						database_message,
 						before_modification_checksum: database_before_update_checksum,
 					},
+					modified_sender,
+					database,
 					client_addr,
-				));
+				);
 
-				let _ = ws_write
-					.send(Message::binary(
-						Response(Ok(EncryptedResponse::DatabaseUpdated
-							.encrypt(password)
-							.unwrap()))
-						.serialize()
-						.unwrap(),
-					))
-					.await;
+				send_response(&Response::DatabaseUpdated, ws_write, password).await;
 
-				if let Err(e) = tokio::fs::write(database_filepath, database_binary).await {
-					panic!(
-						"cant write to database file: {}, error: {e}",
-						database_filepath.display()
-					);
-				}
-
-				info!("updated database");
+				save_database_to_file(database_filepath, &database_binary).await;
 			} else {
 				warn!("clients wanted to update db but checksum doesnt match ours -> sending full db instead");
 				send_more_up_to_date_database(shared_database, ws_write, password).await;
 			}
 		}
 		Request::ImportDatabase { database } => {
+			info!("importing database");
+
 			let database = {
 				let mut shared_data = shared_database.write().unwrap();
 				*shared_data = Database::from_serialized(database, Utc::now());
@@ -313,49 +289,33 @@ async fn respond_to_client_request(
 
 			let database_binary = database.to_binary().unwrap();
 
-			let _ = modified_sender.send(ModifiedEvent::new(
-				database,
+			broadcast_modified_event(
 				DatabaseUpdateEvent::ImportDatabase,
+				modified_sender,
+				database,
 				client_addr,
-			));
+			);
 
-			let _ = ws_write
-				.send(Message::binary(
-					Response(Ok(EncryptedResponse::DatabaseUpdated
-						.encrypt(password)
-						.unwrap()))
-					.serialize()
-					.unwrap(),
-				))
-				.await;
+			send_response(&Response::DatabaseUpdated, ws_write, password).await;
 
-			if let Err(e) = tokio::fs::write(database_filepath, database_binary).await {
-				panic!(
-					"cant write to database file: {}, error: {e}",
-					database_filepath.display()
-				);
-			}
-
-			info!("imported database");
+			save_database_to_file(database_filepath, &database_binary).await;
 		}
 		Request::GetFullDatabase => {
 			send_more_up_to_date_database(shared_database, ws_write, password).await;
 		}
 		Request::AdminInfos => {
-			let response = Response(Ok(EncryptedResponse::AdminInfos(AdminInfos::generate(
-				connected_clients.clone(),
-				cpu_usage_avg,
-				log_filepath,
-			))
-			.encrypt(password)
-			.unwrap()));
-			match ws_write
-				.send(Message::binary(response.serialize().unwrap()))
-				.await
-			{
-				Ok(_) => info!("sent admin infos"),
-				Err(e) => error!("failed to send admin infos: {e}"),
-			}
+			info!("sending admin infos");
+
+			send_response(
+				&Response::AdminInfos(AdminInfos::generate(
+					connected_clients.clone(),
+					cpu_usage_avg,
+					log_filepath,
+				)),
+				ws_write,
+				password,
+			)
+			.await;
 		}
 	}
 }
@@ -373,21 +333,57 @@ async fn send_more_up_to_date_database(
 		)
 	};
 
-	let response = Response(Ok(EncryptedResponse::MoreUpToDateDatabase {
-		database,
-		last_modified_time,
-	}
-	.encrypt(password)
-	.unwrap()))
-	.serialize()
-	.unwrap();
+	send_response(
+		&Response::MoreUpToDateDatabase {
+			database,
+			last_modified_time,
+		},
+		ws_write,
+		password,
+	)
+	.await;
+}
 
-	if let Err(e) = ws_write.send(Message::binary(response)).await {
-		error!("failed to respond to 'GetModifiedDate' request: {e}");
+/// returns wheter sending failed
+async fn send_response(response: &Response, ws_write: &mut WsWriteSink, password: &str) -> bool {
+	let response_bytes = SerializedResponse::ok(response, password);
+
+	match ws_write.send(Message::binary(response_bytes)).await {
+		Ok(_) => false,
+		Err(e) => {
+			error!("failed to send response: {e},\nresponse was: {response:#?}");
+			true
+		}
 	}
 }
 
-type WsWriteSink = futures_util::stream::SplitSink<
-	async_tungstenite::WebSocketStream<async_tungstenite::tokio::TokioAdapter<TcpStream>>,
-	Message,
->;
+/// returns wheter sending failed
+async fn send_error_response(error: ServerError, ws_write: &mut WsWriteSink) -> bool {
+	let response_bytes = SerializedResponse::error(error);
+
+	match ws_write.send(Message::binary(response_bytes)).await {
+		Ok(_) => false,
+		Err(e) => {
+			error!("failed to send response error: {e}");
+			true
+		}
+	}
+}
+
+fn broadcast_modified_event(
+	update_event: DatabaseUpdateEvent,
+	modified_sender: &Sender<ModifiedEvent>,
+	database: Database,
+	client_addr: SocketAddr,
+) {
+	let _ = modified_sender.send(ModifiedEvent::new(database, update_event, client_addr));
+}
+
+async fn save_database_to_file(database_filepath: &PathBuf, database_binary: &[u8]) {
+	if let Err(e) = tokio::fs::write(database_filepath, database_binary).await {
+		panic!(
+			"cant write to database file: {}, error: {e}",
+			database_filepath.display()
+		);
+	}
+}

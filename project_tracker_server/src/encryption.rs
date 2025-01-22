@@ -1,12 +1,48 @@
+use std::marker::PhantomData;
+
 use aes_gcm::aead::Aead;
 use aes_gcm::{Aes256Gcm, Key, KeyInit, Nonce};
 use argon2::{password_hash::SaltString, Algorithm, Argon2, Params, Version};
 use rand::Rng;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::{ServerError, ServerResult};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Encrypted<T: Serialize + DeserializeOwned> {
+	encrypted_bytes: Vec<u8>,
+	salt: [u8; SALT_LENGTH],
+	nonce: [u8; NONCE_LENGTH],
+	_phantom_data: PhantomData<T>,
+}
+
+impl<T: Serialize + DeserializeOwned> Encrypted<T> {
+	pub fn encrypt(message: &T, password: &str) -> Self {
+		let plaintext = bincode::serialize(message).expect("failed to serialize message");
+		let (encrypted_bytes, salt, nonce) =
+			encrypt(&plaintext, password).expect("failed to encrypt message");
+		Self {
+			encrypted_bytes,
+			salt,
+			nonce,
+			_phantom_data: PhantomData,
+		}
+	}
+
+	pub fn decrypt(&self, password: &str) -> ServerResult<T> {
+		let bytes = decrypt(&self.encrypted_bytes, password, &self.salt, &self.nonce)
+			.map_err(|_| ServerError::InvalidPassword)?;
+		let message: T =
+			bincode::deserialize(&bytes).map_err(|_| ServerError::EncryptedContentParseError)?;
+		Ok(message)
+	}
+}
+
 const KEY_LENGTH: usize = 32; // 32 bytes for AES-256
-pub const NONCE_LENGTH: usize = 12; // AES-GCM standard nonce length
-pub const SALT_LENGTH: usize = 16; // Salt length
+const NONCE_LENGTH: usize = 12; // AES-GCM standard nonce length
+const SALT_LENGTH: usize = 16; // Salt length
 
 #[derive(Error, Debug, Clone)]
 pub enum EncryptionError {
@@ -39,8 +75,9 @@ fn derive_key(password: &str, salt: &[u8; SALT_LENGTH]) -> argon2::Result<[u8; K
 	Ok(output_key)
 }
 
+/// returns: Result::Ok is (encrypted_bytes, salt, nonce)
 #[allow(clippy::type_complexity)]
-pub fn encrypt(
+fn encrypt(
 	content: &[u8],
 	password: &str,
 ) -> Result<(Vec<u8>, [u8; SALT_LENGTH], [u8; NONCE_LENGTH]), EncryptionError> {
@@ -56,7 +93,7 @@ pub fn encrypt(
 	Ok((ciphertext, salt, nonce))
 }
 
-pub fn decrypt(
+fn decrypt(
 	encrypted: &[u8],
 	password: &str,
 	salt: &[u8; SALT_LENGTH],
@@ -67,4 +104,35 @@ pub fn decrypt(
 	let nonce = Nonce::from_slice(nonce);
 
 	cipher.decrypt(nonce, encrypted).map_err(|e| e.into())
+}
+
+#[cfg(test)]
+mod tests {
+	use crate::DEFAULT_PASSWORD;
+
+	use super::{decrypt, encrypt, Encrypted};
+
+	const TEST_PASSWORD: &str = DEFAULT_PASSWORD;
+
+	#[test]
+	fn test_encrypted_struct() {
+		let content = 42_i32;
+		let encrypted_as_binary =
+			bincode::serialize(&Encrypted::encrypt(&content, TEST_PASSWORD)).unwrap();
+		assert_eq!(
+			content,
+			bincode::deserialize::<Encrypted<i32>>(&encrypted_as_binary)
+				.unwrap()
+				.decrypt(TEST_PASSWORD)
+				.unwrap()
+		);
+	}
+
+	#[test]
+	fn test_raw_encryption_functions() {
+		let plaintext = "This is plaintext. No encryption here.";
+		let (encrypted_bytes, salt, nonce) = encrypt(plaintext.as_bytes(), TEST_PASSWORD).unwrap();
+		let decrypted_plaintext = decrypt(&encrypted_bytes, TEST_PASSWORD, &salt, &nonce).unwrap();
+		assert_eq!(plaintext.as_bytes(), decrypted_plaintext);
+	}
 }

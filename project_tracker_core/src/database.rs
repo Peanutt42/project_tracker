@@ -20,7 +20,7 @@ pub struct Database {
 	last_saved_time: SystemTime,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DatabaseMessage {
 	Clear,
 
@@ -812,7 +812,7 @@ impl Database {
 
 impl Default for Database {
 	fn default() -> Self {
-		Self::new(OrderedHashMap::new(), SystemTime::now().into())
+		Self::new(OrderedHashMap::new(), Utc::now())
 	}
 }
 

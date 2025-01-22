@@ -45,6 +45,7 @@ use iced::{
 use project_tracker_core::{
 	Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, TaskId,
 };
+use project_tracker_server::Request;
 use std::ops::Range;
 use std::{
 	collections::HashMap,
@@ -797,7 +798,7 @@ impl ProjectTrackerApp {
 				if let Some(Synchronization::ServerSynchronization(server_synchronization)) =
 					&mut self.synchronization
 				{
-					server_synchronization.request_admin_infos();
+					server_synchronization.send_request(Request::AdminInfos);
 				}
 				Task::none()
 			}
