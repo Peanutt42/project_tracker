@@ -1171,7 +1171,7 @@ pub fn code_editor_dropdown_button(
 			.spacing(SPACING_AMOUNT)
 			.align_y(Vertical::Center),
 		)
-		.width(Length::Fixed(130.0))
+		.width(Length::Fixed(150.0))
 		.on_press(settings_modal::Message::ToggleCodeEditorDropdownExpanded.into())
 		.style(secondary_button_style_default),
 		container(
@@ -1191,7 +1191,7 @@ pub fn code_editor_dropdown_button(
 		.style(dropdown_container_style),
 		dropdown_expanded,
 	)
-	.width(Fixed(130.0))
+	.width(Fixed(150.0))
 	.alignment(drop_down::Alignment::Bottom)
 	.offset(0.0)
 	.on_dismiss(settings_modal::Message::CollapseCodeEditorDropdown.into())
