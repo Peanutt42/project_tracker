@@ -899,7 +899,7 @@ pub fn sort_dropdown_button(opened: bool, sort_mode: SortMode) -> Element<'stati
 		.style(dropdown_container_style),
 		opened,
 	)
-	.width(Fixed(140.0))
+	.width(Fixed(160.0))
 	.alignment(drop_down::Alignment::Bottom)
 	.offset(0.0)
 	.on_dismiss(project_page::Message::CloseSortModeDropdown.into())
