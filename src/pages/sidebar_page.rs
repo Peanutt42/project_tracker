@@ -592,8 +592,8 @@ impl Page {
 		};
 
 		let synchronization_error_view = match &self.synchronization_error {
-			Some(error) => error.view(),
-			None => Space::new(Fill, 0.0).into(),
+			Some(error) if app.synchronization.is_some() => error.view(),
+			_ => Space::new(Fill, 0.0).into(),
 		};
 
 		column![
