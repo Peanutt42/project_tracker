@@ -6,7 +6,7 @@ use std::{
 	str::from_utf8,
 };
 
-const MAX_ADMIN_INFO_LOG_COUNT: usize = 1000;
+const MAX_ADMIN_INFO_LOG_COUNT: usize = 50;
 // on avarage you can expect 100 chars per line
 const MAX_ADMIN_INFO_LOG_CHARS: usize = MAX_ADMIN_INFO_LOG_COUNT * 100;
 
