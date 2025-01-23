@@ -1,4 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
+	// register pwa service-worker
+	if ("serviceWorker" in navigator) {
+		navigator.serviceWorker.register("/static/service-worker.js").then(() => {
+			console.log("Service Worker Registered");
+		});
+	}
+
 	const database_list = document.getElementById("database");
 	const admin_dashboard_button = document.getElementById(
 		"admin_dashboard_button",

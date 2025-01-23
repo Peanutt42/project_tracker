@@ -1,27 +1,32 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-	<title>Project Tracker Web</title>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width" />
-	<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-	<link rel="apple-touch-icon" sizes="180x180" href="/static/icon_180x180.png">
-	<link rel="stylesheet" href="/static/style.css">
-	<link rel="preload" as="image" href="/static/bar-chart-fill.svg">
-	<link rel="preload" as="image" href="/static/caret-right-fill.svg">
-</head>
-<body>
-	<div id="nav_bar">
-		<button id="admin_dashboard_button">
-			<img src="/static/bar-chart-fill.svg" />
-			Admin
-		</button>
-		<div style="width: 100%; display: flex; flex-direction: row;">
-			<div style="width: 100%;"></div>
-			<button id="logout_button">Logout</button>
+	<head>
+		<title>Project Tracker Web</title>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="manifest" href="/static/manifest.json" />
+		<link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+		<link
+			rel="apple-touch-icon"
+			sizes="180x180"
+			href="/static/icon_180x180.png"
+		/>
+		<link rel="stylesheet" href="/static/style.css" />
+		<link rel="preload" as="image" href="/static/bar-chart-fill.svg" />
+		<link rel="preload" as="image" href="/static/caret-right-fill.svg" />
+	</head>
+	<body>
+		<div id="nav_bar">
+			<button id="admin_dashboard_button">
+				<img src="/static/bar-chart-fill.svg" />
+				Admin
+			</button>
+			<div style="width: 100%; display: flex; flex-direction: row">
+				<div style="width: 100%"></div>
+				<button id="logout_button">Logout</button>
+			</div>
 		</div>
-	</div>
-	<ul id="database" class="database"></ul>
-	<script src="/static/script.js"></script>
-</body>
+		<ul id="database" class="database"></ul>
+		<script src="/static/script.js"></script>
+	</body>
 </html>

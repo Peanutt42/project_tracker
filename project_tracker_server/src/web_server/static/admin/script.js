@@ -1,4 +1,11 @@
 document.addEventListener("DOMContentLoaded", async () => {
+	// register pwa service-worker
+	if ("serviceWorker" in navigator) {
+		navigator.serviceWorker.register("/static/service-worker.js").then(() => {
+			console.log("Service Worker Registered");
+		});
+	}
+
 	const home_button = document.getElementById("home_button");
 	const logout_button = document.getElementById("logout_button");
 	const admin_infos_div = document.getElementById("admin_infos_div");
@@ -6,8 +13,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 	const cpu_temp_div = document.getElementById("cpu_temp_text");
 	const ram_div = document.getElementById("ram_text");
 	const uptime_div = document.getElementById("uptime_text");
-	const connected_native_gui_clients_list = document.getElementById("connected_native_gui_clients_list");
-	const connected_web_clients_list = document.getElementById("connected_web_clients_list");
+	const connected_native_gui_clients_list = document.getElementById(
+		"connected_native_gui_clients_list",
+	);
+	const connected_web_clients_list = document.getElementById(
+		"connected_web_clients_list",
+	);
 	const latest_logs_text = document.getElementById("latest_logs_text");
 
 	await populate_dom_with_admin_infos();
@@ -32,11 +43,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 		const admin_infos = await fetch_admin_infos();
 
 		if (admin_infos) {
-			cpu_usage_div.textContent = Math.round(admin_infos.cpu_usage * 100) + '%';
+			cpu_usage_div.textContent = Math.round(admin_infos.cpu_usage * 100) + "%";
 			if (admin_infos.cpu_temp) {
-				cpu_temp_div.textContent = Math.round(admin_infos.cpu_temp) + ' °C';
+				cpu_temp_div.textContent = Math.round(admin_infos.cpu_temp) + " °C";
 			} else {
-				cpu_temp_div.textContent = 'failed to get cpu temp!';
+				cpu_temp_div.textContent = "failed to get cpu temp!";
 			}
 			ram_div.textContent = admin_infos.ram_info;
 			uptime_div.textContent = admin_infos.uptime;
@@ -55,8 +66,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 				connected_web_clients_list.appendChild(address_div);
 			}
 
-			const scrollToBottom = latest_logs_text.scrollTop === 0 ||
-				latest_logs_text.scrollTop >= latest_logs_text.scrollHeight - latest_logs_text.clientHeight;
+			const scrollToBottom =
+				latest_logs_text.scrollTop === 0 ||
+				latest_logs_text.scrollTop >=
+					latest_logs_text.scrollHeight - latest_logs_text.clientHeight;
 
 			latest_logs_text.textContent = admin_infos.latest_logs_of_the_day;
 
@@ -82,16 +95,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 				if (response.ok) {
 					const admin_infos = await response.json();
 					return admin_infos;
-				}
-				else {
+				} else {
 					logout();
 				}
-			}
-			catch (error) {
+			} catch (error) {
 				logout();
 			}
-		}
-		else {
+		} else {
 			window.location.href = "/login";
 		}
 		return null;

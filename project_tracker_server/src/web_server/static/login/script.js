@@ -1,4 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
+	// register pwa service-worker
+	if ("serviceWorker" in navigator) {
+		navigator.serviceWorker.register("/static/service-worker.js").then(() => {
+			console.log("Service Worker Registered");
+		});
+	}
+
 	const password_input = document.getElementById("password_input");
 	const login_button = document.getElementById("login_button");
 	const show_password = document.getElementById("show_password");

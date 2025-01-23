@@ -43,6 +43,8 @@ const FILE_TEXT_SVG: &str = include_str!("static/file-earmark-text.svg");
 const INDEX_HTML: &str = include_str!("static/index.html");
 const STYLE_CSS: &str = include_str!("static/style.css");
 const SCRIPT_JS: &str = include_str!("static/script.js");
+const SERVICE_WORKER_JS: &str = include_str!("static/service-worker.js");
+const MANIFEST_JSON: &str = include_str!("static/manifest.json");
 
 const LOGIN_INDEX_HTML: &str = include_str!("static/login/index.html");
 const LOGIN_STYLE_CSS: &str = include_str!("static/login/style.css");
@@ -215,7 +217,19 @@ pub async fn run_web_server(
 		.and(path("script.js"))
 		.map(|| with_header(SCRIPT_JS, "Content-Type", "application/javascript"));
 
-	let main_routes = index_route.or(style_route).or(script_route);
+	let service_worker_route = static_path
+		.and(path("service-worker.js"))
+		.map(|| with_header(SERVICE_WORKER_JS, "Content-Type", "application/javascript"));
+
+	let manifest_route = static_path
+		.and(path("manifest.json"))
+		.map(|| with_header(MANIFEST_JSON, "Content-Type", "application/json"));
+
+	let main_routes = index_route
+		.or(style_route)
+		.or(script_route)
+		.or(service_worker_route)
+		.or(manifest_route);
 
 	let login_path = static_path.and(path("login"));
 

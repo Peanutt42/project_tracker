@@ -1,27 +1,49 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-	<title>Project Tracker Login</title>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width" />
-	<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-	<link rel="apple-touch-icon" sizes="180x180" href="/static/icon_180x180.png">
-	<link rel="stylesheet" href="/static/login/style.css">
-</head>
-<body>
-	<script src="/static/login/script.js"></script>
-	<div class="login_page" id="login_page">
-		<img src="/static/favicon.ico" class="logo">
-		<h1>Project Tracker Web</h1>
-		<div class="password">
-			<input type="password" id="password_input" placeholder="Password" autofocus="true" autocomplete="current-password" required />
-			<button id="login_button">Login</button>
-			<div class="invalid_password" id="invalid_password">Invalid Password!</div>
-			<div id="show_password" style="display: flex; flex-direction: row; gap: 5px; padding-left: 15px;">
-				<input type="checkbox" id="show_password_checkbox" >
-				<label for="show_password_checkbox">Show Password</label>
+	<head>
+		<title>Project Tracker Login</title>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="manifest" href="/static/manifest.json" />
+		<link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+		<link
+			rel="apple-touch-icon"
+			sizes="180x180"
+			href="/static/icon_180x180.png"
+		/>
+		<link rel="stylesheet" href="/static/login/style.css" />
+	</head>
+	<body>
+		<script src="/static/login/script.js"></script>
+		<div class="login_page" id="login_page">
+			<img src="/static/favicon.ico" class="logo" />
+			<h1>Project Tracker Web</h1>
+			<div class="password">
+				<input
+					type="password"
+					id="password_input"
+					placeholder="Password"
+					autofocus="true"
+					autocomplete="current-password"
+					required
+				/>
+				<button id="login_button">Login</button>
+				<div class="invalid_password" id="invalid_password">
+					Invalid Password!
+				</div>
+				<div
+					id="show_password"
+					style="
+						display: flex;
+						flex-direction: row;
+						gap: 5px;
+						padding-left: 15px;
+					"
+				>
+					<input type="checkbox" id="show_password_checkbox" />
+					<label for="show_password_checkbox">Show Password</label>
+				</div>
 			</div>
 		</div>
-	</div>
-</body>
+	</body>
 </html>
