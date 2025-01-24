@@ -20,7 +20,7 @@ pub enum MarkdownMessage {
 // copied from iced_widget-0.13.4/src/markdown.rs:66..84
 // TODO: specify modifications
 /// A Markdown item.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Item {
 	/// A heading.
 	Heading(pulldown_cmark::HeadingLevel, Text),
@@ -38,7 +38,7 @@ pub enum Item {
 	},
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ListItems {
 	beginner: ListItemBeginner,
 	items: Vec<Item>,
@@ -53,7 +53,7 @@ impl ListItems {
 	}
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum ListItemBeginner {
 	/// either unordered: "•" or ordered: "n." where n is the index
 	#[default]
@@ -66,7 +66,7 @@ pub enum ListItemBeginner {
 
 // copied from iced_widget-0.13.4/src/markdown.rs:86..188
 /// A bunch of parsed Markdown text.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Text {
 	spans: Vec<Span>,
 	last_style: Cell<Option<markdown::Style>>,
@@ -98,7 +98,7 @@ impl Text {
 	}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum Span {
 	Standard {
 		text: String,
@@ -297,7 +297,8 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 	let mut metadata = false;
 	let mut table = false;
 	let mut link = None;
-	let mut lists = Vec::new();
+	let mut lists: Vec<List> = Vec::new();
+	let mut task_hint: bool = false;
 
 	let mut highlighter = None;
 
@@ -356,12 +357,21 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 					None
 				}
 				pulldown_cmark::Tag::List(first_item) if !metadata && !table => {
+					let output = if spans.is_empty() {
+						None
+					} else {
+						produce(
+							&mut lists,
+							Item::Paragraph(Text::new(spans.drain(..).collect())),
+						)
+					};
+
 					lists.push(List {
 						start: first_item,
 						items: Vec::new(),
 					});
 
-					None
+					output
 				}
 				pulldown_cmark::Tag::Item => {
 					lists
@@ -417,10 +427,14 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 					link = None;
 					None
 				}
-				pulldown_cmark::TagEnd::Paragraph if !metadata && !table => produce(
-					&mut lists,
-					Item::Paragraph(Text::new(spans.drain(..).collect())),
-				),
+				pulldown_cmark::TagEnd::Paragraph if !metadata && !table => {
+					let spans: Vec<_> = spans.drain(..).collect();
+					if spans.is_empty() {
+						None
+					} else {
+						produce(&mut lists, Item::Paragraph(Text::new(spans)))
+					}
+				}
 				pulldown_cmark::TagEnd::Item if !metadata && !table => {
 					if spans.is_empty() {
 						None
@@ -488,7 +502,16 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 
 				spans.push(span);
 
-				None
+				match task_hint {
+					true => {
+						task_hint = false;
+						produce(
+							&mut lists,
+							Item::Paragraph(Text::new(spans.drain(..).collect())),
+						)
+					}
+					false => None,
+				}
 			}
 			pulldown_cmark::Event::Code(code) if !metadata && !table => {
 				let span = Span::Standard {
@@ -534,9 +557,125 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 						};
 					}
 				}
+				task_hint = true;
 
 				None
 			}
 			_ => None,
 		})
+}
+
+#[cfg(test)]
+mod tests {
+	use super::{advanced_parse, Item, Span, Text};
+	use crate::components::markdown::{ListItemBeginner, ListItems};
+	use std::{
+		cell::{Cell, RefCell},
+		ops::Range,
+		sync::Arc,
+	};
+
+	fn paragraph(text: &'static str) -> Item {
+		Item::Paragraph(Text::new(vec![Span::Standard {
+			text: text.to_string(),
+			strikethrough: false,
+			link: None,
+			strong: false,
+			emphasis: false,
+			code: false,
+		}]))
+	}
+
+	#[test]
+	fn test_heading_markdown_parsing() {
+		let markdown_str = "# Heading";
+		let markdown_items: Vec<Item> = advanced_parse(markdown_str).collect();
+		assert_eq!(
+			markdown_items,
+			vec![Item::Heading(
+				pulldown_cmark::HeadingLevel::H1,
+				Text {
+					spans: vec![Span::Standard {
+						text: "Heading".to_string(),
+						strikethrough: false,
+						link: None,
+						strong: false,
+						emphasis: false,
+						code: false
+					}],
+					last_style: Cell::new(None),
+					last_styled_spans: RefCell::new(Arc::new([]))
+				}
+			)]
+		)
+	}
+
+	#[test]
+	fn test_nested_list_markdown_parsing() {
+		let markdown_str = r"
+- A
+	- B
+		- C";
+
+		let markdown_items: Vec<Item> = advanced_parse(markdown_str).collect();
+
+		assert_eq!(
+			markdown_items,
+			vec![Item::List {
+				start: None,
+				items: vec![ListItems::new(vec![
+					paragraph("A"),
+					Item::List {
+						start: None,
+						items: vec![ListItems::new(vec![
+							paragraph("B"),
+							Item::List {
+								start: None,
+								items: vec![ListItems::new(vec![paragraph("C")])]
+							}
+						])]
+					}
+				]),]
+			}]
+		)
+	}
+
+	#[test]
+	fn test_task_checkbox_markdown_parsing() {
+		let markdown_str = r"
+- [X] task1
+- [X] task2
+- [ ] task3";
+		let markdown_items: Vec<Item> = advanced_parse(markdown_str).collect();
+
+		assert_eq!(
+			markdown_items,
+			vec![Item::List {
+				start: None,
+				items: vec![
+					ListItems {
+						beginner: ListItemBeginner::Checkbox {
+							checked: true,
+							range: Range { start: 3, end: 6 }
+						},
+						items: vec![paragraph("task1")]
+					},
+					ListItems {
+						beginner: ListItemBeginner::Checkbox {
+							checked: true,
+							range: Range { start: 15, end: 18 }
+						},
+						items: vec![paragraph("task2")]
+					},
+					ListItems {
+						beginner: ListItemBeginner::Checkbox {
+							checked: false,
+							range: Range { start: 27, end: 30 }
+						},
+						items: vec![paragraph("task3")]
+					}
+				]
+			}]
+		)
+	}
 }
