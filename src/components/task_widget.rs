@@ -146,8 +146,8 @@ pub fn task_widget<'a>(
 						} else {
 							Some(tags_element)
 						})
-						.push(inner_text_element)
-						.push_maybe(if task.description.is_empty() {
+						.push(inner_text_element) // text_editor leaves empty new line even if completly empty editor
+						.push_maybe(if task.description.is_empty() || task.description == "\n" {
 							None::<Element<'a, Message>>
 						} else {
 							Some(
