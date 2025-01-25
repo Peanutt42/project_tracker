@@ -1,14 +1,7 @@
-use std::{
-	collections::HashSet,
-	net::SocketAddr,
-	path::PathBuf,
-	sync::{Arc, RwLock},
-};
-
 use humantime::format_duration;
 use serde::{Deserialize, Serialize};
+use std::{collections::HashSet, net::SocketAddr, path::PathBuf};
 use systemstat::{saturating_sub_bytes, Platform, System};
-use tracing::error;
 
 use crate::{get_logs_as_string, ConnectedClient, CpuUsageAverage};
 
@@ -25,18 +18,10 @@ pub struct AdminInfos {
 
 impl AdminInfos {
 	pub fn generate(
-		connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
+		connected_clients: HashSet<ConnectedClient>,
 		cpu_usage_avg: &CpuUsageAverage,
 		log_filepath: &PathBuf,
 	) -> Self {
-		let connected_clients = match connected_clients.read() {
-			Ok(connected_clients) => connected_clients.clone(),
-			Err(e) => {
-				error!("failed to read connected clients RwLock: {e}, returning empty set of connected clients");
-				HashSet::new()
-			}
-		};
-
 		let mut connected_native_gui_clients = Vec::new();
 		let mut connected_web_clients = Vec::new();
 

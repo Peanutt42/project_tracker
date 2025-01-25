@@ -9,11 +9,12 @@ use async_tungstenite::{
 use chrono::{Datelike, Local, Timelike, Utc};
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::{collections::HashSet, net::SocketAddr};
 use std::{path::PathBuf, process::exit};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
 type WsWriteSink = futures_util::stream::SplitSink<
@@ -96,12 +97,7 @@ pub async fn handle_client(
 
 	let connected_client = ConnectedClient::NativeGUI(client_addr);
 
-	match connected_clients.write() {
-		Ok(mut connected_clients) => {
-			connected_clients.insert(connected_client);
-		},
-		Err(e) => error!("failed to write connected clients RwLock: {e}, connected client will not show up in connected clients set!"),
-	}
+	connected_clients.write().await.insert(connected_client);
 
 	listen_client_thread(
 		stream,
@@ -117,12 +113,7 @@ pub async fn handle_client(
 	)
 	.await;
 
-	match connected_clients.write() {
-		Ok(mut connected_clients) => {
-			connected_clients.remove(&connected_client);
-		},
-		Err(e) => error!("failed to write connected clients RwLock: {e}, connected client will not be removed from connected clients set!"),
-	}
+	connected_clients.write().await.remove(&connected_client);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -247,13 +238,7 @@ async fn respond_to_client_request(
 	match request {
 		Request::CheckUpToDate { database_checksum } => {
 			info!("sending last modified date");
-			let is_up_to_date = match shared_database.read() {
-				Ok(shared_database) => database_checksum == shared_database.checksum(),
-				Err(e) => {
-					error!("failed to read shared database RwLock: {e}");
-					return;
-				}
-			};
+			let is_up_to_date = database_checksum == shared_database.read().await.checksum();
 			if is_up_to_date {
 				send_response(&Response::DatabaseUpToDate, ws_write, password).await;
 			} else {
@@ -265,28 +250,16 @@ async fn respond_to_client_request(
 			database_message,
 			database_before_update_checksum,
 		} => {
-			let database_synced = match shared_database.read() {
-				Ok(shared_database) => {
-					database_before_update_checksum == shared_database.checksum()
-				}
-				Err(e) => {
-					error!("failed to read shared database RwLock: {e}");
-					return;
-				}
-			};
+			let database_synced =
+				database_before_update_checksum == shared_database.read().await.checksum();
 
 			if database_synced {
 				info!("updating database");
 
-				let database = match shared_database.write() {
-					Ok(mut shared_database) => {
-						shared_database.update(database_message.clone());
-						shared_database.clone()
-					}
-					Err(e) => {
-						error!("failed to write shared database RwLock: {e}");
-						return;
-					}
+				let database = {
+					let mut shared_database = shared_database.write().await;
+					shared_database.update(database_message.clone());
+					shared_database.clone()
 				};
 
 				let database_binary = database.to_binary();
@@ -319,15 +292,10 @@ async fn respond_to_client_request(
 		Request::ImportDatabase { database } => {
 			info!("importing database");
 
-			let database = match shared_database.write() {
-				Ok(mut shared_data) => {
-					*shared_data = Database::from_serialized(database, Utc::now());
-					shared_data.clone()
-				}
-				Err(e) => {
-					error!("failed to write to shared database RwLock: {e}");
-					return;
-				}
+			let database = {
+				let mut shared_database = shared_database.write().await;
+				*shared_database = Database::from_serialized(database, Utc::now());
+				shared_database.clone()
 			};
 
 			let database_binary = database.to_binary();
@@ -358,7 +326,7 @@ async fn respond_to_client_request(
 
 			send_response(
 				&Response::AdminInfos(AdminInfos::generate(
-					connected_clients.clone(),
+					connected_clients.read().await.clone(),
 					cpu_usage_avg,
 					log_filepath,
 				)),
@@ -375,15 +343,10 @@ async fn send_more_up_to_date_database(
 	ws_write: &mut WsWriteSink,
 	password: &str,
 ) {
-	let (database, last_modified_time) = match shared_database.read() {
-		Ok(shared_database) => (
-			shared_database.serialized().clone(),
-			*shared_database.last_changed_time(),
-		),
-		Err(e) => {
-			error!("failed to read shared database RwLock: {e}");
-			return;
-		}
+	let (database, last_modified_time) = {
+		let shared_database = shared_database.read().await.clone();
+		let last_changed_time = *shared_database.last_changed_time();
+		(shared_database.into_serialized(), last_changed_time)
 	};
 
 	send_response(

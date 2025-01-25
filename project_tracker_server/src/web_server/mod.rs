@@ -2,13 +2,8 @@ use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
 use project_tracker_server::{AdminInfos, ConnectedClient, CpuUsageAverage, ModifiedEvent};
 use serde::{Deserialize, Serialize};
-use std::{
-	collections::HashSet,
-	net::SocketAddr,
-	path::PathBuf,
-	sync::{Arc, RwLock},
-};
-use tokio::sync::broadcast::Receiver;
+use std::{collections::HashSet, net::SocketAddr, path::PathBuf, sync::Arc};
+use tokio::sync::{broadcast::Receiver, RwLock};
 use tracing::{error, info};
 use warp::{
 	body,
@@ -67,13 +62,12 @@ pub async fn run_web_server(
 
 	let shared_database_clone = shared_database.clone();
 
-	let get_database_route =
-		path("load_database")
-			.and(post())
-			.and(body::json())
-			.map(move |body: serde_json::Value| {
-				load_database(body, password_clone.clone(), shared_database_clone.clone())
-			});
+	let get_database_route = path("load_database")
+		.and(post())
+		.and(body::json())
+		.and(warp::any().map(move || password_clone.clone()))
+		.and(warp::any().map(move || shared_database_clone.clone()))
+		.then(load_database);
 
 	let password_clone = password.clone();
 
@@ -86,23 +80,11 @@ pub async fn run_web_server(
 	let admin_infos_route = path("admin_infos")
 		.and(post())
 		.and(body::json())
+		.and(warp::any().map(move || password_clone.clone()))
 		.and(connected_clients_clone)
 		.and(cpu_usage_avg_clone)
 		.and(warp::any().map(move || log_filepath.clone()))
-		.map(
-			move |body: serde_json::Value,
-			      connected_clients_clone: Arc<RwLock<HashSet<ConnectedClient>>>,
-			      cpu_usage_avg: Arc<CpuUsageAverage>,
-			      log_filepath: PathBuf| {
-				get_admin_infos(
-					body,
-					password_clone.clone(),
-					connected_clients_clone,
-					cpu_usage_avg,
-					&log_filepath,
-				)
-			},
-		);
+		.then(get_admin_infos);
 
 	let modified_receiver = Arc::new(RwLock::new(modified_receiver));
 	let modified_receiver = warp::any().map(move || modified_receiver.clone());
@@ -126,12 +108,14 @@ pub async fn run_web_server(
 			      connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
 			      password: String| {
 				async move {
+					let modified_receiver = modified_receiver.read().await.resubscribe();
+
 					ws.on_upgrade(move |socket| {
 						on_upgrade_modified_ws(
 							socket,
 							password,
 							client_addr,
-							modified_receiver.read().unwrap().resubscribe(),
+							modified_receiver,
 							connected_clients,
 						)
 					})
@@ -297,33 +281,33 @@ pub async fn run_web_server(
 	https_warp.await;
 }
 
-fn load_database(
+async fn load_database(
 	body: serde_json::Value,
 	password: String,
 	shared_database: Arc<RwLock<Database>>,
 ) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
 		info!("sending database as json");
-		reply::json(&shared_database.read().unwrap().serialized().clone()).into_response()
+		reply::json(shared_database.read().await.serialized()).into_response()
 	} else {
 		info!("invalid password providied, refusing access!");
 		with_status(html("Unauthorized".to_string()), StatusCode::UNAUTHORIZED).into_response()
 	}
 }
 
-fn get_admin_infos(
+async fn get_admin_infos(
 	body: serde_json::Value,
 	password: String,
 	connected_clients: Arc<RwLock<HashSet<ConnectedClient>>>,
 	cpu_usage_avg: Arc<CpuUsageAverage>,
-	log_filepath: &PathBuf,
+	log_filepath: PathBuf,
 ) -> Response {
 	if body.get("password") == Some(&serde_json::Value::String(password)) {
 		info!("sending admin infos");
 		reply::json(&AdminInfos::generate(
-			connected_clients,
+			connected_clients.read().await.clone(),
 			cpu_usage_avg.as_ref(),
-			log_filepath,
+			&log_filepath,
 		))
 		.into_response()
 	} else {
@@ -373,13 +357,13 @@ async fn on_upgrade_modified_ws(
 	let connected_client = client_addr.map(ConnectedClient::Web);
 
 	if let Some(connected_client) = connected_client {
-		connected_clients.write().unwrap().insert(connected_client);
+		connected_clients.write().await.insert(connected_client);
 	}
 
 	handle_modified_ws(ws, modified_receiver).await;
 
 	if let Some(connected_client) = connected_client {
-		connected_clients.write().unwrap().remove(&connected_client);
+		connected_clients.write().await.remove(&connected_client);
 	}
 }
 
