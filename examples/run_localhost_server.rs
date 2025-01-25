@@ -2,11 +2,8 @@ use project_tracker::Database;
 use project_tracker_server::{
 	messure_cpu_usage_avg_thread, CpuUsageAverage, DEFAULT_PASSWORD, DEFAULT_PORT,
 };
-use std::{
-	collections::HashSet,
-	fs::OpenOptions,
-	sync::{Arc, RwLock},
-};
+use std::{collections::HashSet, fs::OpenOptions, sync::Arc};
+use tokio::sync::RwLock;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, Layer};
 
