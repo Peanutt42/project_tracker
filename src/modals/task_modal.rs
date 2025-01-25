@@ -304,7 +304,11 @@ impl Modal {
 								task_description(
 									self.project_id,
 									self.task_id,
-									app.task_description_markdown_items.get(&self.task_id),
+									app.task_description_markdown_storage.get(
+										self.project_id,
+										self.task_id,
+										app.database.ok(),
+									),
 									app,
 								)
 							};

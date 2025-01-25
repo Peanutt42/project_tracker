@@ -862,7 +862,11 @@ fn task_info<'a>(
 				task_description(
 					*project_id,
 					task_id,
-					app.task_description_markdown_items.get(&task_id),
+					app.task_description_markdown_storage.get(
+						*project_id,
+						task_id,
+						app.database.ok(),
+					),
 					app,
 				)
 			}))

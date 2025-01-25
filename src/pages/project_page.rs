@@ -489,7 +489,6 @@ impl Page {
 							project,
 							&self.cached_task_list,
 							&app.task_ui_id_map,
-							&app.task_description_markdown_items,
 							app.preferences.code_editor(),
 							app.dragged_task,
 							app.just_minimal_dragging,

@@ -34,21 +34,60 @@ pub enum Item {
 	List {
 		start: Option<u64>,
 		/// The items of the list.
-		items: Vec<ListItems>,
+		items: Arc<[ListItems]>,
 	},
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ListItems {
 	beginner: ListItemBeginner,
-	items: Vec<Item>,
+	items: Arc<[Item]>,
 }
 
 impl ListItems {
-	pub fn new(items: Vec<Item>) -> Self {
+	pub fn new(items: Arc<[Item]>) -> Self {
 		Self {
 			items,
 			beginner: ListItemBeginner::default(),
+		}
+	}
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum DynamicItem {
+	Heading(pulldown_cmark::HeadingLevel, Text),
+	Paragraph(Text),
+	CodeBlock(Text),
+	List {
+		start: Option<u64>,
+		items: Vec<DynamicListItems>,
+	},
+}
+
+impl From<DynamicItem> for Item {
+	fn from(value: DynamicItem) -> Self {
+		match value {
+			DynamicItem::List { start, items } => Item::List {
+				start,
+				items: items.into_iter().map(|di| di.into()).collect(),
+			},
+			DynamicItem::Heading(heading_level, text) => Item::Heading(heading_level, text),
+			DynamicItem::CodeBlock(text) => Item::CodeBlock(text),
+			DynamicItem::Paragraph(text) => Item::Paragraph(text),
+		}
+	}
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct DynamicListItems {
+	beginner: ListItemBeginner,
+	items: Vec<DynamicItem>,
+}
+impl From<DynamicListItems> for ListItems {
+	fn from(value: DynamicListItems) -> Self {
+		Self {
+			beginner: value.beginner,
+			items: value.items.into_iter().map(|di| di.into()).collect(),
 		}
 	}
 }
@@ -181,7 +220,7 @@ fn markdown_task_checkbox<'a>(checked: bool, range: Range<usize>) -> Element<'a,
 // copied from iced_widget-0.13.4/src/markdown.rs:616..702
 // modification: font to JetBrainsMono (matching the task description text editor font)
 pub fn markdown_with_jetbrainsmono_font<'a>(
-	items: impl IntoIterator<Item = &'a Item>,
+	items: Arc<[Item]>,
 	settings: markdown::Settings,
 	style: markdown::Style,
 ) -> Element<'a, MarkdownMessage> {
@@ -198,7 +237,7 @@ pub fn markdown_with_jetbrainsmono_font<'a>(
 
 	let spacing = text_size * 0.625;
 
-	let blocks = items.into_iter().enumerate().map(|(i, item)| match item {
+	let blocks = items.iter().enumerate().map(|(i, item)| match item {
 		Item::Heading(level, heading) => container(
 			rich_text(heading.spans(style))
 				.size(match level {
@@ -229,7 +268,7 @@ pub fn markdown_with_jetbrainsmono_font<'a>(
 					ListItemBeginner::Checkbox { checked, range } =>
 						markdown_task_checkbox(*checked, range.clone()),
 				},
-				markdown_with_jetbrainsmono_font(&items.items, settings, style)
+				markdown_with_jetbrainsmono_font(items.items.clone(), settings, style)
 			]
 			.spacing(spacing)
 			.into()
@@ -249,7 +288,7 @@ pub fn markdown_with_jetbrainsmono_font<'a>(
 					ListItemBeginner::Checkbox { checked, range } =>
 						markdown_task_checkbox(*checked, range.clone()),
 				},
-				markdown_with_jetbrainsmono_font(&items.items, settings, style)
+				markdown_with_jetbrainsmono_font(items.items.clone(), settings, style)
 			]
 			.spacing(spacing)
 			.into()
@@ -280,14 +319,18 @@ pub fn markdown_with_jetbrainsmono_font<'a>(
 	Element::new(column(blocks).width(Length::Fill).spacing(text_size))
 }
 
+pub fn parse_markdown(markdown: &str) -> Arc<[Item]> {
+	advanced_parse(markdown).map(|item| item.into()).collect()
+}
+
 // copied from iced_widget-0.13.4/src/markdown.rs:190..491
 // TODO: add gfm support with blocknotes --> see 'pulldown_cmark::Options::ENABLE_GFM'
 /// Parse the given Markdown content.
 #[allow(clippy::expect_used, clippy::unwrap_used)]
-pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
+fn advanced_parse(markdown: &str) -> impl Iterator<Item = DynamicItem> + '_ {
 	struct List {
 		start: Option<u64>,
-		items: Vec<ListItems>,
+		items: Vec<DynamicListItems>,
 	}
 
 	let mut spans = Vec::new();
@@ -311,7 +354,7 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 			| pulldown_cmark::Options::ENABLE_TASKLISTS,
 	);
 
-	let produce = |lists: &mut Vec<List>, item| {
+	let produce = |lists: &mut Vec<List>, item: DynamicItem| {
 		if lists.is_empty() {
 			Some(item)
 		} else {
@@ -362,7 +405,7 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 					} else {
 						produce(
 							&mut lists,
-							Item::Paragraph(Text::new(spans.drain(..).collect())),
+							DynamicItem::Paragraph(Text::new(spans.drain(..).collect())),
 						)
 					};
 
@@ -378,7 +421,10 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 						.last_mut()
 						.expect("list context")
 						.items
-						.push(ListItems::new(Vec::new()));
+						.push(DynamicListItems {
+							beginner: ListItemBeginner::default(),
+							items: Vec::new(),
+						});
 					None
 				}
 				pulldown_cmark::Tag::CodeBlock(pulldown_cmark::CodeBlockKind::Fenced(
@@ -409,7 +455,7 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 			pulldown_cmark::Event::End(tag) => match tag {
 				pulldown_cmark::TagEnd::Heading(level) if !metadata && !table => produce(
 					&mut lists,
-					Item::Heading(level, Text::new(spans.drain(..).collect())),
+					DynamicItem::Heading(level, Text::new(spans.drain(..).collect())),
 				),
 				pulldown_cmark::TagEnd::Strong if !metadata && !table => {
 					strong = false;
@@ -432,7 +478,7 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 					if spans.is_empty() {
 						None
 					} else {
-						produce(&mut lists, Item::Paragraph(Text::new(spans)))
+						produce(&mut lists, DynamicItem::Paragraph(Text::new(spans)))
 					}
 				}
 				pulldown_cmark::TagEnd::Item if !metadata && !table => {
@@ -441,7 +487,7 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 					} else {
 						produce(
 							&mut lists,
-							Item::Paragraph(Text::new(spans.drain(..).collect())),
+							DynamicItem::Paragraph(Text::new(spans.drain(..).collect())),
 						)
 					}
 				}
@@ -450,7 +496,7 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 
 					produce(
 						&mut lists,
-						Item::List {
+						DynamicItem::List {
 							start: list.start,
 							items: list.items,
 						},
@@ -461,7 +507,7 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 
 					produce(
 						&mut lists,
-						Item::CodeBlock(Text::new(spans.drain(..).collect())),
+						DynamicItem::CodeBlock(Text::new(spans.drain(..).collect())),
 					)
 				}
 				pulldown_cmark::TagEnd::MetadataBlock(_) => {
@@ -507,7 +553,7 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 						task_hint = false;
 						produce(
 							&mut lists,
-							Item::Paragraph(Text::new(spans.drain(..).collect())),
+							DynamicItem::Paragraph(Text::new(spans.drain(..).collect())),
 						)
 					}
 					false => None,
@@ -567,16 +613,16 @@ pub fn advanced_parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
 
 #[cfg(test)]
 mod tests {
-	use super::{advanced_parse, Item, Span, Text};
-	use crate::components::markdown::{ListItemBeginner, ListItems};
+	use super::{advanced_parse, Span, Text};
+	use crate::components::markdown::{DynamicItem, DynamicListItems, ListItemBeginner};
 	use std::{
 		cell::{Cell, RefCell},
 		ops::Range,
 		sync::Arc,
 	};
 
-	fn paragraph(text: &'static str) -> Item {
-		Item::Paragraph(Text::new(vec![Span::Standard {
+	fn paragraph(text: &'static str) -> DynamicItem {
+		DynamicItem::Paragraph(Text::new(vec![Span::Standard {
 			text: text.to_string(),
 			strikethrough: false,
 			link: None,
@@ -589,10 +635,10 @@ mod tests {
 	#[test]
 	fn test_heading_markdown_parsing() {
 		let markdown_str = "# Heading";
-		let markdown_items: Vec<Item> = advanced_parse(markdown_str).collect();
+		let markdown_items: Vec<DynamicItem> = advanced_parse(markdown_str).collect();
 		assert_eq!(
 			markdown_items,
-			vec![Item::Heading(
+			vec![DynamicItem::Heading(
 				pulldown_cmark::HeadingLevel::H1,
 				Text {
 					spans: vec![Span::Standard {
@@ -617,25 +663,34 @@ mod tests {
 	- B
 		- C";
 
-		let markdown_items: Vec<Item> = advanced_parse(markdown_str).collect();
+		let markdown_items: Vec<DynamicItem> = advanced_parse(markdown_str).collect();
 
 		assert_eq!(
 			markdown_items,
-			vec![Item::List {
+			vec![DynamicItem::List {
 				start: None,
-				items: vec![ListItems::new(vec![
-					paragraph("A"),
-					Item::List {
-						start: None,
-						items: vec![ListItems::new(vec![
-							paragraph("B"),
-							Item::List {
-								start: None,
-								items: vec![ListItems::new(vec![paragraph("C")])]
-							}
-						])]
-					}
-				]),]
+				items: vec![DynamicListItems {
+					beginner: ListItemBeginner::Default,
+					items: vec![
+						paragraph("A"),
+						DynamicItem::List {
+							start: None,
+							items: vec![DynamicListItems {
+								beginner: ListItemBeginner::Default,
+								items: vec![
+									paragraph("B"),
+									DynamicItem::List {
+										start: None,
+										items: vec![DynamicListItems {
+											beginner: ListItemBeginner::Default,
+											items: vec![paragraph("C")]
+										}]
+									}
+								]
+							}]
+						}
+					]
+				}]
 			}]
 		)
 	}
@@ -646,28 +701,28 @@ mod tests {
 - [X] task1
 - [X] task2
 - [ ] task3";
-		let markdown_items: Vec<Item> = advanced_parse(markdown_str).collect();
+		let markdown_items: Vec<DynamicItem> = advanced_parse(markdown_str).collect();
 
 		assert_eq!(
 			markdown_items,
-			vec![Item::List {
+			vec![DynamicItem::List {
 				start: None,
 				items: vec![
-					ListItems {
+					DynamicListItems {
 						beginner: ListItemBeginner::Checkbox {
 							checked: true,
 							range: Range { start: 3, end: 6 }
 						},
 						items: vec![paragraph("task1")]
 					},
-					ListItems {
+					DynamicListItems {
 						beginner: ListItemBeginner::Checkbox {
 							checked: true,
 							range: Range { start: 15, end: 18 }
 						},
 						items: vec![paragraph("task2")]
 					},
-					ListItems {
+					DynamicListItems {
 						beginner: ListItemBeginner::Checkbox {
 							checked: false,
 							range: Range { start: 27, end: 30 }

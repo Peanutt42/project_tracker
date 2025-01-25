@@ -1,7 +1,7 @@
+use std::sync::Arc;
+
 use crate::{
-	components::markdown::{
-		advanced_parse, markdown_with_jetbrainsmono_font, Item, MarkdownMessage,
-	},
+	components::markdown::{markdown_with_jetbrainsmono_font, Item, MarkdownMessage},
 	components::unfocusable,
 	project_tracker::Message,
 	styles::{
@@ -22,16 +22,12 @@ use iced::{
 };
 use project_tracker_core::{DatabaseMessage, ProjectId, TaskId};
 
-pub fn generate_task_description_markdown(description: &str) -> Vec<Item> {
-	advanced_parse(description).collect()
-}
-
-pub fn task_description<'a>(
+pub fn task_description(
 	project_id: ProjectId,
 	task_id: TaskId,
-	task_description_markdown_items: Option<&'a Vec<Item>>,
-	app: &'a ProjectTrackerApp,
-) -> Element<'a, Message> {
+	task_description_markdown_items: Option<Arc<[Item]>>,
+	app: &ProjectTrackerApp,
+) -> Element<Message> {
 	container(match task_description_markdown_items {
 		Some(task_description_markdown_items) if !task_description_markdown_items.is_empty() => {
 			markdown_with_jetbrainsmono_font(

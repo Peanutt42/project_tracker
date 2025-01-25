@@ -1,13 +1,12 @@
-use crate::core::export_database_as_markdown_file_dialog;
+use crate::core::{export_database_as_markdown_file_dialog, TaskDescriptionMarkdownStorage};
 use crate::synchronization::{
 	DatabaseUpdateEvent, DelayedSynchronization, OnUpdateSynchronization, SynchronizationError,
 	SynchronizationMessage, SynchronizationOutput,
 };
 use crate::{
 	components::{
-		create_empty_database_button, generate_task_description_markdown, import_database_button,
-		markdown, retry_loading_database_button, settings_button, toggle_sidebar_button,
-		ScalarAnimation, ICON_BUTTON_WIDTH,
+		create_empty_database_button, import_database_button, retry_loading_database_button,
+		settings_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH,
 	},
 	core::{
 		export_database_as_json_file_dialog, export_database_file_dialog, formatted_date_time,
@@ -43,12 +42,10 @@ use iced::{
 	Padding, Point, Rectangle, Subscription, Task, Theme,
 };
 use project_tracker_core::{
-	toggle_task_description_markdown_task, Database, DatabaseMessage, LoadDatabaseError, ProjectId,
-	SaveDatabaseError, TaskId,
+	Database, DatabaseMessage, LoadDatabaseError, ProjectId, SaveDatabaseError, TaskId,
 };
 use project_tracker_server::Request;
 use std::{
-	collections::HashMap,
 	path::PathBuf,
 	rc::Rc,
 	sync::Arc,
@@ -111,7 +108,7 @@ pub struct ProjectTrackerApp {
 	pub database: DatabaseState,
 	pub project_ui_id_map: ProjectUiIdMap,
 	pub task_ui_id_map: TaskUiIdMap,
-	pub task_description_markdown_items: HashMap<TaskId, Vec<markdown::Item>>,
+	pub task_description_markdown_storage: TaskDescriptionMarkdownStorage,
 	pub loading_database: bool,
 	pub importing_database: bool,
 	pub exporting_database: bool,
@@ -269,7 +266,7 @@ impl ProjectTrackerApp {
 				database: DatabaseState::NotLoaded,
 				project_ui_id_map: ProjectUiIdMap::default(),
 				task_ui_id_map: TaskUiIdMap::default(),
-				task_description_markdown_items: HashMap::new(),
+				task_description_markdown_storage: TaskDescriptionMarkdownStorage::default(),
 				loading_database: true,
 				importing_database: false,
 				exporting_database: false,
@@ -732,15 +729,6 @@ impl ProjectTrackerApp {
 
 				match load_database_result {
 					Ok(database) => {
-						// generate task description markdown parsed items
-						for project in database.projects().values() {
-							for (task_id, task, _task_type) in project.iter() {
-								self.task_description_markdown_items.insert(
-									task_id,
-									generate_task_description_markdown(&task.description),
-								);
-							}
-						}
 						self.database = DatabaseState::Loaded(database);
 						let action = self
 							.content_page
@@ -910,75 +898,6 @@ impl ProjectTrackerApp {
 			}
 			Message::DatabaseMessage(database_message) => match &mut self.database {
 				DatabaseState::Loaded(database) => {
-					match &database_message {
-						DatabaseMessage::CreateTask {
-							task_id,
-							task_description,
-							..
-						} => {
-							self.task_description_markdown_items.insert(
-								*task_id,
-								generate_task_description_markdown(task_description),
-							);
-						}
-						DatabaseMessage::ChangeTaskDescription {
-							task_id,
-							new_task_description,
-							..
-						} => {
-							self.task_description_markdown_items.insert(
-								*task_id,
-								generate_task_description_markdown(new_task_description),
-							);
-						}
-						DatabaseMessage::ToggleTaskDescriptionMarkdownTask {
-							project_id,
-							task_id,
-							range,
-							checked,
-						} => {
-							let new_task_description =
-								database.get_task(project_id, task_id).map(|task| {
-									let mut new_task_description = task.description.clone();
-									toggle_task_description_markdown_task(
-										&mut new_task_description,
-										*checked,
-										range.clone(),
-									);
-									new_task_description
-								});
-
-							if let Some(new_task_description) = new_task_description {
-								self.task_description_markdown_items.insert(
-									*task_id,
-									generate_task_description_markdown(&new_task_description),
-								);
-							}
-						}
-						DatabaseMessage::ImportProjects(projects) => {
-							for project in projects.iter() {
-								for (task_id, task, _task_type) in project.iter() {
-									self.task_description_markdown_items.insert(
-										task_id,
-										generate_task_description_markdown(&task.description),
-									);
-								}
-							}
-						}
-						DatabaseMessage::ImportSourceCodeTodos {
-							source_code_todo_tasks,
-							..
-						} => {
-							for (task_id, task) in source_code_todo_tasks.iter() {
-								self.task_description_markdown_items.insert(
-									task_id,
-									generate_task_description_markdown(&task.description),
-								);
-							}
-						}
-						_ => {}
-					}
-
 					let synchronization_task = match &mut self.synchronization {
 						Some(synchronization) => synchronization.before_database_update(
 							database,

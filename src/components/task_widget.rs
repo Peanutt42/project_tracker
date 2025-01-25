@@ -1,7 +1,6 @@
 use crate::{
 	components::{
-		days_left_widget, duration_widget, in_between_dropzone, markdown,
-		open_in_code_editor_button,
+		days_left_widget, duration_widget, in_between_dropzone, open_in_code_editor_button,
 	},
 	core::{View, TASK_TAG_QUAD_HEIGHT},
 	icons::{icon_to_text, Bootstrap},
@@ -36,7 +35,6 @@ pub fn task_widget<'a>(
 	task_id: TaskId,
 	task_dropzone_id: Id,
 	task_type: TaskType,
-	task_description_markdown_items: Option<&'a Vec<markdown::Item>>,
 	project_id: ProjectId,
 	project: &'a Project,
 	code_editor: Option<&'a CodeEditor>,
@@ -149,17 +147,14 @@ pub fn task_widget<'a>(
 							Some(tags_element)
 						})
 						.push(inner_text_element)
-						.push_maybe(match task_description_markdown_items {
-							Some(task_description_markdown_items)
-								if !task_description_markdown_items.is_empty() =>
-							{
-								Some(
-									icon_to_text(Bootstrap::JustifyLeft)
-										.size(SMALL_TEXT_SIZE)
-										.into(),
-								)
-							}
-							_ => None::<Element<'a, Message>>,
+						.push_maybe(if task.description.is_empty() {
+							None::<Element<'a, Message>>
+						} else {
+							Some(
+								icon_to_text(Bootstrap::JustifyLeft)
+									.size(SMALL_TEXT_SIZE)
+									.into(),
+							)
 						})
 						.spacing(TINY_SPACING_AMOUNT),
 					Column::new().push_maybe(

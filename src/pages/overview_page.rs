@@ -15,7 +15,7 @@ use crate::{
 };
 use chrono::{DateTime, Days, NaiveDate, Utc};
 use iced::{
-	widget::{column, container, container::Id, row, text, Column},
+	widget::{column, container, row, text, Column},
 	Element,
 	Length::{Fill, Fixed},
 	Padding,
@@ -346,11 +346,8 @@ impl Page {
 							Some((task, task_type)) => task_widget(
 								task,
 								*task_id,
-								app.task_ui_id_map
-									.get_dropzone_id(*task_id)
-									.unwrap_or(Id::unique()),
+								app.task_ui_id_map.get_dropzone_id_mut(*task_id),
 								task_type,
-								app.task_description_markdown_items.get(task_id),
 								*project_id,
 								project,
 								app.preferences.code_editor(),

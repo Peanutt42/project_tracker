@@ -1,5 +1,5 @@
 mod task_tag;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 use project_tracker_core::{ProjectId, TaskId};
 pub use task_tag::TASK_TAG_QUAD_HEIGHT;
@@ -9,6 +9,9 @@ pub use date::{formatted_date_time, SerializableDateConversion};
 
 mod project;
 pub use project::{IcedColorConversion, SortModeUI};
+
+mod task;
+pub use task::TaskDescriptionMarkdownStorage;
 
 mod database;
 pub use database::{
@@ -46,20 +49,6 @@ pub struct ProjectUiIdMap {
 }
 
 impl ProjectUiIdMap {
-	pub fn get_project_dropzone_id(&self, project_id: ProjectId) -> Id {
-		self.project_ids
-			.get(&project_id)
-			.map(|ids| ids.project_dropzone_id.clone())
-			.unwrap_or(Id::unique())
-	}
-
-	pub fn get_task_dropzone_id(&self, project_id: ProjectId) -> Id {
-		self.project_ids
-			.get(&project_id)
-			.map(|ids| ids.task_dropzone_id.clone())
-			.unwrap_or(Id::unique())
-	}
-
 	pub fn get_project_dropzone_id_mut(&mut self, project_id: ProjectId) -> Id {
 		self.project_ids
 			.entry(project_id)
@@ -105,32 +94,22 @@ impl Default for TaskUiIds {
 
 #[derive(Debug, Default)]
 pub struct TaskUiIdMap {
-	task_ids: HashMap<TaskId, TaskUiIds>,
+	task_ids: RefCell<HashMap<TaskId, TaskUiIds>>,
 }
 
 impl TaskUiIdMap {
-	pub fn get_dropzone_id(&self, task_id: TaskId) -> Option<Id> {
+	pub fn get_dropzone_id_mut(&self, task_id: TaskId) -> Id {
 		self.task_ids
-			.get(&task_id)
-			.map(|ids| ids.dropzone_id.clone())
-	}
-
-	pub fn get_droppable_id(&self, task_id: TaskId) -> Option<widget::Id> {
-		self.task_ids
-			.get(&task_id)
-			.map(|ids| ids.droppable_id.clone())
-	}
-
-	pub fn get_dropzone_id_mut(&mut self, task_id: TaskId) -> Id {
-		self.task_ids
+			.borrow_mut()
 			.entry(task_id)
 			.or_default()
 			.dropzone_id
 			.clone()
 	}
 
-	pub fn get_droppable_id_mut(&mut self, task_id: TaskId) -> widget::Id {
+	pub fn get_droppable_id_mut(&self, task_id: TaskId) -> widget::Id {
 		self.task_ids
+			.borrow_mut()
 			.entry(task_id)
 			.or_default()
 			.droppable_id
