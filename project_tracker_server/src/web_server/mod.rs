@@ -23,6 +23,7 @@ const SELF_SIGNED_CERT_PEM: &[u8] = include_bytes!("self_signed_certificates/cer
 
 const FAVICON_ICO: &[u8] = include_bytes!("static/favicon.ico");
 const ICON_180X180_PNG: &[u8] = include_bytes!("static/icon_180x180.png");
+const APPLE_TOUCH_ICON_PNG: &[u8] = include_bytes!("static/apple-touch-icon.png");
 const CARET_DOWN_SVG: &str = include_str!("static/caret-down-fill.svg");
 const CARET_RIGHT_SVG: &str = include_str!("static/caret-right-fill.svg");
 const BAR_CHART_SVG: &str = include_str!("static/bar-chart-fill.svg");
@@ -133,6 +134,10 @@ pub async fn run_web_server(
 		.and(path("icon_180x180.png"))
 		.map(|| with_header(ICON_180X180_PNG, "Content-Type", "image/png"));
 
+	let apple_touch_icon_png_route = static_path
+		.and(path("apple-touch-icon.png"))
+		.map(|| with_header(APPLE_TOUCH_ICON_PNG, "Content-Type", "image/png"));
+
 	let caret_down_svg_route = static_path
 		.and(path("caret-down-fill.svg"))
 		.map(|| with_header(CARET_DOWN_SVG, "Content-Type", "image/svg+xml"));
@@ -179,6 +184,7 @@ pub async fn run_web_server(
 
 	let asset_routes = favicon_route
 		.or(icon_180x180_png_route)
+		.or(apple_touch_icon_png_route)
 		.or(caret_down_svg_route)
 		.or(caret_right_svg_route)
 		.or(bar_chart_svg_route)

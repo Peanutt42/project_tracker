@@ -17,6 +17,7 @@ self.addEventListener("install", (event) => {
 				"/static/hourglass-split.svg",
 				"/static/house-fill.svg",
 				"/static/icon_180x180.png",
+				"/static/apple-touch-icon.png",
 				"/static/memory.svg",
 				"/static/thermometer-half.svg",
 				"/static/window.svg",
