@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
 	// register pwa service-worker
 	if ("serviceWorker" in navigator) {
-		navigator.serviceWorker.register("/static/service-worker.js").then(() => {
+		navigator.serviceWorker.register("/service-worker.js").then(() => {
 			console.log("Service Worker Registered");
 		});
 	}

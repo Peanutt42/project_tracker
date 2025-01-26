@@ -127,17 +127,17 @@ summary {
 	background-color: rgb(50, 50, 50);
 }
 summary::after {
-	content: '';
+	content: "";
 	margin-right: 5px;
 	width: 16px;
 	height: 16px;
-	background: url('caret-right-fill.svg');
+	background: url("static/caret-right-fill.svg");
 	background-size: cover;
 	gap: 5px;
 	transition: 0.2s;
 }
 details[open] > summary::after {
-	background: url('caret-down-fill.svg');
+	background: url("static/caret-down-fill.svg");
 }
 /* solves ipad-os (and probably all of webkit) still showing a default marker */
 summary::-webkit-details-marker {

@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 	// register pwa service-worker
 	if ("serviceWorker" in navigator) {
-		navigator.serviceWorker.register("/static/service-worker.js").then(() => {
+		navigator.serviceWorker.register("/service-worker.js").then(() => {
 			console.log("Service Worker Registered");
 		});
 	}
@@ -278,7 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	function connect_ws() {
 		console.log("connecting to modifed ws endpoint...");
-		ws = new WebSocket("wss://" + location.host + "/modified/");
+		ws = new WebSocket("wss://" + location.host + "/modified_ws/");
 		ws.onopen = on_ws_open;
 		ws.onclose = on_ws_close;
 		ws.onmessage = on_ws_message;

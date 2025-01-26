@@ -3,10 +3,10 @@ self.addEventListener("install", (event) => {
 		caches.open("pwa-cache").then((cache) => {
 			return cache.addAll([
 				"/",
-				"/static/index.html",
-				"/static/style.css",
-				"/static/script.js",
-				"/static/service-worker.js",
+				"/index.html",
+				"/style.css",
+				"/script.js",
+				"/service-worker.js",
 				"/static/bar-chart-fill.svg",
 				"/static/caret-down-fill.svg",
 				"/static/cart-right-fill.svg",
@@ -21,12 +21,12 @@ self.addEventListener("install", (event) => {
 				"/static/memory.svg",
 				"/static/thermometer-half.svg",
 				"/static/window.svg",
-				"/static/admin/index.html",
-				"/static/admin/script.js",
-				"/static/admin/style.css",
-				"/static/login/index.html",
-				"/static/login/script.js",
-				"/static/login/style.css",
+				"/admin/index.html",
+				"/admin/script.js",
+				"/admin/style.css",
+				"/login/index.html",
+				"/login/script.js",
+				"/login/style.css",
 			]);
 		}),
 	);
