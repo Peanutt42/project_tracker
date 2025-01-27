@@ -6,6 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
+	const project_list = document.getElementById("project_list");
+	const task_list = document.getElementById("task_list");
+
 	const database_list = document.getElementById("database");
 	const admin_dashboard_button = document.getElementById(
 		"admin_dashboard_button",
@@ -79,75 +82,112 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	function populate_dom_from_database(database) {
-		database_list.innerHTML = "";
+		let selected_project_id = localStorage.getItem("selected_project_id");
+		if (selected_project_id === null) {
+			selected_project_id = Object.keys(database)[0];
+		}
+		localStorage.setItem("selected_project_id", selected_project_id);
+
+		project_list.innerHTML = "";
 		for (const project_id in database) {
+			const selected = selected_project_id === project_id;
 			const project = database[project_id];
 
-			const project_div = document.createElement("div");
-			project_div.className = "project";
+			const project_button = document.createElement("button");
+			const project_color_str = color_to_str(project.color);
+			project_button.style.color = project_color_str;
+			if (selected) {
+				project_button.style.background = project_color_str;
+			} else {
+				project_button.style.background = "none";
+				project_button.style.borderStyle = "solid";
+				project_button.style.borderColor = project_color_str;
+				project_button.style.borderWidth = "1px";
+			}
+			project_button.addEventListener("click", () => {
+				localStorage.setItem("selected_project_id", project_id);
+				populate_dom_from_database(database);
+			});
 			const project_name = document.createElement("div");
-			project_name.className = "project_name";
-			const done_task_count = Object.keys(project.done_tasks).length;
-			const all_task_count =
-				done_task_count +
-				Object.keys(project.todo_tasks).length +
-				Object.keys(project.source_code_todos).length;
-			project_name.textContent =
-				project.name + " (" + done_task_count + "/" + all_task_count + ")";
-			project_name.style.textDecorationColor = color_to_str(project.color);
-			project_div.appendChild(project_name);
-
-			const task_list = document.createElement("ul");
-			task_list.className = "task_list";
-
-			const sorted_todo_tasks = field_ordered_tasklist_to_array(
-				project.todo_tasks,
-			);
-			sort_project_tasks(project.sort_mode, sorted_todo_tasks);
-			for (const task_with_id of sorted_todo_tasks) {
-				populate_dom_with_task(
-					task_list,
-					task_with_id[1],
-					project.task_tags,
-					false,
-				);
+			const project_color_brightness =
+				0.2126 * project.color[0] +
+				0.7152 * project.color[1] +
+				0.0722 * project.color[2];
+			if (selected && project_color_brightness > 255 * 0.6) {
+				project_name.style.color = "black";
+			} else {
+				project_name.style.color = "white";
 			}
-			const sorted_source_code_todos = field_ordered_tasklist_to_array(
-				project.soure_code_todos,
-			);
-			sort_project_tasks(project.sort_mode, sorted_source_code_todos);
-			for (const task_with_id in sorted_source_code_todos) {
-				populate_dom_with_task(
-					task_list,
-					task_with_id[1],
-					project.task_tags,
-					false,
-				);
-			}
-			const done_task_list_section = document.createElement("details");
-			done_task_list_section.className = "show_done_task_details";
-			const show_done_tasks_summary = document.createElement("summary");
-			show_done_tasks_summary.textContent = "Show done tasks";
-			done_task_list_section.appendChild(show_done_tasks_summary);
-			const done_task_list = document.createElement("ul");
-			done_task_list.className = "task_list";
-			const sorted_done_tasks = field_ordered_tasklist_to_array(
-				project.done_tasks,
-			);
-			sort_project_tasks(project.sort_mode, sorted_done_tasks);
-			for (const task_with_id of sorted_done_tasks) {
-				populate_dom_with_task(
-					done_task_list,
-					task_with_id[1],
-					project.task_tags,
-					true,
-				);
-			}
-			done_task_list_section.appendChild(done_task_list);
-			task_list.appendChild(done_task_list_section);
-			project_div.appendChild(task_list);
-			database_list.appendChild(project_div);
+			project_name.textContent = project.name;
+			project_button.appendChild(project_name);
+			project_list.appendChild(project_button);
 		}
+
+		populate_dom_from_project(database[selected_project_id]);
+	}
+
+	function populate_dom_from_project(project) {
+		task_list.innerHTML = "";
+
+		const project_div = document.createElement("div");
+		project_div.className = "project";
+		const project_name = document.createElement("div");
+		project_name.className = "project_name";
+		const done_task_count = Object.keys(project.done_tasks).length;
+		const all_task_count =
+			done_task_count +
+			Object.keys(project.todo_tasks).length +
+			Object.keys(project.source_code_todos).length;
+		project_name.textContent =
+			project.name + " (" + done_task_count + "/" + all_task_count + ")";
+		project_name.style.textDecorationColor = color_to_str(project.color);
+		project_div.appendChild(project_name);
+
+		const sorted_todo_tasks = field_ordered_tasklist_to_array(
+			project.todo_tasks,
+		);
+		sort_project_tasks(project.sort_mode, sorted_todo_tasks);
+		for (const task_with_id of sorted_todo_tasks) {
+			populate_dom_with_task(
+				task_list,
+				task_with_id[1],
+				project.task_tags,
+				false,
+			);
+		}
+		const sorted_source_code_todos = field_ordered_tasklist_to_array(
+			project.soure_code_todos,
+		);
+		sort_project_tasks(project.sort_mode, sorted_source_code_todos);
+		for (const task_with_id in sorted_source_code_todos) {
+			populate_dom_with_task(
+				task_list,
+				task_with_id[1],
+				project.task_tags,
+				false,
+			);
+		}
+		const done_task_list_section = document.createElement("details");
+		done_task_list_section.className = "show_done_task_details";
+		const show_done_tasks_summary = document.createElement("summary");
+		show_done_tasks_summary.textContent = "Show done tasks";
+		done_task_list_section.appendChild(show_done_tasks_summary);
+		const done_task_list = document.createElement("ul");
+		done_task_list.className = "task_list";
+		const sorted_done_tasks = field_ordered_tasklist_to_array(
+			project.done_tasks,
+		);
+		sort_project_tasks(project.sort_mode, sorted_done_tasks);
+		for (const task_with_id of sorted_done_tasks) {
+			populate_dom_with_task(
+				done_task_list,
+				task_with_id[1],
+				project.task_tags,
+				true,
+			);
+		}
+		done_task_list_section.appendChild(done_task_list);
+		task_list.appendChild(done_task_list_section);
 	}
 
 	function task_tag_dom(task_tag) {

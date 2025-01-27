@@ -51,25 +51,14 @@ button:hover {
 #logout_button:hover {
 	background-color: rgb(200, 0, 0);
 }
-.database {
-	white-space: break-spaces;
-	padding: 10px;
+.project_list {
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	gap: 20px;
-	margin-top: 0px;
-	margin-bottom: 0px;
-}
-.project {
-	display: flex;
-	flex-direction: column;
-	gap: 5px;
-}
-.project_name {
-	font-size: large;
-	font-weight: bold;
-	text-decoration: underline;
-	padding: 0px;
+	white-space: nowrap;
+	overflow-x: auto;
+	padding-left: 0;
+	padding-bottom: 10px;
 }
 .task {
 	font-size: medium;
@@ -90,6 +79,8 @@ button:hover {
 	flex-direction: column;
 	gap: 10px;
 	padding: 5px 0px 0px 0px;
+	margin-left: 20px;
+	margin-right: 20px;
 }
 .show_done_task_details {
 	display: flex;
