@@ -23,10 +23,6 @@ pub use container_styles::{
 mod completion_bar_style;
 pub use completion_bar_style::completion_bar_style;
 
-// TODO: pane_grid replacement
-/*mod split_style;
-pub use split_style::SplitStyle;*/
-
 mod checkbox_style;
 pub use checkbox_style::checkbox_style;
 
