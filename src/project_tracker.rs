@@ -1,3 +1,4 @@
+use crate::components::{toggle_sidebar_button, Split};
 use crate::core::{export_database_as_markdown_file_dialog, TaskDescriptionMarkdownStorage};
 use crate::synchronization::{
 	DatabaseUpdateEvent, DelayedSynchronization, OnUpdateSynchronization, SynchronizationError,
@@ -6,7 +7,7 @@ use crate::synchronization::{
 use crate::{
 	components::{
 		create_empty_database_button, import_database_button, retry_loading_database_button,
-		settings_button, toggle_sidebar_button, ScalarAnimation, ICON_BUTTON_WIDTH,
+		settings_button,
 	},
 	core::{
 		export_database_as_json_file_dialog, export_database_file_dialog, formatted_date_time,
@@ -29,14 +30,13 @@ use crate::{
 	LoadPreferencesError, OptionalPreference, PreferenceAction, PreferenceMessage, Preferences,
 };
 use chrono::Utc;
+use iced::widget::pane_grid::ResizeEvent;
 use iced::{
 	alignment::{Horizontal, Vertical},
 	clipboard,
 	event::Status,
 	keyboard, mouse, time,
-	widget::{
-		center, column, container, mouse_area, opaque, responsive, row, stack, text, Space, Stack,
-	},
+	widget::{center, column, container, mouse_area, opaque, row, stack, text, Stack},
 	window, Element, Event,
 	Length::Fill,
 	Padding, Point, Rectangle, Subscription, Task, Theme,
@@ -47,7 +47,6 @@ use project_tracker_core::{
 use project_tracker_server::Request;
 use std::{
 	path::PathBuf,
-	rc::Rc,
 	sync::Arc,
 	time::{Duration, Instant, SystemTime},
 };
@@ -102,8 +101,8 @@ impl AppFlags {
 
 pub struct ProjectTrackerApp {
 	pub flags: AppFlags,
+	pub split: Split,
 	pub sidebar_page: sidebar_page::Page,
-	pub sidebar_animation: ScalarAnimation,
 	pub content_page: pages::Page,
 	pub database: DatabaseState,
 	pub project_ui_id_map: ProjectUiIdMap,
@@ -133,6 +132,9 @@ pub struct ProjectTrackerApp {
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug)]
 pub enum Message {
+	SidebarResized {
+		ratio: f32,
+	},
 	TryClosing,
 	EscapePressed,
 	EnterPressed,
@@ -198,7 +200,6 @@ pub enum Message {
 	ContentPageMessage(pages::Message),
 	SidebarPageMessage(sidebar_page::Message),
 	ToggleSidebar,
-	AnimateSidebar,
 	SettingsModalMessage(settings_modal::Message),
 	OpenCreateTaskModal(ProjectId),
 	OpenCreateTaskModalCurrent,
@@ -260,8 +261,8 @@ impl ProjectTrackerApp {
 		(
 			Self {
 				flags: flags.clone(),
+				split: Split::new(sidebar_page::Page::DEFAULT_SPLIT_RATIO),
 				sidebar_page: sidebar_page::Page::new(),
-				sidebar_animation: ScalarAnimation::Idle,
 				content_page: pages::Page::new(None, &None),
 				database: DatabaseState::NotLoaded,
 				project_ui_id_map: ProjectUiIdMap::default(),
@@ -397,9 +398,6 @@ impl ProjectTrackerApp {
 			self.sidebar_page
 				.subscription()
 				.map(Message::SidebarPageMessage),
-			self.sidebar_animation
-				.subscription()
-				.map(|_| Message::AnimateSidebar),
 			self.content_page
 				.subscription()
 				.map(Message::ContentPageMessage),
@@ -416,6 +414,13 @@ impl ProjectTrackerApp {
 
 	pub fn update(&mut self, message: Message) -> Task<Message> {
 		let mut task = match message {
+			Message::SidebarResized { ratio } => {
+				self.split.resize(ratio);
+				if let Some(preferences) = &mut self.preferences {
+					preferences.set_sidebar_ratio(ratio);
+				}
+				Task::none()
+			}
 			Message::TryClosing => {
 				if self.exporting_database || self.importing_database {
 					let waiting_reason = if self.exporting_database {
@@ -840,6 +845,7 @@ impl ProjectTrackerApp {
 				match load_preferences_result {
 					Ok(preferences) => {
 						self.synchronization = preferences.synchronization().clone();
+						self.split.resize(preferences.sidebar_ratio());
 						self.preferences = Some(preferences);
 						let content_page_action = self
 							.content_page
@@ -1139,19 +1145,7 @@ impl ProjectTrackerApp {
 				);
 				self.perform_sidebar_action(action)
 			}
-			Message::ToggleSidebar => {
-				self.sidebar_animation = if self.preferences.show_sidebar() {
-					ScalarAnimation::start(sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE, 0.0, 0.15)
-				} else {
-					ScalarAnimation::start(0.0, sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE, 0.15)
-				};
-
-				self.update(PreferenceMessage::ToggleShowSidebar.into())
-			}
-			Message::AnimateSidebar => {
-				self.sidebar_animation.update();
-				Task::none()
-			}
+			Message::ToggleSidebar => self.update(PreferenceMessage::ToggleShowSidebar.into()),
 			Message::SettingsModalMessage(message) => {
 				let action = self.settings_modal.update(message, &mut self.preferences);
 				self.perform_preference_action(action)
@@ -1418,59 +1412,24 @@ impl ProjectTrackerApp {
 			None => true,
 		};
 
-		let sidebar_animation_value = self.sidebar_animation.get_value();
-		// 0.0..1.0
-		let sidebar_animation_percentage = sidebar_animation_value
-			.map(|value| (1.0 - value / sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE));
-
 		let underlay: Element<Message> = if self.database.is_loaded() || self.loading_database {
-			let sidebar_layout_percentage = sidebar_animation_value.unwrap_or(if show_sidebar {
-				sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE
+			if show_sidebar {
+				self.split.view(
+					|| {
+						container(self.sidebar_page.view(self))
+							.style(sidebar_background_container_style)
+							.into()
+					},
+					|| {
+						container(self.content_page.view(self))
+							.style(default_background_container_style)
+							.into()
+					},
+					|ResizeEvent { ratio, .. }| Message::SidebarResized { ratio },
+				)
 			} else {
-				0.0
-			});
-			// 0.0..1.0
-			let sidebar_animation_percentage =
-				sidebar_animation_percentage.unwrap_or(if show_sidebar { 0.0 } else { 1.0 });
-
-			let arc_self = Rc::new(self);
-
-			responsive(move |size| {
-				let empty_toggle_sidebar_button_layout_width =
-					ICON_BUTTON_WIDTH * sidebar_animation_percentage;
-
-				let sidebar: Element<Message> = if show_sidebar || sidebar_animation_value.is_some()
-				{
-					container(arc_self.sidebar_page.view(*arc_self))
-						.width(Fill)
-						.padding(Padding::default().right(
-							size.width * (1.0 - sidebar_page::Page::SPLIT_LAYOUT_PERCENTAGE),
-						))
-						.style(sidebar_background_container_style)
-						.into()
-				} else {
-					Space::new(Fill, Fill).into()
-				};
-
-				stack![
-					sidebar,
-					container(
-						container(row![
-							if show_sidebar || sidebar_animation_value.is_some() {
-								Space::with_width(empty_toggle_sidebar_button_layout_width).into()
-							} else {
-								toggle_sidebar_button(false)
-							},
-							arc_self.content_page.view(&arc_self),
-						])
-						.style(default_background_container_style)
-					)
-					.width(Fill)
-					.padding(Padding::default().left(size.width * sidebar_layout_percentage))
-				]
-				.into()
-			})
-			.into()
+				row![toggle_sidebar_button(false), self.content_page.view(self)].into()
+			}
 		} else if self.database.error_loading() {
 			stack![
 				container(

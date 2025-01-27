@@ -1,5 +1,6 @@
 use crate::icons::Bootstrap;
 use crate::integrations::CodeEditor;
+use crate::pages::sidebar_page;
 use crate::project_tracker::AppFlags;
 use crate::synchronization::Synchronization;
 use crate::{
@@ -39,6 +40,9 @@ fn default_sort_unspecified_tasks_at_bottom() -> bool {
 fn default_play_timer_notification_sound() -> bool {
 	true
 }
+fn default_sidebar_ratio() -> f32 {
+	sidebar_page::Page::DEFAULT_SPLIT_RATIO
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
@@ -57,6 +61,9 @@ pub struct Preferences {
 
 	#[serde(default = "default_show_sidebar")]
 	show_sidebar: bool,
+
+	#[serde(default = "default_sidebar_ratio")]
+	sidebar_ratio: f32,
 
 	selected_content_page: SerializedContentPage,
 
@@ -81,6 +88,7 @@ impl Default for Preferences {
 			create_new_tasks_at_top: default_create_new_tasks_at_top(),
 			sort_unspecified_tasks_at_bottom: default_sort_unspecified_tasks_at_bottom(),
 			show_sidebar: default_show_sidebar(),
+			sidebar_ratio: default_sidebar_ratio(),
 			play_timer_notification_sound: default_play_timer_notification_sound(),
 			selected_content_page: SerializedContentPage::default(),
 			stopwatch_progress: None,
@@ -220,6 +228,12 @@ impl Preferences {
 	}
 	pub fn show_sidebar(&self) -> bool {
 		self.show_sidebar
+	}
+	pub fn sidebar_ratio(&self) -> f32 {
+		self.sidebar_ratio
+	}
+	pub fn set_sidebar_ratio(&mut self, ratio: f32) {
+		self.modify(|pref| pref.sidebar_ratio = ratio);
 	}
 	pub fn date_formatting(&self) -> DateFormatting {
 		self.date_formatting

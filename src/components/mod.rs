@@ -74,3 +74,6 @@ mod animation;
 pub use animation::ScalarAnimation;
 
 pub mod markdown;
+
+mod split;
+pub use split::Split;

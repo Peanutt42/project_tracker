@@ -153,7 +153,7 @@ pub struct Page {
 }
 
 impl Page {
-	pub const SPLIT_LAYOUT_PERCENTAGE: f32 = 0.3;
+	pub const DEFAULT_SPLIT_RATIO: f32 = 0.3;
 
 	pub fn new() -> Self {
 		Self {
