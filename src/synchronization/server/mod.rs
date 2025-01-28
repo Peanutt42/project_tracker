@@ -12,8 +12,8 @@ use crate::synchronization::{
 	BaseSynchronization, DatabaseUpdateEvent, OnUpdateSynchronization, Synchronization,
 	SynchronizationOutput,
 };
+use flume::Sender;
 use iced::alignment::Vertical;
-use iced::futures::channel::mpsc;
 use iced::widget::{column, container, row, text_input};
 use iced::{Element, Subscription, Task};
 use project_tracker_core::Database;
@@ -48,7 +48,7 @@ pub struct ServerSynchronization {
 	#[serde(flatten)]
 	pub config: ServerConfig,
 	#[serde(skip)]
-	request_sender: Option<mpsc::UnboundedSender<Request>>,
+	request_sender: Option<Sender<Request>>,
 	#[serde(skip)]
 	database_to_sync: Option<Database>,
 	#[serde(skip)]
@@ -74,7 +74,7 @@ impl Default for ServerSynchronization {
 
 impl From<ServerSynchronization> for Synchronization {
 	fn from(value: ServerSynchronization) -> Self {
-		Self::ServerSynchronization(value)
+		Self::ServerSynchronization(Box::new(value))
 	}
 }
 
@@ -90,7 +90,7 @@ impl OnUpdateSynchronization for ServerSynchronization {
 			DatabaseUpdateEvent::DatabaseMessage(database_message) => {
 				let database_before_update_checksum = database.checksum();
 				Request::UpdateDatabase {
-					database_message,
+					database_messages: vec![database_message],
 					database_before_update_checksum,
 				}
 			}
@@ -217,7 +217,7 @@ impl ServerSynchronization {
 	pub fn send_request(&mut self, request: Request) {
 		match &mut self.request_sender {
 			Some(request_sender) => {
-				let _ = request_sender.unbounded_send(request);
+				let _ = request_sender.send(request);
 			}
 			None => {
 				error!("cant send request since request sender is not set\nrequest: {request:#?}")
@@ -238,10 +238,12 @@ impl ServerSynchronization {
 			))),
 			Response::DatabaseChanged {
 				database_before_update_checksum,
-				database_message,
+				database_messages,
 			} => match &mut self.database_to_sync {
 				Some(database) if database.checksum() == database_before_update_checksum => {
-					database.update(database_message);
+					for database_message in database_messages {
+						database.update(database_message);
+					}
 					Task::done(Message::SyncedDatabase(Ok(
 						SynchronizationOutput::DatabaseLoaded(database.clone()),
 					)))

@@ -195,10 +195,10 @@ async fn listen_client_thread(
 				if modified_event.modified_sender_address != client_addr {
 					info!("sending database modified event in ws");
 					let database_modified_response = match modified_event.database_update_event {
-						DatabaseUpdateEvent::DatabaseMessage { database_message, before_modification_checksum } => {
+						DatabaseUpdateEvent::DatabaseMessage { database_messages, before_modification_checksum } => {
 							Response::DatabaseChanged {
 								database_before_update_checksum: before_modification_checksum,
-								database_message,
+								database_messages,
 							}
 						},
 						DatabaseUpdateEvent::ImportDatabase => {
@@ -247,7 +247,7 @@ async fn respond_to_client_request(
 			}
 		}
 		Request::UpdateDatabase {
-			database_message,
+			database_messages,
 			database_before_update_checksum,
 		} => {
 			let database_synced =
@@ -258,7 +258,9 @@ async fn respond_to_client_request(
 
 				let database = {
 					let mut shared_database = shared_database.write().await;
-					shared_database.update(database_message.clone());
+					for database_message in database_messages.clone() {
+						shared_database.update(database_message);
+					}
 					shared_database.clone()
 				};
 
@@ -266,7 +268,7 @@ async fn respond_to_client_request(
 
 				broadcast_modified_event(
 					DatabaseUpdateEvent::DatabaseMessage {
-						database_message,
+						database_messages,
 						before_modification_checksum: database_before_update_checksum,
 					},
 					modified_sender,

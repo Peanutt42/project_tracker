@@ -72,7 +72,7 @@ pub enum SynchronizationMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Synchronization {
 	FilesystemSynchronization(FilesystemSynchronization),
-	ServerSynchronization(ServerSynchronization),
+	ServerSynchronization(Box<ServerSynchronization>),
 }
 
 impl BaseSynchronization for Synchronization {

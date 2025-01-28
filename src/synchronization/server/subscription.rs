@@ -1,8 +1,10 @@
+use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
 
 use crate::synchronization::server::ServerSynchronizationError;
 use crate::synchronization::{ServerConfig, SynchronizationMessage};
 use async_tungstenite::tungstenite;
+use flume::{unbounded, Receiver, Sender};
 use iced::futures::{self, channel::mpsc, SinkExt, StreamExt};
 use iced::{stream, Subscription};
 use project_tracker_server::{Request, Response, SerializedRequest, SerializedResponse};
@@ -10,7 +12,7 @@ use tracing::{error, info};
 
 #[derive(Debug, Clone)]
 pub enum ServerSynchronizationEvent {
-	RequestSender(mpsc::UnboundedSender<Request>),
+	RequestSender(Sender<Request>),
 	Connected,
 	Disconnected,
 	Response(Response),
@@ -52,7 +54,7 @@ enum ServerConnection {
 }
 
 struct ServerConnectionState {
-	request_receiver: Option<mpsc::UnboundedReceiver<Request>>,
+	request_receiver: Option<Receiver<Request>>,
 	request_sender_sent: bool,
 }
 
@@ -74,7 +76,7 @@ impl ServerConnectionState {
 		match connection {
 			ServerConnection::Disconnected => {
 				if !self.request_sender_sent {
-					let (sender, receiver) = mpsc::unbounded();
+					let (sender, receiver) = unbounded();
 
 					self.request_receiver = Some(receiver);
 
@@ -157,50 +159,105 @@ impl ServerConnectionState {
 	) -> (bool, Option<ServerConnection>) {
 		let mut fused_websocket = websocket.by_ref().fuse();
 
-		match &mut self.request_receiver {
-			Some(request_receiver) => futures::select! {
-				received = fused_websocket.select_next_some() => {
-					match received {
-						Ok(tungstenite::Message::Binary(binary)) => (
-							output.send(Self::parse_server_response(binary, config.password.clone())).await.is_ok(),
-							None
-						),
-						Ok(tungstenite::Message::Close(_)) => {
-							info!("ws server disconnected");
-							(
-								output.send(Ok(ServerSynchronizationEvent::Disconnected)).await.is_ok(),
-								Some(ServerConnection::Disconnected)
-							)
-						},
-						Err(e) => {
-							info!("ws server disconnected: {e}");
-							(
-								output.send(Ok(ServerSynchronizationEvent::Disconnected)).await.is_ok(),
-								Some(ServerConnection::Disconnected)
-							)
+		match &self.request_receiver {
+			Some(request_receiver) => {
+				let mut request_receiver_stream = request_receiver.stream();
+				futures::select! {
+					received = fused_websocket.select_next_some() => {
+						match received {
+							Ok(tungstenite::Message::Binary(binary)) => (
+								output.send(Self::parse_server_response(binary, config.password.clone())).await.is_ok(),
+								None
+							),
+							Ok(tungstenite::Message::Close(_)) => {
+								info!("ws server disconnected");
+								(
+									output.send(Ok(ServerSynchronizationEvent::Disconnected)).await.is_ok(),
+									Some(ServerConnection::Disconnected)
+								)
+							},
+							Err(e) => {
+								info!("ws server disconnected: {e}");
+								(
+									output.send(Ok(ServerSynchronizationEvent::Disconnected)).await.is_ok(),
+									Some(ServerConnection::Disconnected)
+								)
+							}
+							_ => (true, None),
 						}
-						_ => (true, None),
-					}
-				},
+					},
 
-				request = request_receiver.select_next_some() => {
-					let (opt_event_result, opt_new_connection) = Self::send_request(request, &config.password, websocket).await;
-					let continue_subscription = match opt_event_result {
-						Some(event_result) => output.send(event_result).await.is_ok(),
-						None => true,
-					};
+					first_request = request_receiver_stream.select_next_some() => {
+						let mut pending_requests: VecDeque<Request> = request_receiver.try_iter().collect();
+						pending_requests.push_front(first_request);
 
-					(
-						continue_subscription,
-						opt_new_connection,
-					)
-				},
-			},
+						let (continue_subscription, opt_new_connection) = Self::bulk_send_requests(pending_requests, &config.password, websocket, output).await;
+
+						tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
+						(
+							continue_subscription,
+							opt_new_connection,
+						)
+					},
+				}
+			}
 			None => {
 				self.request_sender_sent = false;
 				(true, Some(ServerConnection::Disconnected))
 			}
 		}
+	}
+
+	/// combines continues database message requests into a single "bulk" 'DatabaseMessage' request
+	async fn bulk_send_requests(
+		mut requests: VecDeque<Request>,
+		password: &str,
+		websocket: &mut WebSocketStream,
+		output: &mut mpsc::Sender<ServerSubscriptionMessage>,
+	) -> (bool, Option<ServerConnection>) {
+		let mut opt_new_connection = None;
+
+		while let Some(first_request) = requests.pop_front() {
+			let (continue_subscription, new_connection) = match first_request {
+				Request::UpdateDatabase {
+					mut database_messages,
+					database_before_update_checksum,
+				} => {
+					while let Some(next_request) = requests.front() {
+						match next_request {
+							Request::UpdateDatabase { .. } => {
+								database_messages.extend(match requests.pop_front() {
+									Some(Request::UpdateDatabase { database_messages, .. }) => database_messages,
+									_ => unreachable!(".front() was DatabaseMessage, .pop_front() should therefore also be"),
+								});
+							}
+							_ => break,
+						}
+					}
+
+					Self::send_request(
+						Request::UpdateDatabase {
+							database_messages,
+							database_before_update_checksum,
+						},
+						password,
+						websocket,
+						output,
+					)
+					.await
+				}
+				_ => Self::send_request(first_request, password, websocket, output).await,
+			};
+			if !continue_subscription {
+				return (false, new_connection);
+			}
+			if let Some(new_connection) = new_connection {
+				opt_new_connection = Some(new_connection);
+			}
+		}
+
+		(true, opt_new_connection)
 	}
 
 	fn parse_server_response(
@@ -216,13 +273,14 @@ impl ServerConnectionState {
 	}
 
 	// returns:
-	// 1. 'Option<ServerSynchronizationMessage>': a potential server ws event result to be send to iced app
+	// 1. 'bool': wheter the subscription should continue
 	// 2. 'Option<ServerConnection>': a potential new server connection state ('ServerConnection::Disconnected')
 	async fn send_request(
 		request: Request,
 		password: &str,
 		websocket: &mut WebSocketStream,
-	) -> (Option<ServerSubscriptionMessage>, Option<ServerConnection>) {
+		output: &mut mpsc::Sender<ServerSubscriptionMessage>,
+	) -> (bool, Option<ServerConnection>) {
 		match SerializedRequest::encrypt(&request, password) {
 			Ok(request_bytes) => {
 				if websocket
@@ -230,17 +288,18 @@ impl ServerConnectionState {
 					.await
 					.is_ok()
 				{
-					(None, None)
+					(true, None)
 				} else {
-					(
-						Some(Ok(ServerSynchronizationEvent::Disconnected)),
-						Some(ServerConnection::Disconnected),
-					)
+					let continue_subscription = output
+						.send(Ok(ServerSynchronizationEvent::Disconnected))
+						.await
+						.is_ok();
+					(continue_subscription, Some(ServerConnection::Disconnected))
 				}
 			}
 			Err(e) => {
 				error!("failed to serialize request: {e}, cant send request to server");
-				(None, None)
+				(true, None)
 			}
 		}
 	}

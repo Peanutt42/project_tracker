@@ -316,12 +316,11 @@ impl Modal {
 						preferences.synchronization()
 					{
 						return PreferenceMessage::SetSynchronization(Some(
-							Synchronization::ServerSynchronization(ServerSynchronization::new(
-								ServerConfig {
-									hostname: new_hostname,
-									..server_synchronization.config.clone()
-								},
-							)),
+							ServerSynchronization::new(ServerConfig {
+								hostname: new_hostname,
+								..server_synchronization.config.clone()
+							})
+							.into(),
 						))
 						.into();
 					}
@@ -334,12 +333,11 @@ impl Modal {
 						preferences.synchronization()
 					{
 						return PreferenceMessage::SetSynchronization(Some(
-							Synchronization::ServerSynchronization(ServerSynchronization::new(
-								ServerConfig {
-									port: new_port,
-									..server_synchronization.config.clone()
-								},
-							)),
+							ServerSynchronization::new(ServerConfig {
+								port: new_port,
+								..server_synchronization.config.clone()
+							})
+							.into(),
 						))
 						.into();
 					}
@@ -352,12 +350,11 @@ impl Modal {
 						preferences.synchronization()
 					{
 						return PreferenceMessage::SetSynchronization(Some(
-							Synchronization::ServerSynchronization(ServerSynchronization::new(
-								ServerConfig {
-									password: new_password,
-									..server_synchronization.config.clone()
-								},
-							)),
+							ServerSynchronization::new(ServerConfig {
+								password: new_password,
+								..server_synchronization.config.clone()
+							})
+							.into(),
 						))
 						.into();
 					}

@@ -1,7 +1,6 @@
 use project_tracker::{
-	run_project_tracker_app,
-	synchronization::{ServerSynchronization, Synchronization},
-	AppFlags, Database, Preferences,
+	run_project_tracker_app, synchronization::ServerSynchronization, AppFlags, Database,
+	Preferences,
 };
 use std::process::Command;
 use tracing::info;
@@ -21,9 +20,7 @@ fn main() -> Result<(), iced::Error> {
 	{
 		let rt = tokio::runtime::Runtime::new().unwrap();
 		let mut tmp_client_preferences = Preferences::default();
-		tmp_client_preferences.set_synchronization(Some(Synchronization::ServerSynchronization(
-			ServerSynchronization::default(),
-		)));
+		tmp_client_preferences.set_synchronization(Some(ServerSynchronization::default().into()));
 		rt.block_on(Preferences::save(
 			custom_preferences_filepath.clone(),
 			tmp_client_preferences

@@ -40,7 +40,7 @@ pub enum Request {
 	},
 	GetFullDatabase,
 	UpdateDatabase {
-		database_message: DatabaseMessage,
+		database_messages: Vec<DatabaseMessage>,
 		database_before_update_checksum: u64,
 	},
 	ImportDatabase {
@@ -74,7 +74,7 @@ pub enum Response {
 	},
 	DatabaseChanged {
 		database_before_update_checksum: u64,
-		database_message: DatabaseMessage,
+		database_messages: Vec<DatabaseMessage>,
 	},
 	DatabaseUpdated,
 	AdminInfos(AdminInfos),
@@ -104,7 +104,7 @@ impl SerializedResponse {
 #[derive(Debug, Clone)]
 pub enum DatabaseUpdateEvent {
 	DatabaseMessage {
-		database_message: DatabaseMessage,
+		database_messages: Vec<DatabaseMessage>,
 		before_modification_checksum: u64,
 	},
 	ImportDatabase,
