@@ -1,12 +1,12 @@
 use crate::{
-	AdminInfos, ConnectedClient, CpuUsageAverage, DatabaseUpdateEvent, ModifiedEvent, Request,
-	Response, SerializedRequest, SerializedResponse, ServerError,
+	save_database_to_file, AdminInfos, ConnectedClient, CpuUsageAverage, DatabaseUpdateEvent,
+	ModifiedEvent, Request, Response, SerializedRequest, SerializedResponse, ServerError,
 };
 use async_tungstenite::{
 	tokio::accept_async,
 	tungstenite::{self, Message},
 };
-use chrono::{Datelike, Local, Timelike, Utc};
+use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
 use project_tracker_core::Database;
 use std::sync::Arc;
@@ -403,36 +403,4 @@ fn broadcast_modified_event(
 	client_addr: SocketAddr,
 ) {
 	let _ = modified_sender.send(ModifiedEvent::new(database, update_event, client_addr));
-}
-
-async fn save_database_to_file(database_filepath: &PathBuf, database_binary: &[u8]) {
-	if let Err(e) = tokio::fs::write(database_filepath, database_binary).await {
-		error!(
-			"cant write database to file: {}, error: {e}",
-			database_filepath.display()
-		);
-
-		// try to save database to a different filepath that contains the date, in order to not have a file names that could theoretically cause any problems
-		let mut tmp_backup_database_filepath = database_filepath.clone();
-		let now = Local::now();
-		let formatted_date_time = format!(
-			"{}_{}_{} - {}_{}_{}",
-			now.day(),
-			now.month(),
-			now.year(),
-			now.hour(),
-			now.minute(),
-			now.second()
-		);
-		tmp_backup_database_filepath.set_file_name(format!(
-			"tmp_backup_database_{formatted_date_time}.project_tracker"
-		));
-		if let Err(e) = tokio::fs::write(&tmp_backup_database_filepath, database_binary).await {
-			error!(
-				"failed to write database to tmp backup file ('{}') after already failing to save database to original filepath ('{}'): {e}",
-				tmp_backup_database_filepath.display(),
-				database_filepath.display()
-			);
-		}
-	}
 }

@@ -87,7 +87,9 @@ async fn main() {
 
 	let (modified_sender, modified_receiver) = tokio::sync::broadcast::channel(10);
 
+	let modified_sender_clone = modified_sender.clone();
 	let password_clone = password.clone();
+	let database_filepath_clone = database_filepath.clone();
 	let log_filepath_clone = log_filepath.clone();
 	let shared_database_clone = shared_database.clone();
 	let connected_clients_clone = connected_clients.clone();
@@ -117,10 +119,12 @@ async fn main() {
 			rt.block_on(async {
 				web_server::run_web_server(
 					password_clone,
+					modified_sender_clone,
 					modified_receiver,
 					shared_database_clone,
 					connected_clients_clone,
 					cpu_usage_avg_clone,
+					database_filepath_clone,
 					log_filepath_clone,
 					custom_cert_and_key_pem,
 				)

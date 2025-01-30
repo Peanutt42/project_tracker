@@ -123,10 +123,13 @@ document.addEventListener("DOMContentLoaded", () => {
 			project_list.appendChild(project_button);
 		}
 
-		populate_dom_from_project(database[selected_project_id]);
+		populate_dom_from_project(
+			selected_project_id,
+			database[selected_project_id],
+		);
 	}
 
-	function populate_dom_from_project(project) {
+	function populate_dom_from_project(project_id, project) {
 		task_list.innerHTML = "";
 
 		const project_div = document.createElement("div");
@@ -149,6 +152,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		sort_project_tasks(project.sort_mode, sorted_todo_tasks);
 		for (const task_with_id of sorted_todo_tasks) {
 			populate_dom_with_task(
+				project_id,
+				task_with_id[0],
 				task_list,
 				task_with_id[1],
 				project.task_tags,
@@ -161,6 +166,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		sort_project_tasks(project.sort_mode, sorted_source_code_todos);
 		for (const task_with_id in sorted_source_code_todos) {
 			populate_dom_with_task(
+				project_id,
+				task_with_id[0],
 				task_list,
 				task_with_id[1],
 				project.task_tags,
@@ -180,6 +187,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		sort_project_tasks(project.sort_mode, sorted_done_tasks);
 		for (const task_with_id of sorted_done_tasks) {
 			populate_dom_with_task(
+				project_id,
+				task_with_id[0],
 				done_task_list,
 				task_with_id[1],
 				project.task_tags,
@@ -260,13 +269,32 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	}
 
-	function populate_dom_with_task(task_list, task, task_tags, done) {
+	function populate_dom_with_task(
+		project_id,
+		task_id,
+		task_list,
+		task,
+		task_tags,
+		done,
+	) {
 		const task_div = document.createElement("div");
 		task_div.className = "task";
 
 		const checkbox = document.createElement("input");
 		(checkbox.type = "checkbox"), (checkbox.checked = done);
-		checkbox.disabled = true; // TODO: check/uncheck tasks and send to server
+		checkbox.addEventListener("click", () => {
+			if (ws) {
+				ws.send(
+					JSON.stringify({
+						ToggleTask: {
+							project_id: project_id,
+							task_id: task_id,
+							checked: checkbox.checked,
+						},
+					}),
+				);
+			}
+		});
 		task_div.appendChild(checkbox);
 
 		const task_tags_and_name_div = document.createElement("div");
@@ -317,8 +345,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	function connect_ws() {
-		console.log("connecting to modifed ws endpoint...");
-		ws = new WebSocket("wss://" + location.host + "/modified_ws/");
+		console.log("connecting to ws...");
+		ws = new WebSocket("wss://" + location.host + "/ws/");
 		ws.onopen = on_ws_open;
 		ws.onclose = on_ws_close;
 		ws.onmessage = on_ws_message;
