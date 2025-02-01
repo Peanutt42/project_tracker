@@ -43,6 +43,7 @@ pub fn task_widget<'a>(
 	draggable: bool,
 	highlight_dropzone: bool,
 	show_due_date: bool,
+	smaller_font: bool,
 ) -> Element<'a, Message> {
 	let text_style = if matches!(task_type, TaskType::Done) {
 		grey_text_style
@@ -81,8 +82,13 @@ pub fn task_widget<'a>(
 	};
 
 	let inner = |drag_overlay: bool| -> Element<'a, Message> {
-		let inner_text_element: Element<'a, Message> =
-			text(&task.name).width(Fill).style(text_style).into();
+		let inner_text = text(&task.name).width(Fill).style(text_style);
+		let inner_text_element: Element<'a, Message> = if smaller_font {
+			inner_text.size(15)
+		} else {
+			inner_text
+		}
+		.into();
 
 		let tags_element = Row::with_children(
 			project
@@ -93,8 +99,8 @@ pub fn task_widget<'a>(
 		)
 		.spacing(TINY_SPACING_AMOUNT);
 
-		let grip_icon_dummy: Element<Message> =
-			if draggable && dragging && matches!(project.sort_mode, SortMode::Manual) {
+		let grip_icon_dummy: Element<Message> = if draggable {
+			if dragging && matches!(project.sort_mode, SortMode::Manual) {
 				container(icon_to_text(Bootstrap::GripVertical))
 					.padding(Padding {
 						top: if task.tags.is_empty() {
@@ -107,7 +113,10 @@ pub fn task_widget<'a>(
 					.into()
 			} else {
 				Space::new(PADDING_AMOUNT, 0.0).into()
-			};
+			}
+		} else {
+			Space::new(0, 0).into()
+		};
 
 		container(
 			row![

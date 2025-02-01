@@ -3,6 +3,7 @@ pub use completion_bar::completion_bar;
 
 mod buttons;
 pub use buttons::{
+	calendar_navigation_button, calendar_today_button, calendar_view_button,
 	cancel_create_new_task_tag_button, cancel_create_project_button, cancel_search_tasks_button,
 	close_create_new_task_modal_button, code_editor_dropdown_button, color_palette_item_button,
 	complete_task_timer_button, confirm_cancel_button, confirm_ok_button, copy_to_clipboard_button,
@@ -11,14 +12,14 @@ pub use buttons::{
 	delete_all_done_tasks_button, delete_task_button, delete_task_tag_button, due_date_button,
 	edit_color_palette_button, edit_needed_time_button, error_msg_ok_button,
 	export_as_json_database_button, export_database_as_markdown_button, export_database_button,
-	force_close_anyways_button, hide_password_button, import_database_button,
+	first_weekday_button, force_close_anyways_button, hide_password_button, import_database_button,
 	import_google_tasks_button, import_json_database_button, open_create_task_modal_button,
 	open_folder_location_button, open_in_code_editor_button, open_project_button,
-	open_task_by_name_link_button, overview_button, overview_time_section_button,
-	pause_timer_button, project_context_menu_button, reimport_source_code_todos_button,
-	resume_timer_button, retry_loading_database_button, retry_synchronization_button,
-	search_tasks_button, select_synchronization_filepath_button, settings_button,
-	settings_tab_button, show_done_tasks_button, show_error_popup_button, show_password_button,
+	open_task_by_name_link_button, overview_button, pause_timer_button,
+	project_context_menu_button, reimport_source_code_todos_button, resume_timer_button,
+	retry_loading_database_button, retry_synchronization_button, search_tasks_button,
+	select_synchronization_filepath_button, settings_button, settings_tab_button,
+	show_done_tasks_button, show_error_popup_button, show_password_button,
 	show_source_code_todos_button, sort_dropdown_button, start_task_timer_button,
 	stop_timer_button, stopwatch_button, synchronization_settings_button, take_break_button,
 	task_tag_button, task_tag_name_button, theme_mode_button, toggle_sidebar_button,

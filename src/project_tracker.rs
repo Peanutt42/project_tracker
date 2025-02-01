@@ -263,7 +263,7 @@ impl ProjectTrackerApp {
 				flags: flags.clone(),
 				split: Split::new(sidebar_page::Page::DEFAULT_SPLIT_RATIO),
 				sidebar_page: sidebar_page::Page::new(),
-				content_page: pages::Page::new(None, &None),
+				content_page: pages::Page::new(None),
 				database: DatabaseState::NotLoaded,
 				project_ui_id_map: ProjectUiIdMap::default(),
 				task_ui_id_map: TaskUiIdMap::default(),
@@ -850,6 +850,9 @@ impl ProjectTrackerApp {
 						let content_page_action = self
 							.content_page
 							.restore_from_serialized(self.database.ok(), &mut self.preferences);
+						if let Some(overview_page) = &mut self.content_page.overview_page {
+							*overview_page = overview_page::Page::new(self.database.ok());
+						}
 						Task::batch([
 							self.update(Message::SavePreferences),
 							self.perform_content_page_action(content_page_action),
@@ -917,7 +920,7 @@ impl ProjectTrackerApp {
 						overview_page.update(
 							overview_page::Message::RefreshCachedTaskList,
 							Some(database),
-							&self.preferences,
+							&mut self.preferences,
 						);
 					}
 

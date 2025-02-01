@@ -63,6 +63,7 @@ pub fn task_list<'a>(
 			true,
 			highlight,
 			true,
+			false,
 		)
 	};
 

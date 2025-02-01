@@ -8,22 +8,23 @@ use crate::{
 		task_modal, wait_closing_modal,
 	},
 	pages::{
-		self, format_stopwatch_duration, project_page, sidebar_page, stopwatch_page,
-		STOPWATCH_TASK_DROPZONE_ID,
+		self, format_stopwatch_duration,
+		overview_page::{self, CalendarView},
+		project_page, sidebar_page, stopwatch_page, STOPWATCH_TASK_DROPZONE_ID,
 	},
+	preferences::{FirstWeekday, SerializedOverviewPage},
 	project_tracker::Message,
 	styles::{
 		circle_button_style, danger_text_style, dangerous_button_style, delete_button_style,
 		delete_done_tasks_button_style, dropdown_container_style, enum_dropdown_button_style,
 		hidden_secondary_button_style, overview_button_style, primary_button_style,
-		rounded_container_style, secondary_button_style, secondary_button_style_default,
-		secondary_button_style_no_rounding, secondary_button_style_only_round_left,
-		secondary_button_style_only_round_right, secondary_button_style_only_round_top,
-		selection_list_button_style, settings_tab_button_style, stopwatch_page_button_style,
-		task_tag_button_style, text_input_style, timer_button_style, tooltip_container_style,
-		BOLD_FONT, GAP, HEADING_TEXT_SIZE, JET_BRAINS_MONO_FONT, LARGE_TEXT_SIZE,
-		SMALL_HORIZONTAL_PADDING, SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE,
-		SPACING_AMOUNT,
+		secondary_button_style, secondary_button_style_default, secondary_button_style_no_rounding,
+		secondary_button_style_only_round_left, secondary_button_style_only_round_right,
+		secondary_button_style_only_round_top, selection_list_button_style,
+		settings_tab_button_style, stopwatch_page_button_style, task_tag_button_style,
+		text_input_style, timer_button_style, tooltip_container_style, BOLD_FONT, GAP,
+		HEADING_TEXT_SIZE, JET_BRAINS_MONO_FONT, LARGE_TEXT_SIZE, SMALL_HORIZONTAL_PADDING,
+		SMALL_PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SMALL_TEXT_SIZE, SPACING_AMOUNT,
 	},
 	theme_mode::ThemeMode,
 	DateFormatting, PreferenceMessage,
@@ -47,6 +48,8 @@ use std::{path::PathBuf, time::Duration};
 
 pub const ICON_FONT_SIZE: f32 = 16.0;
 pub const ICON_BUTTON_WIDTH: f32 = ICON_FONT_SIZE * 1.8;
+pub const LARGE_ICON_BUTTON_WIDTH: f32 = LARGE_TEXT_SIZE * 1.8;
+const SETTINGS_SELECTION_LIST_WIDTH: f32 = 280.0;
 
 fn icon_button<Message>(icon: Bootstrap) -> Button<'static, Message> {
 	button(
@@ -65,7 +68,7 @@ fn large_icon_button<Message: 'static>(icon: Bootstrap) -> Button<'static, Messa
 			.align_x(Horizontal::Center)
 			.align_y(Vertical::Center),
 	)
-	.width(LARGE_TEXT_SIZE * 1.8)
+	.width(LARGE_ICON_BUTTON_WIDTH)
 }
 
 fn icon_label_button<Message: 'static>(
@@ -240,7 +243,7 @@ pub fn theme_mode_button(
 				round_right,
 			)
 		})
-		.width(80.0)
+		.width(SETTINGS_SELECTION_LIST_WIDTH / 3.0)
 		.on_press(PreferenceMessage::SetThemeMode(theme_mode).into())
 }
 
@@ -336,13 +339,34 @@ pub fn date_formatting_button<'a>(
 	is_left: bool,
 ) -> Button<'a, Message> {
 	button(text(format.as_str()).align_x(Horizontal::Center))
-		.width(120.0)
+		.width(SETTINGS_SELECTION_LIST_WIDTH / 2.0)
 		.on_press(settings_modal::Message::SetDateFormatting(*format).into())
 		.style(move |t, s| {
 			selection_list_button_style(
 				t,
 				s,
 				*selected_format == *format,
+				is_left,
+				!is_left,
+				is_left,
+				!is_left,
+			)
+		})
+}
+
+pub fn first_weekday_button<'a>(
+	first_weekday: &'a FirstWeekday,
+	selected_first_weekday: &'a FirstWeekday,
+	is_left: bool,
+) -> Button<'a, Message> {
+	button(text!("{first_weekday:?}").align_x(Horizontal::Center))
+		.width(SETTINGS_SELECTION_LIST_WIDTH / 2.0)
+		.on_press(PreferenceMessage::SetFirstWeekday(*first_weekday).into())
+		.style(move |t, s| {
+			selection_list_button_style(
+				t,
+				s,
+				*selected_first_weekday == *first_weekday,
 				is_left,
 				!is_left,
 				is_left,
@@ -1018,40 +1042,6 @@ pub fn open_task_by_name_link_button(
 		})
 }
 
-pub fn overview_time_section_button<Message: 'static>(
-	label: &'static str,
-	task_count: usize,
-	mut collapsed: bool,
-	on_toggle_collabsed: Message,
-) -> Button<'static, Message> {
-	if task_count == 0 {
-		collapsed = true;
-	}
-
-	button(
-		row![
-			icon_to_text(if collapsed {
-				Bootstrap::CaretRightFill
-			} else {
-				Bootstrap::CaretDownFill
-			})
-			.size(ICON_FONT_SIZE),
-			text(label),
-			container(text(task_count.to_string()))
-				.padding(SMALL_HORIZONTAL_PADDING)
-				.style(rounded_container_style)
-		]
-		.spacing(SPACING_AMOUNT)
-		.align_y(Vertical::Center),
-	)
-	.on_press_maybe(if task_count == 0 {
-		None
-	} else {
-		Some(on_toggle_collabsed)
-	})
-	.style(hidden_secondary_button_style)
-}
-
 #[allow(clippy::too_many_arguments)]
 pub fn edit_needed_time_button<'a, Message: 'static + Clone>(
 	task_needed_time_minutes: Option<usize>,
@@ -1314,4 +1304,55 @@ pub fn select_synchronization_filepath_button() -> Button<'static, Message> {
 	icon_label_button("Select", Bootstrap::Folder)
 		.on_press(settings_modal::Message::BrowseSynchronizationFilepath.into())
 		.style(dangerous_button_style)
+}
+
+pub fn calendar_view_button(
+	calendar_view: CalendarView,
+	selected: bool,
+	round_left: bool,
+	round_right: bool,
+) -> Button<'static, Message> {
+	button(text(calendar_view.label()).align_x(Horizontal::Center))
+		.width(SETTINGS_SELECTION_LIST_WIDTH / 3.0)
+		.on_press(
+			PreferenceMessage::SetOverviewPage(SerializedOverviewPage::Calendar {
+				view: calendar_view,
+			})
+			.into(),
+		)
+		.style(move |t, s| {
+			selection_list_button_style(
+				t,
+				s,
+				selected,
+				round_left,
+				round_right,
+				round_left,
+				round_right,
+			)
+		})
+}
+
+pub fn calendar_navigation_button(forward: bool) -> Button<'static, Message> {
+	large_icon_button(if forward {
+		Bootstrap::ArrowRight
+	} else {
+		Bootstrap::ArrowLeft
+	})
+	.on_press(
+		if forward {
+			overview_page::Message::GoForward
+		} else {
+			overview_page::Message::GoBackward
+		}
+		.into(),
+	)
+	.style(secondary_button_style_default)
+}
+
+pub fn calendar_today_button() -> Button<'static, Message> {
+	button(text("Today").align_y(Vertical::Center))
+		.on_press(overview_page::Message::GoToToday.into())
+		.style(primary_button_style)
+		.height(LARGE_ICON_BUTTON_WIDTH)
 }

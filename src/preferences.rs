@@ -1,5 +1,7 @@
+use crate::components::first_weekday_button;
 use crate::icons::Bootstrap;
 use crate::integrations::CodeEditor;
+use crate::pages::overview_page::CalendarView;
 use crate::pages::sidebar_page;
 use crate::project_tracker::AppFlags;
 use crate::synchronization::Synchronization;
@@ -14,6 +16,7 @@ use crate::{
 	theme_mode::ThemeMode,
 };
 use crate::{ProjectId, SerializableDate, TaskId};
+use chrono::Weekday;
 use iced::widget::text;
 use iced::{
 	alignment::Horizontal,
@@ -46,9 +49,14 @@ fn default_sidebar_ratio() -> f32 {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Preferences {
+	#[serde(default)]
 	theme_mode: ThemeMode,
 
+	#[serde(default)]
 	date_formatting: DateFormatting,
+
+	#[serde(default)]
+	first_day_of_week: FirstWeekday,
 
 	#[serde(default = "default_create_new_tasks_at_top")]
 	create_new_tasks_at_top: bool,
@@ -65,12 +73,19 @@ pub struct Preferences {
 	#[serde(default = "default_sidebar_ratio")]
 	sidebar_ratio: f32,
 
+	#[serde(default)]
 	selected_content_page: SerializedContentPage,
 
+	#[serde(default)]
+	serialized_overview_page: SerializedOverviewPage,
+
+	#[serde(default)]
 	stopwatch_progress: Option<StopwatchProgress>,
 
+	#[serde(default)]
 	code_editor: Option<CodeEditor>,
 
+	#[serde(default)]
 	synchronization: Option<Synchronization>,
 
 	#[serde(skip, default = "Instant::now")]
@@ -85,12 +100,14 @@ impl Default for Preferences {
 		Self {
 			theme_mode: ThemeMode::default(),
 			date_formatting: DateFormatting::default(),
+			first_day_of_week: FirstWeekday::default(),
 			create_new_tasks_at_top: default_create_new_tasks_at_top(),
 			sort_unspecified_tasks_at_bottom: default_sort_unspecified_tasks_at_bottom(),
 			show_sidebar: default_show_sidebar(),
 			sidebar_ratio: default_sidebar_ratio(),
 			play_timer_notification_sound: default_play_timer_notification_sound(),
 			selected_content_page: SerializedContentPage::default(),
+			serialized_overview_page: SerializedOverviewPage::default(),
 			stopwatch_progress: None,
 			code_editor: None,
 			synchronization: None,
@@ -128,6 +145,27 @@ pub enum SerializedContentPage {
 	Project(ProjectId),
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub enum SerializedOverviewPage {
+	List,
+	Calendar { view: CalendarView },
+}
+impl SerializedOverviewPage {
+	pub const DEFAULT: Self = Self::List;
+
+	pub fn get_calendar_view(&self) -> CalendarView {
+		match self {
+			Self::Calendar { view } => *view,
+			_ => CalendarView::default(),
+		}
+	}
+}
+impl Default for SerializedOverviewPage {
+	fn default() -> Self {
+		Self::DEFAULT
+	}
+}
+
 #[derive(Clone, Debug)]
 pub enum PreferenceMessage {
 	Save(PathBuf),
@@ -142,6 +180,8 @@ pub enum PreferenceMessage {
 	ToggleShowSidebar,
 	SetContentPage(SerializedContentPage),
 	SetDateFormatting(DateFormatting),
+	SetFirstWeekday(FirstWeekday),
+	SetOverviewPage(SerializedOverviewPage),
 	SetCreateNewTaskAtTop(bool),
 	SetSortUnspecifiedTasksAtBottom(bool),
 	SetPlayTimerNotificationSound(bool),
@@ -220,6 +260,15 @@ impl Preferences {
 	pub fn set_selected_content_page(&mut self, content_page: SerializedContentPage) {
 		self.modify(|pref| pref.selected_content_page = content_page);
 	}
+	pub fn serialized_overview_page(&self) -> &SerializedOverviewPage {
+		&self.serialized_overview_page
+	}
+	pub fn set_serialized_overview_page(
+		&mut self,
+		serialized_overview_page: SerializedOverviewPage,
+	) {
+		self.modify(|pref| pref.serialized_overview_page = serialized_overview_page);
+	}
 	pub fn stopwatch_progress(&self) -> &Option<StopwatchProgress> {
 		&self.stopwatch_progress
 	}
@@ -237,6 +286,9 @@ impl Preferences {
 	}
 	pub fn date_formatting(&self) -> DateFormatting {
 		self.date_formatting
+	}
+	pub fn first_day_of_week(&self) -> FirstWeekday {
+		self.first_day_of_week
 	}
 	pub fn create_new_tasks_at_top(&self) -> bool {
 		self.create_new_tasks_at_top
@@ -324,6 +376,16 @@ impl Preferences {
 
 			PreferenceMessage::SetDateFormatting(date_formatting) => {
 				self.modify(|pref| pref.date_formatting = date_formatting);
+				PreferenceAction::None
+			}
+
+			PreferenceMessage::SetFirstWeekday(first_weekday) => {
+				self.modify(|pref| pref.first_day_of_week = first_weekday);
+				PreferenceAction::None
+			}
+
+			PreferenceMessage::SetOverviewPage(serialized_overview_page) => {
+				self.set_serialized_overview_page(serialized_overview_page);
 				PreferenceAction::None
 			}
 
@@ -462,6 +524,13 @@ impl Preferences {
 				]
 			),
 			Self::setting_item(
+				"First Weekday:",
+				row![
+					first_weekday_button(&FirstWeekday::Monday, &self.first_day_of_week, true),
+					first_weekday_button(&FirstWeekday::Sunday, &self.first_day_of_week, false),
+				]
+			),
+			Self::setting_item(
 				"Create new tasks at top:",
 				toggler(self.create_new_tasks_at_top)
 					.on_toggle(|create_at_top| {
@@ -535,8 +604,8 @@ pub enum DateFormatting {
 impl DateFormatting {
 	pub fn as_str(&self) -> &'static str {
 		match self {
-			DateFormatting::DayMonthYear => "DD.MM.YY",
-			DateFormatting::MonthDayYear => "MM.DD.YY",
+			DateFormatting::DayMonthYear => "DD.MM.YYYY",
+			DateFormatting::MonthDayYear => "MM.DD.YYYY",
 		}
 	}
 
@@ -552,10 +621,28 @@ impl DateFormatting {
 	}
 }
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub enum FirstWeekday {
+	#[default]
+	Monday,
+	Sunday,
+}
+
+impl FirstWeekday {
+	pub fn as_week_day(&self) -> Weekday {
+		match self {
+			Self::Monday => Weekday::Mon,
+			Self::Sunday => Weekday::Sun,
+		}
+	}
+}
+
 pub trait OptionalPreference {
 	fn show_sidebar(&self) -> bool;
 	fn date_formatting(&self) -> DateFormatting;
+	fn first_day_of_week(&self) -> FirstWeekday;
 	fn create_new_tasks_at_top(&self) -> bool;
+	fn serialized_overview_page(&self) -> &SerializedOverviewPage;
 	fn sort_unspecified_tasks_at_bottom(&self) -> bool;
 	fn synchronization(&self) -> Option<&Synchronization>;
 	fn play_timer_notification_sound(&self) -> bool;
@@ -575,6 +662,12 @@ impl OptionalPreference for Option<Preferences> {
 			None => DateFormatting::default(),
 		}
 	}
+	fn first_day_of_week(&self) -> FirstWeekday {
+		match self {
+			Some(preferences) => preferences.first_day_of_week,
+			None => FirstWeekday::default(),
+		}
+	}
 	fn create_new_tasks_at_top(&self) -> bool {
 		match self {
 			Some(preferences) => preferences.create_new_tasks_at_top,
@@ -590,6 +683,12 @@ impl OptionalPreference for Option<Preferences> {
 	fn synchronization(&self) -> Option<&Synchronization> {
 		self.as_ref()
 			.and_then(|preferences| preferences.synchronization.as_ref())
+	}
+	fn serialized_overview_page(&self) -> &SerializedOverviewPage {
+		match self {
+			Some(preferences) => &preferences.serialized_overview_page,
+			None => &SerializedOverviewPage::DEFAULT,
+		}
 	}
 	fn play_timer_notification_sound(&self) -> bool {
 		match self {

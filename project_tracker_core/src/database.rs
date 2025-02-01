@@ -240,6 +240,18 @@ impl Database {
 			.and_then(|project| project.get_task_and_type(task_id))
 	}
 
+	pub fn get_project_task_type(
+		&self,
+		project_id: &ProjectId,
+		task_id: &TaskId,
+	) -> Option<(&Project, &Task, TaskType)> {
+		self.projects.get(project_id).and_then(|project| {
+			project
+				.get_task_and_type(task_id)
+				.map(|(task, task_type)| (project, task, task_type))
+		})
+	}
+
 	pub fn last_changed_time(&self) -> &DateTime<Utc> {
 		&self.last_changed_time
 	}

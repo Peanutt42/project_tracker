@@ -70,9 +70,9 @@ impl From<DatabaseMessage> for Action {
 }
 
 impl Page {
-	pub fn new(database: Option<&Database>, preferences: &Option<Preferences>) -> Self {
+	pub fn new(database: Option<&Database>) -> Self {
 		Self {
-			overview_page: Some(overview_page::Page::new(database, preferences)),
+			overview_page: Some(overview_page::Page::new(database)),
 			stopwatch_page: stopwatch_page::Page::default(),
 			project_page: None,
 		}
@@ -188,7 +188,7 @@ impl Page {
 		preferences: &mut Option<Preferences>,
 	) {
 		self.project_page = None;
-		self.overview_page = Some(overview_page::Page::new(database, preferences));
+		self.overview_page = Some(overview_page::Page::new(database));
 		if let Some(preferences) = preferences {
 			preferences.set_selected_content_page(SerializedContentPage::Overview);
 		}

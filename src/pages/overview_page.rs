@@ -1,55 +1,43 @@
-use crate::components::date_text;
-use crate::core::SortModeUI;
-use crate::styles::{
-	rounded_container_style, LARGE_PADDING_AMOUNT, LARGE_SPACING_AMOUNT, SMALL_HORIZONTAL_PADDING,
-	SMALL_PADDING_AMOUNT,
-};
 use crate::{
 	components::{
-		open_project_button, overview_time_section_button, task_widget, vertical_scrollable,
+		calendar_navigation_button, calendar_today_button, calendar_view_button,
+		horizontal_seperator, open_project_button, task_widget, vertical_seperator,
 	},
-	core::{IcedColorConversion, SerializableDateConversion, TASK_TAG_QUAD_HEIGHT},
-	pages, project_tracker,
-	styles::{PADDING_AMOUNT, SMALL_SPACING_AMOUNT, SPACING_AMOUNT, TINY_SPACING_AMOUNT},
+	core::IcedColorConversion,
+	pages,
+	preferences::{FirstWeekday, SerializedOverviewPage},
+	project_tracker,
+	styles::{PADDING_AMOUNT, SPACING_AMOUNT},
 	OptionalPreference, Preferences, ProjectTrackerApp,
 };
-use chrono::{DateTime, Days, NaiveDate, Utc};
+use chrono::{DateTime, Datelike, Days, Duration, Local, NaiveDate, Utc, Weekday};
 use iced::{
-	widget::{column, container, row, text, Column},
+	alignment::{Horizontal, Vertical},
+	widget::{column, container, row, text, Column, Row, Space},
 	Element,
-	Length::{Fill, Fixed},
-	Padding,
+	Length::Fill,
 };
-use iced_date_picker::Date;
-use project_tracker_core::{Database, ProjectId, SerializableDate, SortMode, Task, TaskId};
+use iced_aw::style::colors::RED;
+use project_tracker_core::{Database, ProjectId, SerializableDate, TaskId, TaskType};
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::{BTreeMap, HashMap},
 	time::SystemTime,
 };
 use tracing::error;
 
-const DATE_WIDGET_WIDTH: f32 = 90.0;
-
 #[derive(Debug, Clone)]
 pub struct Page {
-	overdue_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>, // sorted by due date, then by project
-	today_tasks: HashMap<ProjectId, Vec<TaskId>>, // sorted by est. needed time
-	tomorrow_tasks: HashMap<ProjectId, Vec<TaskId>>, // sorted by est. needed time
-	future_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>, // sorted by due date, then by project
-	show_overdue_tasks: bool,
-	show_today_tasks: bool,
-	show_tomorrow_tasks: bool,
-	show_future_tasks: bool,
+	tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>,
 	cache_time: SystemTime,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
 	RefreshCachedTaskList,
-	ToggleShowOverdueTasks,
-	ToggleShowTodayTasks,
-	ToggleShowTomorrowTasks,
-	ToggleShowFutureTasks,
+	GoForward,
+	GoBackward,
+	GoToToday,
 }
 
 impl From<Message> for project_tracker::Message {
@@ -59,26 +47,16 @@ impl From<Message> for project_tracker::Message {
 }
 
 impl Page {
-	pub fn new(database: Option<&Database>, preferences: &Option<Preferences>) -> Self {
-		let mut overdue_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>> =
-			BTreeMap::new();
-		let mut today_tasks: HashMap<ProjectId, Vec<TaskId>> = HashMap::new();
-		let mut tomorrow_tasks: HashMap<ProjectId, Vec<TaskId>> = HashMap::new();
-		let mut future_tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>> =
+	pub fn new(database: Option<&Database>) -> Self {
+		let mut tasks: BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>> =
 			BTreeMap::new();
 
 		if let Some(database) = database {
-			let today: NaiveDate = Date::today().into();
-			let today_date: Date = today.into();
-
-			let tomorrow = today.checked_add_days(Days::new(1));
-			let tomorrow_date: Option<Date> = tomorrow.map(|date| date.into());
-
 			for (project_id, project) in database.projects().iter() {
-				let mut cache_overdue_tasks = |task_id: TaskId, task: &Task| {
+				for (task_id, task, task_type) in project.iter() {
 					if let Some(due_date) = &task.due_date {
-						if *due_date < SerializableDate::from_iced_date(today_date) {
-							overdue_tasks
+						if matches!(task_type, TaskType::Todo | TaskType::SourceCodeTodo) {
+							tasks
 								.entry(*due_date)
 								.or_default()
 								.entry(project_id)
@@ -86,74 +64,12 @@ impl Page {
 								.push(task_id);
 						}
 					}
-				};
-				let mut cache_today_tasks = |task_id: TaskId, task: &Task| {
-					if let Some(due_date) = &task.due_date {
-						if *due_date == SerializableDate::from_iced_date(today_date) {
-							today_tasks.entry(project_id).or_default().push(task_id);
-						}
-					}
-				};
-				let mut cache_tomorrow_tasks = |task_id: TaskId, task: &Task| {
-					if let Some(tomorrow_date) = tomorrow_date {
-						if let Some(due_date) = &task.due_date {
-							if *due_date == SerializableDate::from_iced_date(tomorrow_date) {
-								tomorrow_tasks.entry(project_id).or_default().push(task_id);
-							}
-						}
-					}
-				};
-				let mut cache_future_tasks = |task_id: TaskId, task: &Task| {
-					if let Some(tomorrow_date) = tomorrow_date {
-						if let Some(due_date) = &task.due_date {
-							if *due_date > SerializableDate::from_iced_date(tomorrow_date) {
-								future_tasks
-									.entry(*due_date)
-									.or_default()
-									.entry(project_id)
-									.or_default()
-									.push(task_id);
-							}
-						}
-					}
-				};
-
-				for (task_id, task) in project.todo_tasks.iter() {
-					cache_overdue_tasks(task_id, task);
-					cache_today_tasks(task_id, task);
-					cache_tomorrow_tasks(task_id, task);
-					cache_future_tasks(task_id, task);
-				}
-				for (task_id, task) in project.source_code_todos.iter() {
-					cache_overdue_tasks(task_id, task);
-					cache_today_tasks(task_id, task);
-					cache_tomorrow_tasks(task_id, task);
-					cache_future_tasks(task_id, task);
-				}
-			}
-
-			let sort_unspecified_tasks_at_bottom = preferences.sort_unspecified_tasks_at_bottom();
-			for (project_id, tasks) in today_tasks.iter_mut() {
-				if let Some(project) = database.get_project(project_id) {
-					SortMode::NeededTime.sort(project, tasks, sort_unspecified_tasks_at_bottom);
-				}
-			}
-			for (project_id, tasks) in tomorrow_tasks.iter_mut() {
-				if let Some(project) = database.get_project(project_id) {
-					SortMode::NeededTime.sort(project, tasks, sort_unspecified_tasks_at_bottom);
 				}
 			}
 		}
 
 		Self {
-			overdue_tasks,
-			today_tasks,
-			tomorrow_tasks,
-			future_tasks,
-			show_overdue_tasks: true,
-			show_today_tasks: true,
-			show_tomorrow_tasks: true,
-			show_future_tasks: true,
+			tasks,
 			cache_time: SystemTime::now(),
 		}
 	}
@@ -162,188 +78,151 @@ impl Page {
 		&mut self,
 		message: Message,
 		database: Option<&Database>,
-		preferences: &Option<Preferences>,
+		preferences: &mut Option<Preferences>,
 	) {
 		match message {
 			Message::RefreshCachedTaskList => {
 				if let Some(database_ref) = database {
 					let cache_date_time: DateTime<Utc> = self.cache_time.into();
 					if cache_date_time < *database_ref.last_changed_time() {
-						*self = Self::new(database, preferences);
+						*self = Self::new(database);
 					}
 				}
 			}
-			Message::ToggleShowOverdueTasks => self.show_overdue_tasks = !self.show_overdue_tasks,
-			Message::ToggleShowTodayTasks => self.show_today_tasks = !self.show_today_tasks,
-			Message::ToggleShowTomorrowTasks => {
-				self.show_tomorrow_tasks = !self.show_tomorrow_tasks
+			Message::GoForward => {
+				if let Some(preferences) = preferences {
+					if let SerializedOverviewPage::Calendar { view } =
+						*preferences.serialized_overview_page()
+					{
+						let first_weekday = preferences.first_day_of_week();
+						let view = view.go_forward(first_weekday);
+						preferences.set_serialized_overview_page(
+							SerializedOverviewPage::Calendar { view },
+						);
+					}
+				}
 			}
-			Message::ToggleShowFutureTasks => self.show_future_tasks = !self.show_future_tasks,
+			Message::GoBackward => {
+				if let Some(preferences) = preferences {
+					if let SerializedOverviewPage::Calendar { view } =
+						*preferences.serialized_overview_page()
+					{
+						let first_weekday = preferences.first_day_of_week();
+						let view = view.go_backward(first_weekday);
+						preferences.set_serialized_overview_page(
+							SerializedOverviewPage::Calendar { view },
+						);
+					}
+				}
+			}
+			Message::GoToToday => {
+				if let Some(preferences) = preferences {
+					if let SerializedOverviewPage::Calendar { view } =
+						*preferences.serialized_overview_page()
+					{
+						let view = match view {
+							CalendarView::Week { .. } => CalendarView::current_week(),
+							CalendarView::ThreeDays { .. } => CalendarView::current_three_days(),
+						};
+						preferences.set_serialized_overview_page(
+							SerializedOverviewPage::Calendar { view },
+						);
+					}
+				}
+			}
 		}
 	}
 
 	pub fn view<'a>(&'a self, app: &'a ProjectTrackerApp) -> Element<'a, project_tracker::Message> {
-		let overdue_tasks_len: usize = self
-			.overdue_tasks
-			.values()
-			.map(|tasks| tasks.values().map(|tasks| tasks.len()).sum::<usize>())
-			.sum();
+		let today = Local::now().date_naive();
+		let first_week_day = app.preferences.first_day_of_week();
+		let calendar_view = match app.preferences.serialized_overview_page() {
+			SerializedOverviewPage::Calendar { view } => *view,
+			_ => CalendarView::default(),
+		};
+		let week_days = calendar_view.days(first_week_day);
 
-		let today_tasks_len: usize = self.today_tasks.values().map(|tasks| tasks.len()).sum();
+		let current_first_date = match calendar_view {
+			CalendarView::Week { week_day } => week_day,
+			CalendarView::ThreeDays { first_date } => first_date,
+		};
 
-		let tomorrow_tasks_len: usize = self.tomorrow_tasks.values().map(|tasks| tasks.len()).sum();
-
-		let future_tasks_len: usize = self
-			.future_tasks
-			.values()
-			.map(|tasks| tasks.values().map(|tasks| tasks.len()).sum::<usize>())
-			.sum();
-
-		container(vertical_scrollable(
-			column![
-				Self::view_tasks_for_days(
-					"Overdue",
-					&self.overdue_tasks,
-					!self.show_overdue_tasks,
-					Message::ToggleShowOverdueTasks,
-					overdue_tasks_len,
-					app
+		column![
+			row![
+				row![
+					calendar_navigation_button(false),
+					calendar_today_button(),
+					calendar_navigation_button(true)
+				],
+				Space::new(SPACING_AMOUNT, 0.0),
+				text(Self::view_range_label(&week_days)),
+				Space::new(Fill, 0.0),
+				calendar_view_button(
+					CalendarView::Week {
+						week_day: current_first_date
+					},
+					matches!(calendar_view, CalendarView::Week { .. }),
+					true,
+					false
 				),
-				Self::view_tasks_for_day(
-					"Today",
-					today_tasks_len,
-					!self.show_today_tasks,
-					Message::ToggleShowTodayTasks,
-					&self.today_tasks,
-					app
-				),
-				Self::view_tasks_for_day(
-					"Tomorrow",
-					tomorrow_tasks_len,
-					!self.show_tomorrow_tasks,
-					Message::ToggleShowTomorrowTasks,
-					&self.tomorrow_tasks,
-					app
-				),
-				Self::view_tasks_for_days(
-					"Future",
-					&self.future_tasks,
-					!self.show_future_tasks,
-					Message::ToggleShowFutureTasks,
-					future_tasks_len,
-					app
-				),
+				calendar_view_button(
+					CalendarView::ThreeDays {
+						first_date: current_first_date
+					},
+					matches!(calendar_view, CalendarView::ThreeDays { .. }),
+					false,
+					true
+				)
 			]
+			.align_y(Vertical::Center),
+			Row::with_children(
+				week_days
+					.into_iter()
+					.enumerate()
+					.map(|(i, (week_day, day))| {
+						Row::new()
+							.push_maybe(if i == 0 {
+								Some(vertical_seperator())
+							} else {
+								None
+							})
+							.push(Self::day_view(
+								week_day,
+								day,
+								day == today,
+								self.tasks.get(&day.into()),
+								app,
+							))
+							.push(vertical_seperator())
+							.into()
+					})
+			)
 			.width(Fill)
-			.spacing(LARGE_SPACING_AMOUNT + SPACING_AMOUNT)
-			.padding(PADDING_AMOUNT),
-		))
+		]
+		.spacing(SPACING_AMOUNT)
+		.padding(PADDING_AMOUNT)
 		.width(Fill)
 		.height(Fill)
 		.into()
 	}
 
-	fn view_tasks_for_days<'a>(
-		label: &'static str,
-		tasks: &'a BTreeMap<SerializableDate, HashMap<ProjectId, Vec<TaskId>>>,
-		collapsed: bool,
-		on_toggle_collabsed: Message,
-		tasks_len: usize,
+	fn day_view<'a>(
+		week_day: Weekday,
+		day: NaiveDate,
+		today: bool,
+		tasks: Option<&'a HashMap<ProjectId, Vec<TaskId>>>,
 		app: &'a ProjectTrackerApp,
 	) -> Element<'a, project_tracker::Message> {
-		Column::new()
-			.push(overview_time_section_button(
-				label,
-				tasks_len,
-				collapsed,
-				on_toggle_collabsed.into(),
-			))
-			.push_maybe(if tasks.is_empty() || collapsed {
-				None
-			} else {
-				Some(
-					Column::with_children(tasks.iter().map(|(date, tasks)| {
-						let first_task_has_tags = tasks
-							.iter()
-							.next()
-							.and_then(|(project_id, tasks)| {
-								tasks.first().and_then(|task_id| {
-									app.database.ok().and_then(|db| {
-										db.get_task(project_id, task_id)
-											.map(|task| !task.tags.is_empty())
-									})
-								})
-							})
-							.unwrap_or(false);
-
-						row![
-							container(
-								container(date_text(date, app.preferences.date_formatting()))
-									.padding(SMALL_HORIZONTAL_PADDING)
-									.style(rounded_container_style)
-							)
-							.width(Fixed(DATE_WIDGET_WIDTH))
-							.padding(Padding::default().top(
-								SMALL_PADDING_AMOUNT
-									+ if first_task_has_tags {
-										TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT
-									} else {
-										0.0
-									}
-							)),
-							Self::view_tasks(tasks, app),
-						]
-						.padding(
-							Padding::default()
-								.left(PADDING_AMOUNT)
-								.bottom(LARGE_PADDING_AMOUNT),
-						)
-						.into()
-					}))
-					.spacing(SPACING_AMOUNT),
-				)
-			})
-			.spacing(SPACING_AMOUNT)
-			.into()
-	}
-
-	fn view_tasks_for_day<'a>(
-		time_label: &'static str,
-		task_count: usize,
-		collapsed: bool,
-		on_toggle_collabsed: Message,
-		tasks: &'a HashMap<ProjectId, Vec<TaskId>>,
-		app: &'a ProjectTrackerApp,
-	) -> Element<'a, project_tracker::Message> {
-		Column::new()
-			.push(overview_time_section_button(
-				time_label,
-				task_count,
-				collapsed,
-				on_toggle_collabsed.into(),
-			))
-			.push_maybe(if tasks.is_empty() || collapsed {
-				None
-			} else {
-				Some(
-					container(Self::view_tasks(tasks, app))
-						.padding(Padding::default().left(PADDING_AMOUNT + DATE_WIDGET_WIDTH)), // no need for date widget for single day section
-				)
-			})
-			.spacing(SPACING_AMOUNT)
-			.into()
-	}
-
-	fn view_tasks<'a>(
-		tasks: &'a HashMap<ProjectId, Vec<TaskId>>,
-		app: &'a ProjectTrackerApp,
-	) -> Element<'a, project_tracker::Message> {
-		Column::with_children(tasks.iter().map(|(project_id, tasks)| {
-			match app.database.ok().and_then(|db| db.get_project(project_id)) {
-				Some(project) => {
-					let list = Column::with_children(tasks.iter().map(|task_id| {
-						match project.get_task_and_type(task_id) {
-							Some((task, task_type)) => task_widget(
+		let tasks: Element<project_tracker::Message> = match tasks {
+			Some(tasks) => Column::with_children(tasks.iter().map(
+				|(project_id, task_ids)| -> Element<project_tracker::Message> {
+					let task_widgets = task_ids.iter().map(|task_id| {
+						match app
+							.database
+							.ok()
+							.and_then(|db| db.get_project_task_type(project_id, task_id))
+						{
+							Some((project, task, task_type)) => task_widget(
 								task,
 								*task_id,
 								app.task_ui_id_map.get_dropzone_id_mut(*task_id),
@@ -356,46 +235,224 @@ impl Page {
 								false,
 								false,
 								false,
+								true,
 							),
-							None => {
-								error!("invalid task_id: doesnt exist in database!");
-								text("<invalid task id>").into()
-							}
+							None => text("<invalid project or task id>").into(),
 						}
-					}))
-					.spacing(SMALL_SPACING_AMOUNT);
+					});
+					match app.database.ok().and_then(|db| db.get_project(project_id)) {
+						Some(project) => column![
+							open_project_button(
+								*project_id,
+								&project.name,
+								project.color.to_iced_color()
+							),
+							Column::with_children(task_widgets)
+						]
+						.width(Fill)
+						.padding(PADDING_AMOUNT)
+						.into(),
+						None => text("<invalid project or task id>").into(),
+					}
+				},
+			))
+			.width(Fill)
+			.into(),
+			None => Space::new(0, 0).into(),
+		};
 
-					let first_task_has_tags = tasks
-						.first()
-						.and_then(|task_id| {
-							project.get_task(task_id).map(|task| !task.tags.is_empty())
-						})
-						.unwrap_or(false);
+		container(
+			column![
+				text!("{week_day:?}"),
+				text!("{}", day.day0() + 1).color_maybe(if today { Some(RED) } else { None }),
+				horizontal_seperator(),
+				tasks,
+			]
+			.align_x(Horizontal::Center),
+		)
+		.center_x(Fill)
+		.into()
+	}
 
-					row![
-						container(open_project_button(
-							*project_id,
-							&project.name,
-							project.color.to_iced_color()
-						))
-						.width(120.0)
-						.padding(Padding::default().top(if first_task_has_tags {
-							TASK_TAG_QUAD_HEIGHT + TINY_SPACING_AMOUNT
-						} else {
-							0.0
-						})),
-						list.padding(Padding::default().left(PADDING_AMOUNT)),
-					]
-					.into()
-				}
-				None => {
-					error!("invalid project_id: doesnt exist in database!");
-					Element::new(text("<invalid project id>"))
+	fn view_range_label(week_days: &[(Weekday, NaiveDate)]) -> String {
+		let month_str = |month0: u32| -> String {
+			match month0 {
+				0 => "January".to_string(),
+				1 => "Febuary".to_string(),
+				2 => "March".to_string(),
+				3 => "April".to_string(),
+				4 => "May".to_string(),
+				5 => "June".to_string(),
+				6 => "July".to_string(),
+				7 => "August".to_string(),
+				8 => "September".to_string(),
+				9 => "October".to_string(),
+				10 => "November".to_string(),
+				11 => "December".to_string(),
+				_ => {
+					error!("invalid month0 index (0..=11): {month0}");
+					format!("<invalid month0 index: {month0}>")
 				}
 			}
-		}))
-		.spacing(SPACING_AMOUNT)
-		.padding(Padding::default().left(PADDING_AMOUNT))
-		.into()
+		};
+
+		match week_days.first() {
+			Some((_, first_date)) => {
+				let first_month0 = first_date.month0();
+				let (_, first_year) = first_date.year_ce();
+
+				match week_days.last() {
+					Some((_, last_date)) if first_month0 != last_date.month0() => {
+						let (_, last_year) = last_date.year_ce();
+						format!(
+							"{}{} - {} {last_year}",
+							month_str(first_month0),
+							if first_year == last_year {
+								String::new()
+							} else {
+								format!(" {first_year}")
+							},
+							month_str(last_date.month0())
+						)
+					}
+					_ => format!("{} {first_year}", month_str(first_month0)),
+				}
+			}
+			None => {
+				error!("empty week days!");
+				"<empty week days>".to_string()
+			}
+		}
+	}
+}
+
+/// `ThreeDays`: 3 days, initially pervious, current and next day
+/// `Week`: Mon to Sun / Sun to Sat
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum CalendarView {
+	ThreeDays { first_date: NaiveDate },
+	Week { week_day: NaiveDate },
+}
+
+impl Default for CalendarView {
+	fn default() -> Self {
+		Self::current_week()
+	}
+}
+
+impl CalendarView {
+	pub fn current_week() -> Self {
+		Self::Week {
+			week_day: Local::now().date_naive(),
+		}
+	}
+
+	pub fn current_three_days() -> Self {
+		let today = Local::now().date_naive();
+		Self::ThreeDays {
+			first_date: today.pred_opt().unwrap_or(today),
+		}
+	}
+
+	pub fn label(&self) -> &'static str {
+		match self {
+			Self::Week { .. } => "Week",
+			Self::ThreeDays { .. } => "3 Days",
+		}
+	}
+
+	pub fn go_forward(self, first_week_day: FirstWeekday) -> Self {
+		match self {
+			Self::Week { week_day } => Self::Week {
+				week_day: week_day
+					.week(first_week_day.as_week_day())
+					.first_day()
+					.checked_add_days(Days::new(7))
+					.unwrap_or(week_day),
+			},
+			Self::ThreeDays { first_date } => Self::ThreeDays {
+				first_date: first_date.succ_opt().unwrap_or(first_date),
+			},
+		}
+	}
+
+	pub fn go_backward(self, first_week_day: FirstWeekday) -> Self {
+		match self {
+			Self::Week { week_day } => Self::Week {
+				week_day: week_day
+					.week(first_week_day.as_week_day())
+					.first_day()
+					.checked_sub_days(Days::new(7))
+					.unwrap_or(week_day),
+			},
+			Self::ThreeDays { first_date } => Self::ThreeDays {
+				first_date: first_date.pred_opt().unwrap_or(first_date),
+			},
+		}
+	}
+
+	pub fn days(&self, first_week_day: FirstWeekday) -> Vec<(Weekday, NaiveDate)> {
+		let (first_date, num_days) = match self {
+			Self::Week { week_day } => {
+				let week = week_day.week(first_week_day.as_week_day());
+				(week.first_day(), 7)
+			}
+			Self::ThreeDays { first_date } => (*first_date, 3),
+		};
+		(0..num_days)
+			.map(|i| {
+				let date = first_date + Duration::days(i);
+				let week_day = date.weekday();
+				(week_day, date)
+			})
+			.collect()
+	}
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+	use chrono::{NaiveDate, Weekday};
+
+	use crate::{pages::overview_page::CalendarView, preferences::FirstWeekday};
+
+	#[test]
+	fn test_week_days() {
+		let today_date = NaiveDate::from_ymd_opt(2025, 1, 31).unwrap();
+		let first_week_day = FirstWeekday::Monday;
+
+		assert_eq!(
+			CalendarView::Week {
+				week_day: today_date
+			}
+			.days(first_week_day),
+			[
+				(Weekday::Mon, NaiveDate::from_ymd_opt(2025, 1, 27).unwrap()),
+				(Weekday::Tue, NaiveDate::from_ymd_opt(2025, 1, 28).unwrap()),
+				(Weekday::Wed, NaiveDate::from_ymd_opt(2025, 1, 29).unwrap()),
+				(Weekday::Thu, NaiveDate::from_ymd_opt(2025, 1, 30).unwrap()),
+				(Weekday::Fri, NaiveDate::from_ymd_opt(2025, 1, 31).unwrap()),
+				(Weekday::Sat, NaiveDate::from_ymd_opt(2025, 2, 1).unwrap()),
+				(Weekday::Sun, NaiveDate::from_ymd_opt(2025, 2, 2).unwrap())
+			]
+		);
+	}
+
+	#[test]
+	fn test_three_days() {
+		let today_date = NaiveDate::from_ymd_opt(2025, 1, 30).unwrap();
+		let first_week_day = FirstWeekday::Monday;
+
+		assert_eq!(
+			CalendarView::ThreeDays {
+				first_date: today_date
+			}
+			.days(first_week_day),
+			[
+				(Weekday::Thu, NaiveDate::from_ymd_opt(2025, 1, 30).unwrap()),
+				(Weekday::Fri, NaiveDate::from_ymd_opt(2025, 1, 31).unwrap()),
+				(Weekday::Sat, NaiveDate::from_ymd_opt(2025, 2, 1).unwrap()),
+			]
+		);
 	}
 }
