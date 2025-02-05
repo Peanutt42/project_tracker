@@ -1,9 +1,9 @@
 use crate::{
 	components::{
 		cancel_search_tasks_button, color_palette, completion_bar, edit_color_palette_button,
-		horizontal_scrollable, loading_screen, open_create_task_modal_button,
+		horizontal_scrollable, loading_screen, on_input, open_create_task_modal_button,
 		project_context_menu_button, search_tasks_button, sort_dropdown_button, task_list,
-		task_tag_button, unfocusable, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING,
+		task_tag_button, ScalarAnimation, HORIZONTAL_SCROLLABLE_PADDING,
 		LARGE_LOADING_SPINNER_SIZE,
 	},
 	core::{import_source_code_todos, IcedColorConversion, SortModeUI},
@@ -566,7 +566,7 @@ impl Page {
 		let search_tasks_element: Element<project_tracker::Message> =
 			match &self.search_tasks_filter {
 				Some(search_tasks_filter) => row![
-					unfocusable(
+					on_input(
 						text_input("Search tasks...", search_tasks_filter)
 							.id(SEARCH_TASKS_TEXT_INPUT_ID.clone())
 							.icon(text_input::Icon {
@@ -579,9 +579,9 @@ impl Page {
 							.on_input(|new_search_filter| {
 								Message::ChangeSearchTasksFilter(new_search_filter).into()
 							})
-							.style(text_input_style_only_round_left),
-						Message::CloseSearchTasks.into()
-					),
+							.style(text_input_style_only_round_left)
+					)
+					.on_esc(Message::CloseSearchTasks.into()),
 					cancel_search_tasks_button(),
 				]
 				.into(),

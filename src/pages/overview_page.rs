@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		calendar_navigation_button, calendar_today_button, calendar_view_button,
-		horizontal_seperator, open_project_button, task_widget, vertical_seperator,
+		horizontal_seperator, on_input, open_project_button, task_widget, vertical_seperator,
 	},
 	core::IcedColorConversion,
 	pages,
@@ -147,39 +147,37 @@ impl Page {
 			CalendarView::ThreeDays { first_date } => first_date,
 		};
 
-		column![
-			row![
+		on_input(
+			column![
 				row![
-					calendar_navigation_button(false),
-					calendar_today_button(),
-					calendar_navigation_button(true)
-				],
-				Space::new(SPACING_AMOUNT, 0.0),
-				text(Self::view_range_label(&week_days)),
-				Space::new(Fill, 0.0),
-				calendar_view_button(
-					CalendarView::Week {
-						week_day: current_first_date
-					},
-					matches!(calendar_view, CalendarView::Week { .. }),
-					true,
-					false
-				),
-				calendar_view_button(
-					CalendarView::ThreeDays {
-						first_date: current_first_date
-					},
-					matches!(calendar_view, CalendarView::ThreeDays { .. }),
-					false,
-					true
-				)
-			]
-			.align_y(Vertical::Center),
-			Row::with_children(
-				week_days
-					.into_iter()
-					.enumerate()
-					.map(|(i, (week_day, day))| {
+					row![
+						calendar_navigation_button(false),
+						calendar_today_button(),
+						calendar_navigation_button(true)
+					],
+					Space::new(SPACING_AMOUNT, 0.0),
+					text(Self::view_range_label(&week_days)),
+					Space::new(Fill, 0.0),
+					calendar_view_button(
+						CalendarView::Week {
+							week_day: current_first_date
+						},
+						matches!(calendar_view, CalendarView::Week { .. }),
+						true,
+						false
+					),
+					calendar_view_button(
+						CalendarView::ThreeDays {
+							first_date: current_first_date
+						},
+						matches!(calendar_view, CalendarView::ThreeDays { .. }),
+						false,
+						true
+					)
+				]
+				.align_y(Vertical::Center),
+				Row::with_children(week_days.into_iter().enumerate().map(
+					|(i, (week_day, day))| {
 						Row::new()
 							.push_maybe(if i == 0 {
 								Some(vertical_seperator())
@@ -195,14 +193,17 @@ impl Page {
 							))
 							.push(vertical_seperator())
 							.into()
-					})
-			)
+					}
+				))
+				.width(Fill)
+			]
+			.spacing(SPACING_AMOUNT)
+			.padding(PADDING_AMOUNT)
 			.width(Fill)
-		]
-		.spacing(SPACING_AMOUNT)
-		.padding(PADDING_AMOUNT)
-		.width(Fill)
-		.height(Fill)
+			.height(Fill),
+		)
+		.on_mouse_forward(Message::GoForward.into())
+		.on_mouse_backward(Message::GoBackward.into())
 		.into()
 	}
 

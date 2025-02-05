@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
 	components::markdown::{markdown_with_jetbrainsmono_font, Item, MarkdownMessage},
-	components::unfocusable,
+	components::on_input,
 	project_tracker::Message,
 	styles::{
 		description_text_editor_style, markdown_background_container_style, markdown_style,
@@ -74,7 +74,7 @@ pub fn task_description_editor<'a, Message: 'a + Clone>(
 		.key_binding(move |key_press| text_editor_keybindings(key_press, unindent_message.clone()));
 
 	match on_exit_editor {
-		Some(on_exit_editor) => unfocusable(text_editor, on_exit_editor).into(),
+		Some(on_exit_editor) => on_input(text_editor).on_esc(on_exit_editor).into(),
 		None => text_editor.into(),
 	}
 }

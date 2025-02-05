@@ -1,21 +1,48 @@
 use iced::{
 	advanced::Widget,
 	keyboard::{self, key::Named, Key},
+	mouse::{self, Button},
 	Element, Event, Renderer, Theme,
 };
 
-pub struct Unfocusable<'a, Message: 'a + Clone> {
+pub struct OnInput<'a, Message: 'a + Clone> {
 	content: Element<'a, Message>,
-	on_esc: Message,
+	on_esc: Option<Message>,
+	on_mouse_forward: Option<Message>,
+	on_mouse_backward: Option<Message>,
 }
 
-impl<'a, Message: 'a + Clone> Unfocusable<'a, Message> {
-	pub fn new(content: Element<'a, Message>, on_esc: Message) -> Self {
-		Self { content, on_esc }
+impl<'a, Message: 'a + Clone> OnInput<'a, Message> {
+	pub fn new(content: Element<'a, Message>) -> Self {
+		Self {
+			content,
+			on_esc: None,
+			on_mouse_forward: None,
+			on_mouse_backward: None,
+		}
+	}
+
+	pub fn on_esc(self, on_esc: Message) -> Self {
+		Self {
+			on_esc: Some(on_esc),
+			..self
+		}
+	}
+	pub fn on_mouse_forward(self, on_mouse_forward: Message) -> Self {
+		Self {
+			on_mouse_forward: Some(on_mouse_forward),
+			..self
+		}
+	}
+	pub fn on_mouse_backward(self, on_mouse_backward: Message) -> Self {
+		Self {
+			on_mouse_backward: Some(on_mouse_backward),
+			..self
+		}
 	}
 }
 
-impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'a, Message> {
+impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for OnInput<'a, Message> {
 	fn tag(&self) -> iced::advanced::widget::tree::Tag {
 		self.content.as_widget().tag()
 	}
@@ -70,14 +97,43 @@ impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'
 		shell: &mut iced::advanced::Shell<'_, Message>,
 		viewport: &iced::Rectangle,
 	) -> iced::advanced::graphics::core::event::Status {
+		let cursor_hovering = cursor.is_over(layout.bounds());
+
 		match &event {
+			Event::Mouse(mouse::Event::ButtonPressed(Button::Forward)) if cursor_hovering => {
+				match &self.on_mouse_forward {
+					Some(on_mouse_forward) => {
+						shell.publish(on_mouse_forward.clone());
+						iced::advanced::graphics::core::event::Status::Captured
+					}
+					None => self.content.as_widget_mut().on_event(
+						state, event, layout, cursor, renderer, clipboard, shell, viewport,
+					),
+				}
+			}
+			Event::Mouse(mouse::Event::ButtonPressed(Button::Back)) if cursor_hovering => {
+				match &self.on_mouse_backward {
+					Some(on_mouse_backward) => {
+						shell.publish(on_mouse_backward.clone());
+						iced::advanced::graphics::core::event::Status::Captured
+					}
+					None => self.content.as_widget_mut().on_event(
+						state, event, layout, cursor, renderer, clipboard, shell, viewport,
+					),
+				}
+			}
 			Event::Keyboard(keyboard::Event::KeyPressed {
 				key: Key::Named(Named::Escape),
 				..
-			}) => {
-				shell.publish(self.on_esc.clone());
-				iced::advanced::graphics::core::event::Status::Captured
-			}
+			}) => match &self.on_esc {
+				Some(on_esc) => {
+					shell.publish(on_esc.clone());
+					iced::advanced::graphics::core::event::Status::Captured
+				}
+				None => self.content.as_widget_mut().on_event(
+					state, event, layout, cursor, renderer, clipboard, shell, viewport,
+				),
+			},
 			_ => self.content.as_widget_mut().on_event(
 				state, event, layout, cursor, renderer, clipboard, shell, viewport,
 			),
@@ -125,15 +181,14 @@ impl<'a, Message: 'a + Clone> Widget<Message, Theme, Renderer> for Unfocusable<'
 	}
 }
 
-impl<'a, Message: 'a + Clone> From<Unfocusable<'a, Message>> for Element<'a, Message> {
-	fn from(value: Unfocusable<'a, Message>) -> Self {
+impl<'a, Message: 'a + Clone> From<OnInput<'a, Message>> for Element<'a, Message> {
+	fn from(value: OnInput<'a, Message>) -> Self {
 		Self::new(value)
 	}
 }
 
-pub fn unfocusable<'a, Message: 'a + Clone>(
+pub fn on_input<'a, Message: 'a + Clone>(
 	content: impl Into<Element<'a, Message>>,
-	on_esc: Message,
-) -> Unfocusable<'a, Message> {
-	Unfocusable::new(content.into(), on_esc)
+) -> OnInput<'a, Message> {
+	OnInput::new(content.into())
 }

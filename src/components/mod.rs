@@ -56,8 +56,8 @@ pub use file_location::{file_location, filepath_widget};
 mod color_palette;
 pub use color_palette::{color_palette, COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE};
 
-mod unfocusable;
-pub use unfocusable::unfocusable;
+mod on_input;
+pub use on_input::on_input;
 
 mod scrollable;
 pub use scrollable::{

@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		cancel_create_new_task_tag_button, color_palette, color_palette_item_button,
-		create_new_task_tags_button, delete_task_tag_button, task_tag_name_button, unfocusable,
+		create_new_task_tags_button, delete_task_tag_button, on_input, task_tag_name_button,
 	},
 	core::IcedColorConversion,
 	project_tracker,
@@ -282,14 +282,14 @@ impl Modal {
 
 		tags_list.push(match create_new_task_tag {
 			Some(create_new_task_tag_name) => row![
-				unfocusable(
+				on_input(
 					text_input("New tag name", create_new_task_tag_name)
 						.id(CREATE_NEW_TASK_TAG_NAME_TEXT_INPUT_ID.clone())
 						.on_input(Message::ChangeCreateNewTaskTagName)
 						.on_submit(Message::CreateNewTaskTag)
-						.style(text_input_style_only_round_left),
-					Message::CloseCreateNewTaskTag
-				),
+						.style(text_input_style_only_round_left)
+				)
+				.on_esc(Message::CloseCreateNewTaskTag),
 				cancel_create_new_task_tag_button(),
 			]
 			.into(),

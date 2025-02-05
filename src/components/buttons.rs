@@ -1,5 +1,5 @@
 use crate::{
-	components::{date_text, duration_text, unfocusable},
+	components::{self, date_text, duration_text},
 	core::{IcedColorConversion, SerializableDateConversion, SortModeUI},
 	icons::{icon_to_text, Bootstrap},
 	integrations::CodeEditor,
@@ -1055,15 +1055,15 @@ pub fn edit_needed_time_button<'a, Message: 'static + Clone>(
 ) -> Element<'a, Message> {
 	match new_needed_time_minutes {
 		Some(new_needed_time_minutes) => {
-			let edit_needed_time_element = unfocusable(
+			let edit_needed_time_element = components::on_input(
 				text_input("ex: 30min", new_needed_time_minutes)
 					.id(text_input_id)
 					.width(Fixed(80.0))
 					.on_input(on_input)
 					.on_submit_maybe(on_submit)
 					.style(move |t, s| text_input_style(t, s, true, false, false, true)),
-				stop_editing,
-			);
+			)
+			.on_esc(stop_editing);
 
 			row![
 				edit_needed_time_element,

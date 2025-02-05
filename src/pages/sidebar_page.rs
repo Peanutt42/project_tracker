@@ -9,7 +9,7 @@ use crate::synchronization::SynchronizationError;
 use crate::DatabaseState;
 use crate::{
 	components::{
-		horizontal_seperator, in_between_dropzone, unfocusable, vertical_scrollable,
+		horizontal_seperator, in_between_dropzone, on_input, vertical_scrollable,
 		COLOR_PALETTE_BLACK, COLOR_PALETTE_WHITE,
 	},
 	pages::stopwatch_page,
@@ -548,15 +548,17 @@ impl Page {
 		));
 
 		if let Some(create_new_project_name) = &self.create_new_project_name {
-			let project_name_text_input_element = container(unfocusable(
-				text_input("New project name", create_new_project_name)
-					.id(TEXT_INPUT_ID.clone())
-					.size(LARGE_TEXT_SIZE)
-					.on_input(|input| Message::ChangeCreateNewProjectName(input).into())
-					.on_submit(Message::CreateNewProject(ProjectId::generate()).into())
-					.style(text_input_style_default),
-				Message::CloseCreateNewProject.into(),
-			))
+			let project_name_text_input_element = container(
+				on_input(
+					text_input("New project name", create_new_project_name)
+						.id(TEXT_INPUT_ID.clone())
+						.size(LARGE_TEXT_SIZE)
+						.on_input(|input| Message::ChangeCreateNewProjectName(input).into())
+						.on_submit(Message::CreateNewProject(ProjectId::generate()).into())
+						.style(text_input_style_default),
+				)
+				.on_esc(Message::CloseCreateNewProject.into()),
+			)
 			.width(Fill)
 			.align_x(Horizontal::Center)
 			.into();
