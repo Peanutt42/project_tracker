@@ -247,16 +247,18 @@ impl Page {
 								&project.name,
 								project.color.to_iced_color()
 							),
-							Column::with_children(task_widgets)
+							Column::with_children(task_widgets).spacing(SPACING_AMOUNT)
 						]
 						.width(Fill)
 						.padding(PADDING_AMOUNT)
+						.spacing(SPACING_AMOUNT)
 						.into(),
 						None => text("<invalid project or task id>").into(),
 					}
 				},
 			))
 			.width(Fill)
+			.spacing(SPACING_AMOUNT)
 			.into(),
 			None => Space::new(0, 0).into(),
 		};

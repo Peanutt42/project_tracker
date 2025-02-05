@@ -1347,7 +1347,7 @@ pub fn calendar_navigation_button(forward: bool) -> Button<'static, Message> {
 		}
 		.into(),
 	)
-	.style(secondary_button_style_default)
+	.style(hidden_secondary_button_style)
 }
 
 pub fn calendar_today_button() -> Button<'static, Message> {

@@ -39,7 +39,7 @@ impl Split {
 				SplitPane::ContentPage => content_page(),
 			})
 		})
-		.on_resize(5.0, on_resize)
+		.on_resize(10.0, on_resize)
 		.style(|theme| pane_grid::Style {
 			hovered_region: pane_grid::Highlight {
 				background: Color {
