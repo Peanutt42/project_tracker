@@ -254,12 +254,23 @@ impl Modal {
 							EDIT_NEEDED_TIME_INPUT_ID.clone(),
 						);
 
-						let needed_time_view =
-							Row::new()
-								.push_maybe(task.needed_time_minutes.as_ref().map(|_| {
-									start_task_timer_button(self.project_id, self.task_id)
-								}))
-								.push(edit_needed_time_view);
+						let needed_time_view = Row::new()
+							.push_maybe(task.needed_time_minutes.as_ref().map(|_| {
+								let currently_stopping_this_task =
+									if app.content_page.is_stopwatch_page_opened() {
+										app.content_page
+											.stopwatch_page
+											.is_task_being_stopped(self.project_id, self.task_id)
+									} else {
+										false
+									};
+								start_task_timer_button(
+									self.project_id,
+									self.task_id,
+									currently_stopping_this_task,
+								)
+							}))
+							.push(edit_needed_time_view);
 
 						let due_date_view = due_date_button(
 							self.edit_due_date,

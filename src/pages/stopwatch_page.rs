@@ -180,6 +180,18 @@ impl Page {
 		Subscription::batch([redraw_subscription, toggle_subscription])
 	}
 
+	pub fn is_task_being_stopped(&self, project_id: ProjectId, task_id: TaskId) -> bool {
+		match &self {
+			Page::StopTaskTime {
+				paused,
+				project_id: stopped_project_id,
+				task_id: stopped_task_id,
+				..
+			} if *stopped_project_id == project_id && *stopped_task_id == task_id => !*paused,
+			_ => false,
+		}
+	}
+
 	pub fn get_needed_seconds(
 		project_id: ProjectId,
 		task_id: TaskId,

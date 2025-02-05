@@ -855,18 +855,34 @@ pub fn complete_task_timer_button() -> Button<'static, Message> {
 	.style(move |t, s| timer_button_style(t, s, true))
 }
 
-pub fn start_task_timer_button<'a>(project_id: ProjectId, task_id: TaskId) -> Element<'a, Message> {
+pub fn start_task_timer_button<'a>(
+	project_id: ProjectId,
+	task_id: TaskId,
+	stopping_task: bool,
+) -> Element<'a, Message> {
 	tooltip(
-		icon_button(Bootstrap::Stopwatch)
-			.on_press(
+		icon_button(if stopping_task {
+			Bootstrap::Pause
+		} else {
+			Bootstrap::Stopwatch
+		})
+		.on_press(
+			if stopping_task {
+				stopwatch_page::Message::Stop
+			} else {
 				stopwatch_page::Message::StopTask {
 					project_id,
 					task_id,
 				}
-				.into(),
-			)
-			.style(secondary_button_style_default),
-		text("Start a timer for this task"),
+			}
+			.into(),
+		)
+		.style(secondary_button_style_default),
+		if stopping_task {
+			text("Stop working on this task")
+		} else {
+			text("Start a timer for this task")
+		},
 		tooltip::Position::Bottom,
 	)
 	.gap(GAP)
