@@ -30,23 +30,26 @@ impl TaskType {
 	}
 }
 
+/// Note: hash implementation of 'TimeSpend' ignores 'tracking_time_start' and only uses u64 resolution of 'offset_seconds'
+/// this is needed for server synchronization!
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TimeSpend {
-	offset_seconds: f32, // seconds spend before stopping the time
+	/// seconds spend before stopping the time
+	offset_seconds: f32,
+	/// only used for tracking time since tracking start by client, ignored by server
 	#[serde(skip)]
 	tracking_time_start: Option<Instant>,
 }
 
 impl PartialEq for TimeSpend {
 	fn eq(&self, other: &Self) -> bool {
-		self.get_duration() == other.get_duration()
+		(self.offset_seconds as u64) == (other.offset_seconds as u64)
 	}
 }
 impl Eq for TimeSpend {}
-/// we only hash with seconds as precision, since we only care about that level of precision when checking if a db has the same checksum
 impl Hash for TimeSpend {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-		self.get_duration().as_secs().hash(state);
+		(self.offset_seconds as u64).hash(state);
 	}
 }
 

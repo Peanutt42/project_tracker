@@ -14,7 +14,7 @@ use thiserror::Error;
 
 pub type SerializedDatabase = OrderedHashMap<ProjectId, Project>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Database {
 	projects: OrderedHashMap<ProjectId, Project>,
 	last_changed_time: DateTime<Utc>,
@@ -875,17 +875,19 @@ pub fn get_last_modification_date_time(metadata: &std::fs::Metadata) -> Option<D
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::panic, clippy::expect_used)]
 mod tests {
+	use chrono::Utc;
+
 	use crate::{
 		Database, LoadDatabaseError, OrderedHashMap, Project, ProjectId, SerializableColor,
-		SortMode, TaskId,
+		SerializableDate, SortMode, TaskId, TimeSpend,
 	};
 	use std::{collections::BTreeSet, path::PathBuf};
 
-	#[tokio::test]
-	async fn test_database_serialization() {
-		let output_filepath: PathBuf =
-			std::env::temp_dir().join("tmp_test_database.project_tracker");
+	fn create_test_database() -> Database {
 		let mut database = Database::default();
+
+		let mut time_spend = TimeSpend::new(0.0);
+		time_spend.start();
 
 		for i in 0..10 {
 			let mut project = Project::new(
@@ -901,15 +903,29 @@ mod tests {
 					format!("Task Nr. {j}"),
 					"A detailed description of the task".to_string(),
 					BTreeSet::new(),
-					None,
-					None,
-					None,
+					Some(SerializableDate {
+						year: 2000,
+						month: 1,
+						day: 1,
+					}),
+					Some(30),
+					Some(time_spend.clone()),
 					false,
 				);
 			}
 
 			database.modify(|projects| projects.insert(ProjectId::generate(), project));
 		}
+
+		database
+	}
+
+	#[tokio::test]
+	async fn test_database_serialization() {
+		let output_filepath: PathBuf =
+			std::env::temp_dir().join("tmp_test_database.project_tracker");
+
+		let database = create_test_database();
 
 		let original = database.clone();
 
@@ -933,5 +949,14 @@ mod tests {
 		tokio::fs::remove_file(&output_filepath)
 			.await
 			.expect("failed to remove temporary test database file used for serialization testing");
+	}
+
+	#[test]
+	fn test_database_checksum() {
+		let database = create_test_database();
+		let database_binary = database.to_binary().unwrap();
+		let loaded_from_binary_database =
+			Database::from_binary(&database_binary, Utc::now()).unwrap();
+		assert_eq!(database.checksum(), loaded_from_binary_database.checksum());
 	}
 }
