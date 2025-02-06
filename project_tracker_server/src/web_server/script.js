@@ -17,6 +17,21 @@ document.addEventListener("DOMContentLoaded", () => {
 	const offline_indicator = document.getElementById("offline_indicator");
 	offline_indicator.style.display = "none";
 
+	const create_task_name_input = document.getElementById(
+		"create_task_name_input",
+	);
+	create_task_name_input.addEventListener("keypress", (event) => {
+		if (event.key == "Enter") {
+			create_task();
+		}
+	});
+	const create_task_name_button = document.getElementById(
+		"create_task_name_button",
+	);
+	create_task_name_button.addEventListener("click", () => {
+		create_task();
+	});
+
 	window.addEventListener("offline", () => {
 		offline_indicator.style.display = "block";
 	});
@@ -81,6 +96,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	function open_admin_page() {
 		window.location.href = "/admin";
+	}
+
+	function create_task() {
+		if (ws) {
+			let selected_project_id = localStorage.getItem("selected_project_id");
+			if (selected_project_id) {
+				ws.send(
+					JSON.stringify({
+						CreateTask: {
+							project_id: selected_project_id,
+							task_name: create_task_name_input.value,
+						},
+					}),
+				);
+				create_task_name_input.value = "";
+			}
+		}
 	}
 
 	function color_to_str(color) {

@@ -4,7 +4,12 @@ use project_tracker_server::{
 	save_database_to_file, ConnectedClient, DatabaseUpdateEvent, ModifiedEvent,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{
+	collections::{BTreeSet, HashSet},
+	net::SocketAddr,
+	path::PathBuf,
+	sync::Arc,
+};
 use tokio::sync::{
 	broadcast::{Receiver, Sender},
 	RwLock,
@@ -139,6 +144,10 @@ enum WsModifyAction {
 		task_id: TaskId,
 		checked: bool,
 	},
+	CreateTask {
+		project_id: ProjectId,
+		task_name: String,
+	},
 }
 
 async fn handle_ws(
@@ -188,6 +197,19 @@ async fn handle_ws(
 										} else {
 											DatabaseMessage::SetTaskTodo { project_id, task_id }
 										},
+										WsModifyAction::CreateTask { project_id, task_name } => {
+											DatabaseMessage::CreateTask {
+												project_id,
+												task_id: TaskId::generate(),
+												task_name,
+												task_description: String::new(),
+												task_tags: BTreeSet::new(),
+												due_date: None,
+												needed_time_minutes: None,
+												time_spend: None,
+												create_at_top: true
+											}
+										}
 									};
 									let (modified_database, before_modification_checksum) = {
 										let mut shared_database = shared_database.write().await;
