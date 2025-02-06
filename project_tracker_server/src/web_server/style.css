@@ -138,3 +138,12 @@ details[open] > summary::after {
 summary::-webkit-details-marker {
 	display: none;
 }
+
+.offline_indicator {
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	justify-content: center;
+	background: red;
+	font-weight: bold;
+}

@@ -14,8 +14,15 @@
 		<link rel="stylesheet" href="/style.css" />
 		<link rel="preload" as="image" href="/static/bar-chart-fill.svg" />
 		<link rel="preload" as="image" href="/static/caret-right-fill.svg" />
+		<link rel="preload" as="image" href="/static/wifi-off.svg" />
 	</head>
 	<body>
+		<div id="offline_indicator" style="display: none;">
+			<div class="offline_indicator">
+				<img src="/static/wifi-off.svg" />
+				Offline!
+			</div>
+		</div>
 		<div id="nav_bar">
 			<button id="admin_dashboard_button">
 				<img src="/static/bar-chart-fill.svg" />

@@ -60,6 +60,7 @@ pub async fn run_web_server(
 		.or(svg_route!("static/house-fill.svg"))
 		.or(svg_route!("static/globe.svg"))
 		.or(svg_route!("static/window.svg"))
+		.or(svg_route!("static/wifi-off.svg"))
 		.or(svg_route!("static/cpu.svg"))
 		.or(svg_route!("static/hourglass-split.svg"))
 		.or(svg_route!("static/memory.svg"))

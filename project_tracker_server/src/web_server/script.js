@@ -14,6 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
 		"admin_dashboard_button",
 	);
 	const logout_button = document.getElementById("logout_button");
+	const offline_indicator = document.getElementById("offline_indicator");
+	offline_indicator.style.display = "none";
+
+	window.addEventListener("offline", () => {
+		offline_indicator.style.display = "block";
+	});
 
 	let ws = null;
 	let ws_authenticated = false;
@@ -366,6 +372,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	function on_ws_close(event) {
+		setTimeout(() => {
+			offline_indicator.style.display = "block";
+		}, 500);
+
 		if (reconnect_attempts < 10) {
 			reconnect_attempts++;
 			console.log(
@@ -388,6 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			const authentication_response = JSON.parse(msg.data);
 			if (authentication_response.successfull) {
 				ws_authenticated = true;
+				offline_indicator.style.display = "none";
 			} else {
 				logout();
 			}
