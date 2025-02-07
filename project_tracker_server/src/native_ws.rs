@@ -31,7 +31,7 @@ pub fn native_ws_route(
 	let modified_sender = Arc::new(RwLock::new(modified_sender));
 	let modified_receiver = Arc::new(RwLock::new(modified_receiver));
 
-	path("native_ws")
+	path!("api" / "native_ws")
 		.and(ws())
 		.and(warp::addr::remote())
 		.and(warp::any().map(move || database_filepath.clone()))
@@ -96,8 +96,6 @@ async fn on_upgrade_ws(
 			return;
 		}
 	};
-
-	// TODO: authenticate client password!!!
 
 	let connected_client = ConnectedClient::Web(client_addr);
 

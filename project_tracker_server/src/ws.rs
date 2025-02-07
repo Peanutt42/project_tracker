@@ -31,7 +31,7 @@ pub fn ws_route(
 	let modified_sender = Arc::new(RwLock::new(modified_sender));
 	let modified_receiver = Arc::new(RwLock::new(modified_receiver));
 
-	path("ws")
+	path!("api" / "ws")
 		.and(ws())
 		.and(warp::addr::remote())
 		.and(warp::any().map(move || database_filepath.clone()))

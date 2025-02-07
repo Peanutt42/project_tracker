@@ -137,7 +137,7 @@ impl ServerConnectionState {
 		connection: &mut ServerConnection,
 		config: &ServerConfig,
 	) -> Result<bool, async_tungstenite::tungstenite::Error> {
-		let address = format!("wss://{}/native_ws", config.hostname);
+		let address = format!("wss://{}/api/native_ws", config.hostname);
 
 		let (webserver, _) = async_tungstenite::tokio::connect_async_with_tls_connector(
 			address,

@@ -15,7 +15,7 @@ pub fn load_database_route(
 	password: String,
 	shared_database: Arc<RwLock<Database>>,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-	path("load_database")
+	path!("api" / "load_database")
 		.and(post())
 		.and(body::json())
 		.and(warp::any().map(move || password.clone()))

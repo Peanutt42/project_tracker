@@ -17,7 +17,7 @@ pub fn get_admin_infos_route(
 	cpu_usage_avg: Arc<CpuUsageAverage>,
 	log_filepath: PathBuf,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-	path("admin_infos")
+	path!("api" / "admin_infos")
 		.and(post())
 		.and(body::json())
 		.and(warp::any().map(move || password.clone()))

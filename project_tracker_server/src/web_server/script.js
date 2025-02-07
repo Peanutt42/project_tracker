@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 
 		try {
-			const response = await fetch("/load_database", {
+			const response = await fetch("/api/load_database", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ password }),
@@ -384,7 +384,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	function connect_ws() {
 		console.log("connecting to ws...");
-		ws = new WebSocket("wss://" + location.host + "/ws/");
+		ws = new WebSocket("wss://" + location.host + "/api/ws/");
 		ws.onopen = on_ws_open;
 		ws.onclose = on_ws_close;
 		ws.onmessage = on_ws_message;

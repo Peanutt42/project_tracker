@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 		if (stored_password) {
 			try {
 				const password = stored_password;
-				const response = await fetch("/admin_infos", {
+				const response = await fetch("/api/admin_infos", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ password }),

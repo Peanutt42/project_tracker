@@ -4,7 +4,6 @@ use std::process::Command;
 fn main() {
 	let certificates_output_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
 		.join("src")
-		.join("web_server")
 		.join("self_signed_certificates");
 
 	let key_path = certificates_output_dir.join("key.pem");
