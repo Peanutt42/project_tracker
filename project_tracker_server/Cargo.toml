@@ -20,10 +20,6 @@ async-tungstenite = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
 humantime = { workspace = true }
-rand = "0.8.5"
-aes-gcm = { version = "0.10.3", features = ["std"] }
-argon2 = { version = "0.5.3", features = ["std"] }
-static_assertions = "1.1.0"
 futures-util = { version = "0.3", default-features = false, features = [
 	"sink",
 ] }
