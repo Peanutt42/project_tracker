@@ -15,23 +15,16 @@ use tracing::error;
 mod error;
 pub use error::{ServerError, ServerResult};
 
-mod server;
-pub use server::{handle_client, run_server};
-
 mod admin_infos;
 pub use admin_infos::AdminInfos;
 
 mod cpu_usage;
 pub use cpu_usage::{messure_cpu_usage_avg_thread, CpuUsageAverage};
 
-mod encryption;
-pub use encryption::{Encrypted, EncryptionError};
-
 mod logs;
 pub use logs::get_logs_as_string;
 
 pub const DEFAULT_HOSTNAME: &str = "127.0.0.1";
-pub const DEFAULT_PORT: usize = 8080;
 pub const DEFAULT_PASSWORD: &str = "1234";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -50,20 +43,10 @@ pub enum Request {
 	AdminInfos,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SerializedRequest(pub Encrypted<Request>);
-
-impl SerializedRequest {
-	pub fn encrypt(request: &Request, password: &str) -> ServerResult<Vec<u8>> {
-		let serialized_request = Self(Encrypted::encrypt(request, password)?);
-		bincode::serialize(&serialized_request).map_err(|_| ServerError::FailedToSerializeToBinary)
-	}
-
-	pub fn decrypt(bytes: &[u8], password: &str) -> ServerResult<Request> {
-		let serialized_request: Self =
-			bincode::deserialize(bytes).map_err(|_| ServerError::RequestParseError)?;
-		serialized_request.0.decrypt(password)
-	}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SerializedRequest {
+	pub password: String,
+	pub request: Request,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -81,26 +64,7 @@ pub enum Response {
 	AdminInfos(AdminInfos),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SerializedResponse(pub Result<Encrypted<Response>, ServerError>);
-
-impl SerializedResponse {
-	pub fn ok(response: &Response, password: &str) -> ServerResult<Vec<u8>> {
-		bincode::serialize(&Self(Ok(Encrypted::encrypt(response, password)?)))
-			.map_err(|_| ServerError::FailedToSerializeToBinary)
-	}
-
-	pub fn error(error: ServerError) -> ServerResult<Vec<u8>> {
-		bincode::serialize(&Self(Err(error))).map_err(|_| ServerError::FailedToSerializeToBinary)
-	}
-
-	pub fn decrypt(bytes: &[u8], password: &str) -> ServerResult<Response> {
-		let serialized_response: Self =
-			bincode::deserialize(bytes).map_err(|_| ServerError::ResponseParseError)?;
-		let encrypted_response = serialized_response.0?;
-		encrypted_response.decrypt(password)
-	}
-}
+pub type SerializedResponse = Result<Response, ServerError>;
 
 #[derive(Debug, Clone)]
 pub enum DatabaseUpdateEvent {
@@ -175,44 +139,5 @@ pub async fn save_database_to_file(database_filepath: &PathBuf, database_binary:
 				database_filepath.display()
 			);
 		}
-	}
-}
-
-#[cfg(test)]
-#[allow(clippy::unwrap_used)]
-mod tests {
-	use crate::{
-		Request, Response, SerializedRequest, SerializedResponse, ServerError, DEFAULT_PASSWORD,
-	};
-
-	const TEST_PASSWORD: &str = DEFAULT_PASSWORD;
-
-	#[test]
-	fn test_request_serialization() {
-		let request = Request::GetFullDatabase;
-
-		let request_bytes = SerializedRequest::encrypt(&request, TEST_PASSWORD).unwrap();
-		assert_eq!(
-			SerializedRequest::decrypt(&request_bytes, TEST_PASSWORD).unwrap(),
-			request
-		);
-	}
-
-	#[test]
-	fn test_response_serialization() {
-		let response = Response::DatabaseUpdated;
-
-		let response_bytes = SerializedResponse::ok(&response, TEST_PASSWORD).unwrap();
-		assert_eq!(
-			SerializedResponse::decrypt(&response_bytes, TEST_PASSWORD).unwrap(),
-			response
-		);
-
-		let error_response = ServerError::InvalidPassword;
-		let error_response_bytes = SerializedResponse::error(error_response.clone()).unwrap();
-		assert_eq!(
-			error_response,
-			SerializedResponse::decrypt(&error_response_bytes, TEST_PASSWORD).unwrap_err()
-		);
 	}
 }

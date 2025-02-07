@@ -14,31 +14,28 @@ use crate::synchronization::{
 };
 use flume::Sender;
 use iced::alignment::Vertical;
-use iced::widget::{column, container, row, text_input};
+use iced::widget::{column, container, row, text_input, toggler};
 use iced::{Element, Subscription, Task};
 use project_tracker_core::Database;
-use project_tracker_server::{
-	AdminInfos, Request, Response, DEFAULT_HOSTNAME, DEFAULT_PASSWORD, DEFAULT_PORT,
-};
+use project_tracker_server::{AdminInfos, Request, Response, DEFAULT_HOSTNAME, DEFAULT_PASSWORD};
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
-use std::str::FromStr;
 use std::sync::Arc;
 use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 pub struct ServerConfig {
 	pub hostname: String,
-	pub port: usize,
 	pub password: String,
+	pub self_signed_certificate: bool,
 }
 
 impl Default for ServerConfig {
 	fn default() -> Self {
 		Self {
 			hostname: DEFAULT_HOSTNAME.to_string(),
-			port: DEFAULT_PORT,
 			password: DEFAULT_PASSWORD.to_string(),
+			self_signed_certificate: true,
 		}
 	}
 }
@@ -149,7 +146,7 @@ impl BaseSynchronization for ServerSynchronization {
 	fn view(&self, show_password: bool) -> Element<Message> {
 		row![column![
 			row![
-				container("Hostname: ").width(100.0),
+				container("Hostname: ").width(200.0),
 				text_input("ex. 127.0.0.1 or raspberrypi.local", &self.config.hostname)
 					.on_input(
 						|hostname| settings_modal::Message::SetServerHostname(hostname).into()
@@ -159,32 +156,7 @@ impl BaseSynchronization for ServerSynchronization {
 			]
 			.align_y(Vertical::Center),
 			row![
-				container("Port: ").width(100.0),
-				text_input("ex. 8080", &format!("{}", self.config.port))
-					.on_input(|input| {
-						let new_port = match usize::from_str(&input) {
-							Ok(new_port) => Some(new_port),
-							Err(_) => {
-								if input.is_empty() {
-									Some(8080)
-								} else {
-									None
-								}
-							}
-						};
-						match new_port {
-							Some(new_port) => {
-								settings_modal::Message::SetServerPort(new_port).into()
-							}
-							None => settings_modal::Message::InvalidPortInput.into(),
-						}
-					})
-					.style(text_input_style_default)
-					.width(55.0),
-			]
-			.align_y(Vertical::Center),
-			row![
-				container("Password: ").width(100.0),
+				container("Password: ").width(200.0),
 				if show_password {
 					row![
 						text_input(
@@ -204,6 +176,15 @@ impl BaseSynchronization for ServerSynchronization {
 				} else {
 					show_password_button()
 				},
+			]
+			.align_y(Vertical::Center),
+			row![
+				container("Self Signed Certificate: ").width(200.0),
+				toggler(self.config.self_signed_certificate)
+					.on_toggle(|enabled| {
+						settings_modal::Message::SetServerSelfSignedCertificate(enabled).into()
+					})
+					.size(27.5),
 			]
 			.align_y(Vertical::Center),
 		]

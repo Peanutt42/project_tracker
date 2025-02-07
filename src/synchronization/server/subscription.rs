@@ -8,6 +8,7 @@ use flume::{unbounded, Receiver, Sender};
 use iced::futures::{self, channel::mpsc, SinkExt, StreamExt};
 use iced::{stream, Subscription};
 use project_tracker_server::{Request, Response, SerializedRequest, SerializedResponse};
+use tokio_native_tls::{native_tls::TlsConnector as NativeTlsConnector, TlsConnector};
 use tracing::{error, info};
 
 #[derive(Debug, Clone)]
@@ -136,9 +137,17 @@ impl ServerConnectionState {
 		connection: &mut ServerConnection,
 		config: &ServerConfig,
 	) -> Result<bool, async_tungstenite::tungstenite::Error> {
-		let address = format!("ws://{}:{}", config.hostname, config.port);
+		let address = format!("wss://{}/native_ws", config.hostname);
 
-		let (webserver, _) = async_tungstenite::tokio::connect_async(address).await?;
+		let (webserver, _) = async_tungstenite::tokio::connect_async_with_tls_connector(
+			address,
+			NativeTlsConnector::builder()
+				.danger_accept_invalid_certs(config.self_signed_certificate)
+				.build()
+				.map(TlsConnector::from)
+				.ok(),
+		)
+		.await?;
 
 		if output
 			.send(Ok(ServerSynchronizationEvent::Connected))
@@ -166,7 +175,7 @@ impl ServerConnectionState {
 					received = fused_websocket.select_next_some() => {
 						match received {
 							Ok(tungstenite::Message::Binary(binary)) => (
-								output.send(Self::parse_server_response(binary, config.password.clone())).await.is_ok(),
+								output.send(Self::parse_server_response(binary)).await.is_ok(),
 								None
 							),
 							Ok(tungstenite::Message::Close(_)) => {
@@ -260,12 +269,14 @@ impl ServerConnectionState {
 		(true, opt_new_connection)
 	}
 
-	fn parse_server_response(
-		binary_response: Vec<u8>,
-		password: String,
-	) -> ServerSubscriptionMessage {
-		match SerializedResponse::decrypt(&binary_response, &password) {
-			Ok(response) => Ok(ServerSynchronizationEvent::Response(response)),
+	fn parse_server_response(binary_response: Vec<u8>) -> ServerSubscriptionMessage {
+		match bincode::deserialize::<SerializedResponse>(&binary_response) {
+			Ok(response_result) => match response_result {
+				Ok(response) => Ok(ServerSynchronizationEvent::Response(response)),
+				Err(e) => Err(ServerSynchronizationError::ParseServerResponse(format!(
+					"{e}"
+				))),
+			},
 			Err(e) => Err(ServerSynchronizationError::ParseServerResponse(format!(
 				"{e}"
 			))),
@@ -281,7 +292,10 @@ impl ServerConnectionState {
 		websocket: &mut WebSocketStream,
 		output: &mut mpsc::Sender<ServerSubscriptionMessage>,
 	) -> (bool, Option<ServerConnection>) {
-		match SerializedRequest::encrypt(&request, password) {
+		match bincode::serialize(&SerializedRequest {
+			request,
+			password: password.to_string(),
+		}) {
 			Ok(request_bytes) => {
 				if websocket
 					.send(tungstenite::Message::Binary(request_bytes))

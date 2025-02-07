@@ -69,7 +69,7 @@ pub enum Message {
 	BrowseSynchronizationFilepathCanceled,
 
 	SetServerHostname(String),
-	SetServerPort(usize),
+	SetServerSelfSignedCertificate(bool),
 	SetServerPassword(String),
 	InvalidPortInput,
 }
@@ -327,14 +327,14 @@ impl Modal {
 				}
 				PreferenceAction::None
 			}
-			Message::SetServerPort(new_port) => {
+			Message::SetServerSelfSignedCertificate(self_signed_certificate) => {
 				if let Some(preferences) = preferences {
 					if let Some(Synchronization::ServerSynchronization(server_synchronization)) =
 						preferences.synchronization()
 					{
 						return PreferenceMessage::SetSynchronization(Some(
 							ServerSynchronization::new(ServerConfig {
-								port: new_port,
+								self_signed_certificate,
 								..server_synchronization.config.clone()
 							})
 							.into(),

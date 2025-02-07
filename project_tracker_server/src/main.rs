@@ -1,7 +1,7 @@
 use project_tracker_core::Database;
 use project_tracker_server::{
 	load_database_from_file, messure_cpu_usage_avg_thread, ConnectedClient, CpuUsageAverage,
-	DEFAULT_PASSWORD, DEFAULT_PORT,
+	DEFAULT_PASSWORD,
 };
 use std::collections::HashSet;
 use std::fs::{read_to_string, OpenOptions};
@@ -111,37 +111,16 @@ async fn main() {
 	};
 	let cpu_usage_avg_clone = cpu_usage_avg.clone();
 
-	std::thread::Builder::new()
-		.name("Web Server".to_string())
-		.spawn(move || {
-			let rt = tokio::runtime::Runtime::new().unwrap();
-
-			rt.block_on(async {
-				web_server::run_web_server(
-					password_clone,
-					modified_sender_clone,
-					modified_receiver,
-					shared_database_clone,
-					connected_clients_clone,
-					cpu_usage_avg_clone,
-					database_filepath_clone,
-					log_filepath_clone,
-					custom_cert_and_key_pem,
-				)
-				.await;
-			});
-		})
-		.expect("failed to start web server thread");
-
-	project_tracker_server::run_server(
-		DEFAULT_PORT,
-		database_filepath,
-		log_filepath,
-		password,
-		modified_sender,
-		shared_database,
-		connected_clients,
-		cpu_usage_avg,
+	web_server::run_web_server(
+		password_clone,
+		modified_sender_clone,
+		modified_receiver,
+		shared_database_clone,
+		connected_clients_clone,
+		cpu_usage_avg_clone,
+		database_filepath_clone,
+		log_filepath_clone,
+		custom_cert_and_key_pem,
 	)
 	.await;
 }
