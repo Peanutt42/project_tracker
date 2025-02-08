@@ -4,6 +4,8 @@ use std::hash::{Hash, Hasher};
 use crate::synchronization::server::ServerSynchronizationError;
 use crate::synchronization::{ServerConfig, SynchronizationMessage};
 use async_tungstenite::tungstenite;
+use async_tungstenite::tungstenite::client::IntoClientRequest;
+use async_tungstenite::tungstenite::http::{HeaderName, HeaderValue};
 use flume::{unbounded, Receiver, Sender};
 use iced::futures::{self, channel::mpsc, SinkExt, StreamExt};
 use iced::{stream, Subscription};
@@ -137,10 +139,19 @@ impl ServerConnectionState {
 		connection: &mut ServerConnection,
 		config: &ServerConfig,
 	) -> Result<bool, async_tungstenite::tungstenite::Error> {
-		let address = format!("wss://{}/api/native_ws", config.hostname);
+		let url = format!("wss://{}/api/native_ws", config.hostname);
+
+		let mut request = url.into_client_request()?;
+
+		request.headers_mut().append(
+			<HeaderName as TryFrom<&'static str>>::try_from("User-Agent")?,
+			<HeaderValue as TryFrom<&'static str>>::try_from(
+				"ProjectTrackerNativeGuiUserAgent/1.0",
+			)?,
+		);
 
 		let (webserver, _) = async_tungstenite::tokio::connect_async_with_tls_connector(
-			address,
+			request,
 			NativeTlsConnector::builder()
 				.danger_accept_invalid_certs(config.self_signed_certificate)
 				.build()
