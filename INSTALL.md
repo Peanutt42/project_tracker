@@ -10,6 +10,7 @@ Just download the latest project_tracker_server-X.X.X-1.ARCH.rpm package from [l
 
 ## Build from source - Prerequisites
 - Rust (programing lanuage): https://www.rust-lang.org/tools/install
+- OpenSSl development files (platform specific instructions below)
 - C compiler (programming lanuage):
 	- Linux: 'gcc'
 	- Windows: 'msvc'
@@ -18,14 +19,14 @@ Just download the latest project_tracker_server-X.X.X-1.ARCH.rpm package from [l
 ## Build from source - Client
 
 ### Linux
-install alsa development files, to play the notification sound:
+install openssl development files and alsa development files, to play the notification sound:
 - Debian/Ubuntu:
 	```bash
-	sudo apt install libasound2-dev
+	sudo apt install libssl-dev libasound2-dev
 	```
 - Fedora:
 	```bash
-	sudo dnf install alsa-lib-devel
+	sudo dnf install openssl-devel alsa-lib-devel
 	```
 to install for only the current user:
 ```bash
