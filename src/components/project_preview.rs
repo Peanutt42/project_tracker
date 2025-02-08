@@ -91,15 +91,13 @@ pub fn custom_project_preview(
 			row![inner_text_element,]
 				.push_maybe(if project_id.is_some() {
 					Some(
-						container(
-							text(format!("({}/{})", tasks_done, task_len)).size(SMALL_TEXT_SIZE),
-						)
-						.width(Fill)
-						.align_x(Horizontal::Right)
-						.padding(Padding {
-							right: SMALL_PADDING_AMOUNT,
-							..Padding::ZERO
-						}),
+						container(text!("{tasks_done}/{task_len}").size(SMALL_TEXT_SIZE))
+							.width(Fill)
+							.align_x(Horizontal::Right)
+							.padding(Padding {
+								right: SMALL_PADDING_AMOUNT,
+								..Padding::ZERO
+							}),
 					)
 				} else {
 					None
