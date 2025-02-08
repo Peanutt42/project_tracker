@@ -49,10 +49,10 @@ impl TaskDescriptionMarkdownStorage {
 				}
 			})
 			.or_insert_with(|| {
-				let markdown_items = parse_markdown(task_description);
+				let items = parse_markdown(task_description);
 				CachedTaskDescriptionMarkdownItems {
 					task_description_hash,
-					items: markdown_items.clone(),
+					items,
 				}
 			})
 			.items

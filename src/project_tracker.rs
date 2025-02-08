@@ -735,6 +735,9 @@ impl ProjectTrackerApp {
 				match load_database_result {
 					Ok(database) => {
 						self.database = DatabaseState::Loaded(database);
+						if let Some(task_modal) = &mut self.task_modal {
+							task_modal.refresh_task_description_editor(self.database.ok());
+						}
 						let action = self
 							.content_page
 							.restore_from_serialized(self.database.ok(), &mut self.preferences);
@@ -922,6 +925,9 @@ impl ProjectTrackerApp {
 							Some(database),
 							&mut self.preferences,
 						);
+					}
+					if let Some(task_modal) = &mut self.task_modal {
+						task_modal.refresh_task_description_editor(Some(database));
 					}
 
 					let should_save = database

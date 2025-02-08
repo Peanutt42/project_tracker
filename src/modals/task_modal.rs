@@ -102,6 +102,28 @@ impl Modal {
 		)
 	}
 
+	pub fn refresh_task_description_editor(&mut self, database: Option<&Database>) {
+		if let Some(description_editor) = &mut self.new_description {
+			if let Some(new_task_description) = database.as_ref().and_then(|db| {
+				db.get_task(&self.project_id, &self.task_id)
+					.map(|task| &task.description)
+			}) {
+				if description_editor.text() != *new_task_description {
+					let (cursor_line, cursor_column) = description_editor.cursor_position();
+					*description_editor = text_editor::Content::with_text(new_task_description);
+					for _ in 0..cursor_line {
+						description_editor
+							.perform(text_editor::Action::Move(text_editor::Motion::Down));
+					}
+					for _ in 0..cursor_column {
+						description_editor
+							.perform(text_editor::Action::Move(text_editor::Motion::Right));
+					}
+				}
+			}
+		}
+	}
+
 	pub fn update<'a>(&'a mut self, message: Message, database: Option<&'a Database>) -> Action {
 		match message {
 			Message::EditDescription => {
