@@ -8,6 +8,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	const project_list = document.getElementById("project_list");
 	const task_list = document.getElementById("task_list");
+	let touch_start_x = 0;
+	let swiping = false;
+	task_list.addEventListener("touchstart", (e) => {
+		touch_start_x = e.touches[0].clientX;
+		swiping = true;
+	});
+	task_list.addEventListener("touchmove", (e) => {
+		if (!swiping) {
+			return;
+		}
+
+		const touch_end_x = e.changedTouches[0].clientX;
+		const delta_x = touch_end_x - touch_start_x;
+		const window_width = window.outerWidth;
+
+		if (Math.abs(delta_x) / window_width >= 0.25) {
+			const last_loaded_database = JSON.parse(
+				localStorage.getItem("last_loaded_database"),
+			);
+			if (last_loaded_database) {
+				swiping = false;
+				swipe_projects(last_loaded_database, delta_x > 0);
+			}
+		}
+	});
+	task_list.addEventListener("touchend", () => {
+		swiping = false;
+	});
 
 	const database_list = document.getElementById("database");
 	const admin_dashboard_button = document.getElementById(
@@ -165,6 +193,32 @@ document.addEventListener("DOMContentLoaded", () => {
 			selected_project_id,
 			database[selected_project_id],
 		);
+	}
+
+	// switch to the left/right project of the currently selected project
+	function swipe_projects(database, left) {
+		const selected_project_id = localStorage.getItem("selected_project_id");
+		let new_selected_project_index = 0;
+		if (selected_project_id) {
+			const selected_project_index =
+				Object.keys(database).indexOf(selected_project_id);
+			if (selected_project_index !== -1) {
+				if (left && selected_project_index > 0) {
+					new_selected_project_index = selected_project_index - 1;
+				} else if (
+					!left &&
+					selected_project_index < Object.keys(database).length - 1
+				) {
+					new_selected_project_index = selected_project_index + 1;
+				} else {
+					new_selected_project_index = selected_project_index;
+				}
+			}
+		}
+		const new_selected_project_id =
+			Object.keys(database)[new_selected_project_index];
+		localStorage.setItem("selected_project_id", new_selected_project_id);
+		populate_dom_from_database(database);
 	}
 
 	function populate_dom_from_project(project_id, project) {
@@ -425,7 +479,9 @@ document.addEventListener("DOMContentLoaded", () => {
 	// fetch updated database
 	function on_ws_message(msg) {
 		if (ws_authenticated) {
-			populate_dom_from_database(JSON.parse(msg.data));
+			const database = JSON.parse(msg.data);
+			populate_dom_from_database(database);
+			localStorage.setItem("last_loaded_database", JSON.stringify(database));
 		} else {
 			const authentication_response = JSON.parse(msg.data);
 			if (authentication_response.successfull) {
