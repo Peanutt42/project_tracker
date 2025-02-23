@@ -734,6 +734,9 @@ impl ProjectTrackerApp {
 
 				match load_database_result {
 					Ok(database) => {
+						if let Some(synchronization) = &mut self.synchronization {
+							synchronization.preset_database_to_sync(&database);
+						}
 						self.database = DatabaseState::Loaded(database);
 						if let Some(task_modal) = &mut self.task_modal {
 							task_modal.refresh_task_description_editor(self.database.ok());
@@ -848,6 +851,11 @@ impl ProjectTrackerApp {
 				match load_preferences_result {
 					Ok(preferences) => {
 						self.synchronization = preferences.synchronization().clone();
+						if let Some(database) = self.database.ok() {
+							if let Some(synchronization) = &mut self.synchronization {
+								synchronization.preset_database_to_sync(database);
+							}
+						}
 						self.split.resize(preferences.sidebar_ratio());
 						self.preferences = Some(preferences);
 						let content_page_action = self
@@ -961,6 +969,11 @@ impl ProjectTrackerApp {
 				let changed_synchronization = match preference_message.clone() {
 					PreferenceMessage::SetSynchronization(new_synchronization) => {
 						self.synchronization = new_synchronization;
+						if let Some(database) = self.database.ok() {
+							if let Some(synchronization) = &mut self.synchronization {
+								synchronization.preset_database_to_sync(database);
+							}
+						}
 						true
 					}
 					_ => false,

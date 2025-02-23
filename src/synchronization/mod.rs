@@ -34,6 +34,10 @@ pub enum DatabaseUpdateEvent {
 
 /// gets called immediatly before every change
 pub trait OnUpdateSynchronization {
+	/// used to preset the database to sync, if the synchronization requires to know it
+	/// before any db updates are done
+	fn preset_database_to_sync(&mut self, database: &Database);
+
 	/// Will update app with 'Message::SyncedDatabase' when synchronized
 	fn before_database_update(
 		&mut self,
@@ -119,6 +123,15 @@ impl BaseSynchronization for Synchronization {
 }
 
 impl OnUpdateSynchronization for Synchronization {
+	fn preset_database_to_sync(&mut self, database: &Database) {
+		match self {
+			Self::FilesystemSynchronization(_filesystem_synchronization) => (),
+			Self::ServerSynchronization(server_synchronization) => {
+				server_synchronization.preset_database_to_sync(database);
+			}
+		}
+	}
+
 	fn before_database_update(
 		&mut self,
 		database: &Database,

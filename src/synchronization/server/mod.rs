@@ -76,6 +76,10 @@ impl From<ServerSynchronization> for Synchronization {
 }
 
 impl OnUpdateSynchronization for ServerSynchronization {
+	fn preset_database_to_sync(&mut self, database: &Database) {
+		self.database_to_sync = Some(database.clone());
+	}
+
 	fn before_database_update(
 		&mut self,
 		database: &Database,

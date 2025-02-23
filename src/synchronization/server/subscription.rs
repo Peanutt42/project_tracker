@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::hash::{Hash, Hasher};
+use std::time::Duration;
 
 use crate::synchronization::server::ServerSynchronizationError;
 use crate::synchronization::{ServerConfig, SynchronizationMessage};
@@ -7,6 +8,7 @@ use async_tungstenite::tungstenite;
 use async_tungstenite::tungstenite::client::IntoClientRequest;
 use async_tungstenite::tungstenite::http::{HeaderName, HeaderValue};
 use flume::{unbounded, Receiver, Sender};
+use iced::futures::FutureExt;
 use iced::futures::{self, channel::mpsc, SinkExt, StreamExt};
 use iced::{stream, Subscription};
 use project_tracker_server::{Request, Response, SerializedRequest, SerializedResponse};
@@ -178,32 +180,45 @@ impl ServerConnectionState {
 		output: &mut mpsc::Sender<ServerSubscriptionMessage>,
 	) -> (bool, Option<ServerConnection>) {
 		let mut fused_websocket = websocket.by_ref().fuse();
+		/// 1 hour timeout for listening, since the ws stream silently
+		/// disconnects after a long period of inactivity
+		const TIMEOUT_DURATION: Duration = Duration::from_secs(60 * 60);
 
 		match &self.request_receiver {
 			Some(request_receiver) => {
 				let mut request_receiver_stream = request_receiver.stream();
 				futures::select! {
-					received = fused_websocket.select_next_some() => {
-						match received {
-							Ok(tungstenite::Message::Binary(binary)) => (
-								output.send(Self::parse_server_response(binary)).await.is_ok(),
-								None
-							),
-							Ok(tungstenite::Message::Close(_)) => {
-								info!("ws server disconnected");
-								(
-									output.send(Ok(ServerSynchronizationEvent::Disconnected)).await.is_ok(),
-									Some(ServerConnection::Disconnected)
-								)
-							},
-							Err(e) => {
-								info!("ws server disconnected: {e}");
+					received_timeout_result = tokio::time::timeout(TIMEOUT_DURATION, fused_websocket.select_next_some()).fuse() => {
+						match received_timeout_result {
+							Ok(received) => match received {
+								Ok(tungstenite::Message::Binary(binary)) => (
+									output.send(Self::parse_server_response(binary)).await.is_ok(),
+									None
+								),
+								Ok(tungstenite::Message::Close(_)) => {
+									info!("ws server disconnected");
+									(
+										output.send(Ok(ServerSynchronizationEvent::Disconnected)).await.is_ok(),
+										Some(ServerConnection::Disconnected)
+									)
+								},
+								Err(e) => {
+									info!("ws server disconnected: {e}");
+									(
+										output.send(Ok(ServerSynchronizationEvent::Disconnected)).await.is_ok(),
+										Some(ServerConnection::Disconnected)
+									)
+								}
+								_ => (true, None),
+							}
+							// Timeout
+							Err(_) => {
+								info!("ws listen timeout, reconnecting for good measure");
 								(
 									output.send(Ok(ServerSynchronizationEvent::Disconnected)).await.is_ok(),
 									Some(ServerConnection::Disconnected)
 								)
 							}
-							_ => (true, None),
 						}
 					},
 
