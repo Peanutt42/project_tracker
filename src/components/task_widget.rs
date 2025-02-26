@@ -1,6 +1,7 @@
 use crate::{
 	components::{
 		days_left_widget, duration_widget, in_between_dropzone, open_in_code_editor_button,
+		task_tag_button,
 	},
 	core::{View, TASK_TAG_QUAD_HEIGHT},
 	icons::{icon_to_text, Bootstrap},
@@ -25,9 +26,9 @@ use iced::{
 use iced_drop::droppable;
 use project_tracker_core::{
 	duration_str, round_duration_to_seconds, DatabaseMessage, Project, ProjectId, SortMode, Task,
-	TaskId, TaskType,
+	TaskId, TaskTagId, TaskType,
 };
-use std::time::Duration;
+use std::{collections::BTreeSet, time::Duration};
 
 #[allow(clippy::too_many_arguments)]
 pub fn task_widget<'a>(
@@ -293,4 +294,32 @@ pub fn task_widget<'a>(
 			.padding(Padding::ZERO)
 			.into()
 	}
+}
+
+/// Shows the enabled tags on the left first, then the disabled tags.
+pub fn task_tag_list<'a>(
+	project: &'a Project,
+	enabled_tags: &'a BTreeSet<TaskTagId>,
+	on_toggle: impl Fn(TaskTagId) -> Message,
+) -> Vec<Element<'a, Message>> {
+	let mut list = Vec::with_capacity(project.task_tags.len());
+	for (tag_id, tag) in project.task_tags.iter() {
+		if enabled_tags.contains(&tag_id) {
+			list.push(
+				task_tag_button(tag, enabled_tags.contains(&tag_id))
+					.on_press(on_toggle(tag_id))
+					.into(),
+			);
+		}
+	}
+	for (tag_id, tag) in project.task_tags.iter() {
+		if !enabled_tags.contains(&tag_id) {
+			list.push(
+				task_tag_button(tag, enabled_tags.contains(&tag_id))
+					.on_press(on_toggle(tag_id))
+					.into(),
+			);
+		}
+	}
+	list
 }

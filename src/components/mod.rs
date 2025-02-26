@@ -30,7 +30,7 @@ mod task_list;
 pub use task_list::task_list;
 
 mod task_widget;
-pub use task_widget::task_widget;
+pub use task_widget::{task_tag_list, task_widget};
 
 mod task_description;
 pub use task_description::{task_description, task_description_editor};

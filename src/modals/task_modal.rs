@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		delete_task_button, due_date_button, edit_needed_time_button, horizontal_scrollable,
-		start_task_timer_button, task_description, task_description_editor, task_tag_button,
+		start_task_timer_button, task_description, task_description_editor, task_tag_list,
 		toggle_view_edit_task_description_button, vertical_scrollable, ICON_BUTTON_WIDTH,
 		SCROLLBAR_WIDTH,
 	},
@@ -248,22 +248,15 @@ impl Modal {
 			{
 				Some(project) => match project.get_task(&self.task_id) {
 					Some(task) => {
-						let task_tags_list: Vec<Element<project_tracker::Message>> = project
-							.task_tags
-							.iter()
-							.map(|(task_tag_id, task_tag)| {
-								task_tag_button(task_tag, task.tags.contains(&task_tag_id))
-									.on_press(
-										DatabaseMessage::ToggleTaskTag {
-											project_id: self.project_id,
-											task_id: self.task_id,
-											task_tag_id,
-										}
-										.into(),
-									)
-									.into()
-							})
-							.collect();
+						let task_tags_list: Vec<Element<project_tracker::Message>> =
+							task_tag_list(project, &task.tags, |task_tag_id| {
+								DatabaseMessage::ToggleTaskTag {
+									project_id: self.project_id,
+									task_id: self.task_id,
+									task_tag_id,
+								}
+								.into()
+							});
 
 						let edit_needed_time_view = edit_needed_time_button(
 							task.needed_time_minutes,

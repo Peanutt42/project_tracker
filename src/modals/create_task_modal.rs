@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		close_create_new_task_modal_button, create_new_task_modal_button, due_date_button,
-		edit_needed_time_button, horizontal_scrollable, task_description_editor, task_tag_button,
+		edit_needed_time_button, horizontal_scrollable, task_description_editor, task_tag_list,
 		vertical_scrollable, SCROLLBAR_WIDTH,
 	},
 	core::SerializableDateConversion,
@@ -212,15 +212,10 @@ impl Modal {
 					.and_then(|db| db.get_project(&self.project_id))
 				{
 					Some(project) => {
-						let task_tags_list: Vec<Element<project_tracker::Message>> = project
-							.task_tags
-							.iter()
-							.map(|(tag_id, tag)| {
-								task_tag_button(tag, self.task_tags.contains(&tag_id))
-									.on_press(Message::ToggleTaskTag(tag_id).into())
-									.into()
-							})
-							.collect();
+						let task_tags_list: Vec<Element<project_tracker::Message>> =
+							task_tag_list(project, &self.task_tags, |task_tag_id| {
+								Message::ToggleTaskTag(task_tag_id).into()
+							});
 
 						if task_tags_list.is_empty() {
 							Element::new(Space::new(0.0, 0.0))
