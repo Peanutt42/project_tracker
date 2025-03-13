@@ -435,8 +435,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		task_content_div.className = "task_content";
 		task_content_div.appendChild(task_tags_and_name_div);
 
-		if (task.description) {
+		if (task.description && task.description.trim().length > 0) {
 			const task_description_section = document.createElement("details");
+			task_description_section.style.width = "fit-content";
 
 			const task_description_summary = document.createElement("summary");
 			const task_description_icon = document.createElement("img");
