@@ -14,6 +14,8 @@ use tracing::level_filters::LevelFilter;
 use tracing::warn;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
+use warp::reject::Rejection;
+use warp::reply::Reply;
 use warp::{path, reply::html, serve, Filter};
 
 #[macro_use]
@@ -138,21 +140,7 @@ async fn main() {
 		.or(index_html_route!("admin"))
 		.or(js_route!("admin/script.js"))
 		.or(css_route!("admin/style.css"))
-		.or(ico_route!("static/favicon.ico"))
-		.or(png_route!("static/icon_180x180.png"))
-		.or(png_route!("static/apple-touch-icon.png"))
-		.or(svg_route!("static/caret-down-fill.svg"))
-		.or(svg_route!("static/caret-right-fill.svg"))
-		.or(svg_route!("static/bar-chart-fill.svg"))
-		.or(svg_route!("static/house-fill.svg"))
-		.or(svg_route!("static/globe.svg"))
-		.or(svg_route!("static/window.svg"))
-		.or(svg_route!("static/wifi-off.svg"))
-		.or(svg_route!("static/cpu.svg"))
-		.or(svg_route!("static/hourglass-split.svg"))
-		.or(svg_route!("static/memory.svg"))
-		.or(svg_route!("static/thermometer-half.svg"))
-		.or(svg_route!("static/file-earmark-text.svg"))
+		.or(static_assets_route())
 		.or(load_database_route(
 			password.clone(),
 			shared_database.clone(),
@@ -200,4 +188,23 @@ async fn main() {
 	info!("https server listening on {https_addr}");
 
 	https_warp.await;
+}
+
+fn static_assets_route() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+	ico_route!("static/favicon.ico")
+		.or(png_route!("static/icon_180x180.png"))
+		.or(png_route!("static/apple-touch-icon.png"))
+		.or(svg_route!("static/caret-down-fill.svg"))
+		.or(svg_route!("static/caret-right-fill.svg"))
+		.or(svg_route!("static/bar-chart-fill.svg"))
+		.or(svg_route!("static/house-fill.svg"))
+		.or(svg_route!("static/globe.svg"))
+		.or(svg_route!("static/window.svg"))
+		.or(svg_route!("static/wifi-off.svg"))
+		.or(svg_route!("static/cpu.svg"))
+		.or(svg_route!("static/hourglass-split.svg"))
+		.or(svg_route!("static/memory.svg"))
+		.or(svg_route!("static/thermometer-half.svg"))
+		.or(svg_route!("static/file-earmark-text.svg"))
+		.or(svg_route!("static/justify-left.svg"))
 }

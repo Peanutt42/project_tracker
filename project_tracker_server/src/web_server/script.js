@@ -431,7 +431,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		task_tags_and_name_div.appendChild(task_info_div);
 
-		task_div.appendChild(task_tags_and_name_div);
+		const task_content_div = document.createElement("div");
+		task_content_div.className = "task_content";
+		task_content_div.appendChild(task_tags_and_name_div);
+
+		if (task.description) {
+			const task_description_section = document.createElement("details");
+
+			const task_description_summary = document.createElement("summary");
+			const task_description_icon = document.createElement("img");
+			task_description_icon.src = "/static/justify-left.svg";
+			task_description_summary.append(task_description_icon);
+			const task_description_div = document.createElement("div");
+			task_description_div.className = "task_description";
+			task_description_div.style.display = "none";
+			task_description_div.textContent = task.description;
+			task_description_summary.appendChild(task_description_div);
+			task_description_section.append(task_description_summary);
+
+			task_description_section.addEventListener("toggle", () => {
+				if (task_description_section.open) {
+					task_description_icon.style.display = "none";
+					task_description_div.style.display = "block";
+				} else {
+					task_description_icon.style.display = "block";
+					task_description_div.style.display = "none";
+				}
+			});
+
+			task_content_div.appendChild(task_description_section);
+		}
+
+		task_div.appendChild(task_content_div);
 
 		task_list.appendChild(task_div);
 	}

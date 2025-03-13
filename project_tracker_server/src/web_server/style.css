@@ -93,6 +93,13 @@ input[type="text"]::placeholder {
 	overflow-wrap: break-word;
 	background-color: #1e1e1e;
 }
+.task_content {
+	display: flex;
+	flex-direction: column;
+}
+.task_description {
+	white-space: pre-wrap;
+}
 .task_list {
 	display: flex;
 	text-decoration: none;
