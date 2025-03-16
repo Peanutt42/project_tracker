@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		const delta_x = touch_end_x - touch_start_x;
 		const window_width = window.outerWidth;
 
-		if (Math.abs(delta_x) / window_width >= 0.25) {
+		if (Math.abs(delta_x) / window_width >= 0.1) {
 			const last_loaded_database = JSON.parse(
 				localStorage.getItem("last_loaded_database"),
 			);
