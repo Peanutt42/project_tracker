@@ -9,9 +9,15 @@ document.addEventListener("DOMContentLoaded", () => {
 	const project_list = document.getElementById("project_list");
 	const task_list = document.getElementById("task_list");
 	let touch_start_x = 0;
+	let touch_start_y = 0;
+	let touch_abs_delta_x = 0;
+	let touch_abs_delta_y = 0;
 	let swiping = false;
 	task_list.addEventListener("touchstart", (e) => {
 		touch_start_x = e.touches[0].clientX;
+		touch_start_y = e.touches[0].clientY;
+		touch_abs_delta_x = 0;
+		touch_abs_delta_y = 0;
 		swiping = true;
 	});
 	task_list.addEventListener("touchmove", (e) => {
@@ -20,16 +26,24 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 
 		const touch_end_x = e.changedTouches[0].clientX;
+		const touch_end_y = e.changedTouches[0].clientY;
 		const delta_x = touch_end_x - touch_start_x;
+		const delta_y = touch_end_y - touch_start_y;
+		touch_abs_delta_x += Math.abs(delta_x);
+		touch_abs_delta_y += Math.abs(delta_y);
 		const window_width = window.outerWidth;
+		const swipe =
+			touch_abs_delta_x / window_width >= 0.1 &&
+			touch_abs_delta_x > Math.abs(touch_abs_delta_y);
+		const swipe_left = delta_x > 0;
 
-		if (Math.abs(delta_x) / window_width >= 0.1) {
+		if (swipe) {
 			const last_loaded_database = JSON.parse(
 				localStorage.getItem("last_loaded_database"),
 			);
 			if (last_loaded_database) {
 				swiping = false;
-				swipe_projects(last_loaded_database, delta_x > 0);
+				swipe_projects(last_loaded_database, swipe_left);
 			}
 		}
 	});
