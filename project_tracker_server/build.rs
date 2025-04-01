@@ -10,7 +10,7 @@ fn main() {
 	let cert_path = certificates_output_dir.join("cert.pem");
 
 	if !key_path.exists() && !cert_path.exists() {
-		std::fs::create_dir(&certificates_output_dir).unwrap();
+		std::fs::create_dir_all(&certificates_output_dir).unwrap();
 
 		let output = Command::new("openssl")
 			.args([
