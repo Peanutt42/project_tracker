@@ -3787,6 +3787,7 @@ dependencies = [
  "futures-util",
  "humantime",
  "project_tracker_core",
+ "pulldown-cmark",
  "serde",
  "serde_json",
  "systemstat",

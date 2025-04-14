@@ -1,5 +1,5 @@
 use futures_util::{SinkExt, StreamExt};
-use project_tracker_core::{Database, DatabaseMessage, ProjectId, TaskId};
+use project_tracker_core::{Database, DatabaseMessage, ProjectId, SerializedDatabase, TaskId};
 use project_tracker_server::{
 	save_database_to_file, ConnectedClient, DatabaseUpdateEvent, ModifiedEvent,
 };
@@ -138,7 +138,7 @@ async fn on_upgrade_ws(
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-enum WsModifyAction {
+enum WsRequest {
 	ToggleTask {
 		project_id: ProjectId,
 		task_id: TaskId,
@@ -147,6 +147,20 @@ enum WsModifyAction {
 	CreateTask {
 		project_id: ProjectId,
 		task_name: String,
+	},
+	ProduceHtmlFromMarkdown {
+		project_id: ProjectId,
+		task_id: TaskId,
+	},
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+enum WsResponse {
+	Database(SerializedDatabase),
+	HtmlMarkdown {
+		project_id: ProjectId,
+		task_id: TaskId,
+		html: String,
 	},
 }
 
@@ -188,50 +202,72 @@ async fn handle_ws(
 				match message {
 					Some(Ok(message)) => {
 						match message.to_str() {
-							Ok(message_str) => match serde_json::from_str::<WsModifyAction>(message_str) {
+							Ok(message_str) => match serde_json::from_str::<WsRequest>(message_str) {
 								Ok(action) => {
 									info!("{action:?}");
-									let database_message = match action {
-										WsModifyAction::ToggleTask { project_id, task_id, checked } => if checked {
-											DatabaseMessage::SetTaskDone { project_id, task_id }
-										} else {
-											DatabaseMessage::SetTaskTodo { project_id, task_id }
-										},
-										WsModifyAction::CreateTask { project_id, task_name } => {
-											DatabaseMessage::CreateTask {
-												project_id,
-												task_id: TaskId::generate(),
-												task_name,
-												task_description: String::new(),
-												task_tags: BTreeSet::new(),
-												due_date: None,
-												needed_time_minutes: None,
-												time_spend: None,
-												create_at_top: true
+									match action {
+										WsRequest::ToggleTask { .. } | WsRequest::CreateTask { .. } => {
+											let database_message = match action {
+												WsRequest::ToggleTask { project_id, task_id, checked } => if checked {
+													DatabaseMessage::SetTaskDone { project_id, task_id }
+												} else {
+													DatabaseMessage::SetTaskTodo { project_id, task_id }
+												},
+												WsRequest::CreateTask { project_id, task_name } => {
+													DatabaseMessage::CreateTask {
+														project_id,
+														task_id: TaskId::generate(),
+														task_name,
+														task_description: String::new(),
+														task_tags: BTreeSet::new(),
+														due_date: None,
+														needed_time_minutes: None,
+														time_spend: None,
+														create_at_top: true
+													}
+												}
+												_ => unreachable!(),
+											};
+											let (modified_database, before_modification_checksum) = {
+												let mut shared_database = shared_database.write().await;
+												let before_modification_checksum = shared_database.checksum();
+												shared_database.update(database_message.clone());
+												(shared_database.clone(), before_modification_checksum)
+											};
+											let database_binary = modified_database.to_binary();
+											let _ = modified_sender.send(ModifiedEvent::new(
+												modified_database,
+												DatabaseUpdateEvent::DatabaseMessage {
+													database_messages: vec![database_message],
+													before_modification_checksum
+												},
+												client_addr
+											));
+											match database_binary {
+												Some(database_binary) => {
+													save_database_to_file(&database_filepath, &database_binary).await;
+												}
+												None => {
+													error!("failed to serialize database to binary -> cant save database to file");
+												}
 											}
 										}
-									};
-									let (modified_database, before_modification_checksum) = {
-										let mut shared_database = shared_database.write().await;
-										let before_modification_checksum = shared_database.checksum();
-										shared_database.update(database_message.clone());
-										(shared_database.clone(), before_modification_checksum)
-									};
-									let database_binary = modified_database.to_binary();
-									let _ = modified_sender.send(ModifiedEvent::new(
-										modified_database,
-										DatabaseUpdateEvent::DatabaseMessage {
-											database_messages: vec![database_message],
-											before_modification_checksum
-										},
-										client_addr
-									));
-									match database_binary {
-										Some(database_binary) => {
-											save_database_to_file(&database_filepath, &database_binary).await;
-										}
-										None => {
-											error!("failed to serialize database to binary -> cant save database to file");
+										WsRequest::ProduceHtmlFromMarkdown { project_id, task_id } => {
+											let html = match shared_database.read().await.get_task(&project_id, &task_id) {
+												Some(task) => {
+													produce_html_from_markdown(&task.description)
+												}
+												None => "Task not found".to_string(),
+											};
+											if let Ok(serialized_response) = serde_json::to_string(&WsResponse::HtmlMarkdown {
+												project_id,
+												task_id,
+												html
+											}) {
+												if let Err(e) = write_ws.send(Message::text(serialized_response)).await {
+													error!("failed to send html markdown response: {e}");
+												}
+											}
 										}
 									}
 								},
@@ -254,4 +290,18 @@ async fn handle_ws(
 			},
 		};
 	}
+}
+
+fn produce_html_from_markdown(description: &str) -> String {
+	let mut html = String::new();
+	let parser = pulldown_cmark::Parser::new_ext(
+		description,
+		pulldown_cmark::Options::ENABLE_YAML_STYLE_METADATA_BLOCKS
+			| pulldown_cmark::Options::ENABLE_PLUSES_DELIMITED_METADATA_BLOCKS
+			| pulldown_cmark::Options::ENABLE_TABLES
+			| pulldown_cmark::Options::ENABLE_STRIKETHROUGH
+			| pulldown_cmark::Options::ENABLE_TASKLISTS,
+	);
+	pulldown_cmark::html::push_html(&mut html, parser);
+	html
 }

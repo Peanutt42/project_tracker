@@ -82,6 +82,23 @@ document.addEventListener("DOMContentLoaded", () => {
 	let ws_authenticated = false;
 	let reconnect_attempts = 0;
 
+	const on_task_description_html_callback_map = {};
+	function add_on_task_description_html_callback(
+		project_id,
+		task_id,
+		callback,
+	) {
+		on_task_description_html_callback_map[`${project_id},${task_id}`] =
+			callback;
+	}
+	function on_task_description_html(project_id, task_id, html) {
+		const callback =
+			on_task_description_html_callback_map[`${project_id},${task_id}`];
+		if (callback) {
+			callback(html);
+		}
+	}
+
 	admin_dashboard_button.addEventListener("click", open_admin_page);
 
 	logout_button.addEventListener("click", logout);
@@ -458,9 +475,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			task_description_icon.src = "/static/justify-left.svg";
 			task_description_summary.append(task_description_icon);
 			const task_description_div = document.createElement("div");
-			task_description_div.className = "task_description";
 			task_description_div.style.display = "none";
-			task_description_div.textContent = task.description;
 			task_description_summary.appendChild(task_description_div);
 			task_description_section.append(task_description_summary);
 
@@ -468,10 +483,15 @@ document.addEventListener("DOMContentLoaded", () => {
 				if (task_description_section.open) {
 					task_description_icon.style.display = "none";
 					task_description_div.style.display = "block";
+					send_html_markdown_request(project_id, task_id);
 				} else {
 					task_description_icon.style.display = "block";
 					task_description_div.style.display = "none";
 				}
+			});
+
+			add_on_task_description_html_callback(project_id, task_id, (html) => {
+				task_description_div.innerHTML = html;
 			});
 
 			task_content_div.appendChild(task_description_section);
@@ -525,9 +545,16 @@ document.addEventListener("DOMContentLoaded", () => {
 	// fetch updated database
 	function on_ws_message(msg) {
 		if (ws_authenticated) {
-			const database = JSON.parse(msg.data);
-			populate_dom_from_database(database);
-			localStorage.setItem("last_loaded_database", JSON.stringify(database));
+			const response = JSON.parse(msg.data);
+			if (response.HtmlMarkdown) {
+				const project_id = response.HtmlMarkdown.project_id;
+				const task_id = response.HtmlMarkdown.task_id;
+				const html = response.HtmlMarkdown.html;
+				on_task_description_html(project_id, task_id, html);
+			} else {
+				populate_dom_from_database(response);
+				localStorage.setItem("last_loaded_database", JSON.stringify(response));
+			}
 		} else {
 			const authentication_response = JSON.parse(msg.data);
 			if (authentication_response.successfull) {
@@ -536,6 +563,19 @@ document.addEventListener("DOMContentLoaded", () => {
 			} else {
 				logout();
 			}
+		}
+	}
+
+	function send_html_markdown_request(project_id, task_id) {
+		if (ws_authenticated) {
+			ws.send(
+				JSON.stringify({
+					ProduceHtmlFromMarkdown: {
+						project_id: project_id,
+						task_id: task_id,
+					},
+				}),
+			);
 		}
 	}
 });
