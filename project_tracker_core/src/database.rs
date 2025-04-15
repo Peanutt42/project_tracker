@@ -174,7 +174,7 @@ pub enum LoadDatabaseError {
 	#[error("failed to parse database: {filepath}, error: {error}")]
 	FailedToParseBinary {
 		filepath: PathBuf,
-		error: bincode::Error,
+		error: bincode::error::DecodeError,
 	},
 	#[error("failed to parse database: {filepath}, error: {error}")]
 	FailedToParseJson {
@@ -803,13 +803,20 @@ impl Database {
 		Self::new(serialized, last_changed_time)
 	}
 
-	pub fn from_binary(binary: &[u8], last_changed_time: DateTime<Utc>) -> bincode::Result<Self> {
-		bincode::deserialize(binary)
-			.map(|serialized| Self::from_serialized(serialized, last_changed_time))
+	pub fn from_binary(
+		binary: &[u8],
+		last_changed_time: DateTime<Utc>,
+	) -> Result<Self, bincode::error::DecodeError> {
+		let (serialized_database, _) =
+			bincode::serde::decode_from_slice(binary, bincode::config::legacy())?;
+		Ok(Self::from_serialized(
+			serialized_database,
+			last_changed_time,
+		))
 	}
 
 	pub fn to_binary(&self) -> Option<Vec<u8>> {
-		bincode::serialize(self.serialized()).ok()
+		bincode::serde::encode_to_vec(self.serialized(), bincode::config::legacy()).ok()
 	}
 
 	// returns begin time of saving

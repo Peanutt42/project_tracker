@@ -192,7 +192,7 @@ impl ServerConnectionState {
 						match received_timeout_result {
 							Ok(received) => match received {
 								Ok(tungstenite::Message::Binary(binary)) => (
-									output.send(Self::parse_server_response(binary)).await.is_ok(),
+									output.send(Self::parse_server_response(binary.to_vec())).await.is_ok(),
 									None
 								),
 								Ok(tungstenite::Message::Close(_)) => {
@@ -296,8 +296,11 @@ impl ServerConnectionState {
 	}
 
 	fn parse_server_response(binary_response: Vec<u8>) -> ServerSubscriptionMessage {
-		match bincode::deserialize::<SerializedResponse>(&binary_response) {
-			Ok(response_result) => match response_result {
+		match bincode::serde::decode_from_slice::<SerializedResponse, _>(
+			&binary_response,
+			bincode::config::legacy(),
+		) {
+			Ok((response_result, _)) => match response_result {
 				Ok(response) => Ok(ServerSynchronizationEvent::Response(response)),
 				Err(e) => Err(ServerSynchronizationError::ParseServerResponse(format!(
 					"{e}"
@@ -318,13 +321,15 @@ impl ServerConnectionState {
 		websocket: &mut WebSocketStream,
 		output: &mut mpsc::Sender<ServerSubscriptionMessage>,
 	) -> (bool, Option<ServerConnection>) {
-		match bincode::serialize(&SerializedRequest {
+		let serialized_request = SerializedRequest {
 			request,
 			password: password.to_string(),
-		}) {
+		};
+
+		match bincode::serde::encode_to_vec(&serialized_request, bincode::config::legacy()) {
 			Ok(request_bytes) => {
 				if websocket
-					.send(tungstenite::Message::Binary(request_bytes))
+					.send(tungstenite::Message::binary(request_bytes))
 					.await
 					.is_ok()
 				{

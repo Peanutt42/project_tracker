@@ -150,8 +150,8 @@ async fn handle_ws(
 		tokio::select! {
 			ws_message = read.next() => match ws_message {
 				Some(Ok(message)) if message.is_binary() => {
-					match bincode::deserialize::<SerializedRequest>(message.as_bytes()) {
-						Ok(request) => {
+					match bincode::serde::decode_from_slice(message.as_bytes(), bincode::config::legacy()) {
+						Ok((request, _)) => {
 							respond_to_client_request(
 								request,
 								client_addr,
@@ -357,7 +357,9 @@ async fn send_more_up_to_date_database(
 
 /// returns wheter sending failed
 async fn send_response(response: Response, ws_write: &mut SplitSink<WebSocket, Message>) -> bool {
-	match bincode::serialize::<SerializedResponse>(&Ok(response)) {
+	let serialized_response: SerializedResponse = Ok(response);
+
+	match bincode::serde::encode_to_vec(&serialized_response, bincode::config::legacy()) {
 		Ok(response_bytes) => match ws_write.send(Message::binary(response_bytes)).await {
 			Ok(_) => false,
 			Err(e) => {
@@ -377,7 +379,9 @@ async fn send_error_response(
 	error: ServerError,
 	ws_write: &mut SplitSink<WebSocket, Message>,
 ) -> bool {
-	match bincode::serialize::<SerializedResponse>(&Err(error)) {
+	let serialized_response: SerializedResponse = Err(error);
+
+	match bincode::serde::encode_to_vec(&serialized_response, bincode::config::legacy()) {
 		Ok(response_bytes) => match ws_write.send(Message::binary(response_bytes)).await {
 			Ok(_) => false,
 			Err(e) => {

@@ -21,8 +21,11 @@ pub fn get_theme(dark_mode: bool) -> &'static Theme {
 
 pub fn is_system_theme_dark() -> bool {
 	match dark_light::detect() {
-		dark_light::Mode::Dark | dark_light::Mode::Default => true,
-		dark_light::Mode::Light => false,
+		Ok(mode) => match mode {
+			dark_light::Mode::Dark | dark_light::Mode::Unspecified => true,
+			dark_light::Mode::Light => false,
+		},
+		Err(_) => true,
 	}
 }
 
