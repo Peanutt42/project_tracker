@@ -284,10 +284,10 @@ document.addEventListener("DOMContentLoaded", () => {
 			);
 		}
 		const sorted_source_code_todos = field_ordered_tasklist_to_array(
-			project.soure_code_todos,
+			project.source_code_todos,
 		);
 		sort_project_tasks(project.sort_mode, sorted_source_code_todos);
-		for (const task_with_id in sorted_source_code_todos) {
+		for (const task_with_id of sorted_source_code_todos) {
 			populate_dom_with_task(
 				project_id,
 				task_with_id[0],
@@ -404,7 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		task_div.className = "task";
 
 		const checkbox = document.createElement("input");
-		(checkbox.type = "checkbox"), (checkbox.checked = done);
+		((checkbox.type = "checkbox"), (checkbox.checked = done));
 		checkbox.addEventListener("click", () => {
 			if (ws) {
 				ws.send(
